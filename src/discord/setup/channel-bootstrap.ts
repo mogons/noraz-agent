@@ -10,6 +10,7 @@ export interface ChannelSetupResult {
   lpSolanaId: string;
   lpEvmId: string;
   predictionId: string;
+  ctAlphaId: string;
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
@@ -91,6 +92,11 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     '🎯 Polymarket Prediction Market Arbitrage, Odds Mispricing, & Whale Bet Signals'
   );
 
+  const ctAlphaId = await getOrCreateChannel(
+    'call-ct-alpha',
+    '💡 Smart Crypto Twitter (CT) & AI Alpha - Airdrop threads, AI Agent launches, & Smart Money Calls'
+  );
+
   console.log('[DISCORD BOOTSTRAP] All Athena channels are ready!');
 
   return {
@@ -103,5 +109,6 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     lpSolanaId,
     lpEvmId,
     predictionId,
+    ctAlphaId,
   };
 }

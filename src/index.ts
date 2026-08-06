@@ -19,6 +19,7 @@ import { EVMScreeningAgent } from './agents/meme-evm/evm-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
+import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
 import { priceAlertService } from './discord/handlers/interaction-handler.js';
 import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
@@ -26,6 +27,7 @@ import { TelegramService } from './telegram/telegram-service.js';
 dotenv.config();
 
 const telegramService = new TelegramService();
+const ctAlphaAgent = new CTAlphaAgent();
 
 console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
@@ -147,21 +149,42 @@ if (discordToken && clientId) {
 
     // Start 24/7 Sub-Agents Background Screening Interval Loop (Every 5 minutes)
     setInterval(async () => {
-      console.log('[SUB-AGENTS LOOP] Running 24/7 background screening passes across active domains...');
+      console.log('[SUB-AGENTS LOOP] Checking active sub-agent domains...');
       try {
-        const solanaReports = await solanaScreeningAgent.runScreeningPass();
-        const evmReports = await evmScreeningAgent.runScreeningPass();
-        const nftReports = await nftScreeningAgent.runScreeningPass();
-        const polyReports = await polymarketAgent.runScreeningPass();
+        const allReports: any[] = [];
+
+        if (hub.isAgentActive('meme-solana')) {
+          const reports = await solanaScreeningAgent.runScreeningPass();
+          allReports.push(...reports);
+        }
+
+        if (hub.isAgentActive('meme-evm')) {
+          const reports = await evmScreeningAgent.runScreeningPass();
+          allReports.push(...reports);
+        }
+
+        if (hub.isAgentActive('nft')) {
+          const reports = await nftScreeningAgent.runScreeningPass();
+          allReports.push(...reports);
+        }
+
+        if (hub.isAgentActive('prediction')) {
+          const reports = await polymarketAgent.runScreeningPass();
+          allReports.push(...reports);
+        }
+
+        if (hub.isAgentActive('ct-alpha')) {
+          const reports = await ctAlphaAgent.runScreeningPass();
+          allReports.push(...reports);
+        }
 
         // Dispatch high confidence signals to Telegram Bridge
-        const allReports = [...solanaReports, ...evmReports, ...nftReports, ...polyReports];
         for (const r of allReports) {
           if (r.passed && telegramService.isEnabled()) {
             await telegramService.broadcastSignalCall(
-              r.signal.symbol,
-              r.signal.symbol,
-              r.signal.contractAddress || 'N/A',
+              r.signal.symbol || r.signal.title || 'CT ALPHA',
+              r.signal.symbol || 'ALPHA',
+              r.signal.contractAddress || r.signal.tweetUrl || 'N/A',
               r.reason
             );
           }

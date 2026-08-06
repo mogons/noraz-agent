@@ -39,7 +39,8 @@ export const slashCommands = [
               { name: 'EVM LP Agent (Robinhood)', value: 'lp-evm' },
               { name: 'Perpetuals Agent', value: 'perps' },
               { name: 'NFT Sniping Agent', value: 'nft' },
-              { name: 'Polymarket Prediction Agent', value: 'prediction' }
+              { name: 'Polymarket Prediction Agent', value: 'prediction' },
+              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
             )
         )
     )
@@ -57,7 +58,8 @@ export const slashCommands = [
               { name: 'EVM LP Agent (Robinhood)', value: 'lp-evm' },
               { name: 'Perpetuals Agent', value: 'perps' },
               { name: 'NFT Sniping Agent', value: 'nft' },
-              { name: 'Polymarket Prediction Agent', value: 'prediction' }
+              { name: 'Polymarket Prediction Agent', value: 'prediction' },
+              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
             )
         )
     ),

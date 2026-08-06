@@ -183,4 +183,12 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(reloaded.priceAlerts.length).toBe(1);
     expect(reloaded.priceAlerts[0].symbol).toBe('BTC');
   });
+
+  it('12. Smart CT Alpha Agent: Should evaluate X/Twitter for AI narratives and yield opportunities', async () => {
+    const { CTAlphaAgent } = await import('../src/agents/ct-alpha/ct-alpha-agent.js');
+    const agent = new CTAlphaAgent();
+    const reports = await agent.runScreeningPass();
+    expect(reports.length).toBeGreaterThan(0);
+    expect(reports[0].confidenceScore ?? reports[0].signal.confidenceScore).toBeGreaterThanOrEqual(80);
+  });
 });

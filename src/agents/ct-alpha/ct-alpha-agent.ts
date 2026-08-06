@@ -1,0 +1,81 @@
+import { TwitterService, TweetItem } from '../../services/twitter-service.js';
+import { AIService } from '../../services/ai-service.js';
+
+export interface CTAlphaSignal {
+  id: string;
+  category: 'AI_AGENTS' | 'AIRDROP_YIELD' | 'SMART_CT_CALL' | 'TICKER_SURGE' | 'STEALTH_LAUNCH';
+  title: string;
+  authorUsername: string;
+  authorName: string;
+  tweetText: string;
+  tweetUrl: string;
+  likes: number;
+  retweets: number;
+  actionableTakeaway: string;
+  symbolMentioned?: string;
+  contractAddress?: string;
+  confidenceScore: number; // 0 - 100
+  postedAt: string;
+}
+
+export class CTAlphaAgent {
+  private twitterService: TwitterService;
+  private aiService: AIService;
+
+  constructor(twitterService?: TwitterService, aiService?: AIService) {
+    this.twitterService = twitterService || new TwitterService();
+    this.aiService = aiService || new AIService();
+  }
+
+  /**
+   * Evaluates tweets for high-value Alpha, AI agent trends, and yield opportunities
+   */
+  public async evaluateTweetsForAlpha(query: string = 'AI agent crypto alpha'): Promise<CTAlphaSignal[]> {
+    console.log(`[CT ALPHA AGENT] Scanning Smart CT & AI narratives for query: "${query}"...`);
+    const tweets = await this.twitterService.searchTweets(query, 10);
+
+    const signals: CTAlphaSignal[] = [];
+
+    for (const t of tweets) {
+      const isAiNarrative = t.text.toLowerCase().includes('ai') || t.text.toLowerCase().includes('agent');
+      const isYield = t.text.toLowerCase().includes('yield') || t.text.toLowerCase().includes('airdrop') || t.text.toLowerCase().includes('farm');
+
+      const category: CTAlphaSignal['category'] = isAiNarrative
+        ? 'AI_AGENTS'
+        : isYield
+        ? 'AIRDROP_YIELD'
+        : 'SMART_CT_CALL';
+
+      const confidenceScore = Math.min(98, 80 + Math.floor((t.likes / 50)));
+
+      signals.push({
+        id: `ct_alpha_${t.id}`,
+        category,
+        title: `🔥 Smart CT Alpha: ${category.replace('_', ' ')} Opportunities`,
+        authorUsername: t.authorUsername,
+        authorName: t.authorName,
+        tweetText: t.text,
+        tweetUrl: t.url,
+        likes: t.likes,
+        retweets: t.retweets,
+        actionableTakeaway: `💡 Actionable Alpha: Smart CT accumulation detected. ${isAiNarrative ? 'High AI agent narrative momentum.' : 'High yield / airdrop potential.'}`,
+        symbolMentioned: query.toUpperCase(),
+        confidenceScore,
+        postedAt: t.createdAt,
+      });
+    }
+
+    return signals;
+  }
+
+  public async runScreeningPass(): Promise<Array<{ passed: boolean; signal: CTAlphaSignal; reason: string }>> {
+    console.log('[CT ALPHA AGENT] Running Smart CT & AI narrative surveillance pass...');
+    const signals = await this.evaluateTweetsForAlpha('AI agent crypto alpha');
+
+    return signals.map(s => ({
+      passed: s.confidenceScore >= 80,
+      signal: s,
+      reason: `🎯 SMART CT ALPHA (${s.category}): ${s.actionableTakeaway} (Score: ${s.confidenceScore}%)`,
+    }));
+  }
+}

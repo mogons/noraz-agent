@@ -333,10 +333,12 @@ async function handleModalSubmit(interaction: ModalSubmitInteraction): Promise<v
 async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: AthenaHub): Promise<void> {
   if (interaction.customId === 'select_toggle_agent') {
     const selectedAgent = interaction.values[0];
-    await interaction.reply({
-      content: `🔄 **Toggled Screening Agent:** \`${selectedAgent.toUpperCase()}\` status updated.`,
-      ephemeral: true,
-    });
+    const currentState = hub.isAgentActive(selectedAgent);
+    const newState = !currentState;
+    hub.setAgentActive(selectedAgent, newState);
+
+    const dash = createDashboardComponents(hub);
+    await interaction.update(dash);
   }
 }
 
@@ -371,11 +373,16 @@ async function handleButtonPress(interaction: ButtonInteraction, hub: AthenaHub)
   }
 
   if (customId === 'btn_start_all_agents') {
-    await interaction.reply({ content: '▶️ **All Sub-Agents Activated!** 24/7 Screening loops started across all domains.', ephemeral: true });
+    hub.setAllAgentsActive(true);
+    const dash = createDashboardComponents(hub);
+    await interaction.update(dash);
   } else if (customId === 'btn_pause_all_agents') {
-    await interaction.reply({ content: '⏸️ **All Sub-Agents Paused.** Background screening loops placed on hold.', ephemeral: true });
+    hub.setAllAgentsActive(false);
+    const dash = createDashboardComponents(hub);
+    await interaction.update(dash);
   } else if (customId === 'btn_emergency_stop') {
-    await interaction.reply({ content: '🛑 **EMERGENCY CIRCUIT BREAKER TRIGGERED!** All trading, screening, and pending orders halted.', ephemeral: false });
+    hub.setAllAgentsActive(false);
+    await interaction.reply({ content: '🛑 **EMERGENCY CIRCUIT BREAKER TRIGGERED!** All sub-agents paused & pending orders halted.', ephemeral: false });
   } else if (customId === 'btn_view_wallets') {
     await interaction.reply({ content: '🔑 **Burner Wallets:** Solana: `10.00 SOL` | EVM: `1.50 ETH` (DRY_RUN Active).', ephemeral: true });
   } else if (customId === 'btn_view_alerts') {

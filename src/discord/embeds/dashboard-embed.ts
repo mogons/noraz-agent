@@ -13,6 +13,8 @@ export function createDashboardComponents(hub: AthenaHub) {
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 
+  const getStatusBadge = (domain: string) => (hub.isAgentActive(domain) ? '`🟢 RUNNING`' : '`🔴 PAUSED`');
+
   const embed = new EmbedBuilder()
     .setTitle('🏛️ ATHENA MULTI-AGENT CONTROL CENTER')
     .setColor(0x00ffaa)
@@ -30,14 +32,15 @@ export function createDashboardComponents(hub: AthenaHub) {
         inline: false,
       },
       {
-        name: '🤖 24/7 Specialist Sub-Agents Status',
+        name: '🤖 24/7 Specialist Sub-Agents Status (PAUSED by Default)',
         value:
-          '• 🐣 **Solana Meme Agent:** `🔴 PAUSED (Use /screening start)`\n' +
-          '• 🔷 **EVM Meme Agent:** `🔴 PAUSED (Base / ETH / Robinhood)`\n' +
-          '• 📈 **Perpetual Futures Agent:** `🔴 PAUSED (Hyperliquid)`\n' +
-          '• 💧 **Trade+LP Velocity Engine:** `🔴 PAUSED (Meteora & Uniswap v3)`\n' +
-          '• 🖼️ **NFT Sniping Agent:** `🔴 PAUSED (OpenSea EVM)`\n' +
-          '• 🎯 **Polymarket Prediction Agent:** `🔴 PAUSED (Polygon L2)`',
+          `• 🐣 **Solana Meme Agent:** ${getStatusBadge('meme-solana')}\n` +
+          `• 🔷 **EVM Meme Agent:** ${getStatusBadge('meme-evm')}\n` +
+          `• 📈 **Perpetual Futures Agent:** ${getStatusBadge('perps')}\n` +
+          `• 💧 **Trade+LP Velocity Engine:** ${getStatusBadge('lp-solana')}\n` +
+          `• 🖼️ **NFT Sniping Agent:** ${getStatusBadge('nft')}\n` +
+          `• 🎯 **Polymarket Prediction Agent:** ${getStatusBadge('prediction')}\n` +
+          `• 💡 **Smart CT & AI Alpha Agent:** ${getStatusBadge('ct-alpha')}`,
         inline: false,
       },
       {
@@ -82,7 +85,7 @@ export function createDashboardComponents(hub: AthenaHub) {
         .setEmoji('📈'),
       new StringSelectMenuOptionBuilder()
         .setLabel('Trade+LP Velocity Engine')
-        .setValue('lp')
+        .setValue('lp-solana')
         .setDescription('High-volume LP harvesting (>5% 4h Fee/TVL)')
         .setEmoji('💧'),
       new StringSelectMenuOptionBuilder()
@@ -94,7 +97,12 @@ export function createDashboardComponents(hub: AthenaHub) {
         .setLabel('Polymarket Agent')
         .setValue('prediction')
         .setDescription('Polygon L2 odds arbitrage & whale bet tracking')
-        .setEmoji('🎯')
+        .setEmoji('🎯'),
+      new StringSelectMenuOptionBuilder()
+        .setLabel('Smart CT & AI Alpha Agent')
+        .setValue('ct-alpha')
+        .setDescription('X/Twitter AI Agent launches, airdrop threads, & CT calls')
+        .setEmoji('💡')
     );
 
   // Row 1: Master Toggles
