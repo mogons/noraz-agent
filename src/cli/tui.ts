@@ -149,7 +149,7 @@ export async function launchTUI(): Promise<void> {
           { id: '7', domain: 'prediction', label: 'Polymarket Agent (Polygon L2)' },
           { id: '8', domain: 'ct-alpha', label: 'Smart CT & AI Alpha Agent (X/Twitter)' },
         ];
-        const activeDomains = hub.getActiveChannelDomains();
+        const activeDomains = hub.getActiveDomains();
         subAgentsList.forEach(a => {
           const isActive = activeDomains.includes(a.domain);
           console.log(`[${a.id}] ${a.label}: ${isActive ? C.green + '🟢 ACTIVE' + C.reset : C.red + '🔴 PAUSED' + C.reset}`);

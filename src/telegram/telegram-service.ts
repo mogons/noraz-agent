@@ -1,3 +1,6 @@
+import { AthenaHub } from '../orchestrator/hub.js';
+import { WalletService } from '../services/wallet-service.js';
+
 export interface TelegramConfig {
   botToken?: string;
   chatId?: string;
@@ -154,7 +157,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
   public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
     const isDryRun = process.env.DRY_RUN !== 'false';
-    const activeDomains = hub ? hub.getActiveChannelDomains() : [];
+    const activeDomains = hub ? hub.getActiveDomains() : [];
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
@@ -249,7 +252,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
 
       if (data.startsWith('toggle_')) {
         const domain = data.replace('toggle_', '');
-        const active = hub.getActiveChannelDomains().includes(domain);
+        const active = hub.getActiveDomains().includes(domain);
         hub.toggleChannelScreening('telegram-forum', domain, !active);
         await this.sendMessage(`⚡ Sub-agent domain \`${domain}\` is now **${!active ? 'ACTIVE' : 'PAUSED'}** on Telegram!`, 'Markdown', undefined, threadId);
       } else if (data === 'start_all') {

@@ -67,6 +67,14 @@ export class AthenaHub {
     return Array.from(this.channelStates.values()).filter(c => c.active);
   }
 
+  public getActiveDomains(): string[] {
+    const active: string[] = [];
+    for (const [domain, isActive] of this.agentStates.entries()) {
+      if (isActive) active.push(domain);
+    }
+    return active;
+  }
+
   public getRiskManager(): RiskManager {
     return this.riskManager;
   }
