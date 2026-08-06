@@ -76,16 +76,19 @@ export class SolanaScreeningAgent {
   public async runScreeningPass(): Promise<any[]> {
     console.log('[SOLANA AGENT] Running Solana Meme DEX screening pass...');
     const signals = await this.gmgnAdapter.fetchTrendingSignals('sol');
-    const signal = signals[0];
-    const rugReport = await this.rugCheckService.auditSolanaToken(signal.contractAddress);
-    const ctoReport = this.detectRevivalAndCTO(signal, rugReport);
+    if (!signals || signals.length === 0) return [];
 
-    return [
-      {
+    const results = [];
+    for (const signal of signals.slice(0, 3)) {
+      const rugReport = await this.rugCheckService.auditSolanaToken(signal.contractAddress);
+      const ctoReport = this.detectRevivalAndCTO(signal, rugReport);
+      results.push({
         passed: rugReport.isSafeForRunner,
         signal,
         reason: ctoReport.detectionReason,
-      },
-    ];
+      });
+    }
+
+    return results;
   }
 }

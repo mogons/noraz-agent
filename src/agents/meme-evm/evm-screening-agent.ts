@@ -104,15 +104,18 @@ export class EVMScreeningAgent {
   public async runScreeningPass(): Promise<any[]> {
     console.log('[EVM AGENT] Running EVM Meme DEX screening pass...');
     const signals = await this.gmgnAdapter.fetchTrendingSignals('base');
-    const signal = signals[0];
-    const report = this.evaluateEVMToken(signal, 'base');
+    if (!signals || signals.length === 0) return [];
 
-    return [
-      {
+    const results = [];
+    for (const signal of signals.slice(0, 3)) {
+      const report = this.evaluateEVMToken(signal, 'base');
+      results.push({
         passed: report.confidenceScore >= 80,
         signal,
         reason: report.detectionReason,
-      },
-    ];
+      });
+    }
+
+    return results;
   }
 }
