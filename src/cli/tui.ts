@@ -2,10 +2,12 @@ import readline from 'readline';
 import { AthenaHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
+import { WalletService } from '../services/wallet-service.js';
 
 const hub = new AthenaHub();
 const swarmEngine = new SwarmConsensusEngine();
 const aiService = new AIService();
+const walletService = new WalletService();
 
 // ANSI Color Helpers
 const C = {
@@ -68,12 +70,46 @@ export async function launchTUI(): Promise<void> {
       case '1':
         console.clear();
         console.log(`${C.cyan}=== 🔑 ATHENA TREASURY & BURNER WALLETS ===${C.reset}`);
-        console.log(`• Solana Wallet Balance: ${C.green}10.00 SOL${C.reset} ($2,100 USD)`);
-        console.log(`• EVM Base Balance: ${C.green}1.50 ETH${C.reset} ($4,200 USD)\n`);
-        const setPk = await prompt('Import new Burner Wallet Private Key? (y/N): ');
-        if (setPk.toLowerCase() === 'y') {
-          const pk = await prompt('Enter Encrypted Private Key: ');
-          console.log(`${C.green}✅ Wallet PK encrypted & stored safely in local vault!${C.reset}`);
+        const hasSol = walletService.hasWallet('solana');
+        const hasEvm = walletService.hasWallet('evm');
+        console.log(`• Solana Wallet: ${hasSol ? C.green + walletService.getSolanaAddress() + C.reset : C.red + 'Not Configured' + C.reset}`);
+        console.log(`• EVM Wallet:    ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
+        console.log('[1] Import / Replace Solana Private Key');
+        console.log('[2] Import / Replace EVM Private Key');
+        console.log('[3] Remove / Clear Solana Private Key');
+        console.log('[4] Remove / Clear EVM Private Key');
+        console.log('[5] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
+        console.log('[0] Back to Parthenon Menu\n');
+        const walletSub = await prompt('Select Treasury Action (0-5): ');
+        if (walletSub === '1' || walletSub === '2') {
+          const chain = walletSub === '1' ? 'solana' : 'evm';
+          const pk = await prompt(`Enter ${chain.toUpperCase()} Private Key: `);
+          if (pk.trim()) {
+            walletService.setKey(chain, pk.trim());
+            console.log(`${C.green}✅ ${chain.toUpperCase()} Private Key imported and active!${C.reset}`);
+          }
+        } else if (walletSub === '3' || walletSub === '4') {
+          const chain = walletSub === '3' ? 'solana' : 'evm';
+          walletService.removeKey(chain);
+          console.log(`${C.yellow}🗑️ ${chain.toUpperCase()} Private Key removed from memory!${C.reset}`);
+        } else if (walletSub === '5') {
+          const to = await prompt('Destination Recipient Wallet Address: ');
+          const amtStr = await prompt('Amount of Native Token (SOL / ETH) to Withdraw: ');
+          const amt = parseFloat(amtStr);
+          if (to.trim() && !isNaN(amt) && amt > 0) {
+            console.log(`${C.yellow}Executing withdrawal...${C.reset}`);
+            try {
+              if (!to.startsWith('0x')) {
+                const res = await walletService.sendSol(to.trim(), amt);
+                console.log(`${C.green}✅ Solana Withdrawal Complete! Tx: ${res.txHash}${C.reset}`);
+              } else {
+                const res = await walletService.sendEvm(8453, to.trim(), amt);
+                console.log(`${C.green}✅ EVM Base Withdrawal Complete! Tx: ${res.txHash}${C.reset}`);
+              }
+            } catch (err: any) {
+              console.log(`${C.red}❌ Withdrawal failed: ${err.message}${C.reset}`);
+            }
+          }
         }
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
@@ -103,14 +139,39 @@ export async function launchTUI(): Promise<void> {
       case '3':
         console.clear();
         console.log(`${C.cyan}=== ⚡ BACKGROUND SCREENING SUB-AGENTS CONTROL ===${C.reset}`);
-        console.log('[1] Toggle Solana Meme Agent (Pump.fun / Raydium)');
-        console.log('[2] Toggle EVM Meme Agent (Base / ETH / Robinhood)');
-        console.log('[3] Toggle Perps Futures Agent (Hyperliquid)');
-        console.log('[4] Toggle NFT Sniping Agent (OpenSea)');
-        console.log('[5] Toggle Polymarket Agent (Polygon L2)');
-        console.log('[6] Toggle Smart CT & AI Alpha Agent (X/Twitter)');
-        const agentChoice = await prompt('Select Agent to Toggle (1-6): ');
-        console.log(`${C.green}✅ Agent screening state updated in Parthenon memory!${C.reset}`);
+        const subAgentsList = [
+          { id: '1', domain: 'meme-solana', label: 'Solana Meme Agent (Pump.fun / Raydium)' },
+          { id: '2', domain: 'meme-evm', label: 'EVM Meme Agent (Base / ETH / Robinhood)' },
+          { id: '3', domain: 'lp-solana', label: 'Solana LP Agent (Meteora DLMM)' },
+          { id: '4', domain: 'lp-evm', label: 'EVM LP Agent (Uniswap V3)' },
+          { id: '5', domain: 'perps', label: 'Perpetuals Agent (Hyperliquid)' },
+          { id: '6', domain: 'nft', label: 'NFT Sniping Agent (OpenSea)' },
+          { id: '7', domain: 'prediction', label: 'Polymarket Agent (Polygon L2)' },
+          { id: '8', domain: 'ct-alpha', label: 'Smart CT & AI Alpha Agent (X/Twitter)' },
+        ];
+        const activeDomains = hub.getActiveChannelDomains();
+        subAgentsList.forEach(a => {
+          const isActive = activeDomains.includes(a.domain);
+          console.log(`[${a.id}] ${a.label}: ${isActive ? C.green + '🟢 ACTIVE' + C.reset : C.red + '🔴 PAUSED' + C.reset}`);
+        });
+        console.log('[A] ⚡ Activate ALL Agents');
+        console.log('[P] ⏸️ Pause ALL Agents');
+        console.log('[0] Back to Parthenon Menu\n');
+        const agentChoice = await prompt('Select Option (1-8, A, P, 0): ');
+        if (agentChoice.toUpperCase() === 'A') {
+          subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, true));
+          console.log(`${C.green}⚡ All 8 Sub-Agents activated in TUI Parthenon!${C.reset}`);
+        } else if (agentChoice.toUpperCase() === 'P') {
+          subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, false));
+          console.log(`${C.yellow}⏸️ All 8 Sub-Agents paused in TUI Parthenon!${C.reset}`);
+        } else {
+          const selected = subAgentsList.find(a => a.id === agentChoice.trim());
+          if (selected) {
+            const currentActive = activeDomains.includes(selected.domain);
+            hub.toggleChannelScreening('tui-terminal', selected.domain, !currentActive);
+            console.log(`${C.green}✅ ${selected.domain} is now ${!currentActive ? 'ACTIVE' : 'PAUSED'}!${C.reset}`);
+          }
+        }
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
 

@@ -127,7 +127,8 @@ if (discordToken && clientId) {
       console.log('[TELEGRAM SERVICE] Telegram Notification Bridge Connected! Provisioning Topics & broadcasting control menu...');
       try {
         await telegramService.bootstrapTelegramTopics();
-        await telegramService.broadcastInteractiveMenu();
+        await telegramService.broadcastInteractiveMenu(hub, walletService);
+        telegramService.startPolling(hub, walletService);
       } catch (tgErr: any) {
         console.error('[TELEGRAM SERVICE] Startup broadcast error:', tgErr.message);
       }

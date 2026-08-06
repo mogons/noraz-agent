@@ -152,49 +152,164 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
     return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
-  public async broadcastInteractiveMenu(): Promise<boolean> {
+  public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
+    const isDryRun = process.env.DRY_RUN !== 'false';
+    const activeDomains = hub ? hub.getActiveChannelDomains() : [];
+
+    const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
+
     const text = `🏛️ *ATHENA CONTROL CENTER DASHBOARD (TELEGRAM)*
 
-⚙️ *Mode:* DRY_RUN Active (Safe Mode)
+⚙️ *Mode:* ${isDryRun ? 'DRY_RUN Active (Safe Simulation)' : '⚡ LIVE Execution Active'}
 🛡️ *Max Drawdown:* 5.0%
 
 🤖 *Active Sub-Agents Status:*
-• 🐣 Solana Meme: PAUSED
-• 🔷 EVM Meme: PAUSED
-• 📈 Perps Futures: PAUSED
-• 💧 Trade+LP Velocity: PAUSED
-• 🖼️ NFT Sniping: PAUSED
-• 🎯 Polymarket: PAUSED
-• 💡 Smart CT Alpha: PAUSED
+• 🐣 Solana Meme (\`meme-solana\`): ${getStatus('meme-solana')}
+• 🔷 EVM Meme (\`meme-evm\`): ${getStatus('meme-evm')}
+• ⚡ Solana LP (\`lp-solana\`): ${getStatus('lp-solana')}
+• 💧 EVM LP (\`lp-evm\`): ${getStatus('lp-evm')}
+• 📈 Perps Futures (\`perps\`): ${getStatus('perps')}
+• 🖼️ NFT Sniping (\`nft\`): ${getStatus('nft')}
+• 🎯 Polymarket (\`prediction\`): ${getStatus('prediction')}
+• 💡 Smart CT Alpha (\`ct-alpha\`): ${getStatus('ct-alpha')}
 
-Use touch buttons below to toggle agents or view balances:`;
+Use buttons below to toggle agents, view wallet status, or execute withdrawals:`;
 
     const replyMarkup = {
       inline_keyboard: [
         [
-          { text: '▶️ Start Solana', callback_data: 'start_solana' },
-          { text: '▶️ Start EVM', callback_data: 'start_evm' },
+          { text: '▶️ Toggle SOL Meme', callback_data: 'toggle_meme-solana' },
+          { text: '▶️ Toggle EVM Meme', callback_data: 'toggle_meme-evm' },
         ],
         [
-          { text: '▶️ Start Perps', callback_data: 'start_perps' },
-          { text: '▶️ Start LP', callback_data: 'start_lp' },
+          { text: '▶️ Toggle SOL LP', callback_data: 'toggle_lp-solana' },
+          { text: '▶️ Toggle EVM LP', callback_data: 'toggle_lp-evm' },
         ],
         [
-          { text: '▶️ Start NFT', callback_data: 'start_nft' },
-          { text: '▶️ Start Polymarket', callback_data: 'start_poly' },
+          { text: '▶️ Toggle Perps', callback_data: 'toggle_perps' },
+          { text: '▶️ Toggle NFT', callback_data: 'toggle_nft' },
         ],
         [
-          { text: '▶️ Start CT Alpha', callback_data: 'start_ct_alpha' },
+          { text: '▶️ Toggle Polymarket', callback_data: 'toggle_prediction' },
+          { text: '▶️ Toggle CT Alpha', callback_data: 'toggle_ct-alpha' },
+        ],
+        [
+          { text: '⚡ Start All', callback_data: 'start_all' },
           { text: '⏸️ Pause All', callback_data: 'pause_all' },
         ],
         [
           { text: '🔑 Wallet Balances', callback_data: 'balances' },
-          { text: '🔔 Active Alerts', callback_data: 'alerts' },
+          { text: '💸 Withdraw Funds', callback_data: 'withdraw_info' },
         ],
       ],
     };
 
     const threadId = this.topics.get('athena-control-room');
     return this.sendMessage(text, 'Markdown', replyMarkup, threadId);
+  }
+
+  /**
+   * Start long-polling listener for Telegram incoming commands & callback buttons
+   */
+  public startPolling(hub: AthenaHub, walletService: WalletService): void {
+    if (!this.isEnabled()) return;
+
+    let offset = 0;
+    console.log('[TELEGRAM POLLING] Starting background update listener...');
+
+    const poll = async () => {
+      try {
+        const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${offset}&timeout=20`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data: any = await res.json();
+          if (data.ok && Array.isArray(data.result)) {
+            for (const update of data.result) {
+              offset = update.update_id + 1;
+              await this.handleTelegramUpdate(update, hub, walletService);
+            }
+          }
+        }
+      } catch (err: any) {
+        // Silent catch for network hiccups
+      } finally {
+        setTimeout(poll, 3000);
+      }
+    };
+
+    poll();
+  }
+
+  private async handleTelegramUpdate(update: any, hub: AthenaHub, walletService: WalletService): Promise<void> {
+    if (update.callback_query) {
+      const query = update.callback_query;
+      const data = query.data;
+      const chatId = query.message?.chat?.id;
+      const threadId = query.message?.message_thread_id;
+
+      if (data.startsWith('toggle_')) {
+        const domain = data.replace('toggle_', '');
+        const active = hub.getActiveChannelDomains().includes(domain);
+        hub.toggleChannelScreening('telegram-forum', domain, !active);
+        await this.sendMessage(`⚡ Sub-agent domain \`${domain}\` is now **${!active ? 'ACTIVE' : 'PAUSED'}** on Telegram!`, 'Markdown', undefined, threadId);
+      } else if (data === 'start_all') {
+        ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, true));
+        await this.sendMessage('⚡ **GLOBAL MASTER SCREENING ACTIVATED!** All 8 Sub-Agents are active on Telegram.', 'Markdown', undefined, threadId);
+      } else if (data === 'pause_all') {
+        ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
+        await this.sendMessage('⏸️ **GLOBAL MASTER SCREENING PAUSED!** All 8 Sub-Agents are paused on Telegram.', 'Markdown', undefined, threadId);
+      } else if (data === 'balances') {
+        const isDryRun = process.env.DRY_RUN !== 'false';
+        const hasSol = walletService.hasWallet('solana');
+        const hasEvm = walletService.hasWallet('evm');
+        let solAddr = hasSol ? `\`${walletService.getSolanaAddress()}\`` : 'Not Configured';
+        let evmAddr = hasEvm ? `\`${walletService.getEvmAddress()}\`` : 'Not Configured';
+        await this.sendMessage(
+          `💼 *ATHENA WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
+          `• *Solana Wallet:* ${solAddr}\n` +
+          `• *EVM Wallet:* ${evmAddr}\n\n` +
+          `Use \`/withdraw <to> <amount>\` to transfer funds.`,
+          'Markdown', undefined, threadId
+        );
+      } else if (data === 'withdraw_info') {
+        await this.sendMessage(
+          `💸 *INSTANT FUND WITHDRAWAL INSTRUCTION*\n\n` +
+          `To withdraw funds to your master wallet address, send message:\n` +
+          `\`/withdraw <recipient_address> <amount>\`\n\n` +
+          `*Example:* \`/withdraw 7XwW4PzZg... 0.5\``,
+          'Markdown', undefined, threadId
+        );
+      }
+    } else if (update.message?.text) {
+      const msg = update.message;
+      const text = msg.text.trim();
+      const threadId = msg.message_thread_id;
+
+      if (text.startsWith('/withdraw')) {
+        const parts = text.split(/\s+/);
+        if (parts.length < 3) {
+          await this.sendMessage('⚠️ Format invalid. Use: `/withdraw <recipient_address> <amount>`', 'Markdown', undefined, threadId);
+          return;
+        }
+        const recipient = parts[1];
+        const amount = parseFloat(parts[2]);
+        if (isNaN(amount) || amount <= 0) {
+          await this.sendMessage('⚠️ Invalid amount specified.', 'Markdown', undefined, threadId);
+          return;
+        }
+        const isDryRun = process.env.DRY_RUN !== 'false';
+        try {
+          if (!recipient.startsWith('0x')) {
+            const { txHash, explorerUrl } = await walletService.sendSol(recipient, amount);
+            await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} SOL\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
+          } else {
+            const { txHash, explorerUrl } = await walletService.sendEvm(8453, recipient, amount);
+            await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} ETH (Base)\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
+          }
+        } catch (err: any) {
+          await this.sendMessage(`❌ Withdrawal failed: ${err.message}`, 'Markdown', undefined, threadId);
+        }
+      }
+    }
   }
 }
