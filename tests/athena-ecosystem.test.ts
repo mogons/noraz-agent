@@ -1,0 +1,186 @@
+import { describe, it, expect } from 'vitest';
+import { SwarmConsensusEngine } from '../src/orchestrator/swarm-consensus.js';
+import { SolanaScreeningAgent } from '../src/agents/meme-solana/solana-screening-agent.js';
+import { EVMScreeningAgent } from '../src/agents/meme-evm/evm-screening-agent.js';
+import { PerpsScreeningAgent } from '../src/agents/perps/perps-screening-agent.js';
+import { HyperliquidAdapter } from '../src/adapters/hyperliquid-adapter.js';
+import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
+import { PolymarketAgent } from '../src/agents/prediction/polymarket-agent.js';
+import { PriceAlertService } from '../src/services/price-alert-service.js';
+import { PositionManager } from '../src/position/position-manager.js';
+
+describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
+  it('1. Swarm Consensus Engine: Should pass high confidence signals (>= 80%)', () => {
+    const swarm = new SwarmConsensusEngine();
+    const result = swarm.evaluateSignal({
+      symbol: 'ATHENA_MEME',
+      domain: 'MEME_SOLANA',
+      contractAddress: 'So11111111111111111111111111111111111111112',
+      liquidityUsd: 25000,
+      volume1hUsd: 75000,
+      securityAuditPassed: true,
+      socialHypeScore: 88,
+    });
+
+    expect(result.confidenceScore).toBeGreaterThanOrEqual(80);
+    expect(result.passed).toBe(true);
+  });
+
+  it('2. Solana Meme Agent: Should evaluate Solana DEX signals', () => {
+    const agent = new SolanaScreeningAgent();
+    const report = agent.detectRevivalAndCTO(
+      {
+        symbol: 'SOLMEME',
+        contractAddress: 'So11111111111111111111111111111111111111112',
+        volume24hUsd: 150000,
+        smartMoneyNetBuySolOrEth: 12,
+        devHoldingPercentage: 0.5,
+        smartMoneyCount: 3,
+        dexscreenerUrl: 'https://dexscreener.com/solana',
+      },
+      {
+        mintAuthorityDisabled: true,
+        freezeAuthorityDisabled: true,
+        lpBurnedPercentage: 100,
+        top10HoldersPercentage: 12.5,
+        isHoneypot: false,
+        score: 95,
+        riskLevel: 'GOOD',
+      }
+    );
+
+    expect(report.isCTO).toBe(true);
+    expect(report.volumeSpikeRatio).toBeGreaterThan(5.0);
+  });
+
+  it('3. EVM Meme Agent: Should evaluate Base, ETH, & Robinhood L2 DEX signals', () => {
+    const agent = new EVMScreeningAgent();
+    const report = agent.evaluateEVMToken(
+      {
+        symbol: 'BASEMEME',
+        contractAddress: '0x1234567890123456789012345678901234567890',
+        volume24hUsd: 120000,
+        smartMoneyNetBuySolOrEth: 2.5,
+        devHoldingPercentage: 2.0,
+        smartMoneyCount: 4,
+        dexscreenerUrl: 'https://dexscreener.com/base',
+      },
+      'base'
+    );
+
+    expect(report.confidenceScore).toBeGreaterThanOrEqual(80);
+    expect(report.chain).toBe('base');
+  });
+
+  it('4. Perpetual Futures Agent: Should evaluate Hyperliquid leverage setups', async () => {
+    const hlAdapter = new HyperliquidAdapter();
+    const agent = new PerpsScreeningAgent(hlAdapter);
+    const reports = await agent.screenAllAssets();
+    expect(Array.isArray(reports)).toBe(true);
+  });
+
+  it('5. EVM NFT Agent: Should evaluate NFT Momentum & Whale Sweeps', async () => {
+    const agent = new NFTScreeningAgent();
+    const reports = await agent.runScreeningPass();
+    expect(Array.isArray(reports)).toBe(true);
+    expect(reports.length).toBeGreaterThan(0);
+    expect(reports[0].confidenceScore).toBeGreaterThanOrEqual(80);
+    expect(reports[0].isFloorSurge).toBe(true);
+  });
+
+  it('6. Polymarket Prediction Agent: Should evaluate prediction market odds', async () => {
+    const agent = new PolymarketAgent();
+    const reports = await agent.runScreeningPass();
+    expect(Array.isArray(reports)).toBe(true);
+    expect(reports.length).toBeGreaterThan(0);
+    expect(reports[0].confidenceScore).toBeGreaterThanOrEqual(80);
+  });
+
+  it('7. Price Alert Service: Should parse natural language alert expressions', () => {
+    const alertService = new PriceAlertService();
+    const parsed = alertService.parseNaturalLanguageAlert('athena kabari kalau BTC 70000');
+    expect(parsed).not.toBeNull();
+    expect(parsed?.symbol).toBe('BTC');
+    expect(parsed?.targetPriceUsd).toBe(70000);
+    expect(parsed?.direction).toBe('ABOVE');
+  });
+
+  it('8. Position Manager: Should trigger TP milestones (+30%, +50%) and Floor Drop (-20%) for NFT positions', () => {
+    const manager = new PositionManager();
+    manager.addNftPosition({
+      id: 'nft_pudgy_1234',
+      collectionSlug: 'pudgypenguins',
+      collectionName: 'Pudgy Penguins',
+      tokenId: '1234',
+      entryFloorEth: 10.0,
+      currentFloorEth: 10.0,
+      highestFloorEth: 10.0,
+      salesVelocity1h: 20,
+    });
+
+    // Test +30% TP1 Milestone
+    const tp1Res = manager.updateNftPosition('nft_pudgy_1234', 13.5, 25);
+    expect(tp1Res.triggerAlert).toBe(true);
+    expect(tp1Res.type).toBe('MILESTONE');
+    expect(tp1Res.reason).toContain('TP1 MILESTONE (+30%)');
+
+    // Test -20% Floor Drop Warning
+    manager.addNftPosition({
+      id: 'nft_azuki_5678',
+      collectionSlug: 'azuki',
+      collectionName: 'Azuki',
+      tokenId: '5678',
+      entryFloorEth: 10.0,
+      currentFloorEth: 10.0,
+      highestFloorEth: 10.0,
+      salesVelocity1h: 20,
+    });
+
+    const dropRes = manager.updateNftPosition('nft_azuki_5678', 7.5, 10);
+    expect(dropRes.triggerAlert).toBe(true);
+    expect(dropRes.type).toBe('CRITICAL');
+    expect(dropRes.reason).toContain('FLOOR DROP WARNING (-20%)');
+  });
+
+  it('9. Twitter Service: Should evaluate X/Twitter hype and TwexAPI search', async () => {
+    const { TwitterService } = await import('../src/services/twitter-service.js');
+    const twitter = new TwitterService();
+    const hype = await twitter.getHypeScore('ATHENA');
+    expect(hype.sentimentScore).toBeGreaterThanOrEqual(70);
+    expect(Array.isArray(hype.topTweets)).toBe(true);
+    expect(hype.topTweets.length).toBeGreaterThan(0);
+  });
+
+  it('10. Trade Journal Service: Should record trades, calculate Win Rate, and export CSV', async () => {
+    const { TradeJournalService } = await import('../src/services/trade-journal-service.js');
+    const journal = new TradeJournalService();
+    const stats = journal.getSummaryStats();
+
+    expect(stats.totalTrades).toBeGreaterThanOrEqual(2);
+    expect(stats.winRatePct).toBe(100);
+    expect(stats.totalRealizedPnlUsd).toBeGreaterThan(0);
+
+    const csv = journal.exportCsv();
+    expect(csv).toContain('ID,Domain,Symbol,Chain,Status');
+    expect(csv).toContain('ATHENA');
+    expect(csv).toContain('PUDGY');
+  });
+
+  it('11. DB Service: Should perform atomic file save and load for persistent state', async () => {
+    const { DbService } = await import('../src/services/db-service.js');
+    const db = new DbService();
+    const loaded = db.loadState();
+    expect(Array.isArray(loaded.priceAlerts)).toBe(true);
+    expect(Array.isArray(loaded.tradeJournalEntries)).toBe(true);
+
+    db.saveState({
+      priceAlerts: [{ id: 'test_alert', symbol: 'BTC', targetPriceUsd: 70000 }],
+      tradeJournalEntries: [],
+      lastUpdated: new Date().toISOString(),
+    });
+
+    const reloaded = db.loadState();
+    expect(reloaded.priceAlerts.length).toBe(1);
+    expect(reloaded.priceAlerts[0].symbol).toBe('BTC');
+  });
+});

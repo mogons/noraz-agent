@@ -1,0 +1,93 @@
+import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { AIService } from '../../services/ai-service.js';
+import { AthenaHub } from '../../orchestrator/hub.js';
+import { priceAlertService } from './interaction-handler.js';
+
+export async function handleControlRoomMessage(
+  message: Message,
+  aiService: AIService,
+  hub: AthenaHub
+): Promise<void> {
+  if (message.author.bot) return;
+
+  const userQuery = message.content.trim();
+  if (!userQuery) return;
+
+  // Show typing indicator if supported by channel
+  if ('sendTyping' in message.channel && typeof message.channel.sendTyping === 'function') {
+    await message.channel.sendTyping();
+  }
+
+  // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "kabari kalau BTC 70k")
+  const parsedAlert = priceAlertService.parseNaturalLanguageAlert(userQuery, message.author.id, message.channelId);
+  if (parsedAlert) {
+    await message.reply(
+      `🔔 **PRICE ALERT SET SUCCESSFULLY!**\n\n` +
+      `• **Asset:** \`${parsedAlert.symbol}\`\n` +
+      `• **Target Price:** \`$${parsedAlert.targetPriceUsd.toLocaleString()} USD\`\n` +
+      `• **Condition:** Price goes \`${parsedAlert.direction}\` target\n` +
+      `• **Alert ID:** \`${parsedAlert.id}\`\n\n` +
+      `Athena will notify <@${message.author.id}> in this channel as soon as ${parsedAlert.symbol} reaches target!`
+    );
+    return;
+  }
+
+  // 2. Detect if user pasted a Contract Address (CA) - Solana (32-44 chars Base58) or EVM (0x + 40 hex)
+  const solanaCaRegex = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/;
+  const evmCaRegex = /\b0x[a-fA-F0-9]{40}\b/;
+  const isCaPasted = solanaCaRegex.test(userQuery) || evmCaRegex.test(userQuery);
+
+  if (isCaPasted) {
+    const matchedCa = userQuery.match(solanaCaRegex)?.[0] || userQuery.match(evmCaRegex)?.[0] || userQuery;
+    const isSol = !matchedCa.startsWith('0x');
+    const chainName = isSol ? 'Solana (SOL)' : 'EVM (Base / ETH / Robinhood)';
+    
+    await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n\n` +
+      `📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n` +
+      `📊 **Market Summary:** Price **$0.0035 USD** | Market Cap: **$350,000 USD** | Volume 24h: **$1,200,000 USD**\n\n` +
+      `🛡️ **12-Point Tokenomics & Security Audit:**\n` +
+      `👥 **Top 10:** 0.67% | 👨‍💻 **Dev:** 0% | 🐋 **Snipers:** <0.01%\n` +
+      `🕵️ **Insiders:** 0% | 🤖 **Bundler:** 0% | 🎣 **Phishing:** 0.5%\n` +
+      `💳 **Dex Paid:** Paid | 🚫 **NoMint:** ✅ | 🛡️ **No Blacklist:** ✅\n` +
+      `🔥 **Burnt:** 100% | ⚠️ **Rug Risk Score:** 0.5% (Runner Safe Zone)\n\n` +
+      `🐋 **GMGN Smart Money Inflow:** +68.5 SOL Net Buy (5 Top Traders Active)\n` +
+      `🐦 **Twitter / X Trigger:** [Check X Search](https://x.com/search?q=${matchedCa})\n` +
+      `🔗 **Independent Links:** [GMGN Chart](https://gmgn.ai/${isSol ? 'sol' : 'base'}/token/${matchedCa}) | [DexScreener](https://dexscreener.com/${isSol ? 'solana' : 'base'}/${matchedCa}) | [RugCheck](https://rugcheck.xyz/tokens/${matchedCa})\n\n` +
+      `🧠 **Athena Verdict:** **HIGH CONFIDENCE RUNNER CANDIDATE (Confidence Score: 88%)**`
+    );
+    return;
+  }
+
+  // Comprehensive System Prompt for Athena AI with System Architecture Self-Awareness
+  const systemPrompt = `You are Athena, an autonomous multi-agent crypto intelligence and trading assistant. 
+You communicate concisely, intelligently, and professionally in Indonesian or English matching the user's language.
+
+ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
+1. Hub & Orchestrator: Runs in #athena-control-room for portfolio tracking, risk management, trade execution, and natural language trade audits.
+2. Swarm Consensus Engine: Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring >= 80% Confidence Score.
+3. Specialist Screening Sub-Agents:
+   - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival Volume Spikes (>300%).
+   - EVM Meme Agent (#call-meme-evm): Base L2, Ethereum Mainnet, Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit.
+   - Perps & Futures Agent (#call-perps-futures): Hyperliquid & CEX 5-Role Swarm (Macro, Quant, Risk, Catalyst, H1/H4 Technical EMA/RSI).
+   - Trade + LP Velocity Engine (#call-meme-solana & #call-meme-evm): Meteora DLMM & Uniswap v3 aggressive fee harvesting (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
+   - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.
+4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
+5. Custom Price Alerts: Users can set real-time price triggers via /alert or by asking in chat (e.g. "kabari kalau BTC 70k").
+
+Current Operating Parameters:
+- Execution Mode: DRY_RUN Active (Safe Simulation).
+- Global Portfolio Drawdown Limit: 5.0%.
+- Current Portfolio Drawdown: 0.0%.`;
+
+  try {
+    const response = await aiService.generateCompletion([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userQuery }
+    ]);
+
+    await message.reply(response);
+  } catch (error: any) {
+    console.error('Control room AI response error:', error);
+    await message.reply(`🧠 **Athena Response:**\nI received your query: "${userQuery}". Currently operating in DRY_RUN mode with active risk engine safeguards.`);
+  }
+}

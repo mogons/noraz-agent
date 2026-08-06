@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production / Build Output
+dist/
+build/
+
+# Environment variables & secrets (CRITICAL: NEVER COMMIT SECRETS)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# Database & Storage
+*.db
+*.sqlite
+*.sqlite3
+database/athena_state.json*
+prisma/dev.db
+
+# Logs & Diagnostics
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pino.log
+
+# IDE & OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
