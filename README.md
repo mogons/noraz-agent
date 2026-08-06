@@ -36,7 +36,7 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 7. **🖼️ EVM NFT Momentum Agent (`#call-nft-sniping`)**: Tracks collection floor pumps (>= +30% 4h), volume spikes (>= 3.0x 4h), sales velocity (>= 25 sales/h), and verified bear-market whale sweeps (>= $10k portfolio, >= 5 ETH PnL, active in last 14 days).
 8. **🎯 Polymarket Prediction Agent (`#call-prediction-markets`)**: Screens prediction event markets across Crypto, Macro, Politics, and Tech on Polymarket (Polygon L2) for implied odds arbitrage, whale bet inflows (>= $10k USDC), and high-probability resolution yields.
 9. **💡 Smart CT & AI Alpha Scraper Agent (`#call-ct-alpha`)**: Monitors X (Twitter) for AI Agent launches, airdrop threads, testnet guides, and Smart Money calls using TwexAPI.
-10. **🌉 Direct On-Chain Execution & Relay Engine (`wallet-service.ts` & `relay-adapter.ts`)**: Direct programmatic transaction signing via in-memory `WalletService` for cross-chain bridging (`/bridge`), DEX swaps (`/swap`), and token transfers (`/send`) across Ethereum, Base, Arbitrum, Optimism, Solana, Polygon, BSC, and Zora with DRY_RUN safety gates.
+10. **🌉 Direct Multi-Provider On-Chain Execution & Relay / OpenSea Engine (`wallet-service.ts`, `relay-adapter.ts`, `opensea-adapter.ts`)**: Direct programmatic transaction signing via in-memory `WalletService` for cross-chain bridging (`/bridge`), DEX swaps (`/swap`), and token transfers (`/send`) with **dual-engine fallback routing** across **Relay.link** and **OpenSea API v2 DEX Aggregator** (supporting ERC-8257 AI Agent Tool Discovery) on Ethereum, Base, Arbitrum, Optimism, Solana, Polygon, BSC, and Zora.
 11. **🐦 Twitter / X Social Intelligence (`twitter-service.ts`)**: Integrated with **TwexAPI (`https://twexapi.io`)** and GMGN AI for live X sentiment scoring, contract address search, and influencer mention counts.
 12. **📊 Trade Journaling & Analytics Engine (`trade-journal-service.ts`)**: Auto-logs all open/closed positions, calculates Win Rate %, Total Realized PnL ($), best/worst trades, and exports `athena_trade_journal.csv` for Excel & Notion.
 13. **💾 Local Database File Persistence (`db-service.ts`)**: Atomic file persistence (`database/athena_state.json`) preserving active alerts and trade history across bot reboots.
@@ -95,9 +95,9 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 | **Smart Money Scan** | `/wallets` | `contract:<CA>` | Top Wallets & Smart Money activity scan |
 | **Pump.fun Tracker** | `/pump` | `contract:<CA>` | Pump.fun Bonding Curve progress & Raydium graduation tracker |
 | **Value Converter** | `/convert` | `amount:<n> symbol:<s>` | Quick token value & SOL/USD converter |
-| **Cross-Chain Bridge** | `/bridge` | `origin:<chain> destination:<chain> amount:<n> token:<symbol>` | Relay.link intent-based cross-chain bridge quotes & 1-click execution links (ETH, Base, Arbitrum, Optimism, Solana, Polygon, BSC, Zora) |
-| **Token Swap** | `/swap` | `from:<token> to:<token> amount:<n> chain:<chain>` | Relay.link same-chain or cross-chain token swap with 1-click execution (supports symbol or CA) |
-| **Token Send** | `/send` | `to:<address> amount:<n> token:<symbol> chain:<chain>` | Send/transfer tokens to another wallet via Relay.link with fee estimation |
+| **Cross-Chain Bridge** | `/bridge` | `origin:<chain> destination:<chain> amount:<n> token:<symbol>` | Relay.link & OpenSea DEX Aggregator intent-based cross-chain bridge & direct execution (ETH, Base, Arbitrum, Optimism, Solana, Polygon, BSC, Zora) |
+| **Token Swap** | `/swap` | `from:<token> to:<token> amount:<n> chain:<chain>` | Multi-provider (Relay.link + OpenSea API v2) token swap with automatic fallback & direct on-chain signing |
+| **Token Send** | `/send` | `to:<address> amount:<n> token:<symbol> chain:<chain>` | Direct token transfer to another wallet via Relay.link / OpenSea with fee estimation |
 | **Config & Channels** | `/config`, `/channel` | `risk`, `create`, `rearrange` | Update drawdown limits & auto-arrange Discord channel layout |
 | **System Upgrade** | `/update` | Direct Command | Pull latest codebase from Git, re-build TypeScript, & soft-restart bot |
 | **Emergency Halt** | `/cancel` | `all` | Emergency Aegis Circuit Breaker to halt orders & screening |
