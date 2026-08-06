@@ -9,6 +9,7 @@ export interface PriceAlert {
   channelId?: string;
   createdTime: number;
   triggered: boolean;
+  lastTriggeredPriceUsd?: number;
 }
 
 export class PriceAlertService {
@@ -127,6 +128,7 @@ export class PriceAlertService {
 
         if (isTriggered) {
           alert.triggered = true;
+          alert.lastTriggeredPriceUsd = currentPrice;
           triggeredAlerts.push(alert);
           console.log(`[PRICE ALERT TRIGGERED] ${alert.symbol} hit target $${alert.targetPriceUsd} (Current: $${currentPrice})!`);
         }

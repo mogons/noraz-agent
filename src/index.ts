@@ -141,7 +141,7 @@ if (discordToken && clientId) {
           const targetChannelId = alert.channelId || process.env.DISCORD_CHANNEL_CONTROL_ROOM;
           if (targetChannelId && client.channels.cache.has(targetChannelId)) {
             const channel = client.channels.cache.get(targetChannelId) as any;
-            const currentPx = await priceFeedService.getPrice(alert.symbol);
+            const currentPx = alert.lastTriggeredPriceUsd || alert.targetPriceUsd;
             if (channel && 'send' in channel) {
               await channel.send(
                 `🔔 **ATHENA PRICE ALERT TRIGGERED!**\n\n` +
@@ -189,14 +189,26 @@ if (discordToken && clientId) {
           allReports.push(...reports);
         }
 
-        // Dispatch high confidence signals to Telegram Bridge
+        // Domain to Telegram Topic channel mapping
+        const domainTopicMap: Record<string, string> = {
+          MEME_SOLANA: 'call-meme-solana',
+          MEME_EVM: 'call-meme-evm',
+          NFT: 'call-nft-sniping',
+          PREDICTION: 'call-prediction-markets',
+          CT_ALPHA: 'call-ct-alpha',
+        };
+
+        // Dispatch high confidence signals to Telegram Bridge with topic routing
         for (const r of allReports) {
           if (r.passed && telegramService.isEnabled()) {
+            const topicName = domainTopicMap[r.signal.domain] || 'athena-control-room';
             await telegramService.broadcastSignalCall(
               r.signal.symbol || r.signal.title || 'CT ALPHA',
               r.signal.symbol || 'ALPHA',
               r.signal.contractAddress || r.signal.tweetUrl || 'N/A',
-              r.reason
+              r.reason,
+              undefined,
+              topicName
             );
           }
         }
