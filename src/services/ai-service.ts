@@ -157,14 +157,18 @@ export class AIService {
           }),
         });
 
+        const rawText = await response.text();
         if (response.ok) {
-          const data: any = await response.json();
-          const content = data.choices?.[0]?.message?.content?.trim();
-          if (content) return content;
+          try {
+            const data: any = JSON.parse(rawText);
+            const content = data.choices?.[0]?.message?.content?.trim();
+            if (content) return content;
+          } catch {
+            // Fallthrough to error handling if JSON parsing fails
+          }
         }
 
-        const errorText = await response.text();
-        lastError = new Error(`Model ${model} Status ${response.status}: ${errorText}`);
+        lastError = new Error(`Model ${model} Status ${response.status}: ${rawText}`);
         console.warn(`[AI SERVICE WARNING] Model ${model} failed: ${lastError.message}. Trying next model...`);
       } catch (err: any) {
         lastError = err;
