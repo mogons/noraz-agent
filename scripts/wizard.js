@@ -28,12 +28,12 @@ async function runWizard() {
     });
   }
 
-  console.log('📌 PILIHAN MODE ANTARMUKA ATHENA:');
+  console.log('📌 INTERFACE MODE SELECTION:');
   console.log(' [1] Discord Command Center (Default)');
   console.log(' [2] Telegram Bot & Forum Topics Bridge');
   console.log(' [3] Dual Mode (Discord + Telegram Bridge)');
-  console.log(' [4] Standalone Terminal TUI (Tanpa Bot, Langsung Terminal VPS)');
-  const interfaceChoice = await askQuestion('Pilihan (1/2/3/4) [Default 1]: ') || '1';
+  console.log(' [4] Standalone Terminal TUI (No Bot, Direct VPS Console)');
+  const interfaceChoice = await askQuestion('Selection (1/2/3/4) [Default 1]: ') || '1';
 
   let botToken = existingEnv.DISCORD_BOT_TOKEN || '';
   let clientId = existingEnv.DISCORD_CLIENT_ID || '';
@@ -42,41 +42,41 @@ async function runWizard() {
   let aiKey = existingEnv.AI_API_KEY || '';
 
   if (interfaceChoice === '1' || interfaceChoice === '3') {
-    console.log('\n💬 KREDENSIAL DISCORD BOT:');
+    console.log('\n💬 DISCORD BOT CREDENTIALS:');
     const defaultBotMsg = botToken ? ` [Default: ${botToken.slice(0, 10)}...]` : '';
-    const inputBot = await askQuestion(`1. Masukkan DISCORD_BOT_TOKEN${defaultBotMsg}: `);
+    const inputBot = await askQuestion(`1. Enter DISCORD_BOT_TOKEN${defaultBotMsg}: `);
     botToken = inputBot.trim() || botToken;
 
     const defaultClientMsg = clientId ? ` [Default: ${clientId}]` : '';
-    const inputClient = await askQuestion(`2. Masukkan DISCORD_CLIENT_ID${defaultClientMsg}: `);
+    const inputClient = await askQuestion(`2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
   }
 
   if (interfaceChoice === '2' || interfaceChoice === '3') {
-    console.log('\n📱 KREDENSIAL TELEGRAM BOT:');
+    console.log('\n📱 TELEGRAM BOT CREDENTIALS:');
     const defaultTgBotMsg = telegramToken ? ` [Default: ${telegramToken.slice(0, 10)}...]` : '';
-    const inputTgBot = await askQuestion(`1. Masukkan TELEGRAM_BOT_TOKEN${defaultTgBotMsg}: `);
+    const inputTgBot = await askQuestion(`1. Enter TELEGRAM_BOT_TOKEN${defaultTgBotMsg}: `);
     telegramToken = inputTgBot.trim() || telegramToken;
 
     const defaultTgChatMsg = telegramChatId ? ` [Default: ${telegramChatId}]` : '';
-    const inputTgChat = await askQuestion(`2. Masukkan TELEGRAM_CHAT_ID${defaultTgChatMsg}: `);
+    const inputTgChat = await askQuestion(`2. Enter TELEGRAM_CHAT_ID${defaultTgChatMsg}: `);
     telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
-  console.log('\n🤖 KREDENSIAL AI ENGINE:');
+  console.log('\n🤖 AI REASONING ENGINE CREDENTIALS:');
   const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
-  const inputAiKey = await askQuestion(`1. Masukkan AI API KEY Utama${defaultAiKeyMsg}: `);
+  const inputAiKey = await askQuestion(`1. Enter Primary AI API KEY${defaultAiKeyMsg}: `);
   aiKey = inputAiKey.trim() || aiKey;
 
-  const stackChoice = await askQuestion('2. Apakah kamu ingin menambah API Key Cadangan (Round-Robin Failover Backup Keys)? (y/N): ');
+  const stackChoice = await askQuestion('2. Would you like to add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
   let allKeys = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
   if (allKeys.length === 0 && aiKey) allKeys.push(aiKey);
 
   if (stackChoice.toLowerCase() === 'y') {
-    const backupCountStr = await askQuestion('   Berapa banyak API Key cadangan yang ingin kamu tambahkan? (1-5) [Default 1]: ') || '1';
+    const backupCountStr = await askQuestion('   How many backup API keys would you like to add? (1-5) [Default 1]: ') || '1';
     const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
     for (let i = 1; i <= backupCount; i++) {
-      const bKey = await askQuestion(`   ➡️ Masukkan Backup API Key #${i}: `);
+      const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i}: `);
       if (bKey.trim()) {
         allKeys.push(bKey.trim());
       }
@@ -84,12 +84,12 @@ async function runWizard() {
   }
   const combinedKeys = allKeys.join(',');
 
-  console.log('\nPilih AI Provider:');
-  console.log(' [1] OpenRouter (Default - Banyak model gratisan)');
+  console.log('\nSelect AI Model Provider:');
+  console.log(' [1] OpenRouter (Default - Access to free models)');
   console.log(' [2] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
   console.log(' [3] OpenAI (GPT-4o)');
-  console.log(' [4] Custom (GLM 5.2 / 9router / Ollama Local)');
-  const providerChoice = await askQuestion('Pilihan (1/2/3/4) [Default 1]: ');
+  console.log(' [4] Custom (GLM 5.2 / 9router / Local Ollama)');
+  const providerChoice = await askQuestion('Choice (1/2/3/4) [Default 1]: ');
 
   let provider = 'openrouter';
   let baseUrl = 'https://openrouter.ai/api/v1';
@@ -105,16 +105,16 @@ async function runWizard() {
     modelName = 'gpt-4o';
   } else if (providerChoice === '4') {
     provider = 'custom';
-    baseUrl = await askQuestion('Masukkan AI_BASE_URL (misal https://api.9router.com/v1): ') || 'https://api.9router.com/v1';
-    modelName = await askQuestion('Masukkan AI_MODEL_NAME (misal glm-4): ') || 'glm-4';
+    baseUrl = await askQuestion('Enter AI_BASE_URL (e.g. https://api.9router.com/v1): ') || 'https://api.9router.com/v1';
+    modelName = await askQuestion('Enter AI_MODEL_NAME (e.g. glm-4): ') || 'glm-4';
   }
 
-  console.log('\n⚙️  PILIHAN SIMULASI & SALDO DEMO:');
-  const dryRunChoice = await askQuestion('4. Jalankan bot dalam Mode Simulasi (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
+  console.log('\n⚙️  SIMULATION & DEMO BALANCE OPTIONS:');
+  const dryRunChoice = await askQuestion('4. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
   const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
 
-  const simSolBalance = await askQuestion('5. Masukkan Saldo Simulasi Solana (SOL) [Default 10.0]: ') || '10.0';
-  const simEthBalance = await askQuestion('6. Masukkan Saldo Simulasi EVM (ETH) [Default 1.0]: ') || '1.0';
+  const simSolBalance = await askQuestion('5. Enter Starting Simulation Balance for Solana (SOL) [Default 10.0]: ') || '10.0';
+  const simEthBalance = await askQuestion('6. Enter Starting Simulation Balance for EVM (ETH) [Default 1.0]: ') || '1.0';
 
   let envContent = `NODE_ENV=production
 DRY_RUN=${isDryRun}
@@ -148,10 +148,10 @@ GOPLUS_API_KEY=
   fs.writeFileSync(envPath, envContent, 'utf8');
 
   console.log('\n======================================================');
-  console.log('✅ File .env berhasil dibuat secara otomatis!');
-  console.log(`💡 Mode: ${isDryRun === 'true' ? 'SIMULASI (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
-  console.log(`🪙 Saldo Demo: ${simSolBalance} SOL | ${simEthBalance} ETH`);
-  console.log('💡 Discord channels akan dibuatkan OTOMATIS saat bot dinyalakan.');
+  console.log('✅ Configuration file (.env) successfully created!');
+  console.log(`💡 Mode: ${isDryRun === 'true' ? 'SIMULATION (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
+  console.log(`🪙 Demo Balance: ${simSolBalance} SOL | ${simEthBalance} ETH`);
+  console.log('💡 Discord channels and slash commands will be provisioned AUTOMATICALLY upon launch.');
   console.log('======================================================\n');
 
   rl.close();
