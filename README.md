@@ -101,49 +101,20 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 
 ---
 
-## 🛠️ Step-by-Step First Time Deployment & Setup Guide
+## 🛠️ Step-by-Step Chronological Execution Guide
 
-Follow this clean 5-step workflow to deploy Athena for the first time:
+Follow this exact sequence to setup, test, launch, and maintain Athena:
 
-### Step 1: Clone Repository & Install Dependencies
-```bash
-git clone https://github.com/dizcorvus/Athena.git
-cd Athena
-npm install
-```
-
-### Step 2: Configure Environment File (`.env`)
-Copy the template and fill in your Discord Bot credentials, AI provider keys, and optional Telegram tokens:
-```bash
-cp .env.example .env
-```
-Key variables to fill in `.env`:
-- `DISCORD_BOT_TOKEN`: Your Discord Bot Token (from Discord Developer Portal).
-- `DISCORD_CLIENT_ID`: Your Discord Application Client ID.
-- `TWEX_API_KEY`: TwexAPI Key from [twexapi.io](https://twexapi.io) (Optional - includes 20k free credits).
-- `OPENROUTER_API_KEY` / `OPENAI_API_KEY`: LLM API Key for chat and deep diagnostic reasoning.
-
-### Step 3: Build TypeScript Codebase
-```bash
-npm run build
-```
-
-### Step 4: Run Automated Verification Tests
-Verify all 12 core modules pass cleanly:
-```bash
-npm test
-```
-
-### Step 5: Launch Athena Ecosystem
-
-| Purpose / Action | Primary Command | Alternative Alias |
-| :--- | :--- | :--- |
-| 🧙‍♂️ **Interactive Setup Wizard** | `npm run wizard` | `npm run config` |
-| 🚀 **Development Mode (Hot-Reload)** | `npm run dev` | - |
-| 🏛️ **Terminal Parthenon TUI** | `npm run terminal` | `npm run tui` |
-| 🌐 **24/7 VPS Background Server (PM2)** | `npm run deploy` | - |
-| 🔄 **Update & Re-build Codebase** | `npm run update` | - |
-| 🧪 **Run Automated Test Suite** | `npm test` | - |
+| Step | Phase | Action / Goal | Primary Command | Alternative Alias |
+| :---: | :--- | :--- | :--- | :--- |
+| **1** | **Installation** | Clone repository & install dependencies | `git clone ... && cd Athena && npm install` | - |
+| **2** | **Configuration** | Interactive setup wizard for `.env` credentials | `npm run wizard` | `npm run config` |
+| **3** | **Compilation** | Build TypeScript codebase into `/dist` | `npm run build` | - |
+| **4** | **Verification** | Run test suite to verify 12/12 core modules pass | `npm test` | - |
+| **5a** | **Launch (Dev)** | Run in local development mode with hot-reload | `npm run dev` | - |
+| **5b** | **Launch (Terminal)** | Run interactive Parthenon Terminal TUI | `npm run terminal` | `npm run tui` |
+| **5c** | **Launch (VPS 24/7)** | Run production 24/7 background process (PM2) | `npm run deploy` | - |
+| **6** | **Maintenance** | Pull latest updates from Git & re-build | `npm run update` | - |
 
 ---
 
