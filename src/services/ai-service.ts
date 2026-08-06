@@ -127,9 +127,8 @@ export class AIService {
 
     const candidateModels = [
       this.config.modelName,
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
       'openrouter/auto',
-      'google/gemini-2.0-flash-exp:free',
-      'stepfun/step-2-16k:free',
       'meta-llama/llama-3.3-70b-instruct',
       'deepseek/deepseek-r1',
     ];
@@ -137,6 +136,11 @@ export class AIService {
     const modelsToTry = this.config.baseUrl?.includes('openrouter.ai')
       ? Array.from(new Set(candidateModels))
       : [this.config.modelName];
+
+    // Cap max_tokens to 500 on OpenRouter to prevent free tier budget reservation 402/403 errors
+    const effectiveMaxTokens = this.config.baseUrl?.includes('openrouter.ai')
+      ? Math.min(maxTokens || 500, 500)
+      : maxTokens;
 
     let lastError: Error | null = null;
 
@@ -148,7 +152,7 @@ export class AIService {
           body: JSON.stringify({
             model,
             messages,
-            max_tokens: maxTokens,
+            max_tokens: effectiveMaxTokens,
             temperature: 0.7,
           }),
         });
