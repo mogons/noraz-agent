@@ -215,6 +215,7 @@ export class EVMTradeAdapter {
 
       const txHash = await walletClient.sendTransaction({
         account,
+        chain: walletClient.chain || null,
         to: String(txData.to) as `0x${string}`,
         data: String(txData.data) as `0x${string}`,
         value: BigInt(String(txData.value || 0)),
