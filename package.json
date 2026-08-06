@@ -18,7 +18,6 @@
     "start": "node dist/index.js",
     "deploy": "npm install && npm run build && npx pm2 restart athena-agent --update-env || npx pm2 start dist/index.js --name athena-agent",
     "update": "git pull && npm install && npm run build",
-    "postinstall": "npm link --force || true",
     "test": "vitest run"
   },
   "keywords": [
