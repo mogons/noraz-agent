@@ -76,11 +76,11 @@ export const slashCommands = [
     .setDescription('Control 24/7 background screening agents')
     .addSubcommand(sub =>
       sub.setName('start')
-        .setDescription('Activate screening agent')
+        .setDescription('Activate screening agent (auto-detects agent domain from channel if omitted)')
         .addStringOption(opt =>
           opt.setName('agent')
-            .setDescription('Domain agent to activate')
-            .setRequired(true)
+            .setDescription('Domain agent to activate (optional - auto-detected in channel)')
+            .setRequired(false)
             .addChoices(
               { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'EVM Meme Agent', value: 'meme-evm' },
@@ -95,11 +95,11 @@ export const slashCommands = [
     )
     .addSubcommand(sub =>
       sub.setName('stop')
-        .setDescription('Deactivate screening agent')
+        .setDescription('Deactivate screening agent (auto-detects agent domain from channel if omitted)')
         .addStringOption(opt =>
           opt.setName('agent')
-            .setDescription('Domain agent to deactivate')
-            .setRequired(true)
+            .setDescription('Domain agent to deactivate (optional - auto-detected in channel)')
+            .setRequired(false)
             .addChoices(
               { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'EVM Meme Agent', value: 'meme-evm' },

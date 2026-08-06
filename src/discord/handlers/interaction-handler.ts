@@ -224,14 +224,65 @@ async function handleChatInput(
     });
   } else if (commandName === 'screening') {
     const subcommand = interaction.options.getSubcommand();
-    const agent = interaction.options.getString('agent', true);
+    const explicitAgent = interaction.options.getString('agent');
+    const channelName = (interaction.channel as any)?.name?.toLowerCase() || '';
+
+    // Channel to Agent mapping
+    const channelDomainMap: Record<string, { agent: string; name: string }> = {
+      'call-meme-solana': { agent: 'meme-solana', name: 'Solana Meme Agent' },
+      'call-meme-evm': { agent: 'meme-evm', name: 'EVM Meme Agent' },
+      'call-perps-futures': { agent: 'perps', name: 'Perpetuals Agent' },
+      'call-nft-sniping': { agent: 'nft', name: 'NFT Sniping Agent' },
+      'call-lp-solana': { agent: 'lp-solana', name: 'Solana LP Agent' },
+      'call-lp-evm': { agent: 'lp-evm', name: 'EVM LP Agent' },
+      'call-prediction-markets': { agent: 'prediction', name: 'Polymarket Prediction Agent' },
+      'call-ct-alpha': { agent: 'ct-alpha', name: 'Smart CT & AI Alpha Agent' },
+    };
+
+    let targetAgent = explicitAgent;
+
+    // Auto-detect agent from channel if omitted
+    if (!targetAgent) {
+      const match = channelDomainMap[channelName];
+      if (match) {
+        targetAgent = match.agent;
+      } else if (channelName.includes('control-room') || !channelName.startsWith('call-')) {
+        // Control room / general channel — operate on ALL agents
+        if (subcommand === 'start') {
+          Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, true));
+          await interaction.reply('⚡ **Global Master Screening Activated!** All 8 Sub-Agent domains are now active.');
+        } else {
+          Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, false));
+          await interaction.reply('⏸️ **Global Master Screening Paused!** All 8 Sub-Agent domains are now paused.');
+        }
+        return;
+      } else {
+        await interaction.reply({
+          content: '⚠️ Please specify an agent domain (e.g. `/screening start agent:meme-solana`) or run this command inside a dedicated `#call-*` channel!',
+          ephemeral: true,
+        });
+        return;
+      }
+    }
+
+    // Validate channel alignment if explicit agent was specified
+    const currentChannelMapping = channelDomainMap[channelName];
+    if (currentChannelMapping && explicitAgent && currentChannelMapping.agent !== explicitAgent) {
+      await interaction.reply({
+        content: `⚠️ **Channel Misalignment Notice:**\n` +
+          `Channel <#${interaction.channelId}> is dedicated to **${currentChannelMapping.name}** (\`${currentChannelMapping.agent}\`).\n\n` +
+          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#athena-control-room**!`,
+        ephemeral: true,
+      });
+      return;
+    }
 
     if (subcommand === 'start') {
-      hub.toggleChannelScreening(interaction.channelId, agent, true);
-      await interaction.reply(`⚡ **Screening Activated** for agent domain: \`${agent}\` in this channel.`);
+      hub.toggleChannelScreening(interaction.channelId, targetAgent, true);
+      await interaction.reply(`⚡ **Screening Activated** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     } else if (subcommand === 'stop') {
-      hub.toggleChannelScreening(interaction.channelId, agent, false);
-      await interaction.reply(`⏸️ **Screening Stopped** for agent domain: \`${agent}\`.`);
+      hub.toggleChannelScreening(interaction.channelId, targetAgent, false);
+      await interaction.reply(`⏸️ **Screening Stopped** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     }
   } else if (commandName === 'cancel') {
     await interaction.reply({
