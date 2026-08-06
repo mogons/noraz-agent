@@ -257,6 +257,11 @@ function isControlRoomChannel(configuredId: string | undefined, message: any): b
 console.log('[SYSTEM] Setup complete. All Athena modules ready.');
 console.log('[STATE STORE] Persistent state engine active — positions, alerts, and journal survive restarts.');
 
+// Start Athena 2.0 Telemetry & REST API Server
+import { AthenaRESTServer } from './api/server.js';
+const apiServer = new AthenaRESTServer();
+apiServer.start(hub);
+
 // Graceful Shutdown: flush pending state writes to disk before exit
 const gracefulShutdown = (signal: string) => {
   console.log(`\n[SHUTDOWN] Received ${signal}. Flushing state to disk...`);

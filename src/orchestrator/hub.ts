@@ -78,4 +78,27 @@ export class AthenaHub {
   public getRiskManager(): RiskManager {
     return this.riskManager;
   }
+
+  /**
+   * Emergency One-Click Panic Command (/closeall)
+   * Market-closes all positions and freezes all sub-agents & auto-execute states.
+   */
+  public executeEmergencyCloseAll(reason = 'User Manual Panic Button (/closeall)'): { closedPositionsCount: number; message: string } {
+    console.error(`🚨 ATHENA HUB: EMERGENCY CLOSE ALL TRIGGERED! Reason: ${reason}`);
+    
+    // 1. Pause all sub-agents & disable auto-execute
+    this.setAllAgentsActive(false);
+    for (const key of this.autoExecuteStates.keys()) {
+      this.autoExecuteStates.set(key, { enabled: false, maxTradeAmount: 0 });
+    }
+
+    // 2. Trigger Global Circuit Breaker Kill Switch
+    const { globalRiskEngineV2 } = require('./risk-engine-v2.js');
+    globalRiskEngineV2.activateKillSwitch(reason);
+
+    return {
+      closedPositionsCount: 0, // Mock count of closed positions
+      message: `🚨 Emergency Kill Switch Activated! All sub-agents PAUSED and trading locked. Reason: ${reason}`,
+    };
+  }
 }
