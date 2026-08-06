@@ -476,5 +476,116 @@ export class RelayAdapter {
       };
     }
   }
+
+  /**
+   * Direct execution of Bridge request using WalletService + EVM/Solana adapters.
+   */
+  public async executeBridge(request: RelayQuoteRequest, walletService?: any): Promise<RelayQuoteResult & { txHash?: string; explorerUrl?: string }> {
+    const quote = await this.getBridgeQuote(request);
+    
+    if (this.isDryRun) {
+      const simHash = `sim_bridge_${quote.originChainId}_${quote.destinationChainId}_${Date.now()}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.originChainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      return {
+        ...quote,
+        txHash: simHash,
+        explorerUrl,
+      };
+    }
+
+    if (!walletService) {
+      return quote;
+    }
+
+    try {
+      if (quote.originChainId === 792703809) {
+        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
+        const solanaAdapter = new SolanaTradeAdapter();
+        const res = await solanaAdapter.sendToken({ recipientAddress: quote.relayWebUrl, amountSol: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      } else {
+        const { EVMTradeAdapter } = await import('./evm-adapter.js');
+        const evmAdapter = new EVMTradeAdapter();
+        const res = await evmAdapter.swapToken({ chain: quote.originChainId, fromToken: request.tokenSymbol || 'ETH', toToken: request.tokenSymbol || 'ETH', amountEth: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      }
+    } catch (err: any) {
+      return { ...quote, error: err.message };
+    }
+  }
+
+  /**
+   * Direct execution of Swap request using WalletService + EVM/Solana adapters.
+   */
+  public async executeSwap(request: RelaySwapRequest, walletService?: any): Promise<RelaySwapResult & { txHash?: string; explorerUrl?: string }> {
+    const quote = await this.getSwapQuote(request);
+    
+    if (this.isDryRun) {
+      const simHash = `sim_swap_${quote.chainId}_${Date.now()}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      return {
+        ...quote,
+        txHash: simHash,
+        explorerUrl,
+      };
+    }
+
+    if (!walletService) {
+      return quote;
+    }
+
+    try {
+      if (quote.chainId === 792703809) {
+        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
+        const solanaAdapter = new SolanaTradeAdapter();
+        const res = await solanaAdapter.swapToken({ inputMint: request.fromToken, outputMint: request.toToken, amountSol: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      } else {
+        const { EVMTradeAdapter } = await import('./evm-adapter.js');
+        const evmAdapter = new EVMTradeAdapter();
+        const res = await evmAdapter.swapToken({ chain: quote.chainId, fromToken: request.fromToken, toToken: request.toToken, amountEth: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      }
+    } catch (err: any) {
+      return { ...quote, error: err.message };
+    }
+  }
+
+  /**
+   * Direct execution of Send request using WalletService + EVM/Solana adapters.
+   */
+  public async executeSend(request: RelaySendRequest, walletService?: any): Promise<RelaySendResult & { txHash?: string; explorerUrl?: string }> {
+    const quote = await this.getSendQuote(request);
+
+    if (this.isDryRun) {
+      const simHash = `sim_send_${quote.chainId}_${Date.now()}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      return {
+        ...quote,
+        txHash: simHash,
+        explorerUrl,
+      };
+    }
+
+    if (!walletService) {
+      return quote;
+    }
+
+    try {
+      if (quote.chainId === 792703809) {
+        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
+        const solanaAdapter = new SolanaTradeAdapter();
+        const res = await solanaAdapter.sendToken({ recipientAddress: request.recipientAddress, amountSol: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      } else {
+        const { EVMTradeAdapter } = await import('./evm-adapter.js');
+        const evmAdapter = new EVMTradeAdapter();
+        const res = await evmAdapter.sendToken({ chain: quote.chainId, recipientAddress: request.recipientAddress, amountEth: request.amount }, walletService);
+        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
+      }
+    } catch (err: any) {
+      return { ...quote, error: err.message };
+    }
+  }
 }
 

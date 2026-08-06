@@ -19,12 +19,14 @@ import { AIService } from '../../services/ai-service.js';
 import { PriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
 import { TradeJournalService } from '../../services/trade-journal-service.js';
+import { WalletService } from '../../services/wallet-service.js';
 import { RelayAdapter } from '../../adapters/relay-adapter.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 
 const priceFeedService = new PriceFeedService();
 export const priceAlertService = new PriceAlertService();
 export const tradeJournalService = new TradeJournalService();
+export const walletService = new WalletService();
 
 export async function handleInteraction(
   interaction: Interaction,
@@ -87,19 +89,38 @@ async function handleChatInput(
       await interaction.showModal(modal);
     } else if (subcommand === 'balance') {
       const isDryRun = process.env.DRY_RUN !== 'false';
-      const solBalance = parseFloat(process.env.SIMULATION_BALANCE_SOL || '10.0');
-      const ethBalance = parseFloat(process.env.SIMULATION_BALANCE_ETH || '1.0');
-      
-      const solPrice = await priceFeedService.getPrice('SOL');
-      const ethPrice = await priceFeedService.getPrice('ETH');
-      
-      const solUsd = Math.round(solBalance * solPrice);
-      const ethUsd = Math.round(ethBalance * ethPrice);
+      const hasSol = walletService.hasWallet('solana');
+      const hasEvm = walletService.hasWallet('evm');
+
+      let solAddrStr = 'Not Configured';
+      let evmAddrStr = 'Not Configured';
+      let solBalStr = `${parseFloat(process.env.SIMULATION_BALANCE_SOL || '10.0').toFixed(2)} SOL (Simulated)`;
+      let evmBalStr = `${parseFloat(process.env.SIMULATION_BALANCE_ETH || '1.0').toFixed(2)} ETH (Simulated)`;
+
+      if (hasSol) {
+        try {
+          solAddrStr = `\`${walletService.getSolanaAddress()}\``;
+          const b = await walletService.getSolanaBalance();
+          solBalStr = `\`${b.balance.toFixed(4)} SOL\``;
+        } catch (e: any) {
+          solBalStr = `Error: ${e.message}`;
+        }
+      }
+
+      if (hasEvm) {
+        try {
+          evmAddrStr = `\`${walletService.getEvmAddress()}\``;
+          const b = await walletService.getEvmBalance(1); // Ethereum
+          evmBalStr = `\`${b.balance.toFixed(4)} ETH\``;
+        } catch (e: any) {
+          evmBalStr = `Error: ${e.message}`;
+        }
+      }
 
       await interaction.reply({
         content: `💼 **Athena Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
-          `• Solana: \`${solBalance.toFixed(2)} SOL\` ($${solUsd.toLocaleString()} USD)\n` +
-          `• EVM (Robinhood): \`${ethBalance.toFixed(2)} ETH\` ($${ethUsd.toLocaleString()} USD)`,
+          `• Solana Wallet: ${solAddrStr} | Balance: ${solBalStr}\n` +
+          `• EVM Wallet: ${evmAddrStr} | Balance: ${evmBalStr}`,
         ephemeral: true,
       });
     }
@@ -313,30 +334,31 @@ async function handleChatInput(
     const token = interaction.options.getString('token') || 'ETH';
 
     const relayAdapter = new RelayAdapter();
-    const quote = await relayAdapter.getBridgeQuote({
+    const result = await relayAdapter.executeBridge({
       originChain: origin,
       destinationChain: destination,
       amount,
       tokenSymbol: token,
-    });
+    }, walletService);
 
     const embed = new EmbedBuilder()
-      .setTitle(`🌐 RELAY.LINK CROSS-CHAIN BRIDGE QUOTE`)
+      .setTitle(`🌐 RELAY.LINK CROSS-CHAIN BRIDGE DIRECT EXECUTION`)
       .setColor(0x0052FF)
       .setDescription(
-        `🌉 **Bridging:** \`${quote.amountIn} ${quote.tokenSymbol}\` from **${quote.originChainName}** ➡️ **${quote.destinationChainName}**\n\n` +
-        `📥 **Expected Output:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
-        `💸 **Relayer & Gas Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
-        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated Intent)`' : '`Live Relay.link Intent`'}`
+        `🌉 **Bridging:** \`${result.amountIn} ${result.tokenSymbol}\` from **${result.originChainName}** ➡️ **${result.destinationChainName}**\n\n` +
+        `📥 **Expected Output:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
+        `💸 **Relayer & Gas Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `🔑 **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
+        `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Intent)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Intent Engine • Athena Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Direct Intent Engine • Athena Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Open in Relay.link (${quote.originChainName} -> ${quote.destinationChainName})`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await interaction.reply({ embeds: [embed], components: [actionRow] });
@@ -347,30 +369,31 @@ async function handleChatInput(
     const chain = interaction.options.getString('chain') || 'ethereum';
 
     const relayAdapter = new RelayAdapter();
-    const quote = await relayAdapter.getSwapQuote({
+    const result = await relayAdapter.executeSwap({
       chain,
       fromToken: from,
       toToken: to,
       amount,
-    });
+    }, walletService);
 
     const embed = new EmbedBuilder()
-      .setTitle(`🔄 RELAY.LINK TOKEN SWAP QUOTE`)
+      .setTitle(`🔄 RELAY.LINK TOKEN SWAP DIRECT EXECUTION`)
       .setColor(0x7B3FE4)
       .setDescription(
-        `🔄 **Swapping:** \`${quote.amountIn} ${quote.fromToken}\` ➡️ \`~${quote.expectedAmountOut} ${quote.toToken}\`\n` +
-        `⛓️ **Chain:** **${quote.chainName}**\n\n` +
-        `💸 **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
-        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated)`' : '`Live Relay.link Swap`'}`
+        `🔄 **Swapping:** \`${result.amountIn} ${result.fromToken}\` ➡️ \`~${result.expectedAmountOut} ${result.toToken}\`\n` +
+        `⛓️ **Chain:** **${result.chainName}**\n` +
+        `🔑 **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n\n` +
+        `💸 **Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Swap)`' : '`Live Broadcast`'}`
       )
       .setFooter({ text: 'Powered by Relay.link Swap Engine • Athena Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Swap ${quote.fromToken} → ${quote.toToken} on Relay.link`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await interaction.reply({ embeds: [embed], components: [actionRow] });
@@ -381,31 +404,32 @@ async function handleChatInput(
     const chain = interaction.options.getString('chain') || 'ethereum';
 
     const relayAdapter = new RelayAdapter();
-    const quote = await relayAdapter.getSendQuote({
+    const result = await relayAdapter.executeSend({
       chain,
       token,
       amount,
       recipientAddress: to,
-    });
+    }, walletService);
 
     const embed = new EmbedBuilder()
-      .setTitle(`📤 RELAY.LINK TOKEN SEND QUOTE`)
+      .setTitle(`📤 RELAY.LINK TOKEN SEND DIRECT EXECUTION`)
       .setColor(0x00C853)
       .setDescription(
-        `📤 **Sending:** \`${quote.amountIn} ${quote.tokenSymbol}\` to \`${quote.recipientAddress.substring(0, 6)}...${quote.recipientAddress.substring(quote.recipientAddress.length - 4)}\`\n` +
-        `⛓️ **Chain:** **${quote.chainName}**\n\n` +
-        `📥 **Recipient Receives:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
-        `💸 **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
-        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated)`' : '`Live Relay.link Transfer`'}`
+        `📤 **Sending:** \`${result.amountIn} ${result.tokenSymbol}\` to \`${result.recipientAddress.substring(0, 6)}...${result.recipientAddress.substring(result.recipientAddress.length - 4)}\`\n` +
+        `⛓️ **Chain:** **${result.chainName}**\n` +
+        `🔑 **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n\n` +
+        `📥 **Recipient Receives:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
+        `💸 **Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Transfer)`' : '`Live Broadcast`'}`
       )
       .setFooter({ text: 'Powered by Relay.link Transfer Engine • Athena Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Send ${quote.tokenSymbol} on Relay.link`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await interaction.reply({ embeds: [embed], components: [actionRow] });
@@ -414,9 +438,21 @@ async function handleChatInput(
 
 async function handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
   if (interaction.customId === 'wallet_setup_modal') {
-    const chain = interaction.fields.getTextInputValue('wallet_chain');
+    const chain = interaction.fields.getTextInputValue('wallet_chain').toLowerCase().trim();
+    const pk = interaction.fields.getTextInputValue('wallet_pk').trim();
+
+    const chainType = chain.includes('sol') ? 'solana' : 'evm';
+    walletService.setKey(chainType, pk);
+
+    let addressStr = '';
+    try {
+      addressStr = `\n• Public Address: \`${walletService.getAddress(chainType)}\``;
+    } catch (e: any) {
+      addressStr = `\n⚠️ Key stored, but address derivation warning: ${e.message}`;
+    }
+
     await interaction.reply({
-      content: `✅ **Burner Wallet Successfully Configured for \`${chain.toUpperCase()}\`!**`,
+      content: `✅ **Burner Wallet Private Key Configured in Athena Runtime Memory!**\n• Chain: \`${chainType.toUpperCase()}\`${addressStr}\n• Security Note: Key is stored 100% in-memory and will never be written to disk or logs.`,
       ephemeral: true,
     });
   } else if (interaction.customId === 'api_setup_modal') {

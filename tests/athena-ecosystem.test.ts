@@ -244,4 +244,67 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(quote.expectedAmountOut).toBeGreaterThan(0);
     expect(quote.relayWebUrl).toContain('relay.link');
   });
+
+  it('16. Wallet Service: Should store private keys and derive EVM and Solana wallet addresses', async () => {
+    const { WalletService } = await import('../src/services/wallet-service.js');
+    const ws = new WalletService();
+
+    ws.setKey('evm', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
+    expect(ws.hasWallet('evm')).toBe(true);
+    expect(ws.getEvmAddress().toLowerCase()).toBe('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266');
+
+    const bal = await ws.getEvmBalance(1);
+    expect(bal.symbol).toBe('ETH');
+    expect(typeof bal.balance).toBe('number');
+  });
+
+  it('17. Solana Adapter Direct Execution: Should simulate sendToken and swapToken', async () => {
+    const { SolanaTradeAdapter } = await import('../src/adapters/solana-adapter.js');
+    const adapter = new SolanaTradeAdapter();
+
+    const sendRes = await adapter.sendToken({
+      recipientAddress: '7XwW4PzZg8Zp4kH7XwW4PzZg8Zp4kH7XwW4PzZg8Zp4k',
+      amountSol: 0.5,
+    });
+    expect(sendRes.success).toBe(true);
+    expect(sendRes.simulated).toBe(true);
+    expect(sendRes.explorerUrl).toContain('solscan.io');
+
+    const swapRes = await adapter.swapToken({
+      inputMint: 'So11111111111111111111111111111111111111112',
+      outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC mint
+      amountSol: 1.0,
+    });
+    expect(swapRes.success).toBe(true);
+    expect(swapRes.simulated).toBe(true);
+    expect(swapRes.outputTokens).toBeGreaterThan(0);
+  });
+
+  it('18. EVM Adapter Direct Execution: Should simulate sendToken and swapToken via WalletService', async () => {
+    const { EVMTradeAdapter } = await import('../src/adapters/evm-adapter.js');
+    const { WalletService } = await import('../src/services/wallet-service.js');
+    const adapter = new EVMTradeAdapter();
+    const ws = new WalletService();
+    ws.setKey('evm', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
+
+    const sendRes = await adapter.sendToken({
+      chain: 'base',
+      recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
+      amountEth: 0.1,
+    }, ws);
+    expect(sendRes.success).toBe(true);
+    expect(sendRes.simulated).toBe(true);
+    expect(sendRes.explorerUrl).toContain('basescan.org');
+
+    const swapRes = await adapter.swapToken({
+      chain: 'base',
+      fromToken: 'ETH',
+      toToken: 'USDC',
+      amountEth: 0.2,
+    }, ws);
+    expect(swapRes.success).toBe(true);
+    expect(swapRes.simulated).toBe(true);
+    expect(swapRes.outputTokens).toBeGreaterThan(0);
+  });
 });
+

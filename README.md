@@ -15,7 +15,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-15%2F15%20PASSED-brightgreen.svg)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-18%2F18%20PASSED-brightgreen.svg)](https://vitest.dev/)
 [![Discord](https://img.shields.io/badge/Discord-v14.18-5865F2.svg)](https://discord.js.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -36,7 +36,7 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 7. **🖼️ EVM NFT Momentum Agent (`#call-nft-sniping`)**: Tracks collection floor pumps (>= +30% 4h), volume spikes (>= 3.0x 4h), sales velocity (>= 25 sales/h), and verified bear-market whale sweeps (>= $10k portfolio, >= 5 ETH PnL, active in last 14 days).
 8. **🎯 Polymarket Prediction Agent (`#call-prediction-markets`)**: Screens prediction event markets across Crypto, Macro, Politics, and Tech on Polymarket (Polygon L2) for implied odds arbitrage, whale bet inflows (>= $10k USDC), and high-probability resolution yields.
 9. **💡 Smart CT & AI Alpha Scraper Agent (`#call-ct-alpha`)**: Monitors X (Twitter) for AI Agent launches, airdrop threads, testnet guides, and Smart Money calls using TwexAPI.
-10. **🌉 Relay.link Cross-Chain Bridge, Swap & Send Engine (`relay-adapter.ts`)**: Unified intent-based cross-chain bridging (`/bridge`), same-chain token swaps (`/swap`), and wallet-to-wallet transfers (`/send`) with fee calculations and 1-click Relay.link execution links across Ethereum, Base, Arbitrum, Optimism, Solana, Polygon, BSC, and Zora.
+10. **🌉 Direct On-Chain Execution & Relay Engine (`wallet-service.ts` & `relay-adapter.ts`)**: Direct programmatic transaction signing via in-memory `WalletService` for cross-chain bridging (`/bridge`), DEX swaps (`/swap`), and token transfers (`/send`) across Ethereum, Base, Arbitrum, Optimism, Solana, Polygon, BSC, and Zora with DRY_RUN safety gates.
 11. **🐦 Twitter / X Social Intelligence (`twitter-service.ts`)**: Integrated with **TwexAPI (`https://twexapi.io`)** and GMGN AI for live X sentiment scoring, contract address search, and influencer mention counts.
 12. **📊 Trade Journaling & Analytics Engine (`trade-journal-service.ts`)**: Auto-logs all open/closed positions, calculates Win Rate %, Total Realized PnL ($), best/worst trades, and exports `athena_trade_journal.csv` for Excel & Notion.
 13. **💾 Local Database File Persistence (`db-service.ts`)**: Atomic file persistence (`database/athena_state.json`) preserving active alerts and trade history across bot reboots.

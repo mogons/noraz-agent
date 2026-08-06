@@ -1,7 +1,7 @@
 import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { AIService } from '../../services/ai-service.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
-import { priceAlertService } from './interaction-handler.js';
+import { priceAlertService, walletService } from './interaction-handler.js';
 
 export async function handleControlRoomMessage(
   message: Message,
@@ -30,6 +30,8 @@ export async function handleControlRoomMessage(
       `Athena will notify <@${message.author.id}> in this channel as soon as ${parsedAlert.symbol} reaches target!`
     );
     return;
+  }
+
   // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Base lewat Relay")
   const lowerQuery = userQuery.toLowerCase();
   const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
@@ -46,28 +48,29 @@ export async function handleControlRoomMessage(
     const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
     const token = lowerQuery.includes('usdc') ? 'USDC' : lowerQuery.includes('sol') ? 'SOL' : 'ETH';
 
-    const quote = await relayAdapter.getBridgeQuote({
+    const result = await relayAdapter.executeBridge({
       originChain: origin,
       destinationChain: destination,
       amount,
       tokenSymbol: token,
-    });
+    }, walletService);
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Open in Relay.link (${quote.originChainName} -> ${quote.destinationChainName})`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await message.reply({
       content:
-        `🌉 **ATHENA RELAY.LINK CROSS-CHAIN BRIDGE QUOTE**\n\n` +
-        `• **Bridging:** \`${quote.amountIn} ${quote.tokenSymbol}\` from **${quote.originChainName}** ➡️ **${quote.destinationChainName}**\n` +
-        `• **Expected Received:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
-        `• **Relayer & Gas Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
-        `Click the button below to execute 1-click intent swap on Relay.link:`,
+        `🌉 **ATHENA RELAY.LINK CROSS-CHAIN BRIDGE DIRECT EXECUTION**\n\n` +
+        `• **Bridging:** \`${result.amountIn} ${result.tokenSymbol}\` from **${result.originChainName}** ➡️ **${result.destinationChainName}**\n` +
+        `• **Expected Received:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
+        `• **Relayer & Gas Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
+        `• **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Intent)`' : '`Live Broadcast`'}\n\n` +
+        `Click below to view transaction details:`,
       components: [actionRow],
     });
     return;
@@ -83,7 +86,6 @@ export async function handleControlRoomMessage(
     const foundChain = chains.find(c => lowerQuery.includes(c));
     const chain = foundChain || 'ethereum';
 
-    // Extract token symbols from common patterns
     const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH', 'SOL', 'BNB', 'MATIC', 'ARB', 'OP', 'BUSD'];
     const upperQuery = userQuery.toUpperCase();
     const foundTokens = knownTokens.filter(t => upperQuery.includes(t));
@@ -93,23 +95,24 @@ export async function handleControlRoomMessage(
     const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
     const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
 
-    const quote = await relayAdapter.getSwapQuote({ chain, fromToken, toToken, amount });
+    const result = await relayAdapter.executeSwap({ chain, fromToken, toToken, amount }, walletService);
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Swap ${quote.fromToken} → ${quote.toToken} on Relay.link`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await message.reply({
       content:
-        `🔄 **ATHENA RELAY.LINK SWAP QUOTE**\n\n` +
-        `• **Swapping:** \`${quote.amountIn} ${quote.fromToken}\` ➡️ \`~${quote.expectedAmountOut} ${quote.toToken}\`\n` +
-        `• **Chain:** **${quote.chainName}**\n` +
-        `• **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
-        `Click the button below to execute swap on Relay.link:`,
+        `🔄 **ATHENA RELAY.LINK SWAP DIRECT EXECUTION**\n\n` +
+        `• **Swapping:** \`${result.amountIn} ${result.fromToken}\` ➡️ \`~${result.expectedAmountOut} ${result.toToken}\`\n` +
+        `• **Chain:** **${result.chainName}**\n` +
+        `• **Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
+        `• **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Swap)`' : '`Live Broadcast`'}\n\n` +
+        `Click below to view transaction details:`,
       components: [actionRow],
     });
     return;
@@ -136,25 +139,26 @@ export async function handleControlRoomMessage(
     const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
     const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
 
-    const quote = await relayAdapter.getSendQuote({ chain, token, amount, recipientAddress });
+    const result = await relayAdapter.executeSend({ chain, token, amount, recipientAddress }, walletService);
 
-    const shortAddr = `${quote.recipientAddress.substring(0, 6)}...${quote.recipientAddress.substring(quote.recipientAddress.length - 4)}`;
+    const shortAddr = `${result.recipientAddress.substring(0, 6)}...${result.recipientAddress.substring(result.recipientAddress.length - 4)}`;
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel(`Send ${quote.tokenSymbol} to ${shortAddr} on Relay.link`)
+        .setLabel(`View on Explorer`)
         .setStyle(ButtonStyle.Link)
-        .setURL(quote.relayWebUrl)
+        .setURL(result.explorerUrl || result.relayWebUrl)
     );
 
     await message.reply({
       content:
-        `📤 **ATHENA RELAY.LINK SEND QUOTE**\n\n` +
-        `• **Sending:** \`${quote.amountIn} ${quote.tokenSymbol}\` to \`${shortAddr}\`\n` +
-        `• **Chain:** **${quote.chainName}**\n` +
-        `• **Recipient Receives:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
-        `• **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
-        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
-        `Click the button below to execute send on Relay.link:`,
+        `📤 **ATHENA RELAY.LINK SEND DIRECT EXECUTION**\n\n` +
+        `• **Sending:** \`${result.amountIn} ${result.tokenSymbol}\` to \`${shortAddr}\`\n` +
+        `• **Chain:** **${result.chainName}**\n` +
+        `• **Recipient Receives:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
+        `• **Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
+        `• **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Transfer)`' : '`Live Broadcast`'}\n\n` +
+        `Click below to view transaction details:`,
       components: [actionRow],
     });
     return;
