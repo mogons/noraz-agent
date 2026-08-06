@@ -183,7 +183,9 @@ Upon executing `athena run` or `athena deploy`, Athena automatically provisions 
   - **Step 2 (Automatic Channel Creation):** Launch `athena run` or `athena deploy`. Athena connects to your server and **automatically creates Category `🏛️ ATHENA COMMAND CENTER` and 10 Channels** (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`) + registers all 16 Slash Commands. You **NEVER** need to create any channels manually!
 
 - **📱 Telegram Notification & Control Bridge:**
-  - When `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID` are set in `.env`, Athena automatically broadcasts the **Interactive Control Dashboard** on startup with inline touch buttons (`[▶️ Start Solana]`, `[▶️ Start CT Alpha]`, `[🔑 Balances]`, `[⏸️ Pause All]`).
+  - **Flexible Delivery:** Signals can be sent **directly to your Private Chat (DM)** or to a **Telegram Group / Channel**.
+  - **Setup:** Create your bot via Telegram [@BotFather](https://t.me/BotFather) for `TELEGRAM_BOT_TOKEN` and get your Chat ID via [@userinfobot](https://t.me/userinfobot) for `TELEGRAM_CHAT_ID` in `.env`.
+  - On startup, Athena automatically sends the **Interactive Touch Control Dashboard** with inline buttons (`[▶️ Start Solana]`, `[▶️ Start CT Alpha]`, `[🔑 Balances]`, `[⏸️ Pause All]`).
   - High-confidence signals (Score >= 80%) are automatically formatted and dual-broadcasted directly to your Telegram chat/group in real time.
 
 ---
