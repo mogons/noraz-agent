@@ -77,46 +77,77 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 
 ---
 
-## 💬 Interactive Commands & Features
+## 💬 Complete Interactive Commands & Features Table
 
-| Command | Subcommands / Format | Description |
-| :--- | :--- | :--- |
-| `/menu` / `/dashboard` | Direct Command | Opens the Master Interactive Control Center Embed with Action Buttons & Agent Select Dropdown |
-| `/journal` | `summary`, `history`, `export` | View Win-Rate %, PnL summary, recent trades, & download `athena_trade_journal.csv` |
-| `/alert` | `set`, `list`, `cancel` | Manage custom real-time price alerts & notifications |
-| `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-evm`, `perps`, `nft`, `prediction`) |
-| `/wallet` | `setup`, `balance` | Manage burner wallets & view balances |
-| `/analyze` | `contract:<CA>` | Force 12-point on-demand audit for Solana/EVM token |
-| `/update` | Direct Command | Pull latest codebase from Git, re-build TypeScript, & soft-restart bot |
-| `/cancel` | `all` | Emergency Aegis Circuit Breaker to halt orders & screening |
-| Chat | *"Athena, kabari kalau BTC 70k"* | Natural language price alert parser in `#athena-control-room` |
+| Category | Command | Subcommands / Format | Description |
+| :--- | :--- | :--- | :--- |
+| **Control Dashboard** | `/menu` / `/dashboard` | Direct Command | Opens the Master Interactive Control Center Embed with Action Buttons & Agent Select Dropdown |
+| **Trade Journal** | `/journal` | `summary`, `history`, `export` | View Win-Rate %, PnL summary, recent trades, & download `athena_trade_journal.csv` |
+| **Price Alerts** | `/alert` | `set`, `list`, `cancel` | Manage custom real-time price alerts & notifications |
+| **Sub-Agent Toggles** | `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-evm`, `lp-solana`, `lp-evm`, `perps`, `nft`, `prediction`) |
+| **Burner Wallets** | `/wallet` | `setup`, `balance` | Manage burner wallets & view SOL/ETH balances |
+| **Token Audit** | `/analyze` | `contract:<CA>` | Force 12-point on-demand audit for Solana/EVM token |
+| **Quick Price Check** | `/p` | `token:<symbol/CA>` | Quick token price, 24h change, and market cap lookup |
+| **Quick Dex Chart** | `/c` | `token:<symbol/CA>` | Quick chart & DexScreener visual link generator |
+| **Holder Breakdown** | `/th` | `contract:<CA>` | Top Holders audit & insider ownership breakdown |
+| **Smart Money Scan** | `/tw` | `contract:<CA>` | Top Wallets & Smart Money activity scan |
+| **Pump.fun Tracker** | `/pf` | `contract:<CA>` | Pump.fun Bonding Curve progress & Raydium graduation tracker |
+| **Value Converter** | `/v` | `amount:<n> symbol:<s>` | Quick token value & SOL/USD converter |
+| **Config & Channels** | `/config`, `/channel` | `risk`, `create`, `rearrange` | Update drawdown limits & auto-arrange Discord channel layout |
+| **System Upgrade** | `/update` | Direct Command | Pull latest codebase from Git, re-build TypeScript, & soft-restart bot |
+| **Emergency Halt** | `/cancel` | `all` | Emergency Aegis Circuit Breaker to halt orders & screening |
+| **Natural Language** | Chat | *"Athena, kabari kalau BTC 70k"* | Natural language price alert parser in `#athena-control-room` |
 
 ---
 
-## 🚀 Quickstart & Setup Commands
+## 🛠️ Step-by-Step First Time Deployment & Setup Guide
 
+Follow this clean 5-step workflow to deploy Athena for the first time:
+
+### Step 1: Clone Repository & Install Dependencies
 ```bash
-# 1. Install dependencies
+git clone https://github.com/dizcorvus/Athena.git
+cd Athena
 npm install
-
-# 2. Configure environment variables
-cp .env.example .env
-
-# 3. Build production bundle
-npm run build
-
-# 4. Launch in development mode
-npm run dev
-
-# 5. Launch Terminal Parthenon Interactive UI (TUI)
-npm run tui
-
-# 6. Run full unit & integration test suite (11/11 tests)
-npm test
-
-# 7. Update Athena codebase from Git
-npm run update
 ```
+
+### Step 2: Configure Environment File (`.env`)
+Copy the template and fill in your Discord Bot credentials, AI provider keys, and optional Telegram tokens:
+```bash
+cp .env.example .env
+```
+Key variables to fill in `.env`:
+- `DISCORD_BOT_TOKEN`: Your Discord Bot Token (from Discord Developer Portal).
+- `DISCORD_CLIENT_ID`: Your Discord Application Client ID.
+- `TWEX_API_KEY`: TwexAPI Key from [twexapi.io](https://twexapi.io) (Optional - includes 20k free credits).
+- `OPENROUTER_API_KEY` / `OPENAI_API_KEY`: LLM API Key for chat and deep diagnostic reasoning.
+
+### Step 3: Build TypeScript Codebase
+```bash
+npm run build
+```
+
+### Step 4: Run Automated Verification Tests
+Verify all 11 core modules pass cleanly:
+```bash
+npm test
+```
+
+### Step 5: Launch Athena Ecosystem
+Choose your preferred launch mode:
+
+- **Mode A: Development Hot-Reload**
+  ```bash
+  npm run dev
+  ```
+- **Mode B: Production PM2 Process Manager (Background 24/7 Daemon)**
+  ```bash
+  npm run deploy
+  ```
+- **Mode C: Terminal Parthenon Interactive UI (TUI)**
+  ```bash
+  npm run tui
+  ```
 
 ---
 
