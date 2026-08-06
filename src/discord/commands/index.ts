@@ -184,4 +184,12 @@ export const slashCommands = [
   new SlashCommandBuilder()
     .setName('update')
     .setDescription('Pull latest Athena codebase from Git, re-build TypeScript, and soft-restart'),
+
+  new SlashCommandBuilder()
+    .setName('bridge')
+    .setDescription('Get instant cross-chain bridge quote & 1-click Relay.link execution link')
+    .addStringOption(opt => opt.setName('origin').setDescription('Origin chain (e.g. ethereum, base, arbitrum, optimism, solana, polygon)').setRequired(true))
+    .addStringOption(opt => opt.setName('destination').setDescription('Destination chain (e.g. base, ethereum, arbitrum, optimism, solana)').setRequired(true))
+    .addNumberOption(opt => opt.setName('amount').setDescription('Amount to bridge').setRequired(true))
+    .addStringOption(opt => opt.setName('token').setDescription('Token symbol (e.g. ETH, USDC, SOL)')),
 ];

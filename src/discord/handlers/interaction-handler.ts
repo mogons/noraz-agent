@@ -9,6 +9,9 @@ import {
   ButtonInteraction,
   StringSelectMenuInteraction,
   AttachmentBuilder,
+  EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { SwarmConsensus } from '../../orchestrator/swarm-consensus.js';
@@ -16,6 +19,7 @@ import { AIService } from '../../services/ai-service.js';
 import { PriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
 import { TradeJournalService } from '../../services/trade-journal-service.js';
+import { RelayAdapter } from '../../adapters/relay-adapter.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 
 const priceFeedService = new PriceFeedService();
@@ -302,6 +306,40 @@ async function handleChatInput(
         ephemeral: true,
       });
     }
+  } else if (commandName === 'bridge') {
+    const origin = interaction.options.getString('origin', true);
+    const destination = interaction.options.getString('destination', true);
+    const amount = interaction.options.getNumber('amount', true);
+    const token = interaction.options.getString('token') || 'ETH';
+
+    const relayAdapter = new RelayAdapter();
+    const quote = await relayAdapter.getBridgeQuote({
+      originChain: origin,
+      destinationChain: destination,
+      amount,
+      tokenSymbol: token,
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🌐 RELAY.LINK CROSS-CHAIN BRIDGE QUOTE`)
+      .setColor(0x0052FF)
+      .setDescription(
+        `🌉 **Bridging:** \`${quote.amountIn} ${quote.tokenSymbol}\` from **${quote.originChainName}** ➡️ **${quote.destinationChainName}**\n\n` +
+        `📥 **Expected Output:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
+        `💸 **Relayer & Gas Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated Intent)`' : '`Live Relay.link Intent`'}`
+      )
+      .setFooter({ text: 'Powered by Relay.link Intent Engine • Athena Multi-Agent Hub' });
+
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Open in Relay.link (${quote.originChainName} -> ${quote.destinationChainName})`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await interaction.reply({ embeds: [embed], components: [actionRow] });
   }
 }
 

@@ -191,4 +191,21 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(reports.length).toBeGreaterThan(0);
     expect(reports[0].confidenceScore ?? reports[0].signal.confidenceScore).toBeGreaterThanOrEqual(80);
   });
+
+  it('13. Relay Adapter: Should calculate cross-chain bridge intent quotes via Relay.link', async () => {
+    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
+    const adapter = new RelayAdapter();
+    const quote = await adapter.getBridgeQuote({
+      originChain: 'ethereum',
+      destinationChain: 'base',
+      amount: 0.5,
+      tokenSymbol: 'ETH',
+    });
+
+    expect(quote.success).toBe(true);
+    expect(quote.originChainId).toBe(1);
+    expect(quote.destinationChainId).toBe(8453);
+    expect(quote.expectedAmountOut).toBeGreaterThan(0);
+    expect(quote.relayWebUrl).toContain('relay.link/bridge');
+  });
 });

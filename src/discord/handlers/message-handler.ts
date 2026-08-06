@@ -30,6 +30,47 @@ export async function handleControlRoomMessage(
       `Athena will notify <@${message.author.id}> in this channel as soon as ${parsedAlert.symbol} reaches target!`
     );
     return;
+  // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Base lewat Relay")
+  const lowerQuery = userQuery.toLowerCase();
+  const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
+  if (isBridgeIntent) {
+    const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
+    const relayAdapter = new RelayAdapter();
+
+    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'solana', 'sol', 'polygon', 'poly', 'bsc', 'zora'];
+    const foundChains = chains.filter(c => lowerQuery.includes(c));
+    const origin = foundChains[0] || 'ethereum';
+    const destination = foundChains[1] || 'base';
+
+    const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
+    const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
+    const token = lowerQuery.includes('usdc') ? 'USDC' : lowerQuery.includes('sol') ? 'SOL' : 'ETH';
+
+    const quote = await relayAdapter.getBridgeQuote({
+      originChain: origin,
+      destinationChain: destination,
+      amount,
+      tokenSymbol: token,
+    });
+
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Open in Relay.link (${quote.originChainName} -> ${quote.destinationChainName})`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await message.reply({
+      content:
+        `🌉 **ATHENA RELAY.LINK CROSS-CHAIN BRIDGE QUOTE**\n\n` +
+        `• **Bridging:** \`${quote.amountIn} ${quote.tokenSymbol}\` from **${quote.originChainName}** ➡️ **${quote.destinationChainName}**\n` +
+        `• **Expected Received:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
+        `• **Relayer & Gas Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
+        `Click the button below to execute 1-click intent swap on Relay.link:`,
+      components: [actionRow],
+    });
+    return;
   }
 
   // 2. Detect if user pasted a Contract Address (CA) - Solana (32-44 chars Base58) or EVM (0x + 40 hex)
