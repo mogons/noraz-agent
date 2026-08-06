@@ -1,4 +1,6 @@
+import dotenv from 'dotenv';
 import readline from 'readline';
+dotenv.config();
 import { AthenaHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
