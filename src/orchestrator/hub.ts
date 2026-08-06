@@ -11,6 +11,7 @@ export class AthenaHub {
   private riskManager: RiskManager;
   private channelStates: Map<string, ChannelStatus> = new Map();
   private agentStates: Map<string, boolean> = new Map();
+  private autoExecuteStates: Map<string, { enabled: boolean; maxTradeAmount: number }> = new Map();
 
   constructor() {
     this.riskManager = new RiskManager();
@@ -22,6 +23,7 @@ export class AthenaHub {
     const domains = ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'];
     for (const d of domains) {
       this.agentStates.set(d, false);
+      this.autoExecuteStates.set(d, { enabled: false, maxTradeAmount: 0.1 });
     }
   }
 
@@ -32,6 +34,15 @@ export class AthenaHub {
 
   public isAgentActive(domain: string): boolean {
     return this.agentStates.get(domain.toLowerCase()) ?? false;
+  }
+
+  public setAutoExecute(domain: string, enabled: boolean, maxTradeAmount: number = 0.1): void {
+    this.autoExecuteStates.set(domain.toLowerCase(), { enabled, maxTradeAmount });
+    console.log(`[HUB] Auto-Execution for "${domain.toUpperCase()}" set to: ${enabled ? '⚡ ENABLED' : '🔒 DISABLED'} (Max Size: ${maxTradeAmount})`);
+  }
+
+  public isAutoExecuteEnabled(domain: string): { enabled: boolean; maxTradeAmount: number } {
+    return this.autoExecuteStates.get(domain.toLowerCase()) ?? { enabled: false, maxTradeAmount: 0.1 };
   }
 
   public setAllAgentsActive(active: boolean): void {
