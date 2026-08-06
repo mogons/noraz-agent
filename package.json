@@ -35,7 +35,7 @@
   "dependencies": {
     "@jup-ag/api": "^6.0.30",
     "@meteora-ag/dlmm": "^1.4.0",
-    "@opensea/sdk": "^7.1.10",
+    "@opensea/sdk": "^11.7.2",
     "@opensea/stream-js": "^0.3.0",
     "@solana/web3.js": "^1.98.0",
     "@uniswap/sdk-core": "^5.8.0",
