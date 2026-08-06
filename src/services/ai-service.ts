@@ -41,7 +41,7 @@ export class AIService {
         modelName = modelName || 'gpt-4o';
         break;
       case 'opencode':
-        baseUrl = baseUrl || 'https://api.opencode.ai/v1';
+        baseUrl = baseUrl || 'https://opencode.ai/zen/go/v1';
         modelName = modelName || 'deepseek-v4-pro';
         break;
       case 'codingplan':

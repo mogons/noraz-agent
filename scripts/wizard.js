@@ -120,7 +120,7 @@ async function runWizard() {
 
   if (providerChoice === '2') {
     provider = 'opencode';
-    baseUrl = await askQuestion('Enter OpenCode AI_BASE_URL [Default https://api.opencode.ai/v1]: ') || 'https://api.opencode.ai/v1';
+    baseUrl = await askQuestion('Enter OpenCode AI_BASE_URL [Default https://opencode.ai/zen/go/v1]: ') || 'https://opencode.ai/zen/go/v1';
     modelName = await askQuestion('Enter OpenCode AI_MODEL_NAME (e.g. deepseek-v4-pro, glm-5.2) [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
   } else if (providerChoice === '3') {
     provider = 'zai';
