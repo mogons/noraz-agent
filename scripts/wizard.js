@@ -17,18 +17,16 @@ async function runWizard() {
   console.log('🏛️ ATHENA AGENT - INTERACTIVE VPS SETUP WIZARD');
   console.log('======================================================\n');
 
+  let existingEnv = {};
   if (fs.existsSync(envPath)) {
-    const overwrite = await askQuestion('❓ File .env sudah ada. Apakah kamu ingin mengonfigurasi ulang? (y/N): ');
-    if (overwrite.toLowerCase() !== 'y') {
-      console.log('✅ Menggunakan file .env yang sudah ada. Lanjut ke proses build...');
-      rl.close();
-      return;
-    }
+    const rawEnv = fs.readFileSync(envPath, 'utf8');
+    rawEnv.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        existingEnv[match[1].trim()] = match[2].trim();
+      }
+    });
   }
-
-  let envTemplate = fs.existsSync(envExamplePath)
-    ? fs.readFileSync(envExamplePath, 'utf8')
-    : '';
 
   console.log('📌 PILIHAN MODE ANTARMUKA ATHENA:');
   console.log(' [1] Discord Command Center (Default)');
@@ -37,25 +35,38 @@ async function runWizard() {
   console.log(' [4] Standalone Terminal TUI (Tanpa Bot, Langsung Terminal VPS)');
   const interfaceChoice = await askQuestion('Pilihan (1/2/3/4) [Default 1]: ') || '1';
 
-  let botToken = '';
-  let clientId = '';
-  let telegramToken = '';
-  let telegramChatId = '';
+  let botToken = existingEnv.DISCORD_BOT_TOKEN || '';
+  let clientId = existingEnv.DISCORD_CLIENT_ID || '';
+  let telegramToken = existingEnv.TELEGRAM_BOT_TOKEN || '';
+  let telegramChatId = existingEnv.TELEGRAM_CHAT_ID || '';
+  let aiKey = existingEnv.AI_API_KEY || '';
 
   if (interfaceChoice === '1' || interfaceChoice === '3') {
     console.log('\n💬 KREDENSIAL DISCORD BOT:');
-    botToken = await askQuestion('1. Masukkan DISCORD_BOT_TOKEN: ');
-    clientId = await askQuestion('2. Masukkan DISCORD_CLIENT_ID: ');
+    const defaultBotMsg = botToken ? ` [Default: ${botToken.slice(0, 10)}...]` : '';
+    const inputBot = await askQuestion(`1. Masukkan DISCORD_BOT_TOKEN${defaultBotMsg}: `);
+    botToken = inputBot.trim() || botToken;
+
+    const defaultClientMsg = clientId ? ` [Default: ${clientId}]` : '';
+    const inputClient = await askQuestion(`2. Masukkan DISCORD_CLIENT_ID${defaultClientMsg}: `);
+    clientId = inputClient.trim() || clientId;
   }
 
   if (interfaceChoice === '2' || interfaceChoice === '3') {
     console.log('\n📱 KREDENSIAL TELEGRAM BOT:');
-    telegramToken = await askQuestion('1. Masukkan TELEGRAM_BOT_TOKEN: ');
-    telegramChatId = await askQuestion('2. Masukkan TELEGRAM_CHAT_ID (misal -1001234567): ');
+    const defaultTgBotMsg = telegramToken ? ` [Default: ${telegramToken.slice(0, 10)}...]` : '';
+    const inputTgBot = await askQuestion(`1. Masukkan TELEGRAM_BOT_TOKEN${defaultTgBotMsg}: `);
+    telegramToken = inputTgBot.trim() || telegramToken;
+
+    const defaultTgChatMsg = telegramChatId ? ` [Default: ${telegramChatId}]` : '';
+    const inputTgChat = await askQuestion(`2. Masukkan TELEGRAM_CHAT_ID${defaultTgChatMsg}: `);
+    telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
   console.log('\n🤖 KREDENSIAL AI ENGINE:');
-  const aiKey = await askQuestion('Masukkan AI API KEY (OpenRouter / Anthropic / OpenAI / Custom): ');
+  const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
+  const inputAiKey = await askQuestion(`Masukkan AI API KEY (OpenRouter / Anthropic / OpenAI / Custom)${defaultAiKeyMsg}: `);
+  aiKey = inputAiKey.trim() || aiKey;
   
   console.log('\nPilih AI Provider:');
   console.log(' [1] OpenRouter (Default - Banyak model gratisan)');
