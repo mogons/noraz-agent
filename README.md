@@ -201,4 +201,18 @@ Upon executing `athena run` or `athena deploy`, Athena automatically provisions 
 
 ---
 
+## ⚠️ Financial Disclaimer
+
+> [!WARNING]
+> **NOT FINANCIAL ADVICE (NFA)**  
+> The software, signals, AI summaries, and quantitative heuristics provided by Athena are strictly for educational, research, and informational purposes. Cryptocurrency, meme tokens, perpetual leverage, NFTs, and prediction markets involve extreme volatility and high risk of capital loss. Never trade with funds you cannot afford to lose. Always perform your own independent research (DYOR).
+
+---
+
+## 📜 License
+
+This project is licensed under the terms of the [MIT License](LICENSE).
+
+---
+
 *Athena Multi-Agent Ecosystem • Built with Precision, Wisdom, and High Alpha.* 🌿🏛️
