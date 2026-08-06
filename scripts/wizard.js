@@ -13,8 +13,9 @@ const askQuestion = (query) => new Promise((resolve) => rl.question(query, resol
 
 async function runWizard() {
   console.log('\n======================================================');
-  console.log('🏛️ ATHENA MULTI-AGENT ENGINE - INTERACTIVE ONBOARDING WIZARD');
+  console.log('🏛️ ATHENA MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD');
   console.log('======================================================\n');
+  console.log('💡 Note: Press ENTER to skip any optional API key or accept default values.\n');
 
   let existingEnv = {};
   if (fs.existsSync(envPath)) {
@@ -27,100 +28,91 @@ async function runWizard() {
     });
   }
 
-  console.log('📌 INTERFACE MODE SELECTION:');
+  // 1. INTERFACE MODE SELECTION
+  console.log('📌 STEP 1: INTERFACE MODE SELECTION');
   console.log(' [1] Discord Command Center (Default)');
   console.log(' [2] Telegram Bot & Forum Topics Bridge');
   console.log(' [3] Dual Mode (Discord + Telegram Bridge)');
-  console.log(' [4] Standalone Terminal TUI (No Bot, Direct VPS Console)');
+  console.log(' [4] Standalone Terminal TUI (Direct VPS Console)');
   const interfaceChoice = await askQuestion('Selection (1/2/3/4) [Default 1]: ') || '1';
 
   let botToken = existingEnv.DISCORD_BOT_TOKEN || '';
   let clientId = existingEnv.DISCORD_CLIENT_ID || '';
   let telegramToken = existingEnv.TELEGRAM_BOT_TOKEN || '';
   let telegramChatId = existingEnv.TELEGRAM_CHAT_ID || '';
-  let aiKey = existingEnv.AI_API_KEY || '';
-  let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
-  let openseaApiKey = existingEnv.OPENSEA_API_KEY || '';
-  let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
-  let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
-  let solanaPrivateKey = existingEnv.SOLANA_PRIVATE_KEY || '';
-  let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
-  let solanaRpcUrl = existingEnv.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-  let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || 'https://mainnet.base.org';
 
-  let allKeys = [];
-
+  // 2. DISCORD CREDENTIALS
   if (interfaceChoice === '1' || interfaceChoice === '3') {
-    console.log('\n💬 DISCORD BOT CREDENTIALS:');
+    console.log('\n💬 STEP 2: DISCORD BOT CREDENTIALS');
     const defaultBotMsg = botToken ? ` [Default: ${botToken.slice(0, 10)}...]` : '';
-    const inputBot = await askQuestion(`1. Enter DISCORD_BOT_TOKEN${defaultBotMsg}: `);
+    const inputBot = await askQuestion(` 1. Enter DISCORD_BOT_TOKEN${defaultBotMsg}: `);
     botToken = inputBot.trim() || botToken;
 
     const defaultClientMsg = clientId ? ` [Default: ${clientId}]` : '';
-    const inputClient = await askQuestion(`2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
+    const inputClient = await askQuestion(` 2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
   }
 
+  // 3. TELEGRAM CREDENTIALS
   if (interfaceChoice === '2' || interfaceChoice === '3') {
-    console.log('\n📱 TELEGRAM BOT CREDENTIALS:');
+    console.log('\n📱 STEP 3: TELEGRAM BOT CREDENTIALS');
     const defaultTgBotMsg = telegramToken ? ` [Default: ${telegramToken.slice(0, 10)}...]` : '';
-    const inputTgBot = await askQuestion(`1. Enter TELEGRAM_BOT_TOKEN${defaultTgBotMsg}: `);
+    const inputTgBot = await askQuestion(` 1. Enter TELEGRAM_BOT_TOKEN${defaultTgBotMsg}: `);
     telegramToken = inputTgBot.trim() || telegramToken;
 
     const defaultTgChatMsg = telegramChatId ? ` [Default: ${telegramChatId}]` : '';
-    const inputTgChat = await askQuestion(`2. Enter TELEGRAM_CHAT_ID${defaultTgChatMsg}: `);
+    const inputTgChat = await askQuestion(` 2. Enter TELEGRAM_CHAT_ID${defaultTgChatMsg}: `);
     telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
-  console.log('\n🤖 AI REASONING ENGINE CREDENTIALS:');
+  // 4. AI REASONING ENGINE
+  console.log('\n🤖 STEP 4: AI REASONING ENGINE CREDENTIALS');
+  let aiKey = existingEnv.AI_API_KEY || '';
   let rawExistingKeys = existingEnv.AI_API_KEYS || existingEnv.AI_API_KEY || '';
   let existingKeyList = rawExistingKeys.split(',').map(k => k.trim()).filter(Boolean);
+  let allKeys = [];
 
   if (existingKeyList.length > 1) {
-    console.log(`ℹ️  Found ${existingKeyList.length} stacked API keys in existing config:`);
+    console.log(` ℹ️  Found ${existingKeyList.length} stacked API keys in existing config:`);
     existingKeyList.forEach((k, idx) => {
       console.log(`   - Key #${idx + 1}: ${k.slice(0, 14)}...`);
     });
-    const keepKeys = await askQuestion('Keep existing stacked API keys? (Y/n) [Default Y]: ') || 'y';
+    const keepKeys = await askQuestion(' Keep existing stacked API keys? (Y/n) [Default Y]: ') || 'y';
     if (keepKeys.toLowerCase() !== 'n') {
       allKeys = existingKeyList;
       aiKey = existingKeyList[0];
-    } else {
-      existingKeyList = [];
     }
   }
 
-  if (existingKeyList.length <= 1) {
+  if (allKeys.length === 0) {
     const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
-    const inputAiKey = await askQuestion(`1. Enter Primary AI API KEY (OpenRouter / OpenAI / Anthropic)${defaultAiKeyMsg}: `);
+    const inputAiKey = await askQuestion(` 1. Enter Primary AI API KEY (OpenRouter / OpenAI / Anthropic)${defaultAiKeyMsg}: `);
     aiKey = inputAiKey.trim() || aiKey;
 
-    const stackChoice = await askQuestion('2. Would you like to add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
+    const stackChoice = await askQuestion(' 2. Add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
     let allKeysList = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
     if (allKeysList.length === 0 && aiKey) allKeysList.push(aiKey);
 
     if (stackChoice.toLowerCase() === 'y') {
-      const backupCountStr = await askQuestion('   How many backup API keys would you like to add? (1-5) [Default 1]: ') || '1';
+      const backupCountStr = await askQuestion('   How many backup API keys to add? (1-5) [Default 1]: ') || '1';
       const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
       for (let i = 1; i <= backupCount; i++) {
         const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i}: `);
-        if (bKey.trim()) {
-          allKeysList.push(bKey.trim());
-        }
+        if (bKey.trim()) allKeysList.push(bKey.trim());
       }
     }
     allKeys = allKeysList;
   }
   const combinedKeys = allKeys.join(',');
 
-  console.log('\nSelect AI Model Provider:');
+  console.log('\n Select AI Provider:');
   console.log(' [1] OpenRouter (Default - Access to free & open models)');
   console.log(' [2] OpenCode Go (DeepSeek V4 Pro, GLM 5.2 - opencode.ai/go)');
-  console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM-5.2, GLM-5-Turbo - z.ai/subscribe)');
-  console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
+  console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM-5.2 - z.ai)');
+  console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet)');
   console.log(' [5] OpenAI (GPT-4o)');
   console.log(' [6] Custom OpenAI-Compatible Endpoint');
-  const providerChoice = await askQuestion('Choice (1/2/3/4/5/6) [Default 1]: ');
+  const providerChoice = await askQuestion(' Choice (1/2/3/4/5/6) [Default 1]: ');
 
   let provider = 'openrouter';
   let baseUrl = 'https://openrouter.ai/api/v1';
@@ -128,12 +120,12 @@ async function runWizard() {
 
   if (providerChoice === '2') {
     provider = 'opencode';
-    baseUrl = await askQuestion('Enter OpenCode AI_BASE_URL [Default https://opencode.ai/zen/go/v1]: ') || 'https://opencode.ai/zen/go/v1';
-    modelName = await askQuestion('Enter OpenCode AI_MODEL_NAME [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
+    baseUrl = await askQuestion(' Enter OpenCode AI_BASE_URL [Default https://opencode.ai/zen/go/v1]: ') || 'https://opencode.ai/zen/go/v1';
+    modelName = await askQuestion(' Enter OpenCode AI_MODEL_NAME [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
   } else if (providerChoice === '3') {
     provider = 'zai';
-    baseUrl = await askQuestion('Enter Z.ai AI_BASE_URL [Default https://api.z.ai/api/coding/paas/v4]: ') || 'https://api.z.ai/api/coding/paas/v4';
-    modelName = await askQuestion('Enter Z.ai AI_MODEL_NAME [Default glm-4.7]: ') || 'glm-4.7';
+    baseUrl = await askQuestion(' Enter Z.ai AI_BASE_URL [Default https://api.z.ai/api/coding/paas/v4]: ') || 'https://api.z.ai/api/coding/paas/v4';
+    modelName = await askQuestion(' Enter Z.ai AI_MODEL_NAME [Default glm-4.7]: ') || 'glm-4.7';
   } else if (providerChoice === '4') {
     provider = 'anthropic';
     baseUrl = 'https://api.anthropic.com/v1';
@@ -144,50 +136,81 @@ async function runWizard() {
     modelName = 'gpt-4o';
   } else if (providerChoice === '6') {
     provider = 'custom';
-    baseUrl = await askQuestion('Enter AI_BASE_URL: ') || 'https://api.9router.com/v1';
-    modelName = await askQuestion('Enter AI_MODEL_NAME: ') || 'glm-4';
+    baseUrl = await askQuestion(' Enter AI_BASE_URL: ') || 'https://api.9router.com/v1';
+    modelName = await askQuestion(' Enter AI_MODEL_NAME: ') || 'glm-4';
   }
 
-  console.log('\n📊 PRO MARKET DATA & SECURITY AUDIT APIS (For Real Market Data):');
+  // 5. PRO MARKET DATA & SECURITY AUDIT APIS
+  console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS');
+  let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
+  let openseaApiKey = existingEnv.OPENSEA_API_KEY || '';
+  let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
+  let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
+  let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
+
   const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Optional]';
-  const inputGmgn = await askQuestion(`1. Enter GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
+  const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
   gmgnApiKey = inputGmgn.trim() || gmgnApiKey;
 
   const defaultOpensea = openseaApiKey ? ` [Default: ${openseaApiKey.slice(0, 8)}...]` : ' [Optional]';
-  const inputOpensea = await askQuestion(`2. Enter OPENSEA_API_KEY (OpenSea API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
+  const inputOpensea = await askQuestion(` 2. OPENSEA_API_KEY (OpenSea REST API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
   const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Optional]';
-  const inputTwex = await askQuestion(`3. Enter TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment)${defaultTwex}: `);
+  const inputTwex = await askQuestion(` 3. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment & CT Alpha)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
 
   const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Optional]';
-  const inputGoplus = await askQuestion(`4. Enter GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
+  const inputGoplus = await askQuestion(` 4. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
   goplusApiKey = inputGoplus.trim() || goplusApiKey;
 
-  console.log('\n👛 BURNER WALLETS & WEB3 RPC ENDPOINTS:');
+  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Optional]';
+  const inputPoly = await askQuestion(` 5. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
+  polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
+
+  // 6. WEB3 RPC ENDPOINTS
+  console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS & HIGH-VELOCITY NETWORK NODES');
+  let solanaRpcUrl = existingEnv.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+  let solanaWssUrl = existingEnv.SOLANA_WSS_URL || 'wss://api.mainnet-beta.solana.com';
+  let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || 'https://mainnet.base.org';
+  let evmEthRpcUrl = existingEnv.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com';
+
+  const defaultSolRpc = solanaRpcUrl ? ` [Default: ${solanaRpcUrl}]` : '';
+  const inputSolRpc = await askQuestion(` 1. SOLANA_RPC_URL (Helius / QuickNode / Alchemy)${defaultSolRpc}: `);
+  solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
+
+  const defaultSolWss = solanaWssUrl ? ` [Default: ${solanaWssUrl}]` : '';
+  const inputSolWss = await askQuestion(` 2. SOLANA_WSS_URL (Solana WebSocket RPC)${defaultSolWss}: `);
+  solanaWssUrl = inputSolWss.trim() || solanaWssUrl;
+
+  const defaultBaseRpc = evmBaseRpcUrl ? ` [Default: ${evmBaseRpcUrl}]` : '';
+  const inputBaseRpc = await askQuestion(` 3. EVM_BASE_RPC_URL (Base L2 RPC URL)${defaultBaseRpc}: `);
+  evmBaseRpcUrl = inputBaseRpc.trim() || evmBaseRpcUrl;
+
+  const defaultEthRpc = evmEthRpcUrl ? ` [Default: ${evmEthRpcUrl}]` : '';
+  const inputEthRpc = await askQuestion(` 4. EVM_ETH_RPC_URL (Ethereum Mainnet RPC URL)${defaultEthRpc}: `);
+  evmEthRpcUrl = inputEthRpc.trim() || evmEthRpcUrl;
+
+  // 7. BURNER WALLETS
+  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS FOR DIRECT EXECUTION');
+  let solanaPrivateKey = existingEnv.SOLANA_PRIVATE_KEY || '';
+  let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
+
   const defaultSolPk = solanaPrivateKey ? ` [Default: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Optional - Base58/JSON]';
-  const inputSolPk = await askQuestion(`1. Enter SOLANA_PRIVATE_KEY${defaultSolPk}: `);
+  const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
   solanaPrivateKey = inputSolPk.trim() || solanaPrivateKey;
 
   const defaultEvmPk = evmPrivateKey ? ` [Default: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional - 0x...]';
-  const inputEvmPk = await askQuestion(`2. Enter EVM_PRIVATE_KEY${defaultEvmPk}: `);
+  const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  const defaultSolRpc = solanaRpcUrl ? ` [Default: ${solanaRpcUrl}]` : '';
-  const inputSolRpc = await askQuestion(`3. Enter SOLANA_RPC_URL (Helius / QuickNode / Alchemy)${defaultSolRpc}: `);
-  solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
-
-  const defaultEvmRpc = evmBaseRpcUrl ? ` [Default: ${evmBaseRpcUrl}]` : '';
-  const inputEvmRpc = await askQuestion(`4. Enter EVM_BASE_RPC_URL (Base L2 RPC URL)${defaultEvmRpc}: `);
-  evmBaseRpcUrl = inputEvmRpc.trim() || evmBaseRpcUrl;
-
-  console.log('\n⚙️ SIMULATION & DEMO BALANCE OPTIONS:');
-  const dryRunChoice = await askQuestion('1. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
+  // 8. SIMULATION MODE
+  console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCES');
+  const dryRunChoice = await askQuestion(' 1. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
   const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
 
-  const simSolBalance = await askQuestion('2. Enter Starting Simulation Balance for Solana (SOL) [Default 10.0]: ') || '10.0';
-  const simEthBalance = await askQuestion('3. Enter Starting Simulation Balance for EVM (ETH) [Default 1.0]: ') || '1.0';
+  const simSolBalance = await askQuestion(' 2. Starting Simulation Balance for Solana (SOL) [Default 10.0]: ') || '10.0';
+  const simEthBalance = await askQuestion(' 3. Starting Simulation Balance for EVM (ETH) [Default 1.0]: ') || '1.0';
 
   let envContent = `NODE_ENV=production
 DRY_RUN=${isDryRun}
@@ -219,12 +242,17 @@ OPENSEA_API_KEY=${openseaApiKey.trim()}
 TWEX_API_KEY=${twexApiKey.trim()}
 TWITTER_BEARER_TOKEN=${twexApiKey.trim()}
 GOPLUS_API_KEY=${goplusApiKey.trim()}
+POLYMARKET_PRIVATE_KEY=${polymarketPrivateKey.trim()}
 
-# Web3 Burner Wallets & RPC Endpoints
+# Web3 RPC Endpoints & High-Velocity Network Nodes
+SOLANA_RPC_URL=${solanaRpcUrl.trim()}
+SOLANA_WSS_URL=${solanaWssUrl.trim()}
+EVM_BASE_RPC_URL=${evmBaseRpcUrl.trim()}
+EVM_ETH_RPC_URL=${evmEthRpcUrl.trim()}
+
+# Web3 Burner Wallets
 SOLANA_PRIVATE_KEY=${solanaPrivateKey.trim()}
 EVM_PRIVATE_KEY=${evmPrivateKey.trim()}
-SOLANA_RPC_URL=${solanaRpcUrl.trim()}
-EVM_BASE_RPC_URL=${evmBaseRpcUrl.trim()}
 
 # Security Audit Endpoints
 RUGCHECK_API_URL=https://api.rugcheck.xyz/v1
@@ -233,10 +261,10 @@ RUGCHECK_API_URL=https://api.rugcheck.xyz/v1
   fs.writeFileSync(envPath, envContent, 'utf8');
 
   console.log('\n======================================================');
-  console.log('✅ Configuration file (.env) successfully created!');
-  console.log(`💡 Mode: ${isDryRun === 'true' ? 'SIMULATION (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
+  console.log('✅ Configuration file (.env) successfully generated!');
+  console.log(`💡 Operating Mode: ${isDryRun === 'true' ? 'SIMULATION (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
   console.log(`🪙 Demo Balance: ${simSolBalance} SOL | ${simEthBalance} ETH`);
-  console.log('💡 All API keys and credentials are now saved safely in .env');
+  console.log('💡 All API keys and adapter credentials saved securely in .env');
   console.log('======================================================\n');
 
   rl.close();
