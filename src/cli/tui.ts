@@ -108,7 +108,8 @@ export async function launchTUI(): Promise<void> {
         console.log('[3] Toggle Perps Futures Agent (Hyperliquid)');
         console.log('[4] Toggle NFT Sniping Agent (OpenSea)');
         console.log('[5] Toggle Polymarket Agent (Polygon L2)');
-        const agentChoice = await prompt('Select Agent to Toggle (1-5): ');
+        console.log('[6] Toggle Smart CT & AI Alpha Agent (X/Twitter)');
+        const agentChoice = await prompt('Select Agent to Toggle (1-6): ');
         console.log(`${C.green}✅ Agent screening state updated in Parthenon memory!${C.reset}`);
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;

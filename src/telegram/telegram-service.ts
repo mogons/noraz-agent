@@ -78,6 +78,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 • 💧 Trade+LP Velocity: PAUSED
 • 🖼️ NFT Sniping: PAUSED
 • 🎯 Polymarket: PAUSED
+• 💡 Smart CT Alpha: PAUSED
 
 Use touch buttons below to toggle agents or view balances:`;
 
@@ -96,8 +97,8 @@ Use touch buttons below to toggle agents or view balances:`;
           { text: '▶️ Start Polymarket', callback_data: 'start_poly' },
         ],
         [
+          { text: '▶️ Start CT Alpha', callback_data: 'start_ct_alpha' },
           { text: '⏸️ Pause All', callback_data: 'pause_all' },
-          { text: '🛑 Emergency Stop', callback_data: 'stop_all' },
         ],
         [
           { text: '🔑 Wallet Balances', callback_data: 'balances' },

@@ -69,8 +69,10 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
    - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival Volume Spikes (>300%).
    - EVM Meme Agent (#call-meme-evm): Base L2, Ethereum Mainnet, Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit.
    - Perps & Futures Agent (#call-perps-futures): Hyperliquid & CEX 5-Role Swarm (Macro, Quant, Risk, Catalyst, H1/H4 Technical EMA/RSI).
-   - Trade + LP Velocity Engine (#call-meme-solana & #call-meme-evm): Meteora DLMM & Uniswap v3 aggressive fee harvesting (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
+   - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-evm): Meteora DLMM & Uniswap v3 aggressive fee harvesting (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
    - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.
+   - Polymarket Prediction Agent (#call-prediction-markets): Polygon L2 odds arbitrage, implied mispricings, & $10k+ USDC whale bet inflows.
+   - Smart CT & AI Alpha Agent (#call-ct-alpha): X/Twitter AI Agent launches, airdrop threads, & Smart Money calls.
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Custom Price Alerts: Users can set real-time price triggers via /alert or by asking in chat (e.g. "kabari kalau BTC 70k").
 
