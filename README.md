@@ -173,6 +173,22 @@ athena update
 
 ---
 
+## 🤖 Automatic Platform Provisioning (Discord & Telegram)
+
+Upon executing `athena run` or `athena deploy`, Athena automatically provisions your connected communication platforms:
+
+- **👾 Discord Server Auto-Setup:**
+  - Auto-creates Category: **`🏛️ ATHENA COMMAND CENTER`**.
+  - Auto-creates 10 Text Channels: `#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`.
+  - Auto-registers 16 Slash Commands (`/price`, `/chart`, `/holders`, `/wallets`, `/pump`, `/convert`, `/menu`, `/journal`, `/alert`, etc.).
+  - *Prerequisite:* Ensure your Discord bot is invited to your server with **Administrator** or **Manage Channels** permissions.
+
+- **📱 Telegram Notification & Control Bridge:**
+  - When `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID` are set in `.env`, Athena automatically broadcasts the **Interactive Control Dashboard** on startup with inline touch buttons (`[▶️ Start Solana]`, `[▶️ Start CT Alpha]`, `[🔑 Balances]`, `[⏸️ Pause All]`).
+  - High-confidence signals (Score >= 80%) are automatically formatted and dual-broadcasted directly to your Telegram chat/group in real time.
+
+---
+
 ## 🛡️ Security & Safety Rules
 
 - **Dry-Run Safeguard Default**: `DRY_RUN=true` environment flag ensures no live blockchain transactions are sent without explicit confirmation.
