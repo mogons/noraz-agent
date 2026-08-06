@@ -306,5 +306,26 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(swapRes.simulated).toBe(true);
     expect(swapRes.outputTokens).toBeGreaterThan(0);
   });
+
+  it('19. OpenSea Adapter DEX Aggregator & Agent Discovery: Should calculate swap quotes and return agent tools manifest', async () => {
+    const { OpenSeaAdapter } = await import('../src/adapters/opensea-adapter.js');
+    const adapter = new OpenSeaAdapter();
+
+    const quote = await adapter.getSwapQuote({
+      chain: 'base',
+      fromToken: 'ETH',
+      toToken: 'USDC',
+      amount: 0.5,
+    });
+    expect(quote.success).toBe(true);
+    expect(quote.chainId).toBe(8453);
+    expect(quote.expectedAmountOut).toBeGreaterThan(0);
+    expect(quote.openseaSwapUrl).toContain('opensea.io/swap');
+
+    const manifest = adapter.getAgentToolsManifest();
+    expect(manifest.name).toBe('Athena OpenSea Agent Tools');
+    expect(Array.isArray(manifest.capabilities)).toBe(true);
+  });
 });
+
 

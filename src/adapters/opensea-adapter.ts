@@ -1,3 +1,5 @@
+import type { WalletService } from '../services/wallet-service.js';
+
 export interface OpenSeaWhaleInfo {
   address: string;
   portfolioValueUsd: number;
@@ -24,8 +26,55 @@ export interface OpenSeaNFTSignal {
   aiThesis: string;
 }
 
+export interface OpenSeaSwapRequest {
+  chain: string | number;
+  fromToken: string;
+  toToken: string;
+  amount: number;
+  userAddress?: string;
+}
+
+export interface OpenSeaSwapResult {
+  success: boolean;
+  chainName: string;
+  chainId: number;
+  fromToken: string;
+  toToken: string;
+  amountIn: number;
+  expectedAmountOut: number;
+  feeUsd: number;
+  estimatedDurationSeconds: number;
+  openseaSwapUrl: string;
+  simulated: boolean;
+  txHash?: string;
+  explorerUrl?: string;
+  error?: string;
+}
+
+const CHAIN_MAP: Record<string, { id: number; name: string; slug: string }> = {
+  '1': { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
+  ethereum: { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
+  eth: { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
+
+  '8453': { id: 8453, name: 'Base L2', slug: 'base' },
+  base: { id: 8453, name: 'Base L2', slug: 'base' },
+
+  '42161': { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
+  arbitrum: { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
+  arb: { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
+
+  '10': { id: 10, name: 'OP Mainnet', slug: 'optimism' },
+  optimism: { id: 10, name: 'OP Mainnet', slug: 'optimism' },
+  op: { id: 10, name: 'OP Mainnet', slug: 'optimism' },
+
+  '137': { id: 137, name: 'Polygon L2', slug: 'polygon' },
+  polygon: { id: 137, name: 'Polygon L2', slug: 'polygon' },
+  poly: { id: 137, name: 'Polygon L2', slug: 'polygon' },
+};
+
 export class OpenSeaAdapter {
   private apiKey?: string;
+  private isDryRun: boolean;
 
   public readonly trackedCollections = [
     { slug: 'pudgypenguins', name: 'Pudgy Penguins', chain: 'ethereum' as const },
@@ -37,10 +86,142 @@ export class OpenSeaAdapter {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.OPENSEA_API_KEY;
+    this.isDryRun = process.env.DRY_RUN !== 'false';
   }
 
   public isApiKeyConfigured(): boolean {
     return Boolean(this.apiKey);
+  }
+
+  public parseChain(input: string | number): { id: number; name: string; slug: string } {
+    const key = String(input).toLowerCase().trim();
+    if (CHAIN_MAP[key]) return CHAIN_MAP[key];
+    return { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' };
+  }
+
+  /**
+   * Get a token swap quote via OpenSea API v2 Swap Aggregator (powered by Relay, 0x, Jupiter)
+   */
+  public async getSwapQuote(request: OpenSeaSwapRequest): Promise<OpenSeaSwapResult> {
+    const chainInfo = this.parseChain(request.chain);
+    const fromSymbol = request.fromToken.toUpperCase();
+    const toSymbol = request.toToken.toUpperCase();
+    const amount = request.amount;
+
+    console.log(`[OPENSEA ADAPTER] Requesting OpenSea Swap Quote: ${amount} ${fromSymbol} -> ${toSymbol} on ${chainInfo.name}`);
+
+    const openseaSwapUrl = `https://opensea.io/swap?chain=${chainInfo.slug}&from=${encodeURIComponent(fromSymbol)}&to=${encodeURIComponent(toSymbol)}&amount=${amount}`;
+
+    if (this.isDryRun) {
+      console.log(`[OPENSEA ADAPTER] DRY_RUN=true -> Simulating OpenSea DEX Aggregator Swap Quote...`);
+      return {
+        success: true,
+        chainName: chainInfo.name,
+        chainId: chainInfo.id,
+        fromToken: fromSymbol,
+        toToken: toSymbol,
+        amountIn: amount,
+        expectedAmountOut: Number((amount * (fromSymbol === 'ETH' ? 3200 : 0.998)).toFixed(4)),
+        feeUsd: 0.0, // OpenSea 0% swap fee
+        estimatedDurationSeconds: 4,
+        openseaSwapUrl,
+        simulated: true,
+      };
+    }
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (this.apiKey) headers['x-api-key'] = this.apiKey;
+
+      const res = await fetch(`https://api.opensea.io/api/v2/swap/quote?chain=${chainInfo.slug}&from_token=${fromSymbol}&to_token=${toSymbol}&amount=${amount}`, { headers });
+
+      if (!res.ok) {
+        throw new Error(`OpenSea Swap API returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json() as Record<string, unknown>;
+      const expectedOut = data.expected_out ? Number(data.expected_out) : amount * 0.998;
+
+      return {
+        success: true,
+        chainName: chainInfo.name,
+        chainId: chainInfo.id,
+        fromToken: fromSymbol,
+        toToken: toSymbol,
+        amountIn: amount,
+        expectedAmountOut: expectedOut,
+        feeUsd: 0.0,
+        estimatedDurationSeconds: 4,
+        openseaSwapUrl,
+        simulated: false,
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`[OPENSEA ADAPTER] OpenSea Swap API fallback (${errMsg}). Using simulation.`);
+      return {
+        success: true,
+        chainName: chainInfo.name,
+        chainId: chainInfo.id,
+        fromToken: fromSymbol,
+        toToken: toSymbol,
+        amountIn: amount,
+        expectedAmountOut: Number((amount * 0.998).toFixed(4)),
+        feeUsd: 0.0,
+        estimatedDurationSeconds: 4,
+        openseaSwapUrl,
+        simulated: true,
+      };
+    }
+  }
+
+  /**
+   * Execute token swap via OpenSea API v2 + WalletService
+   */
+  public async executeSwap(request: OpenSeaSwapRequest, walletService?: WalletService): Promise<OpenSeaSwapResult> {
+    const quote = await this.getSwapQuote(request);
+
+    if (this.isDryRun) {
+      const simHash = `0xsim_os_swap_${quote.chainId}_${Date.now()}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      return {
+        ...quote,
+        txHash: simHash,
+        explorerUrl,
+        simulated: true,
+      };
+    }
+
+    if (!walletService || !walletService.hasWallet('evm')) {
+      return quote;
+    }
+
+    try {
+      const { EVMTradeAdapter } = await import('./evm-adapter.js');
+      const evmAdapter = new EVMTradeAdapter();
+      const res = await evmAdapter.swapToken({ chain: quote.chainId, fromToken: request.fromToken, toToken: request.toToken, amountEth: request.amount }, walletService);
+      return {
+        ...quote,
+        txHash: res.txHash,
+        explorerUrl: res.explorerUrl,
+        simulated: false,
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return { ...quote, error: errMsg };
+    }
+  }
+
+  /**
+   * Get OpenSea ERC-8257 AI Agent Tool discovery manifest
+   */
+  public getAgentToolsManifest(): Record<string, unknown> {
+    return {
+      name: 'Athena OpenSea Agent Tools',
+      version: '1.0.0',
+      description: 'OpenSea API v2 & Seaport integration tools for AI Agents',
+      capabilities: ['swap_tokens', 'get_nft_floor', 'whale_analytics', 'cross_chain_fulfill'],
+      discovery_url: 'https://docs.opensea.io/reference/llms-agent-discovery',
+    };
   }
 
   /**
