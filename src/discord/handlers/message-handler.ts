@@ -222,6 +222,33 @@ Current Operating Parameters:
     await message.reply(response);
   } catch (error: any) {
     console.error('Control room AI response error:', error);
-    await message.reply(`🧠 **Athena Response:**\nI received your query: "${userQuery}". Currently operating in DRY_RUN mode with active risk engine safeguards.`);
+
+    const lower = userQuery.toLowerCase();
+    const isIndonesian = /[a-z]/i.test(userQuery) && (
+      lower.includes('bisa') ||
+      lower.includes('hai') ||
+      lower.includes('halo') ||
+      lower.includes('apa') ||
+      lower.includes('yang') ||
+      lower.includes('indonesia') ||
+      lower.includes('kamu') ||
+      lower.includes('saya')
+    );
+
+    const fallbackText = isIndonesian
+      ? `🏛️ **Athena AI Active System:**\n\nHalo! Tentu saja, saya adalah **Athena**, asisten intelijen dan trading crypto otonom multi-agent kamu.\n\n` +
+        `Saat ini sistem beroperasi dalam **Mode Simulasi (DRY_RUN)** dengan engine mitigasi risiko aktif.\n\n` +
+        `Ada yang bisa saya bantu? Kamu bisa meminta saya untuk:\n` +
+        `• Audit token (paste contract address Solana / Base / ETH)\n` +
+        `• Set alert harga (contoh: *"kabari kalau BTC 75000"*)\n` +
+        `• Eksekusi langsung on-chain: \`/swap\`, \`/bridge\`, atau \`/send\``
+      : `🏛️ **Athena AI Active System:**\n\nHello! I am **Athena**, your autonomous multi-agent crypto intelligence and trading assistant.\n\n` +
+        `Currently operating in **Simulation Mode (DRY_RUN)** with active risk engine safeguards.\n\n` +
+        `How can I assist you today? You can ask me for:\n` +
+        `• Token security audits (paste contract address)\n` +
+        `• Natural language price alerts (e.g. *"notify me if ETH hits 3000"*)\n` +
+        `• Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\``;
+
+    await message.reply(fallbackText);
   }
 }

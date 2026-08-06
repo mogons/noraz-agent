@@ -125,24 +125,49 @@ export class AIService {
       headers['X-Title'] = 'Athena Crypto Agent';
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: this.config.modelName,
-        messages,
-        max_tokens: maxTokens,
-        temperature: 0.7,
-      }),
-    });
+    const candidateModels = [
+      this.config.modelName,
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'deepseek/deepseek-r1:free',
+      'google/gemini-2.0-flash-lite-preview-02-05:free',
+      'qwen/qwen-2.5-coder-32b-instruct:free',
+    ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Status ${response.status}: ${errorText}`);
+    const modelsToTry = this.config.baseUrl?.includes('openrouter.ai')
+      ? Array.from(new Set(candidateModels))
+      : [this.config.modelName];
+
+    let lastError: Error | null = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model,
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+          }),
+        });
+
+        if (response.ok) {
+          const data: any = await response.json();
+          const content = data.choices?.[0]?.message?.content?.trim();
+          if (content) return content;
+        }
+
+        const errorText = await response.text();
+        lastError = new Error(`Model ${model} Status ${response.status}: ${errorText}`);
+        console.warn(`[AI SERVICE WARNING] Model ${model} failed: ${lastError.message}. Trying next model...`);
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[AI SERVICE WARNING] Network error for ${model}: ${err.message}`);
+      }
     }
 
-    const data: any = await response.json();
-    return data.choices?.[0]?.message?.content?.trim() || 'No response generated from AI provider.';
+    throw lastError || new Error('All AI models failed to return a response.');
   }
 
   private async callAnthropic(messages: AIMessage[], maxTokens: number, apiKey: string): Promise<string> {
