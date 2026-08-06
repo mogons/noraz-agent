@@ -223,18 +223,21 @@ Current Operating Parameters:
   } catch (error: any) {
     console.error('[ATHENA AI ERROR]', error.message);
 
-    const lower = userQuery.toLowerCase();
+    const providerConfig = aiService.getConfig();
+    const keyHint = providerConfig.apiKeys.length > 0 
+      ? `${providerConfig.apiKeys[0].slice(0, 12)}... (${providerConfig.apiKeys.length} keys total)`
+      : 'NONE';
 
     // 1. Dynamic intent: User asking about LLM / AI model
     if (lower.includes('llm') || lower.includes('model') || lower.includes('ai apa') || lower.includes('pakai ai')) {
-      const providerConfig = aiService.getConfig();
       await message.reply(
         `🏛️ **ATHENA LLM ENGINE STATUS REPORT**\n\n` +
         `• **Configured Provider:** \`${providerConfig.provider.toUpperCase()}\` (${providerConfig.baseUrl})\n` +
         `• **Target Model:** \`${providerConfig.modelName}\`\n` +
-        `• **API Key Status:** ⚠️ \`Key Limit / Quota Exceeded (${error.message || '403 Forbidden'})\`\n\n` +
-        `💡 **Solusi:** API Key OpenRouter kamu mengalami batas limit kuota. Kamu bisa memperbarui API Key baru atau menambahkan Backup Keys via \`athena wizard\`.\n\n` +
-        `🛡️ **Sistem Otonom Lokal:** Meskipun API Key cloud limit, 95% engine lokal Athena (7 Sub-Agent, GoPlus/RugCheck audit, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) tetap beroperasi 100% lancar!`
+        `• **Active API Key Hint:** \`${keyHint}\`\n` +
+        `• **Error Detail:** ⚠️ \`${error.message || 'Unknown Error'}\`\n\n` +
+        `💡 **Solusi:** Jalankan \`athena wizard\` di VPS untuk menyegarkan API Key baru kamu.\n\n` +
+        `🛡️ **Sistem Otonom Lokal:** 95% engine lokal Athena (7 Sub-Agent, GoPlus/RugCheck audit, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) tetap beroperasi 100% lancar!`
       );
       return;
     }
@@ -256,26 +259,26 @@ Current Operating Parameters:
     const fallbackText = isIndonesian
       ? `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
         `Saya menerima permintaan kamu: *"${userQuery}"*.\n\n` +
-        `📊 **Status Analisa & Operasional:**\n` +
+        `📊 **Status Operasional:**\n` +
         `• **Mode:** \`DRY_RUN (Simulasi Aman Active)\`\n` +
-        `• **Risk Safeguard:** Portfolio Max Drawdown Limit \`5.0%\` (Current: \`0.0%\` Safe)\n` +
-        `• **Active Sub-Agents:** Solana Meme, EVM DEX, Perps, NFT Sniping, Polymarket, & LP Velocity\n\n` +
+        `• **Active Key Hint:** \`${keyHint}\`\n` +
+        `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
         `💡 **Kemampuan Utama:**\n` +
         `1. Paste Contract Address token untuk **Audit Keamanan Real-time**.\n` +
         `2. Minta alert harga (*"kabari kalau SOL 200"*).\n` +
         `3. Eksekusi direct on-chain: \`/swap\`, \`/bridge\`, atau \`/send\`.\n\n` +
-        `*(Catatan: API Key Cloud AI kamu mengalami limit kuota. Jalankan \`athena wizard\` jika ingin memperbarui API Key cadangan!)*`
+        `*(Catatan: Cloud AI Error. Jalankan \`athena wizard\` di VPS untuk memperbarui API Key!)*`
       : `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
         `I received your query: *"${userQuery}"*.\n\n` +
-        `📊 **Analysis & Operating Status:**\n` +
+        `📊 **Operating Status:**\n` +
         `• **Mode:** \`DRY_RUN (Safe Simulation Active)\`\n` +
-        `• **Risk Safeguard:** Portfolio Max Drawdown Limit \`5.0%\` (Current: \`0.0%\` Safe)\n` +
-        `• **Active Sub-Agents:** Solana Meme, EVM DEX, Perps, NFT Sniping, Polymarket, & LP Velocity\n\n` +
+        `• **Active Key Hint:** \`${keyHint}\`\n` +
+        `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
         `💡 **Core Capabilities:**\n` +
         `1. Paste Contract Address for **Real-Time Security Audit**.\n` +
         `2. Ask for price alerts (*"notify me if SOL hits 200"*).\n` +
         `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
-        `*(Note: Your Cloud AI API Key experienced a quota limit. Run \`athena wizard\` to update backup API keys!)*`;
+        `*(Note: Cloud AI Error. Run \`athena wizard\` on VPS to update API keys!)*`;
 
     await message.reply(fallbackText);
   }
