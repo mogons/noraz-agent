@@ -3,9 +3,15 @@ export interface TelegramConfig {
   chatId?: string;
 }
 
+export interface TelegramTopic {
+  name: string;
+  threadId: number;
+}
+
 export class TelegramService {
   private botToken?: string;
   private chatId?: string;
+  private topics: Map<string, number> = new Map();
 
   constructor(config?: TelegramConfig) {
     this.botToken = config?.botToken || process.env.TELEGRAM_BOT_TOKEN;
@@ -16,23 +22,96 @@ export class TelegramService {
     return Boolean(this.botToken && this.chatId);
   }
 
-  public async sendMessage(text: string, parseMode: 'Markdown' | 'HTML' = 'Markdown', replyMarkup?: any): Promise<boolean> {
-    if (!this.isEnabled()) {
-      return false;
-    }
+  /**
+   * Automatically provisions Telegram Forum Topics (sub-channels) if chat is a Forum Supergroup
+   */
+  public async createForumTopic(name: string): Promise<number | null> {
+    if (!this.isEnabled()) return null;
 
-    const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
+    const url = `https://api.telegram.org/bot${this.botToken}/createForumTopic`;
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: this.chatId,
-          text,
-          parse_mode: parseMode,
-          disable_web_page_preview: true,
-          reply_markup: replyMarkup,
+          name,
         }),
+      });
+
+      if (!response.ok) {
+        // Chat might be a regular group or private chat, or topic already exists
+        return null;
+      }
+
+      const data: any = await response.json();
+      if (data.ok && data.result?.message_thread_id) {
+        const threadId = data.result.message_thread_id;
+        this.topics.set(name.toLowerCase(), threadId);
+        console.log(`[TELEGRAM BOOTSTRAP] Auto-created Topic: "${name}" (Thread ID: ${threadId})`);
+        return threadId;
+      }
+      return null;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  /**
+   * Auto-bootstrap all 10 Athena Sub-Channels / Forum Topics in Telegram Group
+   */
+  public async bootstrapTelegramTopics(): Promise<Record<string, number | null>> {
+    if (!this.isEnabled()) return {};
+
+    console.log('[TELEGRAM BOOTSTRAP] Auto-provisioning Athena Sub-Channels (Forum Topics) in Telegram Group...');
+    const topicNames = [
+      'athena-control-room',
+      'audit-on-demand',
+      'call-meme-solana',
+      'call-meme-evm',
+      'call-perps-futures',
+      'call-lp-solana',
+      'call-lp-evm',
+      'call-nft-sniping',
+      'call-prediction-markets',
+      'call-ct-alpha',
+    ];
+
+    const results: Record<string, number | null> = {};
+    for (const name of topicNames) {
+      results[name] = await this.createForumTopic(name);
+    }
+    return results;
+  }
+
+  public async sendMessage(
+    text: string,
+    parseMode: 'Markdown' | 'HTML' = 'Markdown',
+    replyMarkup?: any,
+    threadId?: number
+  ): Promise<boolean> {
+    if (!this.isEnabled()) {
+      return false;
+    }
+
+    const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
+    try {
+      const payload: any = {
+        chat_id: this.chatId,
+        text,
+        parse_mode: parseMode,
+        disable_web_page_preview: true,
+        reply_markup: replyMarkup,
+      };
+
+      if (threadId) {
+        payload.message_thread_id = threadId;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -49,7 +128,14 @@ export class TelegramService {
     }
   }
 
-  public async broadcastSignalCall(title: string, symbol: string, ca: string, aiThesis: string, dexUrl?: string): Promise<boolean> {
+  public async broadcastSignalCall(
+    title: string,
+    symbol: string,
+    ca: string,
+    aiThesis: string,
+    dexUrl?: string,
+    topicName?: string
+  ): Promise<boolean> {
     const message = `🚨 *ATHENA CALL: ${title} ($${symbol})*
 
 📋 *Contract Address (CA):*
@@ -62,7 +148,8 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
 🤖 _Sent via Athena Swarm Consensus_`;
 
-    return this.sendMessage(message, 'Markdown');
+    const threadId = topicName ? this.topics.get(topicName.toLowerCase()) : undefined;
+    return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
   public async broadcastInteractiveMenu(): Promise<boolean> {
@@ -107,6 +194,7 @@ Use touch buttons below to toggle agents or view balances:`;
       ],
     };
 
-    return this.sendMessage(text, 'Markdown', replyMarkup);
+    const threadId = this.topics.get('athena-control-room');
+    return this.sendMessage(text, 'Markdown', replyMarkup, threadId);
   }
 }
