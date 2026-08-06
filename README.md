@@ -105,16 +105,16 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 
 Follow this exact sequence to setup, test, launch, and maintain Athena:
 
-| Step | Phase | Action / Goal | Primary Command | Alternative Alias |
+| Step | Phase | Action / Goal | Modern `athena` CLI | Standard `npm` Alias |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Installation** | Clone repository & install dependencies | `git clone ... && cd Athena && npm install` | - |
-| **2** | **Configuration** | Interactive setup wizard for `.env` credentials | `npm run wizard` | `npm run config` |
-| **3** | **Compilation** | Build TypeScript codebase into `/dist` | `npm run build` | - |
-| **4** | **Verification** | Run test suite to verify 12/12 core modules pass | `npm test` | - |
-| **5a** | **Launch (Dev)** | Run in local development mode with hot-reload | `npm run dev` | - |
-| **5b** | **Launch (Terminal)** | Run interactive Parthenon Terminal TUI | `npm run terminal` | `npm run tui` |
-| **5c** | **Launch (VPS 24/7)** | Run production 24/7 background process (PM2) | `npm run deploy` | - |
-| **6** | **Maintenance** | Pull latest updates from Git & re-build | `npm run update` | - |
+| **1** | **Installation** | Clone repository & install dependencies | `git clone ... && npm install` | - |
+| **2** | **Configuration** | Interactive setup wizard for `.env` credentials | `npx athena wizard` | `npm run wizard` |
+| **3** | **Compilation** | Build TypeScript codebase into `/dist` | `npx athena build` | `npm run build` |
+| **4** | **Verification** | Run test suite to verify 12/12 core modules pass | `npx athena test` | `npm test` |
+| **5a** | **Launch (Dev)** | Run in local development mode with hot-reload | `npx athena run` *(or `npx athena`)* | `npm run dev` |
+| **5b** | **Launch (Terminal)** | Run interactive Parthenon Terminal TUI | `npx athena terminal` | `npm run terminal` |
+| **5c** | **Launch (VPS 24/7)** | Run production 24/7 background process (PM2) | `npx athena deploy` | `npm run deploy` |
+| **6** | **Maintenance** | Pull latest updates from Git & re-build | `npx athena update` | `npm run update` |
 
 ---
 

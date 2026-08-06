@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading System operated via Discord Command Center",
   "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "athena": "./bin/athena.js"
+  },
   "scripts": {
+    "athena": "node ./bin/athena.js",
     "wizard": "node scripts/wizard.js",
     "config": "node scripts/wizard.js",
     "dev": "tsx watch src/index.ts",
