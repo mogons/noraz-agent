@@ -30,17 +30,38 @@ async function runWizard() {
     ? fs.readFileSync(envExamplePath, 'utf8')
     : '';
 
-  console.log('📌 Silakan masukkan kredensial dasar (bisa ditekan Enter untuk lewati):\n');
+  console.log('📌 PILIHAN MODE ANTARMUKA ATHENA:');
+  console.log(' [1] Discord Command Center (Default)');
+  console.log(' [2] Telegram Bot & Forum Topics Bridge');
+  console.log(' [3] Dual Mode (Discord + Telegram Bridge)');
+  console.log(' [4] Standalone Terminal TUI (Tanpa Bot, Langsung Terminal VPS)');
+  const interfaceChoice = await askQuestion('Pilihan (1/2/3/4) [Default 1]: ') || '1';
 
-  const botToken = await askQuestion('1. Masukkan DISCORD_BOT_TOKEN: ');
-  const clientId = await askQuestion('2. Masukkan DISCORD_CLIENT_ID: ');
-  const aiKey = await askQuestion('3. Masukkan AI API KEY (OpenRouter / Anthropic / GLM / 9router): ');
+  let botToken = '';
+  let clientId = '';
+  let telegramToken = '';
+  let telegramChatId = '';
+
+  if (interfaceChoice === '1' || interfaceChoice === '3') {
+    console.log('\n💬 KREDENSIAL DISCORD BOT:');
+    botToken = await askQuestion('1. Masukkan DISCORD_BOT_TOKEN: ');
+    clientId = await askQuestion('2. Masukkan DISCORD_CLIENT_ID: ');
+  }
+
+  if (interfaceChoice === '2' || interfaceChoice === '3') {
+    console.log('\n📱 KREDENSIAL TELEGRAM BOT:');
+    telegramToken = await askQuestion('1. Masukkan TELEGRAM_BOT_TOKEN: ');
+    telegramChatId = await askQuestion('2. Masukkan TELEGRAM_CHAT_ID (misal -1001234567): ');
+  }
+
+  console.log('\n🤖 KREDENSIAL AI ENGINE:');
+  const aiKey = await askQuestion('Masukkan AI API KEY (OpenRouter / Anthropic / OpenAI / Custom): ');
   
   console.log('\nPilih AI Provider:');
   console.log(' [1] OpenRouter (Default - Banyak model gratisan)');
   console.log(' [2] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
   console.log(' [3] OpenAI (GPT-4o)');
-  console.log(' [4] Custom (GLM 5.2 / 9router)');
+  console.log(' [4] Custom (GLM 5.2 / 9router / Ollama Local)');
   const providerChoice = await askQuestion('Pilihan (1/2/3/4) [Default 1]: ');
 
   let provider = 'openrouter';
@@ -80,6 +101,10 @@ SIMULATION_BALANCE_ETH=${simEthBalance.trim()}
 DISCORD_BOT_TOKEN=${botToken.trim()}
 DISCORD_CLIENT_ID=${clientId.trim()}
 DISCORD_GUILD_ID=
+
+# Telegram Credentials
+TELEGRAM_BOT_TOKEN=${telegramToken.trim()}
+TELEGRAM_CHAT_ID=${telegramChatId.trim()}
 
 # AI Provider Configuration
 AI_PROVIDER=${provider}
