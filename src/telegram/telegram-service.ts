@@ -1,5 +1,6 @@
 import { AthenaHub } from '../orchestrator/hub.js';
 import { WalletService } from '../services/wallet-service.js';
+import { AIService } from '../services/ai-service.js';
 
 export interface TelegramConfig {
   botToken?: string;
@@ -214,7 +215,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
   /**
    * Start long-polling listener for Telegram incoming commands & callback buttons
    */
-  public startPolling(hub: AthenaHub, walletService: WalletService): void {
+  public startPolling(hub: AthenaHub, walletService: WalletService, aiService?: AIService): void {
     if (!this.isEnabled()) return;
 
     let offset = 0;
@@ -229,7 +230,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           if (data.ok && Array.isArray(data.result)) {
             for (const update of data.result) {
               offset = update.update_id + 1;
-              await this.handleTelegramUpdate(update, hub, walletService);
+              await this.handleTelegramUpdate(update, hub, walletService, aiService);
             }
           }
         }
@@ -243,7 +244,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
     poll();
   }
 
-  private async handleTelegramUpdate(update: any, hub: AthenaHub, walletService: WalletService): Promise<void> {
+  private async handleTelegramUpdate(update: any, hub: AthenaHub, walletService: WalletService, aiService?: AIService): Promise<void> {
     if (update.callback_query) {
       const query = update.callback_query;
       const data = query.data;
@@ -311,6 +312,24 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           }
         } catch (err: any) {
           await this.sendMessage(`❌ Withdrawal failed: ${err.message}`, 'Markdown', undefined, threadId);
+        }
+      } else if (!text.startsWith('/') && aiService) {
+        try {
+          const systemPrompt = `You are Athena, a chill, brilliant, and interactive AI crypto trading companion.
+You chat naturally and casually like a smart crypto-native friend (gaya bahasa santai, ramah, dan interaktif), but always stay sharp, accurate, and direct.
+
+CRITICAL TONE & COST EFFICIENCY RULES:
+- Be casual, friendly, and conversational (bahasa santai, ga kaku, ga kelewat formal).
+- Be extremely TO THE POINT and concise. NO fluff, NO introductory fillers, NO repetitive summaries (hemat token, langsung ke inti).
+- Use clear markdown bullet points when explaining technical data or steps.`;
+
+          const aiRes = await aiService.generateCompletion([
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text },
+          ]);
+          await this.sendMessage(aiRes, 'Markdown', undefined, threadId);
+        } catch (err: any) {
+          // Failover catch
         }
       }
     }

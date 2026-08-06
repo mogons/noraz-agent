@@ -141,7 +141,7 @@ if (discordToken && clientId) {
       try {
         await telegramService.bootstrapTelegramTopics();
         await telegramService.broadcastInteractiveMenu(hub, walletService);
-        telegramService.startPolling(hub, walletService);
+        telegramService.startPolling(hub, walletService, aiService);
       } catch (tgErr: any) {
         console.error('[TELEGRAM SERVICE] Startup broadcast error:', tgErr.message);
       }
