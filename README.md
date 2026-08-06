@@ -178,10 +178,9 @@ athena update
 Upon executing `athena run` or `athena deploy`, Athena automatically provisions your connected communication platforms:
 
 - **👾 Discord Server Auto-Setup:**
-  - Auto-creates Category: **`🏛️ ATHENA COMMAND CENTER`**.
-  - Auto-creates 10 Text Channels: `#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`.
-  - Auto-registers 16 Slash Commands (`/price`, `/chart`, `/holders`, `/wallets`, `/pump`, `/convert`, `/menu`, `/journal`, `/alert`, etc.).
-  - *Prerequisite:* Ensure your Discord bot is invited to your server with **Administrator** or **Manage Channels** permissions.
+  - **Step 1 (Invite Bot to Server):** Invite your Discord Bot to your server using your `CLIENT_ID`:
+    `https://discord.com/api/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&permissions=8&scope=bot%20applications.commands`
+  - **Step 2 (Automatic Channel Creation):** Launch `athena run` or `athena deploy`. Athena connects to your server and **automatically creates Category `🏛️ ATHENA COMMAND CENTER` and 10 Channels** (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`) + registers all 16 Slash Commands. You **NEVER** need to create any channels manually!
 
 - **📱 Telegram Notification & Control Bridge:**
   - When `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID` are set in `.env`, Athena automatically broadcasts the **Interactive Control Dashboard** on startup with inline touch buttons (`[▶️ Start Solana]`, `[▶️ Start CT Alpha]`, `[🔑 Balances]`, `[⏸️ Pause All]`).
