@@ -204,7 +204,7 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 
 Current Operating Parameters:
 - Execution Mode: DRY_RUN Active (Safe Simulation).
-- Global Portfolio Drawdown Limit: 5.0%.
+- Global Portfolio Drawdown Limit: 50.0%.
 - Current Portfolio Drawdown: 0.0%.
 
 RESPONSE FORMATTING RULES:
@@ -225,7 +225,7 @@ RESPONSE FORMATTING RULES:
       case '5':
         console.clear();
         console.log(`${C.cyan}=== ⚙️ GLOBAL RISK MANAGEMENT & SAFEGUARDS ===${C.reset}`);
-        console.log(`• Max Daily Drawdown: 5% ($500)`);
+        console.log(`• Max Daily Drawdown: 50% ($5,000)`);
         console.log(`• Default Position Size: 0.5 SOL / 0.1 ETH`);
         console.log(`• Auto Take Profit Targets: +100% (50%), +200% (25%)`);
         console.log(`• Auto Stop Loss Target: -20% (Dynamic Trailing Enabled)`);

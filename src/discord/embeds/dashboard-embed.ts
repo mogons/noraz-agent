@@ -27,7 +27,7 @@ export function createDashboardComponents(hub: AthenaHub) {
         name: '⚙️ Operating Mode & Risk Safeguards',
         value:
           '• **Execution Mode:** `DRY_RUN (Safe Simulation)`\n' +
-          '• **Max Daily Drawdown:** `5.0% ($500 USD)`\n' +
+          '• **Max Daily Drawdown:** `50.0% ($5,000 USD)`\n' +
           '• **Current Drawdown:** `0.0%`',
         inline: false,
       },

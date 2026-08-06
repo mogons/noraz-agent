@@ -257,7 +257,7 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 
 Current Operating Parameters:
 - Execution Mode: DRY_RUN Active (Safe Simulation).
-- Global Portfolio Drawdown Limit: 5.0%.
+- Global Portfolio Drawdown Limit: 50.0%.
 - Current Portfolio Drawdown: 0.0%.
 
 RESPONSE FORMATTING RULES:

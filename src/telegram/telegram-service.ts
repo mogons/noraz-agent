@@ -164,7 +164,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
     const text = `🏛️ *ATHENA CONTROL CENTER DASHBOARD (TELEGRAM)*
 
 ⚙️ *Mode:* ${isDryRun ? 'DRY_RUN Active (Safe Simulation)' : '⚡ LIVE Execution Active'}
-🛡️ *Max Drawdown:* 5.0%
+🛡️ *Max Drawdown:* 50.0%
 
 🤖 *Active Sub-Agents Status:*
 • 🐣 Solana Meme (\`meme-solana\`): ${getStatus('meme-solana')}

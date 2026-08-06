@@ -23,7 +23,7 @@ export class RiskManager {
 
   constructor(customLimits?: Partial<RiskLimits>) {
     this.limits = {
-      maxPortfolioDrawdownPercent: 5.0,
+      maxPortfolioDrawdownPercent: 50.0,
       maxTradeAmountUsd: 500,
       stopTradingOnDrawdown: true,
       maxSectorExposurePercent: 30.0,      // Max 30% portfolio in one asset
