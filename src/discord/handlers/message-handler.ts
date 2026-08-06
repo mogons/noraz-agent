@@ -3,6 +3,53 @@ import { AIService } from '../../services/ai-service.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
 
+const DISCORD_MAX_LENGTH = 2000;
+
+/**
+ * Splits a long text into chunks of ≤ maxLength characters.
+ * Prefers splitting at newline boundaries to avoid breaking mid-sentence.
+ * Falls back to splitting at space boundaries, then hard-cuts as last resort.
+ */
+function splitDiscordMessage(text: string, maxLength: number = DISCORD_MAX_LENGTH): string[] {
+  if (text.length <= maxLength) return [text];
+
+  const chunks: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= maxLength) {
+      chunks.push(remaining);
+      break;
+    }
+
+    let splitIndex = -1;
+
+    // 1. Try to split at the last newline within the limit
+    const lastNewline = remaining.lastIndexOf('\n', maxLength);
+    if (lastNewline > maxLength * 0.3) {
+      splitIndex = lastNewline + 1; // include the newline in current chunk
+    }
+
+    // 2. Fallback: split at the last space within the limit
+    if (splitIndex === -1) {
+      const lastSpace = remaining.lastIndexOf(' ', maxLength);
+      if (lastSpace > maxLength * 0.3) {
+        splitIndex = lastSpace + 1;
+      }
+    }
+
+    // 3. Last resort: hard cut at maxLength
+    if (splitIndex === -1) {
+      splitIndex = maxLength;
+    }
+
+    chunks.push(remaining.substring(0, splitIndex).trimEnd());
+    remaining = remaining.substring(splitIndex).trimStart();
+  }
+
+  return chunks.filter(c => c.length > 0);
+}
+
 export async function handleControlRoomMessage(
   message: Message,
   aiService: AIService,
@@ -219,7 +266,14 @@ Current Operating Parameters:
       { role: 'user', content: userQuery }
     ]);
 
-    await message.reply(response);
+    const chunks = splitDiscordMessage(response);
+    // First chunk as reply (preserves thread context), rest as follow-ups
+    await message.reply(chunks[0]);
+    for (let i = 1; i < chunks.length; i++) {
+      if ('send' in message.channel && typeof message.channel.send === 'function') {
+        await message.channel.send(chunks[i]);
+      }
+    }
   } catch (error: any) {
     console.error('[ATHENA AI ERROR]', error.message);
 
