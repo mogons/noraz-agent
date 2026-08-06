@@ -37,7 +37,7 @@ export class RiskEngineV2 {
       maxPortfolioDrawdownPercent: 5,
       maxSingleAssetExposurePercent: 10,
       maxSingleChainExposurePercent: 40,
-      maxCorrelatedPositionsCount: 3,
+      maxCorrelatedPositionsCount: 999, // Disabled to allow full participation in trending narrative metas (e.g. AI / Meme runners)
       maxConsecutiveLossesBeforeKill: 3,
       killSwitchCooldownMinutes: 60,
       ...config,
