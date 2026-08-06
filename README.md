@@ -107,7 +107,7 @@ Athena is engineered with an asynchronous Node.js Event Loop architecture and lo
 
 | Resource | Recommended VPS / Server Spec | Minimum Spec | Key Recommendations |
 | :--- | :--- | :--- | :--- |
-| 🐧 **Operating System** | **Ubuntu 22.04 LTS 64-bit** | Windows 10/11, macOS, Debian 12 | Ubuntu 22.04 LTS is strongly recommended for 24/7 VPS daemons |
+| 🐧 **Operating System** | **Ubuntu 22.04 / 24.04 LTS 64-bit** | Windows 10/11, macOS, Debian 12 | Ubuntu 22.04 or 24.04 LTS are fully supported for 24/7 VPS daemons |
 | ⚡ **CPU / Processor** | **1 vCPU / Core** | 1 vCPU / Core | 1 Core easily handles all 7 screening loops asynchronously |
 | 🧠 **Memory (RAM)** | **2 GB RAM** | 1 GB RAM | 2 GB RAM provides 100% headroom with zero OOM crash risk |
 | 💾 **Storage (Disk)** | **20 – 40 GB SSD / NVMe** | 15 GB SSD | Stores local database state, trade logs, and `/dist` bundle |
