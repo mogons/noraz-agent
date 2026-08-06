@@ -37,8 +37,12 @@ console.log('----------------------------------------------------');
 const isDryRun = process.env.DRY_RUN !== 'false';
 console.log(`[CONFIG] DRY_RUN Mode: ${isDryRun ? 'ENABLED (Safe Mode)' : 'DISABLED (LIVE TRADING)'}`);
 
+// Initialize persistent StateStore (survives bot restarts)
+const stateStore = new StateStore();
+
 const hub = new AthenaHub();
 const swarmEngine = new SwarmConsensusEngine();
+swarmEngine.attachStateStore(stateStore);
 const swarmAdapter: SwarmConsensus = {
   evaluateSignal: async (signalPayload: any) => {
     const res = swarmEngine.evaluateSignal({
@@ -63,8 +67,6 @@ const swarmAdapter: SwarmConsensus = {
   },
 };
 
-// Initialize persistent StateStore (survives bot restarts)
-const stateStore = new StateStore();
 
 const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
