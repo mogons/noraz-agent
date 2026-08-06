@@ -223,6 +223,7 @@ Current Operating Parameters:
   } catch (error: any) {
     console.error('[ATHENA AI ERROR]', error.message);
 
+    const lower = userQuery.toLowerCase();
     const providerConfig = aiService.getConfig();
     const keyHint = providerConfig.apiKeys.length > 0 
       ? `${providerConfig.apiKeys[0].slice(0, 12)}... (${providerConfig.apiKeys.length} keys total)`
