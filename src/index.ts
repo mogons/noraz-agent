@@ -89,6 +89,7 @@ const priceFeedService = new PriceFeedService();
 // Attach StateStore to all persistent services
 priceAlertService.attachStateStore(stateStore);
 tradeJournalService.attachStateStore(stateStore);
+walletService.attachStateStore(stateStore);
 
 const loadedSkills = skillLoader.loadAllSkills();
 

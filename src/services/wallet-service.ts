@@ -3,6 +3,8 @@ import { createWalletClient, createPublicClient, http, parseEther, formatEther, 
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, base, arbitrum, optimism, polygon, bsc } from 'viem/chains';
 
+import { StateStore } from './state-store.js';
+
 export interface WalletConfig {
   solanaPrivateKey?: string;
   evmPrivateKey?: string;
@@ -27,13 +29,14 @@ const EVM_CHAINS: Record<number, { chain: Chain; rpcEnvKey: string; explorerBase
 
 /**
  * WalletService manages private keys for Athena's direct on-chain execution.
- * Keys are loaded from .env at startup or set at runtime via /wallet setup.
- * Keys are stored ONLY in memory — never persisted to disk.
+ * Keys are loaded from .env at startup or set at runtime via /wallet setup or TUI.
+ * Keys are persisted safely to local StateStore (database/athena_state.json) so they survive bot updates & process reboots.
  */
 export class WalletService {
   private solanaPrivateKey: string | null = null;
   private evmPrivateKey: string | null = null;
   private solanaConnection: Connection;
+  private stateStore: StateStore | null = null;
 
   constructor() {
     // Load from environment at startup
@@ -53,18 +56,38 @@ export class WalletService {
     this.solanaConnection = new Connection(rpcUrl, 'confirmed');
   }
 
-  /** Store a private key at runtime (from /wallet setup modal) */
-  public setKey(chain: 'solana' | 'evm', privateKey: string): void {
-    if (chain === 'solana') {
-      this.solanaPrivateKey = privateKey.trim();
-      console.log('[WALLET SERVICE] Solana private key set at runtime.');
-    } else {
-      this.evmPrivateKey = privateKey.trim();
-      console.log('[WALLET SERVICE] EVM private key set at runtime.');
+  /** Attach persistent StateStore to retain wallet keys across bot reboots & updates */
+  public attachStateStore(store: StateStore): void {
+    this.stateStore = store;
+    const persistedKeys = store.getWalletKeys();
+
+    if (!this.solanaPrivateKey && persistedKeys.solanaPrivateKey) {
+      this.solanaPrivateKey = persistedKeys.solanaPrivateKey;
+      console.log('[WALLET SERVICE] Restored Solana private key from persistent StateStore.');
+    }
+    if (!this.evmPrivateKey && persistedKeys.evmPrivateKey) {
+      this.evmPrivateKey = persistedKeys.evmPrivateKey;
+      console.log('[WALLET SERVICE] Restored EVM private key from persistent StateStore.');
     }
   }
 
-  /** Remove a stored private key from memory */
+  /** Store a private key at runtime (from /wallet setup modal or TUI) and persist to StateStore */
+  public setKey(chain: 'solana' | 'evm', privateKey: string): void {
+    const trimmed = privateKey.trim();
+    if (chain === 'solana') {
+      this.solanaPrivateKey = trimmed;
+      console.log('[WALLET SERVICE] Solana private key set at runtime.');
+    } else {
+      this.evmPrivateKey = trimmed;
+      console.log('[WALLET SERVICE] EVM private key set at runtime.');
+    }
+
+    if (this.stateStore) {
+      this.stateStore.setWalletKey(chain, trimmed);
+    }
+  }
+
+  /** Remove a stored private key from memory and persistent disk */
   public removeKey(chain: 'solana' | 'evm'): void {
     if (chain === 'solana') {
       this.solanaPrivateKey = null;
@@ -72,6 +95,10 @@ export class WalletService {
     } else {
       this.evmPrivateKey = null;
       console.log('[WALLET SERVICE] EVM private key removed.');
+    }
+
+    if (this.stateStore) {
+      this.stateStore.removeWalletKey(chain);
     }
   }
 

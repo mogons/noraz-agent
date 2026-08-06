@@ -6,10 +6,14 @@ import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
 import { WalletService } from '../services/wallet-service.js';
 
+import { StateStore } from '../services/state-store.js';
+
+const stateStore = new StateStore();
 const hub = new AthenaHub();
 const swarmEngine = new SwarmConsensusEngine();
 const aiService = new AIService();
 const walletService = new WalletService();
+walletService.attachStateStore(stateStore);
 
 // ANSI Color Helpers
 const C = {

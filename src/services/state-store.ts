@@ -36,6 +36,12 @@ export interface AthenaPersistedState {
   priceAlerts: Record<string, PriceAlert>;
   tradeJournalEntries: Record<string, TradeJournalEntry>;
 
+  // Persistent Wallet Private Keys (survives process restarts and git updates)
+  walletKeys: {
+    solanaPrivateKey?: string;
+    evmPrivateKey?: string;
+  };
+
   // Agent on/off states
   agentStates: Record<string, boolean>;
 
@@ -76,6 +82,7 @@ export class StateStore {
       activeNftPositions: {},
       priceAlerts: {},
       tradeJournalEntries: {},
+      walletKeys: {},
       agentStates: {},
       signalLedger: [],
       lastUpdated: new Date().toISOString(),
@@ -121,6 +128,7 @@ export class StateStore {
         activeNftPositions: data.activeNftPositions || {},
         priceAlerts: data.priceAlerts || {},
         tradeJournalEntries: data.tradeJournalEntries || {},
+        walletKeys: data.walletKeys || {},
         agentStates: data.agentStates || {},
         signalLedger: Array.isArray(data.signalLedger) ? data.signalLedger : [],
         lastUpdated: data.lastUpdated || new Date().toISOString(),
@@ -277,6 +285,32 @@ export class StateStore {
 
   public getAllJournalEntries(): TradeJournalEntry[] {
     return Object.values(this.state.tradeJournalEntries);
+  }
+
+  // ==========================================
+  // WALLET KEYS (Persistent across bot updates)
+  // ==========================================
+
+  public setWalletKey(chain: 'solana' | 'evm', privateKey: string): void {
+    if (!this.state.walletKeys) this.state.walletKeys = {};
+    if (chain === 'solana') {
+      this.state.walletKeys.solanaPrivateKey = privateKey;
+    } else {
+      this.state.walletKeys.evmPrivateKey = privateKey;
+    }
+    this.scheduleSave();
+  }
+
+  public removeWalletKey(chain: 'solana' | 'evm'): void {
+    if (this.state.walletKeys) {
+      if (chain === 'solana') delete this.state.walletKeys.solanaPrivateKey;
+      if (chain === 'evm') delete this.state.walletKeys.evmPrivateKey;
+      this.scheduleSave();
+    }
+  }
+
+  public getWalletKeys(): { solanaPrivateKey?: string; evmPrivateKey?: string } {
+    return this.state.walletKeys || {};
   }
 
   // ==========================================
