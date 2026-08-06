@@ -1,6 +1,6 @@
 export interface SignalCandidate {
   symbol: string;
-  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP';
+  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION';
   contractAddress?: string;
   liquidityUsd: number;
   volume1hUsd: number;

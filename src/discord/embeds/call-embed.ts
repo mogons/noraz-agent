@@ -1,7 +1,7 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export interface CallSignalPayload {
-  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP';
+  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION';
   title: string;
   symbol: string;
   contractAddress?: string;
@@ -37,6 +37,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     NFT: 0x9b59b6,         // Purple
     LP_METEORA: 0x2ecc71,  // Bright Emerald Green
     LP_UNISWAP: 0x3498db,  // Royal Blue
+    PREDICTION: 0x00ffaa,  // Cyan / Prediction
   };
 
   const isLpSignal = payload.domain === 'LP_METEORA' || payload.domain === 'LP_UNISWAP';
@@ -152,6 +153,21 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       new ButtonBuilder()
         .setCustomId(`pause_channel_${payload.domain}`)
         .setLabel('⏸️ Pause NFT Screening')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  } else if (payload.domain === 'PREDICTION') {
+    buttonsRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`execute_prediction_yes_${payload.symbol}`)
+        .setLabel('🎯 Bet YES (50 USDC)')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`execute_prediction_no_${payload.symbol}`)
+        .setLabel('🛑 Bet NO (50 USDC)')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`pause_channel_${payload.domain}`)
+        .setLabel('⏸️ Pause Polymarket Screening')
         .setStyle(ButtonStyle.Secondary)
     );
   } else {
