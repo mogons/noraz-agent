@@ -1,3 +1,5 @@
+import { StateStore } from '../services/state-store.js';
+
 export interface OpenPosition {
   id: string;
   symbol: string;
@@ -38,9 +40,36 @@ export interface ActiveNFTPosition {
 }
 
 export class PositionManager {
+  private stateStore: StateStore | null = null;
+
+  // In-memory mirrors for fast access (loaded from StateStore on init)
   private activePositions: Map<string, OpenPosition> = new Map();
   private activeLpPositions: Map<string, ActiveLPPosition> = new Map();
   private activeNftPositions: Map<string, ActiveNFTPosition> = new Map();
+
+  /**
+   * Attach persistent StateStore. Call this after StateStore is initialized.
+   * Loads all existing positions from disk into memory.
+   */
+  public attachStateStore(store: StateStore): void {
+    this.stateStore = store;
+
+    // Restore positions from persistent storage
+    for (const pos of store.getAllPositions()) {
+      this.activePositions.set(pos.id, pos);
+    }
+    for (const lp of store.getAllLpPositions()) {
+      this.activeLpPositions.set(lp.id, lp);
+    }
+    for (const nft of store.getAllNftPositions()) {
+      this.activeNftPositions.set(nft.id, nft);
+    }
+
+    const total = this.activePositions.size + this.activeLpPositions.size + this.activeNftPositions.size;
+    if (total > 0) {
+      console.log(`[POSITION MANAGER] Restored ${this.activePositions.size} spot, ${this.activeLpPositions.size} LP, ${this.activeNftPositions.size} NFT positions from persistent state.`);
+    }
+  }
 
   // ==========================================
   // MEME & SPOT POSITION TRACKING
@@ -48,10 +77,16 @@ export class PositionManager {
 
   public addPosition(position: OpenPosition) {
     this.activePositions.set(position.id, position);
+    this.stateStore?.setPosition(position);
   }
 
   public getActivePositions(): OpenPosition[] {
     return Array.from(this.activePositions.values());
+  }
+
+  public removePosition(id: string): void {
+    this.activePositions.delete(id);
+    this.stateStore?.removePosition(id);
   }
 
   public updateMemePosition(
@@ -73,6 +108,7 @@ export class PositionManager {
     // 1. Take Profit Milestones (+100% and +200%)
     if (priceChangePercent >= 200 && !pos.tp200Triggered) {
       pos.tp200Triggered = true;
+      this.stateStore?.setPosition(pos);
       return {
         triggerAlert: true,
         type: 'MILESTONE',
@@ -82,6 +118,7 @@ export class PositionManager {
 
     if (priceChangePercent >= 100 && !pos.tp100Triggered) {
       pos.tp100Triggered = true;
+      this.stateStore?.setPosition(pos);
       return {
         triggerAlert: true,
         type: 'MILESTONE',
@@ -91,6 +128,7 @@ export class PositionManager {
 
     // 2. Critical Drop (-50%)
     if (priceChangePercent <= -50) {
+      this.stateStore?.setPosition(pos);
       return {
         triggerAlert: true,
         type: 'CRITICAL',
@@ -102,6 +140,7 @@ export class PositionManager {
     if (pos.initialVolume4hUsd && currentVolume4hUsd) {
       const volumeDropPercent = ((pos.initialVolume4hUsd - currentVolume4hUsd) / pos.initialVolume4hUsd) * 100;
       if (volumeDropPercent >= 70) {
+        this.stateStore?.setPosition(pos);
         return {
           triggerAlert: true,
           type: 'WARNING',
@@ -113,6 +152,7 @@ export class PositionManager {
     // 4. Smart Money Exiting (Count drops below 1, or drops by >= 50%)
     if (pos.initialSmartMoneyCount !== undefined && currentSmartMoneyCount !== undefined) {
       if (currentSmartMoneyCount === 0 || (pos.initialSmartMoneyCount >= 2 && currentSmartMoneyCount <= pos.initialSmartMoneyCount * 0.5)) {
+        this.stateStore?.setPosition(pos);
         return {
           triggerAlert: true,
           type: 'CRITICAL',
@@ -121,6 +161,8 @@ export class PositionManager {
       }
     }
 
+    // Persist updated price even if no alert
+    this.stateStore?.setPosition(pos);
     return { triggerAlert: false, type: 'NONE' };
   }
 
@@ -130,10 +172,16 @@ export class PositionManager {
 
   public addLpPosition(position: ActiveLPPosition) {
     this.activeLpPositions.set(position.id, position);
+    this.stateStore?.setLpPosition(position);
   }
 
   public getActiveLpPositions(): ActiveLPPosition[] {
     return Array.from(this.activeLpPositions.values());
+  }
+
+  public removeLpPosition(id: string): void {
+    this.activeLpPositions.delete(id);
+    this.stateStore?.removeLpPosition(id);
   }
 
   public checkLpPositionAlert(positionId: string): { triggerAlert: boolean; reason?: string } {
@@ -184,10 +232,16 @@ export class PositionManager {
 
   public addNftPosition(position: ActiveNFTPosition) {
     this.activeNftPositions.set(position.id, position);
+    this.stateStore?.setNftPosition(position);
   }
 
   public getActiveNftPositions(): ActiveNFTPosition[] {
     return Array.from(this.activeNftPositions.values());
+  }
+
+  public removeNftPosition(id: string): void {
+    this.activeNftPositions.delete(id);
+    this.stateStore?.removeNftPosition(id);
   }
 
   /**
@@ -212,6 +266,7 @@ export class PositionManager {
     // 1. Take Profit Milestones (+50% and +30%)
     if (floorChangePct >= 50 && !pos.tp50Triggered) {
       pos.tp50Triggered = true;
+      this.stateStore?.setNftPosition(pos);
       return {
         triggerAlert: true,
         type: 'MILESTONE',
@@ -221,6 +276,7 @@ export class PositionManager {
 
     if (floorChangePct >= 30 && !pos.tp30Triggered) {
       pos.tp30Triggered = true;
+      this.stateStore?.setNftPosition(pos);
       return {
         triggerAlert: true,
         type: 'MILESTONE',
@@ -230,6 +286,7 @@ export class PositionManager {
 
     // 2. Critical Floor Drop (-20%)
     if (floorChangePct <= -20) {
+      this.stateStore?.setNftPosition(pos);
       return {
         triggerAlert: true,
         type: 'CRITICAL',
@@ -239,6 +296,7 @@ export class PositionManager {
 
     // 3. Sales Velocity Dry-up Alert (Sales velocity < 5 sales/hour)
     if (salesVelocity1h < 5) {
+      this.stateStore?.setNftPosition(pos);
       return {
         triggerAlert: true,
         type: 'WARNING',
@@ -246,6 +304,7 @@ export class PositionManager {
       };
     }
 
+    this.stateStore?.setNftPosition(pos);
     return { triggerAlert: false, type: 'NONE' };
   }
 }

@@ -1,4 +1,5 @@
 import { PriceFeedService } from './price-feed-service.js';
+import { StateStore } from './state-store.js';
 
 export interface PriceAlert {
   id: string;
@@ -14,6 +15,24 @@ export interface PriceAlert {
 
 export class PriceAlertService {
   private alerts: Map<string, PriceAlert> = new Map();
+  private stateStore: StateStore | null = null;
+
+  /**
+   * Attach persistent StateStore. Loads existing alerts from disk.
+   */
+  public attachStateStore(store: StateStore): void {
+    this.stateStore = store;
+
+    // Restore alerts from persistent storage
+    for (const alert of store.getAllAlerts()) {
+      this.alerts.set(alert.id, alert);
+    }
+
+    const activeCount = Array.from(this.alerts.values()).filter(a => !a.triggered).length;
+    if (activeCount > 0) {
+      console.log(`[PRICE ALERT SERVICE] Restored ${activeCount} active price alerts from persistent state.`);
+    }
+  }
 
   /**
    * Add a new price alert
@@ -28,6 +47,7 @@ export class PriceAlertService {
       triggered: false,
     };
     this.alerts.set(id, alert);
+    this.stateStore?.setAlert(alert);
     console.log(`[PRICE ALERT SERVICE] Registered alert: ${alert.symbol} ${alert.direction} $${alert.targetPriceUsd} (ID: ${id})`);
     return alert;
   }
@@ -36,7 +56,9 @@ export class PriceAlertService {
    * Remove/cancel an existing price alert
    */
   public removeAlert(id: string): boolean {
-    return this.alerts.delete(id);
+    const removed = this.alerts.delete(id);
+    if (removed) this.stateStore?.removeAlert(id);
+    return removed;
   }
 
   /**
@@ -78,7 +100,6 @@ export class PriceAlertService {
 
     // Match price pattern (e.g. 70k, $70,000, 70000, 70.5k, 1500)
     const kRegex = /(\$?\d+(\.\d+)?)\s*k\b/i;
-    const standardRegex = /\$?\b(\d{1,3}(,\d{3})*(\.\d+)?|\d+(\.\d+)?)\b/;
 
     let targetPriceUsd = 0;
     if (kRegex.test(lower)) {
@@ -129,6 +150,7 @@ export class PriceAlertService {
         if (isTriggered) {
           alert.triggered = true;
           alert.lastTriggeredPriceUsd = currentPrice;
+          this.stateStore?.setAlert(alert); // Persist triggered state
           triggeredAlerts.push(alert);
           console.log(`[PRICE ALERT TRIGGERED] ${alert.symbol} hit target $${alert.targetPriceUsd} (Current: $${currentPrice})!`);
         }

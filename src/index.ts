@@ -20,9 +20,10 @@ import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
 import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
-import { priceAlertService, walletService } from './discord/handlers/interaction-handler.js';
+import { priceAlertService, tradeJournalService, walletService } from './discord/handlers/interaction-handler.js';
 import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
+import { StateStore } from './services/state-store.js';
 
 dotenv.config();
 
@@ -62,7 +63,12 @@ const swarmAdapter: SwarmConsensus = {
   },
 };
 
+// Initialize persistent StateStore (survives bot restarts)
+const stateStore = new StateStore();
+
 const positionManager = new PositionManager();
+positionManager.attachStateStore(stateStore);
+
 const aiService = new AIService();
 const skillLoader = new SkillLoader();
 const meteoraAdapter = new MeteoraDLMMAdapter();
@@ -76,6 +82,10 @@ const evmScreeningAgent = new EVMScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
 const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 const priceFeedService = new PriceFeedService();
+
+// Attach StateStore to all persistent services
+priceAlertService.attachStateStore(stateStore);
+tradeJournalService.attachStateStore(stateStore);
 
 const loadedSkills = skillLoader.loadAllSkills();
 
@@ -243,3 +253,15 @@ function isControlRoomChannel(configuredId: string | undefined, message: any): b
 }
 
 console.log('[SYSTEM] Setup complete. All Athena modules ready.');
+console.log('[STATE STORE] Persistent state engine active — positions, alerts, and journal survive restarts.');
+
+// Graceful Shutdown: flush pending state writes to disk before exit
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n[SHUTDOWN] Received ${signal}. Flushing state to disk...`);
+  stateStore.flushToDisk();
+  console.log('[SHUTDOWN] State saved. Goodbye!');
+  process.exit(0);
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

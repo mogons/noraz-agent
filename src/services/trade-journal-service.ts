@@ -1,3 +1,5 @@
+import { StateStore } from './state-store.js';
+
 export interface TradeJournalEntry {
   id: string;
   domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'LP_VELOCITY' | 'NFT_SNIPING' | 'PREDICTION';
@@ -32,9 +34,34 @@ export interface JournalSummaryStats {
 
 export class TradeJournalService {
   private entries: Map<string, TradeJournalEntry> = new Map();
+  private stateStore: StateStore | null = null;
 
   constructor() {
+    // Sample entries only seeded if no persistent state is loaded
     this.seedSampleEntries();
+  }
+
+  /**
+   * Attach persistent StateStore. Loads existing journal entries from disk.
+   * If persistent entries exist, clears sample seeds and uses real data.
+   */
+  public attachStateStore(store: StateStore): void {
+    this.stateStore = store;
+
+    const persisted = store.getAllJournalEntries();
+    if (persisted.length > 0) {
+      // Replace sample data with real persisted data
+      this.entries.clear();
+      for (const entry of persisted) {
+        this.entries.set(entry.id, entry);
+      }
+      console.log(`[TRADE JOURNAL] Restored ${persisted.length} journal entries from persistent state.`);
+    } else {
+      // Persist the sample entries for first-time setup
+      for (const entry of this.entries.values()) {
+        store.setJournalEntry(entry);
+      }
+    }
   }
 
   private seedSampleEntries(): void {
@@ -84,6 +111,7 @@ export class TradeJournalService {
 
   public recordTradeEntry(entry: TradeJournalEntry): TradeJournalEntry {
     this.entries.set(entry.id, entry);
+    this.stateStore?.setJournalEntry(entry);
     console.log(`[TRADE JOURNAL] Logged new trade entry: ${entry.symbol} (${entry.domain}) - Status: ${entry.status}`);
     return entry;
   }
@@ -107,6 +135,7 @@ export class TradeJournalService {
     trade.realizedPnlUsd = (trade.positionSizeUsd * priceChangePct) / 100;
 
     this.entries.set(id, trade);
+    this.stateStore?.setJournalEntry(trade);
     console.log(`[TRADE JOURNAL] Closed trade ${trade.symbol} | PnL: ${trade.realizedPnlPct.toFixed(1)}% ($${trade.realizedPnlUsd.toFixed(2)} USD)`);
     return trade;
   }
