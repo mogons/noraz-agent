@@ -4,14 +4,15 @@
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading System operated via Discord Command Center",
   "main": "dist/index.js",
   "scripts": {
+    "wizard": "node scripts/wizard.js",
+    "config": "node scripts/wizard.js",
     "dev": "tsx watch src/index.ts",
+    "terminal": "tsx src/cli/tui.ts",
+    "tui": "tsx src/cli/tui.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "tui": "tsx src/cli/tui.ts",
-    "wizard": "node scripts/wizard.js",
-    "setup": "npm install && npm run build",
-    "update": "git pull && npm install && npm run build",
     "deploy": "npm install && npm run build && npx pm2 restart athena-agent --update-env || npx pm2 start dist/index.js --name athena-agent",
+    "update": "git pull && npm install && npm run build",
     "test": "vitest run"
   },
   "keywords": [

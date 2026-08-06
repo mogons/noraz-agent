@@ -135,20 +135,15 @@ npm test
 ```
 
 ### Step 5: Launch Athena Ecosystem
-Choose your preferred launch mode:
 
-- **Mode A: Development Hot-Reload**
-  ```bash
-  npm run dev
-  ```
-- **Mode B: Production PM2 Process Manager (Background 24/7 Daemon)**
-  ```bash
-  npm run deploy
-  ```
-- **Mode C: Terminal Parthenon Interactive UI (TUI)**
-  ```bash
-  npm run tui
-  ```
+| Purpose / Action | Primary Command | Alternative Alias |
+| :--- | :--- | :--- |
+| 🧙‍♂️ **Interactive Setup Wizard** | `npm run wizard` | `npm run config` |
+| 🚀 **Development Mode (Hot-Reload)** | `npm run dev` | - |
+| 🏛️ **Terminal Parthenon TUI** | `npm run terminal` | `npm run tui` |
+| 🌐 **24/7 VPS Background Server (PM2)** | `npm run deploy` | - |
+| 🔄 **Update & Re-build Codebase** | `npm run update` | - |
+| 🧪 **Run Automated Test Suite** | `npm test` | - |
 
 ---
 
