@@ -127,10 +127,11 @@ export class AIService {
 
     const candidateModels = [
       this.config.modelName,
-      'meta-llama/llama-3.3-70b-instruct:free',
-      'deepseek/deepseek-r1:free',
-      'google/gemini-2.0-flash-lite-preview-02-05:free',
-      'qwen/qwen-2.5-coder-32b-instruct:free',
+      'openrouter/auto',
+      'google/gemini-2.0-flash-exp:free',
+      'stepfun/step-2-16k:free',
+      'meta-llama/llama-3.3-70b-instruct',
+      'deepseek/deepseek-r1',
     ];
 
     const modelsToTry = this.config.baseUrl?.includes('openrouter.ai')

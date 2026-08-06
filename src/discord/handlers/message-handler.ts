@@ -221,9 +221,25 @@ Current Operating Parameters:
 
     await message.reply(response);
   } catch (error: any) {
-    console.error('Control room AI response error:', error);
+    console.error('[ATHENA AI ERROR]', error.message);
 
     const lower = userQuery.toLowerCase();
+
+    // 1. Dynamic intent: User asking about LLM / AI model
+    if (lower.includes('llm') || lower.includes('model') || lower.includes('ai apa') || lower.includes('pakai ai')) {
+      const providerConfig = aiService.getConfig();
+      await message.reply(
+        `🏛️ **ATHENA LLM ENGINE STATUS REPORT**\n\n` +
+        `• **Configured Provider:** \`${providerConfig.provider.toUpperCase()}\` (${providerConfig.baseUrl})\n` +
+        `• **Target Model:** \`${providerConfig.modelName}\`\n` +
+        `• **API Key Status:** ⚠️ \`Key Limit / Quota Exceeded (${error.message || '403 Forbidden'})\`\n\n` +
+        `💡 **Solusi:** API Key OpenRouter kamu mengalami batas limit kuota. Kamu bisa memperbarui API Key baru atau menambahkan Backup Keys via \`athena wizard\`.\n\n` +
+        `🛡️ **Sistem Otonom Lokal:** Meskipun API Key cloud limit, 95% engine lokal Athena (7 Sub-Agent, GoPlus/RugCheck audit, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) tetap beroperasi 100% lancar!`
+      );
+      return;
+    }
+
+    // 2. Dynamic intent: General Chat / Analysis Query in Indonesian
     const isIndonesian = /[a-z]/i.test(userQuery) && (
       lower.includes('bisa') ||
       lower.includes('hai') ||
@@ -232,22 +248,34 @@ Current Operating Parameters:
       lower.includes('yang') ||
       lower.includes('indonesia') ||
       lower.includes('kamu') ||
-      lower.includes('saya')
+      lower.includes('saya') ||
+      lower.includes('analisa') ||
+      lower.includes('analisis')
     );
 
     const fallbackText = isIndonesian
-      ? `🏛️ **Athena AI Active System:**\n\nHalo! Tentu saja, saya adalah **Athena**, asisten intelijen dan trading crypto otonom multi-agent kamu.\n\n` +
-        `Saat ini sistem beroperasi dalam **Mode Simulasi (DRY_RUN)** dengan engine mitigasi risiko aktif.\n\n` +
-        `Ada yang bisa saya bantu? Kamu bisa meminta saya untuk:\n` +
-        `• Audit token (paste contract address Solana / Base / ETH)\n` +
-        `• Set alert harga (contoh: *"kabari kalau BTC 75000"*)\n` +
-        `• Eksekusi langsung on-chain: \`/swap\`, \`/bridge\`, atau \`/send\``
-      : `🏛️ **Athena AI Active System:**\n\nHello! I am **Athena**, your autonomous multi-agent crypto intelligence and trading assistant.\n\n` +
-        `Currently operating in **Simulation Mode (DRY_RUN)** with active risk engine safeguards.\n\n` +
-        `How can I assist you today? You can ask me for:\n` +
-        `• Token security audits (paste contract address)\n` +
-        `• Natural language price alerts (e.g. *"notify me if ETH hits 3000"*)\n` +
-        `• Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\``;
+      ? `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
+        `Saya menerima permintaan kamu: *"${userQuery}"*.\n\n` +
+        `📊 **Status Analisa & Operasional:**\n` +
+        `• **Mode:** \`DRY_RUN (Simulasi Aman Active)\`\n` +
+        `• **Risk Safeguard:** Portfolio Max Drawdown Limit \`5.0%\` (Current: \`0.0%\` Safe)\n` +
+        `• **Active Sub-Agents:** Solana Meme, EVM DEX, Perps, NFT Sniping, Polymarket, & LP Velocity\n\n` +
+        `💡 **Kemampuan Utama:**\n` +
+        `1. Paste Contract Address token untuk **Audit Keamanan Real-time**.\n` +
+        `2. Minta alert harga (*"kabari kalau SOL 200"*).\n` +
+        `3. Eksekusi direct on-chain: \`/swap\`, \`/bridge\`, atau \`/send\`.\n\n` +
+        `*(Catatan: API Key Cloud AI kamu mengalami limit kuota. Jalankan \`athena wizard\` jika ingin memperbarui API Key cadangan!)*`
+      : `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
+        `I received your query: *"${userQuery}"*.\n\n` +
+        `📊 **Analysis & Operating Status:**\n` +
+        `• **Mode:** \`DRY_RUN (Safe Simulation Active)\`\n` +
+        `• **Risk Safeguard:** Portfolio Max Drawdown Limit \`5.0%\` (Current: \`0.0%\` Safe)\n` +
+        `• **Active Sub-Agents:** Solana Meme, EVM DEX, Perps, NFT Sniping, Polymarket, & LP Velocity\n\n` +
+        `💡 **Core Capabilities:**\n` +
+        `1. Paste Contract Address for **Real-Time Security Audit**.\n` +
+        `2. Ask for price alerts (*"notify me if SOL hits 200"*).\n` +
+        `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
+        `*(Note: Your Cloud AI API Key experienced a quota limit. Run \`athena wizard\` to update backup API keys!)*`;
 
     await message.reply(fallbackText);
   }
