@@ -175,18 +175,21 @@ athena update
 
 ## 🤖 Automatic Platform Provisioning (Discord & Telegram)
 
-Upon executing `athena run` or `athena deploy`, Athena automatically provisions your connected communication platforms:
+Upon executing `athena run` or `athena deploy`, Athena automatically provisions sub-channels on both Discord & Telegram:
 
-- **👾 Discord Server Auto-Setup:**
-  - **Step 1 (Invite Bot to Server):** Invite your Discord Bot to your server using your `CLIENT_ID`:
-    `https://discord.com/api/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&permissions=8&scope=bot%20applications.commands`
-  - **Step 2 (Automatic Channel Creation):** Launch `athena run` or `athena deploy`. Athena connects to your server and **automatically creates Category `🏛️ ATHENA COMMAND CENTER` and 10 Channels** (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`) + registers all 16 Slash Commands. You **NEVER** need to create any channels manually!
+### 👾 Discord Server Setup & Auto-Channel Creation
+1. **Create Discord Server:** Click `+` (Add a Server) in Discord to create a server (takes 2 seconds).
+2. **Invite Bot:** Open this OAuth2 link in your browser to invite your bot:
+   `https://discord.com/api/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&permissions=8&scope=bot%20applications.commands`
+3. **Automatic Channel Creation:** Launch `athena run` or `athena deploy`. Athena automatically creates Category **`🏛️ ATHENA COMMAND CENTER`**, 10 Text Channels (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`), and registers all 16 Slash Commands. Zero manual channel setup required!
 
-- **📱 Telegram Notification & Control Bridge:**
-  - **Flexible Delivery:** Signals can be sent **directly to your Private Chat (DM)** or to a **Telegram Group / Channel**.
-  - **Setup:** Create your bot via Telegram [@BotFather](https://t.me/BotFather) for `TELEGRAM_BOT_TOKEN` and get your Chat ID via [@userinfobot](https://t.me/userinfobot) for `TELEGRAM_CHAT_ID` in `.env`.
-  - On startup, Athena automatically sends the **Interactive Touch Control Dashboard** with inline buttons (`[▶️ Start Solana]`, `[▶️ Start CT Alpha]`, `[🔑 Balances]`, `[⏸️ Pause All]`).
-  - High-confidence signals (Score >= 80%) are automatically formatted and dual-broadcasted directly to your Telegram chat/group in real time.
+---
+
+### 📱 Telegram Group Setup & Auto-Forum Topics Creation
+1. **Create Telegram Group & Enable Topics:** Create a Telegram Group, open **Group Settings** ➡️ Enable **Topics / Forum Mode**, and add your bot as Admin.
+2. **Set Chat ID:** Get your Group Chat ID (e.g. `-100123456789`) via [@userinfobot](https://t.me/userinfobot) and set `TELEGRAM_CHAT_ID` in `.env`.
+3. **Automatic Sub-Topic Creation:** Launch `athena run` or `athena deploy`. Athena automatically calls Telegram API to **create 10 Forum Sub-Topics** (`athena-control-room`, `call-meme-solana`, `call-meme-evm`, `call-ct-alpha`, etc.) and routes each domain signal to its dedicated sub-topic automatically!
+*(Note: If using a Private Chat DM, signals and the interactive touch control dashboard arrive directly in your DM chat)*.
 
 ---
 
