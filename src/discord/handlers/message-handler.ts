@@ -33,7 +33,7 @@ export async function handleControlRoomMessage(
   // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Base lewat Relay")
   const lowerQuery = userQuery.toLowerCase();
   const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
-  if (isBridgeIntent) {
+  if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
     const relayAdapter = new RelayAdapter();
 
@@ -68,6 +68,93 @@ export async function handleControlRoomMessage(
         `• **Relayer & Gas Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
         `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
         `Click the button below to execute 1-click intent swap on Relay.link:`,
+      components: [actionRow],
+    });
+    return;
+  }
+
+  // 1c. Detect if user is asking to Swap tokens (e.g., "swap 0.5 ETH ke USDC di Base", "tuker 100 USDC jadi ETH")
+  const isSwapIntent = ['swap', 'tuker', 'tukar', 'exchange', 'konversi'].some(kw => lowerQuery.includes(kw));
+  if (isSwapIntent) {
+    const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
+    const relayAdapter = new RelayAdapter();
+
+    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'solana', 'sol', 'polygon', 'poly', 'bsc'];
+    const foundChain = chains.find(c => lowerQuery.includes(c));
+    const chain = foundChain || 'ethereum';
+
+    // Extract token symbols from common patterns
+    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH', 'SOL', 'BNB', 'MATIC', 'ARB', 'OP', 'BUSD'];
+    const upperQuery = userQuery.toUpperCase();
+    const foundTokens = knownTokens.filter(t => upperQuery.includes(t));
+    const fromToken = foundTokens[0] || 'ETH';
+    const toToken = foundTokens[1] || (fromToken === 'ETH' ? 'USDC' : 'ETH');
+
+    const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
+    const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
+
+    const quote = await relayAdapter.getSwapQuote({ chain, fromToken, toToken, amount });
+
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Swap ${quote.fromToken} → ${quote.toToken} on Relay.link`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await message.reply({
+      content:
+        `🔄 **ATHENA RELAY.LINK SWAP QUOTE**\n\n` +
+        `• **Swapping:** \`${quote.amountIn} ${quote.fromToken}\` ➡️ \`~${quote.expectedAmountOut} ${quote.toToken}\`\n` +
+        `• **Chain:** **${quote.chainName}**\n` +
+        `• **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
+        `Click the button below to execute swap on Relay.link:`,
+      components: [actionRow],
+    });
+    return;
+  }
+
+  // 1d. Detect if user is asking to Send/Transfer tokens (e.g., "send 0.5 ETH ke 0xabc...", "kirim 1 SOL ke wallet")
+  const isSendIntent = ['send', 'kirim', 'kirimkan', 'transfer'].some(kw => lowerQuery.includes(kw));
+  const evmAddrMatch = userQuery.match(/\b0x[a-fA-F0-9]{40}\b/);
+  if (isSendIntent && evmAddrMatch) {
+    const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
+    const relayAdapter = new RelayAdapter();
+
+    const recipientAddress = evmAddrMatch[0];
+
+    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'polygon', 'poly', 'bsc'];
+    const foundChain = chains.find(c => lowerQuery.includes(c));
+    const chain = foundChain || 'ethereum';
+
+    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH', 'SOL', 'BNB', 'MATIC'];
+    const upperQuery = userQuery.toUpperCase();
+    const foundToken = knownTokens.find(t => upperQuery.includes(t));
+    const token = foundToken || 'ETH';
+
+    const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
+    const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
+
+    const quote = await relayAdapter.getSendQuote({ chain, token, amount, recipientAddress });
+
+    const shortAddr = `${quote.recipientAddress.substring(0, 6)}...${quote.recipientAddress.substring(quote.recipientAddress.length - 4)}`;
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Send ${quote.tokenSymbol} to ${shortAddr} on Relay.link`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await message.reply({
+      content:
+        `📤 **ATHENA RELAY.LINK SEND QUOTE**\n\n` +
+        `• **Sending:** \`${quote.amountIn} ${quote.tokenSymbol}\` to \`${shortAddr}\`\n` +
+        `• **Chain:** **${quote.chainName}**\n` +
+        `• **Recipient Receives:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
+        `• **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `• **Estimated Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n\n` +
+        `Click the button below to execute send on Relay.link:`,
       components: [actionRow],
     });
     return;

@@ -192,4 +192,20 @@ export const slashCommands = [
     .addStringOption(opt => opt.setName('destination').setDescription('Destination chain (e.g. base, ethereum, arbitrum, optimism, solana)').setRequired(true))
     .addNumberOption(opt => opt.setName('amount').setDescription('Amount to bridge').setRequired(true))
     .addStringOption(opt => opt.setName('token').setDescription('Token symbol (e.g. ETH, USDC, SOL)')),
+
+  new SlashCommandBuilder()
+    .setName('swap')
+    .setDescription('Swap tokens instantly via Relay.link (same-chain or cross-chain)')
+    .addStringOption(opt => opt.setName('from').setDescription('Token to swap from (e.g. ETH, USDC, or contract address)').setRequired(true))
+    .addStringOption(opt => opt.setName('to').setDescription('Token to swap to (e.g. USDC, ETH, or contract address)').setRequired(true))
+    .addNumberOption(opt => opt.setName('amount').setDescription('Amount to swap').setRequired(true))
+    .addStringOption(opt => opt.setName('chain').setDescription('Chain to swap on (default: ethereum)')),
+
+  new SlashCommandBuilder()
+    .setName('send')
+    .setDescription('Send/transfer tokens to another wallet via Relay.link')
+    .addStringOption(opt => opt.setName('to').setDescription('Recipient wallet address (0x... or SOL address)').setRequired(true))
+    .addNumberOption(opt => opt.setName('amount').setDescription('Amount to send').setRequired(true))
+    .addStringOption(opt => opt.setName('token').setDescription('Token symbol (default: ETH)'))
+    .addStringOption(opt => opt.setName('chain').setDescription('Chain to send on (default: ethereum)')),
 ];

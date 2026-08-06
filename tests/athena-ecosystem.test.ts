@@ -208,4 +208,40 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(quote.expectedAmountOut).toBeGreaterThan(0);
     expect(quote.relayWebUrl).toContain('relay.link/bridge');
   });
+
+  it('14. Relay Adapter Swap: Should calculate same-chain token swap quotes via Relay.link', async () => {
+    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
+    const adapter = new RelayAdapter();
+    const quote = await adapter.getSwapQuote({
+      chain: 'base',
+      fromToken: 'ETH',
+      toToken: 'USDC',
+      amount: 1.0,
+    });
+
+    expect(quote.success).toBe(true);
+    expect(quote.chainId).toBe(8453);
+    expect(quote.fromToken).toBe('ETH');
+    expect(quote.toToken).toBe('USDC');
+    expect(quote.expectedAmountOut).toBeGreaterThan(0);
+    expect(quote.relayWebUrl).toContain('relay.link/swap');
+  });
+
+  it('15. Relay Adapter Send: Should calculate token transfer quotes to recipient wallet via Relay.link', async () => {
+    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
+    const adapter = new RelayAdapter();
+    const quote = await adapter.getSendQuote({
+      chain: 'ethereum',
+      token: 'ETH',
+      amount: 0.25,
+      recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
+    });
+
+    expect(quote.success).toBe(true);
+    expect(quote.chainId).toBe(1);
+    expect(quote.tokenSymbol).toBe('ETH');
+    expect(quote.recipientAddress).toBe('0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18');
+    expect(quote.expectedAmountOut).toBeGreaterThan(0);
+    expect(quote.relayWebUrl).toContain('relay.link');
+  });
 });

@@ -340,6 +340,75 @@ async function handleChatInput(
     );
 
     await interaction.reply({ embeds: [embed], components: [actionRow] });
+  } else if (commandName === 'swap') {
+    const from = interaction.options.getString('from', true);
+    const to = interaction.options.getString('to', true);
+    const amount = interaction.options.getNumber('amount', true);
+    const chain = interaction.options.getString('chain') || 'ethereum';
+
+    const relayAdapter = new RelayAdapter();
+    const quote = await relayAdapter.getSwapQuote({
+      chain,
+      fromToken: from,
+      toToken: to,
+      amount,
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🔄 RELAY.LINK TOKEN SWAP QUOTE`)
+      .setColor(0x7B3FE4)
+      .setDescription(
+        `🔄 **Swapping:** \`${quote.amountIn} ${quote.fromToken}\` ➡️ \`~${quote.expectedAmountOut} ${quote.toToken}\`\n` +
+        `⛓️ **Chain:** **${quote.chainName}**\n\n` +
+        `💸 **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated)`' : '`Live Relay.link Swap`'}`
+      )
+      .setFooter({ text: 'Powered by Relay.link Swap Engine • Athena Multi-Agent Hub' });
+
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Swap ${quote.fromToken} → ${quote.toToken} on Relay.link`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await interaction.reply({ embeds: [embed], components: [actionRow] });
+  } else if (commandName === 'send') {
+    const to = interaction.options.getString('to', true);
+    const amount = interaction.options.getNumber('amount', true);
+    const token = interaction.options.getString('token') || 'ETH';
+    const chain = interaction.options.getString('chain') || 'ethereum';
+
+    const relayAdapter = new RelayAdapter();
+    const quote = await relayAdapter.getSendQuote({
+      chain,
+      token,
+      amount,
+      recipientAddress: to,
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📤 RELAY.LINK TOKEN SEND QUOTE`)
+      .setColor(0x00C853)
+      .setDescription(
+        `📤 **Sending:** \`${quote.amountIn} ${quote.tokenSymbol}\` to \`${quote.recipientAddress.substring(0, 6)}...${quote.recipientAddress.substring(quote.recipientAddress.length - 4)}\`\n` +
+        `⛓️ **Chain:** **${quote.chainName}**\n\n` +
+        `📥 **Recipient Receives:** \`~${quote.expectedAmountOut} ${quote.tokenSymbol}\`\n` +
+        `💸 **Fee:** \`~$${quote.feeUsd.toFixed(2)} USD\`\n` +
+        `⚡ **Est. Speed:** \`~${quote.estimatedDurationSeconds} seconds\`\n` +
+        `💡 **Execution Mode:** ${quote.simulated ? '`DRY_RUN (Simulated)`' : '`Live Relay.link Transfer`'}`
+      )
+      .setFooter({ text: 'Powered by Relay.link Transfer Engine • Athena Multi-Agent Hub' });
+
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel(`Send ${quote.tokenSymbol} on Relay.link`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(quote.relayWebUrl)
+    );
+
+    await interaction.reply({ embeds: [embed], components: [actionRow] });
   }
 }
 
