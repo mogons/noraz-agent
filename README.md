@@ -101,31 +101,75 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 
 ---
 
-## ⚡ 1-Click Automatic Setup Scripts
+## ⚡ Quickstart & Copy-Pasteable Setup Guide
 
-For instant automatic setup on a new laptop, PC, or VPS server:
+### Method A: One-Click Automatic Installer (Recommended)
 
-- **🪟 Windows (1-Click Installer):** Double-click `setup.bat` or run `.\setup.bat` in PowerShell/CMD.
-- **🐧 Linux / macOS / VPS (1-Click Installer):** Run `bash deploy.sh`.
+#### 🪟 Windows (PowerShell / CMD)
+Copy and paste this single block into your PowerShell or CMD terminal:
 
-*The script automatically installs dependencies, links `athena` CLI globally, compiles TypeScript, and launches the interactive configuration wizard!*
+```powershell
+git clone https://github.com/dizcorvus/Athena.git
+cd Athena
+.\setup.bat
+```
+
+#### 🐧 Linux / macOS / VPS Server
+Copy and paste this single block into your bash terminal:
+
+```bash
+git clone https://github.com/dizcorvus/Athena.git
+cd Athena
+bash deploy.sh
+```
 
 ---
 
-## 🛠️ Step-by-Step Chronological Execution Guide
+### Method B: Manual Step-by-Step Installation
 
-Follow this exact sequence to setup, test, launch, and maintain Athena:
+If you prefer to execute commands step-by-step manually, copy and paste each command block in sequence:
 
-| Step | Phase | Action / Goal | Direct Global `athena` CLI | Standard `npm` Alias |
-| :---: | :--- | :--- | :--- | :--- |
-| **1** | **Installation** | Install dependencies & link CLI globally | `setup.bat` *(or `npm install && npm link`)* | - |
-| **2** | **Configuration** | Interactive setup wizard for `.env` credentials | `athena wizard` | `npm run wizard` |
-| **3** | **Compilation** | Build TypeScript codebase into `/dist` | `athena build` | `npm run build` |
-| **4** | **Verification** | Run test suite to verify 12/12 core modules pass | `athena test` | `npm test` |
-| **5a** | **Launch (Dev)** | Run in local development mode with hot-reload | `athena run` *(or `athena`)* | `npm run dev` |
-| **5b** | **Launch (Terminal)** | Run interactive Parthenon Terminal TUI | `athena terminal` | `npm run terminal` |
-| **5c** | **Launch (VPS 24/7)** | Run production 24/7 background process (PM2) | `athena deploy` | `npm run deploy` |
-| **6** | **Maintenance** | Pull latest updates from Git & re-build | `athena update` | `npm run update` |
+#### Step 1: Clone Repository & Install Dependencies
+```bash
+git clone https://github.com/dizcorvus/Athena.git
+cd Athena
+npm install
+npm link
+```
+
+#### Step 2: Configure Environment Credentials (`.env`)
+Launch the interactive configuration wizard to generate your `.env` file automatically:
+```bash
+athena wizard
+```
+*(Alternatively, copy template manually: `cp .env.example .env` and fill in `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID`)*
+
+#### Step 3: Build & Verify Codebase
+Compile TypeScript into production JS and run test verification:
+```bash
+athena build
+athena test
+```
+
+#### Step 4: Launch Athena Ecosystem
+Choose your preferred launch mode:
+
+```bash
+# Option 1: Development Mode (Hot-Reloading in terminal)
+athena run
+
+# Option 2: Interactive Parthenon Terminal TUI
+athena terminal
+
+# Option 3: Production 24/7 Background Process on VPS (PM2)
+athena deploy
+```
+
+#### Step 5: Update Codebase in Future
+Whenever you pull new updates from Git:
+```bash
+athena update
+```
 
 ---
 
