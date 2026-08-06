@@ -19,10 +19,10 @@ export class AthenaHub {
   }
 
   private initializeAgentStatesDefaultPaused(): void {
-    // All sub-agents default to PAUSED / IDLE upon deployment for safety
+    // Sub-agents enabled by default on deployment for 24/7 background screening
     const domains = ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'];
     for (const d of domains) {
-      this.agentStates.set(d, false);
+      this.agentStates.set(d, true);
       this.autoExecuteStates.set(d, { enabled: false, maxTradeAmount: 0.1 });
     }
   }
