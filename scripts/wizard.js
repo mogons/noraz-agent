@@ -40,6 +40,7 @@ async function runWizard() {
   let telegramToken = existingEnv.TELEGRAM_BOT_TOKEN || '';
   let telegramChatId = existingEnv.TELEGRAM_CHAT_ID || '';
   let aiKey = existingEnv.AI_API_KEY || '';
+  let allKeys = [];
 
   if (interfaceChoice === '1' || interfaceChoice === '3') {
     console.log('\n💬 DISCORD BOT CREDENTIALS:');
@@ -64,23 +65,43 @@ async function runWizard() {
   }
 
   console.log('\n🤖 AI REASONING ENGINE CREDENTIALS:');
-  const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
-  const inputAiKey = await askQuestion(`1. Enter Primary AI API KEY${defaultAiKeyMsg}: `);
-  aiKey = inputAiKey.trim() || aiKey;
+  let rawExistingKeys = existingEnv.AI_API_KEYS || existingEnv.AI_API_KEY || '';
+  let existingKeyList = rawExistingKeys.split(',').map(k => k.trim()).filter(Boolean);
 
-  const stackChoice = await askQuestion('2. Would you like to add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
-  let allKeys = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
-  if (allKeys.length === 0 && aiKey) allKeys.push(aiKey);
+  if (existingKeyList.length > 1) {
+    console.log(`ℹ️  Found ${existingKeyList.length} stacked API keys in existing config:`);
+    existingKeyList.forEach((k, idx) => {
+      console.log(`   - Key #${idx + 1}: ${k.slice(0, 14)}...`);
+    });
+    const keepKeys = await askQuestion('Keep existing stacked API keys? (Y/n) [Default Y]: ') || 'y';
+    if (keepKeys.toLowerCase() !== 'n') {
+      allKeys = existingKeyList;
+      aiKey = existingKeyList[0];
+    } else {
+      existingKeyList = [];
+    }
+  }
 
-  if (stackChoice.toLowerCase() === 'y') {
-    const backupCountStr = await askQuestion('   How many backup API keys would you like to add? (1-5) [Default 1]: ') || '1';
-    const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
-    for (let i = 1; i <= backupCount; i++) {
-      const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i}: `);
-      if (bKey.trim()) {
-        allKeys.push(bKey.trim());
+  if (existingKeyList.length <= 1) {
+    const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
+    const inputAiKey = await askQuestion(`1. Enter Primary AI API KEY${defaultAiKeyMsg}: `);
+    aiKey = inputAiKey.trim() || aiKey;
+
+    const stackChoice = await askQuestion('2. Would you like to add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
+    let allKeysList = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
+    if (allKeysList.length === 0 && aiKey) allKeysList.push(aiKey);
+
+    if (stackChoice.toLowerCase() === 'y') {
+      const backupCountStr = await askQuestion('   How many backup API keys would you like to add? (1-5) [Default 1]: ') || '1';
+      const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
+      for (let i = 1; i <= backupCount; i++) {
+        const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i}: `);
+        if (bKey.trim()) {
+          allKeysList.push(bKey.trim());
+        }
       }
     }
+    allKeys = allKeysList;
   }
   const combinedKeys = allKeys.join(',');
 
