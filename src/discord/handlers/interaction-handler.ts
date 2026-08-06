@@ -160,13 +160,13 @@ async function handleChatInput(
     } else if (subcommand === 'rearrange') {
       await interaction.reply('✨ **Athena Channel Arrangement:** Command Center channels are organized neatly in sequence.');
     }
-  } else if (commandName === 'p') {
+  } else if (commandName === 'price') {
     const token = interaction.options.getString('token', true);
     await interaction.reply(`📊 **Token Price Query (\`${token}\`):**\n• Price: **$0.00245 USD** (+18.4% 24h)\n• Market Cap: **$245,000 USD**\n• Volume 24h: **$680,000 USD**`);
-  } else if (commandName === 'c') {
+  } else if (commandName === 'chart') {
     const token = interaction.options.getString('token', true);
     await interaction.reply(`📈 **Chart View for \`${token}\`:**\n📊 DexScreener: https://dexscreener.com/solana/${token}`);
-  } else if (commandName === 'th') {
+  } else if (commandName === 'holders') {
     const ca = interaction.options.getString('contract', true);
     await interaction.reply({
       content: `👥 **TOP HOLDERS & INSIDER AUDIT (\`${ca}\`):**\n` +
@@ -175,7 +175,7 @@ async function handleChatInput(
         `• **Bundler Wallets:** \`0.0%\` (No Bundled Supply Detected)\n` +
         `• **Phishing / Flagged Holders:** \`0.0%\` (Runner Safe Zone)`,
     });
-  } else if (commandName === 'tw') {
+  } else if (commandName === 'wallets') {
     const ca = interaction.options.getString('contract', true);
     await interaction.reply({
       content: `🐋 **TOP SMART MONEY WALLETS SCAN (\`${ca}\`):**\n` +
@@ -183,7 +183,7 @@ async function handleChatInput(
         `• **Net Smart Money Inflow:** \`+38.5 SOL\`\n` +
         `• **Top Trader Win Rate:** \`78.5%\` (High Conviction Accumulation)`,
     });
-  } else if (commandName === 'pf') {
+  } else if (commandName === 'pump') {
     const ca = interaction.options.getString('contract', true);
     await interaction.reply({
       content: `🎯 **PUMP.FUN BONDING CURVE TRACKER (\`${ca}\`):**\n` +
@@ -191,7 +191,7 @@ async function handleChatInput(
         `• **King of the Hill Status:** 👑 \`Active Crown\`\n` +
         `• **Graduation Liquidity Target:** \`$69,000 Market Cap\``,
     });
-  } else if (commandName === 'v') {
+  } else if (commandName === 'convert') {
     const amount = interaction.options.getNumber('amount', true);
     const symbol = interaction.options.getString('symbol', true).toUpperCase();
     const tokenPrice = await priceFeedService.getPrice(symbol);

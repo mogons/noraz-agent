@@ -97,34 +97,34 @@ export const slashCommands = [
         .setDescription('Organize and re-order Athena Command Center channels neatly')
     ),
 
-  // Phanes Bot-inspired Quick Commands
+  // Quick Utility Slash Commands
   new SlashCommandBuilder()
-    .setName('p')
+    .setName('price')
     .setDescription('Quick token price, 24h change & market cap lookup')
     .addStringOption(opt => opt.setName('token').setDescription('Symbol or Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName('c')
+    .setName('chart')
     .setDescription('Quick chart & DexScreener visual link')
     .addStringOption(opt => opt.setName('token').setDescription('Symbol or Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName('th')
+    .setName('holders')
     .setDescription('Top Holders audit & insider ownership breakdown')
     .addStringOption(opt => opt.setName('contract').setDescription('Token Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName('tw')
+    .setName('wallets')
     .setDescription('Top Wallets & Smart Money activity scan')
     .addStringOption(opt => opt.setName('contract').setDescription('Token Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName('pf')
+    .setName('pump')
     .setDescription('Pump.fun Bonding Curve progress & Raydium graduation tracker')
     .addStringOption(opt => opt.setName('contract').setDescription('Pump.fun Token Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
-    .setName('v')
+    .setName('convert')
     .setDescription('Quick token value & SOL/USD converter')
     .addNumberOption(opt => opt.setName('amount').setDescription('Token Amount').setRequired(true))
     .addStringOption(opt => opt.setName('symbol').setDescription('Token Symbol (e.g., SOL, ETH, BONK)').setRequired(true)),

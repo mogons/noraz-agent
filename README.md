@@ -84,15 +84,15 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 | **Control Dashboard** | `/menu` / `/dashboard` | Direct Command | Opens the Master Interactive Control Center Embed with Action Buttons & Agent Select Dropdown |
 | **Trade Journal** | `/journal` | `summary`, `history`, `export` | View Win-Rate %, PnL summary, recent trades, & download `athena_trade_journal.csv` |
 | **Price Alerts** | `/alert` | `set`, `list`, `cancel` | Manage custom real-time price alerts & notifications |
-| **Sub-Agent Toggles** | `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-evm`, `lp-solana`, `lp-evm`, `perps`, `nft`, `prediction`) |
+| **Sub-Agent Toggles** | `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-evm`, `lp-solana`, `lp-evm`, `perps`, `nft`, `prediction`, `ct-alpha`) |
 | **Burner Wallets** | `/wallet` | `setup`, `balance` | Manage burner wallets & view SOL/ETH balances |
 | **Token Audit** | `/analyze` | `contract:<CA>` | Force 12-point on-demand audit for Solana/EVM token |
-| **Quick Price Check** | `/p` | `token:<symbol/CA>` | Quick token price, 24h change, and market cap lookup |
-| **Quick Dex Chart** | `/c` | `token:<symbol/CA>` | Quick chart & DexScreener visual link generator |
-| **Holder Breakdown** | `/th` | `contract:<CA>` | Top Holders audit & insider ownership breakdown |
-| **Smart Money Scan** | `/tw` | `contract:<CA>` | Top Wallets & Smart Money activity scan |
-| **Pump.fun Tracker** | `/pf` | `contract:<CA>` | Pump.fun Bonding Curve progress & Raydium graduation tracker |
-| **Value Converter** | `/v` | `amount:<n> symbol:<s>` | Quick token value & SOL/USD converter |
+| **Quick Price Check** | `/price` | `token:<symbol/CA>` | Quick token price, 24h change, and market cap lookup |
+| **Quick Dex Chart** | `/chart` | `token:<symbol/CA>` | Quick chart & DexScreener visual link generator |
+| **Holder Breakdown** | `/holders` | `contract:<CA>` | Top Holders audit & insider ownership breakdown |
+| **Smart Money Scan** | `/wallets` | `contract:<CA>` | Top Wallets & Smart Money activity scan |
+| **Pump.fun Tracker** | `/pump` | `contract:<CA>` | Pump.fun Bonding Curve progress & Raydium graduation tracker |
+| **Value Converter** | `/convert` | `amount:<n> symbol:<s>` | Quick token value & SOL/USD converter |
 | **Config & Channels** | `/config`, `/channel` | `risk`, `create`, `rearrange` | Update drawdown limits & auto-arrange Discord channel layout |
 | **System Upgrade** | `/update` | Direct Command | Pull latest codebase from Git, re-build TypeScript, & soft-restart bot |
 | **Emergency Halt** | `/cancel` | `all` | Emergency Aegis Circuit Breaker to halt orders & screening |
