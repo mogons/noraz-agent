@@ -291,7 +291,7 @@ async function handleChatInput(
     });
   } else if (commandName === 'config') {
     await interaction.reply({
-      content: '⚙️ **Athena Current Risk Settings:**\n• Max Daily Drawdown: `50%` ($5,000 USD)\n• Position Size: `0.5 SOL / 0.1 ETH` per trade\n• Auto TP: `+100% (50%), +200% (25%)`\n• Auto SL: `-20%` (Dynamic Trailing Enabled)',
+      content: '⚙️ **Athena Current Risk Settings:**\n• Max Daily Drawdown: `50%` \n• Position Size: `0.5 SOL / 0.1 ETH` per trade\n• Auto TP: `+100% (50%), +200% (25%)`\n• Auto SL: `-20%` (Dynamic Trailing Enabled)',
       ephemeral: true,
     });
   } else if (commandName === 'channel') {

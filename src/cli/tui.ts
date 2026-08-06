@@ -226,7 +226,7 @@ Current Operating Parameters:
       case '5':
         console.clear();
         console.log(`${C.cyan}=== ⚙️ GLOBAL RISK MANAGEMENT & SAFEGUARDS ===${C.reset}`);
-        console.log(`• Max Daily Drawdown: 50% ($5,000)`);
+        console.log(`• Max Daily Drawdown: 50%`);
         console.log(`• Default Position Size: 0.5 SOL / 0.1 ETH`);
         console.log(`• Auto Take Profit Targets: +100% (50%), +200% (25%)`);
         console.log(`• Auto Stop Loss Target: -20% (Dynamic Trailing Enabled)`);
