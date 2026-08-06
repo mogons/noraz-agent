@@ -101,13 +101,24 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 
 ---
 
+## ⚡ 1-Click Automatic Setup Scripts
+
+For instant automatic setup on a new laptop, PC, or VPS server:
+
+- **🪟 Windows (1-Click Installer):** Double-click `setup.bat` or run `.\setup.bat` in PowerShell/CMD.
+- **🐧 Linux / macOS / VPS (1-Click Installer):** Run `bash deploy.sh`.
+
+*The script automatically installs dependencies, links `athena` CLI globally, compiles TypeScript, and launches the interactive configuration wizard!*
+
+---
+
 ## 🛠️ Step-by-Step Chronological Execution Guide
 
 Follow this exact sequence to setup, test, launch, and maintain Athena:
 
 | Step | Phase | Action / Goal | Direct Global `athena` CLI | Standard `npm` Alias |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Installation** | Install dependencies & link CLI globally | `npm install && npm link` | - |
+| **1** | **Installation** | Install dependencies & link CLI globally | `setup.bat` *(or `npm install && npm link`)* | - |
 | **2** | **Configuration** | Interactive setup wizard for `.env` credentials | `athena wizard` | `npm run wizard` |
 | **3** | **Compilation** | Build TypeScript codebase into `/dist` | `athena build` | `npm run build` |
 | **4** | **Verification** | Run test suite to verify 12/12 core modules pass | `athena test` | `npm test` |
