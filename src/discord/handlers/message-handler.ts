@@ -3,7 +3,7 @@ import { AIService } from '../../services/ai-service.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
 
-const DISCORD_MAX_LENGTH = 2000;
+const DISCORD_MAX_LENGTH = 1900;
 
 /**
  * Splits a long text into chunks of ≤ maxLength characters.
@@ -258,13 +258,17 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 Current Operating Parameters:
 - Execution Mode: DRY_RUN Active (Safe Simulation).
 - Global Portfolio Drawdown Limit: 5.0%.
-- Current Portfolio Drawdown: 0.0%.`;
+- Current Portfolio Drawdown: 0.0%.
+
+RESPONSE FORMATTING RULES:
+- Keep answers structured, clear, and concise using markdown bullet points.
+- If asked for deep architecture/gaps analysis, deliver full actionable insights without omitting details.`;
 
   try {
     const response = await aiService.generateCompletion([
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userQuery }
-    ]);
+    ], 1500);
 
     const chunks = splitDiscordMessage(response);
     // First chunk as reply (preserves thread context), rest as follow-ups

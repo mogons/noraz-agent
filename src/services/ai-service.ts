@@ -137,9 +137,9 @@ export class AIService {
       ? Array.from(new Set(candidateModels))
       : [this.config.modelName];
 
-    // Cap max_tokens to 500 on OpenRouter to prevent free tier budget reservation 402/403 errors
+    // Cap max_tokens on OpenRouter to 1500 to allow complete answers while staying safe on API budget
     const effectiveMaxTokens = this.config.baseUrl?.includes('openrouter.ai')
-      ? Math.min(maxTokens || 500, 500)
+      ? Math.min(maxTokens || 1500, 2000)
       : maxTokens;
 
     let lastError: Error | null = null;
