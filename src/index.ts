@@ -122,6 +122,16 @@ if (discordToken && clientId) {
       console.error('[DISCORD REST] Error registering Slash Commands:', error);
     }
 
+    // Auto-Broadcast Telegram Interactive Control Menu on startup if Telegram configured
+    if (telegramService.isEnabled()) {
+      console.log('[TELEGRAM SERVICE] Telegram Notification Bridge Connected! Broadcasting startup control menu...');
+      try {
+        await telegramService.broadcastInteractiveMenu();
+      } catch (tgErr: any) {
+        console.error('[TELEGRAM SERVICE] Startup broadcast error:', tgErr.message);
+      }
+    }
+
     // Start Price Alert Checking Interval Loop (Every 60s)
     setInterval(async () => {
       try {
