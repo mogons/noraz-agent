@@ -65,9 +65,25 @@ async function runWizard() {
 
   console.log('\n🤖 KREDENSIAL AI ENGINE:');
   const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
-  const inputAiKey = await askQuestion(`Masukkan AI API KEY (OpenRouter / Anthropic / OpenAI / Custom)${defaultAiKeyMsg}: `);
+  const inputAiKey = await askQuestion(`1. Masukkan AI API KEY Utama${defaultAiKeyMsg}: `);
   aiKey = inputAiKey.trim() || aiKey;
-  
+
+  const stackChoice = await askQuestion('2. Apakah kamu ingin menambah API Key Cadangan (Round-Robin Failover Backup Keys)? (y/N): ');
+  let allKeys = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
+  if (allKeys.length === 0 && aiKey) allKeys.push(aiKey);
+
+  if (stackChoice.toLowerCase() === 'y') {
+    const backupCountStr = await askQuestion('   Berapa banyak API Key cadangan yang ingin kamu tambahkan? (1-5) [Default 1]: ') || '1';
+    const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
+    for (let i = 1; i <= backupCount; i++) {
+      const bKey = await askQuestion(`   ➡️ Masukkan Backup API Key #${i}: `);
+      if (bKey.trim()) {
+        allKeys.push(bKey.trim());
+      }
+    }
+  }
+  const combinedKeys = allKeys.join(',');
+
   console.log('\nPilih AI Provider:');
   console.log(' [1] OpenRouter (Default - Banyak model gratisan)');
   console.log(' [2] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
@@ -117,10 +133,11 @@ DISCORD_GUILD_ID=
 TELEGRAM_BOT_TOKEN=${telegramToken.trim()}
 TELEGRAM_CHAT_ID=${telegramChatId.trim()}
 
-# AI Provider Configuration
+# AI Provider Configuration & Stacked Backup Keys
 AI_PROVIDER=${provider}
 AI_BASE_URL=${baseUrl}
-AI_API_KEY=${aiKey.trim()}
+AI_API_KEYS=${combinedKeys}
+AI_API_KEY=${allKeys[0] || ''}
 AI_MODEL_NAME=${modelName}
 
 # Security Audit Endpoints
