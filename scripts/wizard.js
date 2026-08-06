@@ -124,8 +124,8 @@ async function runWizard() {
     modelName = await askQuestion('Enter OpenCode AI_MODEL_NAME (e.g. deepseek-v4-pro, glm-5.2) [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
   } else if (providerChoice === '3') {
     provider = 'zai';
-    baseUrl = await askQuestion('Enter Z.ai AI_BASE_URL [Default https://api.z.ai/api/paas/v4]: ') || 'https://api.z.ai/api/paas/v4';
-    modelName = await askQuestion('Enter Z.ai AI_MODEL_NAME (e.g. glm-4.7-flash, glm-5.2) [Default glm-4.7-flash]: ') || 'glm-4.7-flash';
+    baseUrl = await askQuestion('Enter Z.ai AI_BASE_URL [Default https://api.z.ai/api/coding/paas/v4]: ') || 'https://api.z.ai/api/coding/paas/v4';
+    modelName = await askQuestion('Enter Z.ai AI_MODEL_NAME (e.g. glm-4.7, glm-5-turbo) [Default glm-4.7]: ') || 'glm-4.7';
   } else if (providerChoice === '4') {
     provider = 'anthropic';
     baseUrl = 'https://api.anthropic.com/v1';

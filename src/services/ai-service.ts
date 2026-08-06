@@ -46,8 +46,8 @@ export class AIService {
         break;
       case 'codingplan':
       case 'zai':
-        baseUrl = baseUrl || 'https://api.z.ai/api/paas/v4';
-        modelName = modelName || 'glm-4.7-flash';
+        baseUrl = baseUrl || 'https://api.z.ai/api/coding/paas/v4';
+        modelName = modelName || 'glm-4.7';
         break;
       case 'deepseek':
         baseUrl = baseUrl || 'https://api.deepseek.com/v1';
