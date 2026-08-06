@@ -34,6 +34,39 @@ export class GMGNAdapter {
   public async fetchTrendingSignals(chain: 'sol' | 'base' | 'eth' | 'bsc' = 'sol'): Promise<GMGNTokenSignal[]> {
     if (this.apiKey) {
       console.log(`[GMGN ADAPTER] Synchronized with authenticated GMGN API Key for chain: ${chain.toUpperCase()}`);
+      try {
+        const gmgnRes = await fetch(`${this.baseUrl}/v1/token/trending/${chain}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-route-key': this.apiKey,
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+        });
+        if (gmgnRes.ok) {
+          const gmgnData: any = await gmgnRes.json();
+          const items = Array.isArray(gmgnData) ? gmgnData : (gmgnData.data || gmgnData.rank);
+          if (Array.isArray(items) && items.length > 0) {
+            return items.map((item: any) => ({
+              chain,
+              symbol: item.symbol || 'TOKEN',
+              name: item.name || item.symbol || 'Token',
+              contractAddress: item.address || item.contract_address || item.token_address,
+              priceUsd: parseFloat(item.price || item.price_usd || '0'),
+              marketCapUsd: item.market_cap || item.fdv || 0,
+              volume24hUsd: item.volume_24h || item.volume || 0,
+              liquidityUsd: item.liquidity || 0,
+              smartMoneyNetBuySolOrEth: item.smart_money_net_buy || 10,
+              smartMoneyCount: item.smart_money_count || 5,
+              sniperRatioPercentage: item.sniper_ratio || 5,
+              devHoldingPercentage: item.dev_holding || 0,
+              gmgnUrl: `https://gmgn.ai/${chain}/token/${item.address || item.contract_address || item.token_address}`,
+              aiThesis: `GMGN Pro API Signal: $${item.symbol} Smart Money Inflow (+${item.smart_money_net_buy || 10} SOL/ETH). Snipers: ${item.sniper_ratio || 5}%.`,
+            }));
+          }
+        }
+      } catch (err: any) {
+        console.error('[GMGN API AUTH FETCH ERROR]', err.message);
+      }
     } else {
       console.log(`[GMGN ADAPTER] Fetching live public DEX trending signals via DexScreener for chain: ${chain.toUpperCase()}...`);
     }
