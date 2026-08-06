@@ -1,5 +1,5 @@
 export interface AIProviderConfig {
-  provider: 'openrouter' | 'openai' | 'anthropic' | 'custom';
+  provider: 'openrouter' | 'openai' | 'anthropic' | 'opencode' | 'codingplan' | 'zai' | 'deepseek' | 'custom';
   apiKeys: string[]; // Stacked list of primary & backup API keys
   baseUrl?: string;
   modelName: string;
@@ -39,6 +39,19 @@ export class AIService {
       case 'openai':
         baseUrl = baseUrl || 'https://api.openai.com/v1';
         modelName = modelName || 'gpt-4o';
+        break;
+      case 'opencode':
+        baseUrl = baseUrl || 'https://api.opencode.ai/v1';
+        modelName = modelName || 'deepseek-v4-pro';
+        break;
+      case 'codingplan':
+      case 'zai':
+        baseUrl = baseUrl || 'https://api.z.ai/v1';
+        modelName = modelName || 'glm-5.2';
+        break;
+      case 'deepseek':
+        baseUrl = baseUrl || 'https://api.deepseek.com/v1';
+        modelName = modelName || 'deepseek-chat';
         break;
       case 'openrouter':
         baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
@@ -137,10 +150,10 @@ export class AIService {
       ? Array.from(new Set(candidateModels))
       : [this.config.modelName];
 
-    // Cap max_tokens on OpenRouter to 1500 to allow complete answers while staying safe on API budget
+    // Cap max_tokens on OpenRouter to 1500; allow paid providers (OpenCode, CodingPlan, DeepSeek, OpenAI) full token capacity
     const effectiveMaxTokens = this.config.baseUrl?.includes('openrouter.ai')
       ? Math.min(maxTokens || 1500, 2000)
-      : maxTokens;
+      : (maxTokens || 2000);
 
     let lastError: Error | null = null;
 

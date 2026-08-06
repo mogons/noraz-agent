@@ -106,25 +106,35 @@ async function runWizard() {
   const combinedKeys = allKeys.join(',');
 
   console.log('\nSelect AI Model Provider:');
-  console.log(' [1] OpenRouter (Default - Access to free models)');
-  console.log(' [2] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
-  console.log(' [3] OpenAI (GPT-4o)');
-  console.log(' [4] Custom (GLM 5.2 / 9router / Local Ollama)');
-  const providerChoice = await askQuestion('Choice (1/2/3/4) [Default 1]: ');
+  console.log(' [1] OpenRouter (Default - Access to free & open models)');
+  console.log(' [2] OpenCode Go (DeepSeek V4 Pro, GLM 5.2, GPT 5.6 Luna - opencode.ai/go)');
+  console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM-5.2, GLM-5-Turbo - z.ai/subscribe)');
+  console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet / Opus)');
+  console.log(' [5] OpenAI (GPT-4o)');
+  console.log(' [6] Custom (9router, Local Ollama, Custom OpenAI-compatible endpoint)');
+  const providerChoice = await askQuestion('Choice (1/2/3/4/5/6) [Default 1]: ');
 
   let provider = 'openrouter';
   let baseUrl = 'https://openrouter.ai/api/v1';
   let modelName = 'openrouter/auto';
 
   if (providerChoice === '2') {
+    provider = 'opencode';
+    baseUrl = await askQuestion('Enter OpenCode AI_BASE_URL [Default https://api.opencode.ai/v1]: ') || 'https://api.opencode.ai/v1';
+    modelName = await askQuestion('Enter OpenCode AI_MODEL_NAME (e.g. deepseek-v4-pro, glm-5.2) [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
+  } else if (providerChoice === '3') {
+    provider = 'zai';
+    baseUrl = await askQuestion('Enter Z.ai AI_BASE_URL [Default https://api.z.ai/v1]: ') || 'https://api.z.ai/v1';
+    modelName = await askQuestion('Enter Z.ai AI_MODEL_NAME (e.g. glm-5.2, glm-5-turbo) [Default glm-5.2]: ') || 'glm-5.2';
+  } else if (providerChoice === '4') {
     provider = 'anthropic';
     baseUrl = 'https://api.anthropic.com/v1';
     modelName = 'claude-3-5-sonnet-20241022';
-  } else if (providerChoice === '3') {
+  } else if (providerChoice === '5') {
     provider = 'openai';
     baseUrl = 'https://api.openai.com/v1';
     modelName = 'gpt-4o';
-  } else if (providerChoice === '4') {
+  } else if (providerChoice === '6') {
     provider = 'custom';
     baseUrl = await askQuestion('Enter AI_BASE_URL (e.g. https://api.9router.com/v1): ') || 'https://api.9router.com/v1';
     modelName = await askQuestion('Enter AI_MODEL_NAME (e.g. glm-4): ') || 'glm-4';
