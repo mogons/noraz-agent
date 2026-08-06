@@ -20,7 +20,7 @@ import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
 import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
-import { priceAlertService } from './discord/handlers/interaction-handler.js';
+import { priceAlertService, walletService } from './discord/handlers/interaction-handler.js';
 import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
 
