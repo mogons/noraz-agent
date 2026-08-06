@@ -34,11 +34,11 @@ export class RiskEngineV2 {
 
   constructor(config?: Partial<RiskEngineConfig>) {
     this.config = {
-      maxPortfolioDrawdownPercent: 5,
+      maxPortfolioDrawdownPercent: 50, // Updated to 50% max daily drawdown
       maxSingleAssetExposurePercent: 10,
       maxSingleChainExposurePercent: 40,
-      maxCorrelatedPositionsCount: 999, // Disabled to allow full participation in trending narrative metas (e.g. AI / Meme runners)
-      maxConsecutiveLossesBeforeKill: 3,
+      maxCorrelatedPositionsCount: 999, // Disabled to allow full participation in trending narrative metas
+      maxConsecutiveLossesBeforeKill: 999, // Disabled auto-lock on consecutive losses
       killSwitchCooldownMinutes: 60,
       ...config,
     };
