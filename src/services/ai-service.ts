@@ -42,7 +42,7 @@ export class AIService {
         break;
       case 'openrouter':
         baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
-        modelName = modelName || 'meta-llama/llama-3.3-70b-instruct:free';
+        modelName = modelName || 'openrouter/auto';
         break;
       case 'custom':
       default:

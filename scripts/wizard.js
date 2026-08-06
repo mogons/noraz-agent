@@ -114,7 +114,7 @@ async function runWizard() {
 
   let provider = 'openrouter';
   let baseUrl = 'https://openrouter.ai/api/v1';
-  let modelName = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+  let modelName = 'openrouter/auto';
 
   if (providerChoice === '2') {
     provider = 'anthropic';
