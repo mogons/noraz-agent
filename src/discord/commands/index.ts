@@ -9,6 +9,27 @@ export const slashCommands = [
         .setDescription('Safely setup/import burner wallet Private Key via secure modal popup')
     )
     .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('View list of registered wallet addresses & active status')
+    )
+    .addSubcommand(sub =>
+      sub.setName('replace')
+        .setDescription('Replace an existing registered burner wallet Private Key')
+    )
+    .addSubcommand(sub =>
+      sub.setName('remove')
+        .setDescription('Remove/delete a registered burner wallet Private Key from memory')
+        .addStringOption(opt =>
+          opt.setName('chain')
+            .setDescription('Chain type to remove (solana / evm)')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Solana Wallet', value: 'solana' },
+              { name: 'EVM Wallet', value: 'evm' }
+            )
+        )
+    )
+    .addSubcommand(sub =>
       sub.setName('balance')
         .setDescription('View current native SOL, ETH, and token balances')
     ),

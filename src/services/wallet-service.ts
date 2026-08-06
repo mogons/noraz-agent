@@ -64,6 +64,17 @@ export class WalletService {
     }
   }
 
+  /** Remove a stored private key from memory */
+  public removeKey(chain: 'solana' | 'evm'): void {
+    if (chain === 'solana') {
+      this.solanaPrivateKey = null;
+      console.log('[WALLET SERVICE] Solana private key removed.');
+    } else {
+      this.evmPrivateKey = null;
+      console.log('[WALLET SERVICE] EVM private key removed.');
+    }
+  }
+
   /** Check if a wallet is configured for the given chain type */
   public hasWallet(chain: 'solana' | 'evm'): boolean {
     if (chain === 'solana') return this.solanaPrivateKey !== null;

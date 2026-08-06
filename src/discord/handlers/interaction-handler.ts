@@ -62,10 +62,11 @@ async function handleChatInput(
 
   if (commandName === 'wallet') {
     const subcommand = interaction.options.getSubcommand();
-    if (subcommand === 'setup') {
+    if (subcommand === 'setup' || subcommand === 'replace') {
+      const isReplace = subcommand === 'replace';
       const modal = new ModalBuilder()
         .setCustomId('wallet_setup_modal')
-        .setTitle('🔑 Athena Burner Wallet Setup');
+        .setTitle(isReplace ? '🔄 Replace Athena Burner Wallet' : '🔑 Athena Burner Wallet Setup');
 
       const chainInput = new TextInputBuilder()
         .setCustomId('wallet_chain')
@@ -87,6 +88,37 @@ async function handleChatInput(
       );
 
       await interaction.showModal(modal);
+    } else if (subcommand === 'list') {
+      const hasSol = walletService.hasWallet('solana');
+      const hasEvm = walletService.hasWallet('evm');
+
+      let solAddr = '❌ Not Configured';
+      let evmAddr = '❌ Not Configured';
+
+      if (hasSol) {
+        try { solAddr = `🟢 \`${walletService.getSolanaAddress()}\``; } catch (e: any) { solAddr = `⚠️ Invalid Key (${e.message})`; }
+      }
+      if (hasEvm) {
+        try { evmAddr = `🟢 \`${walletService.getEvmAddress()}\``; } catch (e: any) { evmAddr = `⚠️ Invalid Key (${e.message})`; }
+      }
+
+      await interaction.reply({
+        content: `📋 **REGISTERED ATHENA BURNER WALLETS**\n\n` +
+          `• **Solana Wallet:** ${solAddr}\n` +
+          `• **EVM Wallet:** ${evmAddr}\n\n` +
+          `💡 *Gunakan \`/wallet replace\` untuk mengganti private key, atau \`/wallet remove\` untuk menghapus wallet.*`,
+        ephemeral: true,
+      });
+    } else if (subcommand === 'remove') {
+      const chain = interaction.options.getString('chain', true) as 'solana' | 'evm';
+      walletService.removeKey(chain);
+
+      await interaction.reply({
+        content: `🗑️ **WALLET REMOVED SUCCESSFULLY!**\n\n` +
+          `Burner wallet untuk network \`${chain.toUpperCase()}\` telah berhasil dihapus dari memori bot.\n` +
+          `Gunakan \`/wallet setup\` jika ingin mendaftarkan wallet baru di masa mendatang.`,
+        ephemeral: true,
+      });
     } else if (subcommand === 'balance') {
       const isDryRun = process.env.DRY_RUN !== 'false';
       const hasSol = walletService.hasWallet('solana');
