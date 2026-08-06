@@ -155,6 +155,51 @@ async function handleChatInput(
           `• EVM Wallet: ${evmAddrStr} | Balance: ${evmBalStr}`,
         ephemeral: true,
       });
+    } else if (subcommand === 'withdraw') {
+      const recipient = interaction.options.getString('to', true).trim();
+      const amount = interaction.options.getNumber('amount', true);
+      const selectedChain = interaction.options.getString('chain') || (recipient.startsWith('0x') ? 'base' : 'solana');
+      const isDryRun = process.env.DRY_RUN !== 'false';
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        if (selectedChain === 'solana' || !recipient.startsWith('0x')) {
+          if (!walletService.hasWallet('solana') && !isDryRun) {
+            await interaction.editReply('❌ Solana burner wallet is not configured. Use `/wallet setup` first.');
+            return;
+          }
+          const { txHash, explorerUrl } = await walletService.sendSol(recipient, amount);
+          await interaction.editReply(
+            `💸 **WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!**\n\n` +
+            `• **Amount:** \`${amount} SOL\`\n` +
+            `• **Recipient:** \`${recipient}\`\n` +
+            `• **Network:** \`Solana\`\n` +
+            `• **Transaction Hash:** \`${txHash}\`\n` +
+            `🔗 [View Explorer](${explorerUrl})`
+          );
+        } else {
+          if (!walletService.hasWallet('evm') && !isDryRun) {
+            await interaction.editReply('❌ EVM burner wallet is not configured. Use `/wallet setup` first.');
+            return;
+          }
+          const evmChainIds: Record<string, number> = {
+            ethereum: 1, base: 8453, arbitrum: 42161, optimism: 10, polygon: 137, bsc: 56,
+          };
+          const chainId = evmChainIds[selectedChain] || 8453;
+          const { txHash, explorerUrl } = await walletService.sendEvm(chainId, recipient, amount);
+          await interaction.editReply(
+            `💸 **WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!**\n\n` +
+            `• **Amount:** \`${amount} Native Token\`\n` +
+            `• **Recipient:** \`${recipient}\`\n` +
+            `• **Network:** \`${selectedChain.toUpperCase()} (Chain ID #${chainId})\`\n` +
+            `• **Transaction Hash:** \`${txHash}\`\n` +
+            `🔗 [View Explorer](${explorerUrl})`
+          );
+        }
+      } catch (err: any) {
+        await interaction.editReply(`❌ Withdrawal error: ${err.message}`);
+      }
     }
   } else if (commandName === 'analyze') {
     const contract = interaction.options.getString('contract', true);

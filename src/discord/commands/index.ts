@@ -32,6 +32,34 @@ export const slashCommands = [
     .addSubcommand(sub =>
       sub.setName('balance')
         .setDescription('View current native SOL, ETH, and token balances')
+    )
+    .addSubcommand(sub =>
+      sub.setName('withdraw')
+        .setDescription('Withdraw native funds (SOL/ETH) from burner wallet to destination address')
+        .addStringOption(opt =>
+          opt.setName('to')
+            .setDescription('Destination recipient wallet address (SOL base58 or EVM 0x...)')
+            .setRequired(true)
+        )
+        .addNumberOption(opt =>
+          opt.setName('amount')
+            .setDescription('Amount of native token (SOL / ETH) to withdraw')
+            .setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt.setName('chain')
+            .setDescription('Network chain (default: auto-detected from address)')
+            .setRequired(false)
+            .addChoices(
+              { name: 'Solana (SOL)', value: 'solana' },
+              { name: 'Base L2 (ETH)', value: 'base' },
+              { name: 'Ethereum Mainnet (ETH)', value: 'ethereum' },
+              { name: 'Arbitrum One (ETH)', value: 'arbitrum' },
+              { name: 'Optimism (ETH)', value: 'optimism' },
+              { name: 'Polygon (MATIC)', value: 'polygon' },
+              { name: 'BNB Chain (BNB)', value: 'bsc' }
+            )
+        )
     ),
 
   new SlashCommandBuilder()
