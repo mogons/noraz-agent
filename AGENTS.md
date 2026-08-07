@@ -44,13 +44,6 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 Athena/
 ├── .agents/
 │   └── AGENTS.md                  # Project rules & coding guidelines
-├── docs/
-│   └── superpowers/specs/         # Design specifications & system architecture docs
-│       ├── 2026-08-04-athena-architecture-design.md
-│       ├── 2026-08-06-evm-meme-screening-agent-design.md
-│       ├── 2026-08-06-price-alert-engine-design.md
-│       ├── 2026-08-06-nft-screening-agent-design.md
-│       └── 2026-08-06-polymarket-agent-design.md
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── orchestrator/              # Athena Core Hub & Global Risk Engine

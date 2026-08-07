@@ -40,9 +40,6 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 Athena/
 ├── .agents/
 │   └── AGENTS.md                  # Project rules & coding guidelines
-├── docs/
-│   └── superpowers/specs/         # Design specifications & system architecture docs
-│       └── 2026-08-04-athena-architecture-design.md
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── orchestrator/              # Athena Core Hub & Global Risk Engine

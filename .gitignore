@@ -19,6 +19,7 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+database/*.json
 database/athena_state.json*
 prisma/dev.db
 
@@ -35,3 +36,8 @@ pino.log
 Thumbs.db
 .vscode/
 .idea/
+
+# Agent Internal Specs & Superpower Artifacts
+docs/superpowers/
+.brain/
+
