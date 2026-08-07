@@ -2,128 +2,102 @@ export interface UniswapPoolSignal {
   poolAddress: string;
   pairName: string;
   network: 'Robinhood' | 'Base' | 'Ethereum';
-  feeTierPercentage: number; // e.g. 0.05, 0.3, 1.0
+  feeTierPercentage: number;
   tvlUsd: number;
-  activeTvlUsd: number; // Active TVL inside current tick range
-  volume4hUsd: number;  // 4-hour rolling trading volume
-  fee4hUsd: number;     // Fees generated in the last 4 hours
-  fees24hEth: number;   // Total accumulated fees in the last 24h in ETH (minimum check)
+  activeTvlUsd: number;
+  volume4hUsd: number;
+  fee4hUsd: number;
+  fees24hEth: number;
   feeAprPercentage: number;
-  feesToTvlRatio4h: number; // 4-hour Fees / TVL ratio
-  volumeToTvlRatio4h: number; // 4-hour Volume / Total TVL ratio (Overall pool popularity)
-  volumeToActiveTvlRatio4h: number; // 4-hour Volume / Active TVL ratio (Capital velocity)
-  organicVolumeScore4h: number; // Organic activity score for 4h window (0-100)
+  feesToTvlRatio4h: number;
+  volumeToTvlRatio4h: number;
+  volumeToActiveTvlRatio4h: number;
+  organicVolumeScore4h: number;
   tokenAgeMinutes?: number;
-  recommendedPriceRange: {
-    minPrice: number;
-    maxPrice: number;
-  };
+  recommendedPriceRange: { minPrice: number; maxPrice: number };
   aiRecommendation: string;
 }
+
+interface DexScreenerPair {
+  chainId: string;
+  dexId: string;
+  pairAddress: string;
+  baseToken: { symbol: string; name: string };
+  quoteToken: { symbol: string; name: string };
+  priceUsd: string;
+  liquidity?: { usd?: number };
+  volume?: { h24?: number };
+  feeTier?: number;
+}
+
+const CHAIN_MAP: Record<string, 'Base' | 'Ethereum' | 'Robinhood'> = {
+  base: 'Base',
+  ethereum: 'Ethereum',
+  robinhood: 'Robinhood',
+};
 
 export class UniswapLPAdapter {
   public async fetchTopYieldEVMPools(minTvlUsd: number = 5000): Promise<UniswapPoolSignal[]> {
     try {
-      // Sample Uniswap v3 Concentrated Pools incorporating 4h multihour yield & Robinhood Chain support
-      const samplePools: UniswapPoolSignal[] = [
-        {
-          poolAddress: '0xd0b53D9277642d139eAab432CEb0d2d3a3d24A69',
-          pairName: 'ETH-USDC (Uniswap v3 Robinhood)',
-          network: 'Robinhood',
-          feeTierPercentage: 0.05,
-          tvlUsd: 120000,
-          activeTvlUsd: 20000,
-          volume4hUsd: 110000,
-          fee4hUsd: 55,
-          fees24hEth: 0.35, // 0.35 ETH fees generated in 24h (passes >= 0.2 ETH check)
-          feeAprPercentage: 99.6,
-          feesToTvlRatio4h: 0.00045, // Lower yield but extremely stable
-          volumeToTvlRatio4h: 0.91, // 91% of total TVL traded in 4 hours
-          volumeToActiveTvlRatio4h: 5.5, // 5.5x active capital turnover
-          organicVolumeScore4h: 92, // High organic trading volume
-          tokenAgeMinutes: 43200, // Established pool
-          recommendedPriceRange: {
-            minPrice: 2400.0,
-            maxPrice: 2900.0,
-          },
-          aiRecommendation: 'Stable multihour efficiency on Robinhood Chain L2. Recommended narrow price boundaries.',
-        },
-        {
-          poolAddress: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
-          pairName: 'ETH-USDT (Uniswap v3 Ethereum)',
-          network: 'Ethereum',
-          feeTierPercentage: 0.3,
-          tvlUsd: 850000,
-          activeTvlUsd: 120000,
-          volume4hUsd: 880000,
-          fee4hUsd: 2640,
-          fees24hEth: 3.42, // 3.42 ETH fees generated in 24h
-          feeAprPercentage: 681.0,
-          feesToTvlRatio4h: 0.0031, // 0.31% yield per 4 hours
-          volumeToTvlRatio4h: 1.03, // 103% of total TVL traded in 4 hours
-          volumeToActiveTvlRatio4h: 7.33,
-          organicVolumeScore4h: 85,
-          tokenAgeMinutes: 10080,
-          recommendedPriceRange: {
-            minPrice: 2350.0,
-            maxPrice: 2950.0,
-          },
-          aiRecommendation: 'High dynamic yield pool on Ethereum mainnet. Suitable if gas fees are optimized.',
-        },
-        {
-          poolAddress: '0xShitCoIn42d139eAab432CEb0d2d3a3d24A69FakE',
-          pairName: 'ETH-SHITLP (Uniswap v3 Robinhood)',
-          network: 'Robinhood',
-          feeTierPercentage: 1.0,
-          tvlUsd: 10000,
-          activeTvlUsd: 1000,
-          volume4hUsd: 20000,
-          fee4hUsd: 200,
-          fees24hEth: 0.05, // REJECTED: Only 0.05 ETH fees (does not pass >= 0.2 ETH check)
-          feeAprPercentage: 4380.0,
-          feesToTvlRatio4h: 0.02, // 2.0% yield per 4 hours (deceptive)
-          volumeToTvlRatio4h: 2.0,
-          volumeToActiveTvlRatio4h: 20.0,
-          organicVolumeScore4h: 30, // REJECTED: Bot wash trading detected
-          tokenAgeMinutes: 45, // REJECTED: Too young (< 6 hours)
-          recommendedPriceRange: {
-            minPrice: 0.0001,
-            maxPrice: 0.0005,
-          },
-          aiRecommendation: 'High risk pool. Artificial volume signature detected on Robinhood Chain. Do not deploy.',
-        },
-      ];
-
-      return samplePools.filter(p => p.tvlUsd >= minTvlUsd);
-    } catch (err: any) {
-      console.error('[UNISWAP LP ADAPTER ERROR]', err.message);
+      const pools: UniswapPoolSignal[] = [];
+      for (const chainId of ['base', 'ethereum']) {
+        const url = `https://api.dexscreener.com/latest/dex/search?q=uniswap%20v3`;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = (await res.json()) as { pairs?: DexScreenerPair[] };
+        const pairs = (data.pairs || [])
+          .filter((p) => p.dexId === 'uniswap' && p.chainId === chainId)
+          .slice(0, 10);
+        for (const p of pairs) {
+          const tvlUsd = Number(p.liquidity?.usd) || 0;
+          const volume24hUsd = Number(p.volume?.h24) || 0;
+          if (!p.pairAddress || !(tvlUsd > 0) || !(volume24hUsd > 0)) continue;
+          const network = CHAIN_MAP[chainId];
+          if (!network) continue;
+          const feeTierPct = p.feeTier ? p.feeTier / 10000 : 0.3;
+          const volume4hUsd = volume24hUsd / 6;
+          const fee4hUsd = volume4hUsd * feeTierPct;
+          const activeTvlUsd = tvlUsd * 0.3;
+          pools.push({
+            poolAddress: p.pairAddress,
+            pairName: `${p.baseToken.symbol}-${p.quoteToken.symbol} (Uniswap v3 ${network})`,
+            network,
+            feeTierPercentage: feeTierPct,
+            tvlUsd,
+            activeTvlUsd,
+            volume4hUsd,
+            fee4hUsd,
+            fees24hEth: (fee4hUsd * 6) / 3000,
+            feeAprPercentage: Number(((fee4hUsd / tvlUsd) * 6 * 365 * 100).toFixed(1)) || 0,
+            feesToTvlRatio4h: fee4hUsd / tvlUsd,
+            volumeToTvlRatio4h: volume4hUsd / tvlUsd,
+            volumeToActiveTvlRatio4h: activeTvlUsd > 0 ? volume4hUsd / activeTvlUsd : 0,
+            organicVolumeScore4h: 50,
+            tokenAgeMinutes: undefined,
+            recommendedPriceRange: {
+              minPrice: Number(p.priceUsd) * 0.95 || 0,
+              maxPrice: Number(p.priceUsd) * 1.05 || 0,
+            },
+            aiRecommendation: `Live Uniswap v3 pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume4hUsd / 1000).toFixed(1)}k 4h volume.`,
+          });
+        }
+      }
+      return pools.filter((p) => p.tvlUsd >= minTvlUsd);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[UNISWAP LP ADAPTER ERROR] ${message}`);
       return [];
     }
   }
 
-  /**
-   * Applies Aggressive Trade + LP Velocity screening rules tailored to a 4-hour window on EVM chains (Uniswap v3)
-   */
   public filterHighYieldEVMPools(pools: UniswapPoolSignal[]): UniswapPoolSignal[] {
     return pools.filter(pool => {
-      // 1. Min 0.5 ETH total fees generated by the pool in 24h
       const passesMinFeesEth = pool.fees24hEth >= 0.5;
-
-      // 2. Min 5.0% (0.05) fee yield per 4-hour period (~30% daily yield / ~10,000%+ APR)
-      const passesFeesRatio = pool.feesToTvlRatio4h >= 0.05; 
-
-      // 3. Min 1.5x (150%) Volume to Total TVL ratio in 4 hours
+      const passesFeesRatio = pool.feesToTvlRatio4h >= 0.05;
       const passesVolumeToTvl = pool.volumeToTvlRatio4h >= 1.5;
-
-      // 4. Min 6.0x Volume to Active TVL ratio in 4 hours (active range velocity check)
       const passesVolumeVelocity = pool.volumeToActiveTvlRatio4h >= 6.0;
-      
-      // 5. Min 65% organic trading activity in the last 4 hours (GoPlus/API organic audit check)
-      const passesOrganicScore = pool.organicVolumeScore4h >= 65; 
-      
-      // 6. Min token age of 4 hours (240 minutes) to avoid quick launch rugpulls
-      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 240 : true; 
-
+      const passesOrganicScore = pool.organicVolumeScore4h >= 65;
+      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 240 : true;
       return passesMinFeesEth && passesFeesRatio && passesVolumeToTvl && passesVolumeVelocity && passesOrganicScore && passesAge;
     });
   }
