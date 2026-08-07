@@ -16,7 +16,7 @@ export interface DispatchDomainOptions {
   isActive: () => boolean;
   runPass: () => Promise<NormalizedReport[]>;
   keyReady: () => { ready: boolean; statusMessage: string };
-  buildPayload: (entry: { signal: any; reason: string }) => any;
+  buildPayload?: (entry: { signal: any; reason: string }) => any;
   onHalt?: (domain: string, statusMessage: string) => void;
 }
 
@@ -39,7 +39,9 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
       out.push({
         channelName: opts.channelName,
         rawReason: r.reason || '',
-        payload: opts.buildPayload({ signal: r.signal, reason: r.reason || '' }),
+        payload: opts.buildPayload
+          ? opts.buildPayload({ signal: r.signal, reason: r.reason || '' })
+          : (r as any).payload || {},
       });
     }
   }

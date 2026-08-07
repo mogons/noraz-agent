@@ -17,9 +17,7 @@ import { bootstrapDiscordChannels } from './discord/setup/channel-bootstrap.js';
 import { SkillLoader } from './services/skill-loader.js';
 import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
 import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
-import { GMGNAdapter } from './adapters/gmgn-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
-import { RugCheckService } from './services/security-service.js';
 import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
 import { EVMScreeningAgent } from './agents/meme-evm/evm-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
@@ -104,10 +102,8 @@ const aiService = new AIService();
 const skillLoader = new SkillLoader();
 const meteoraAdapter = new MeteoraDLMMAdapter();
 const uniswapAdapter = new UniswapLPAdapter();
-const gmgnAdapter = new GMGNAdapter();
 const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
-const rugCheckService = new RugCheckService();
 const solanaScreeningAgent = new SolanaScreeningAgent();
 const evmScreeningAgent = new EVMScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
@@ -261,37 +257,9 @@ if (discordToken && clientId) {
           domain: 'meme-solana',
           channelName: 'call-meme-solana',
           isActive: () => hub.isAgentActive('meme-solana'),
-          runPass: async () => (await solanaScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          runPass: () => solanaScreeningAgent.runScreeningPass(),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-solana'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'MEME_SOLANA',
-            title: `${signal.name} (${signal.symbol})`,
-            symbol: signal.symbol,
-            contractAddress: signal.contractAddress,
-            network: 'Solana',
-            priceUsd: `$${signal.priceUsd}`,
-            marketCap: `$${(signal.marketCapUsd / 1000).toFixed(1)}k`,
-            liquidity: `$${(signal.liquidityUsd / 1000).toFixed(1)}k`,
-            volume5m: '+620%',
-            volume1h: '$1.2M',
-            txRatio: 'Buy 78% / Sell 22%',
-            top10Pct: '22.4%',
-            devHoldingPct: `${signal.devHoldingPercentage}%`,
-            sniperPct: `${signal.sniperRatioPercentage}%`,
-            bundlerPct: '11.2%',
-            dexPaidStatus: '✅ Paid',
-            smartMoneyInfo: `🧠 **Smart Traders:** ${signal.smartMoneyCount} Smart Wallets Accumulating (+${signal.smartMoneyNetBuySolOrEth} SOL)`,
-            confidenceScore: 92,
-            aiThesis: reason || signal.aiThesis,
-            gmgnUrl: signal.gmgnUrl,
-            dexScreenerUrl: `https://dexscreener.com/solana/${signal.contractAddress}`,
-            rugcheckUrl: `https://rugcheck.xyz/tokens/${signal.contractAddress}`,
-            liquidityUsd: signal.liquidityUsd || 0,
-            volume1hUsd: (signal.volume24hUsd || 0) / 24,
-            securityAuditPassed: true,
-            socialHypeScore: Math.min(98, 40 + (signal.smartMoneyCount >= 2 ? 20 : 0) + (signal.liquidityUsd >= 25000 ? 15 : 0) + (signal.volume24hUsd >= 100000 ? 15 : 0)),
-          }),
         });
         dispatchedPayloads.push(...solanaDispatched);
 
