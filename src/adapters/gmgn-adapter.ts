@@ -56,12 +56,12 @@ export class GMGNAdapter {
               marketCapUsd: item.market_cap || item.fdv || 0,
               volume24hUsd: item.volume_24h || item.volume || 0,
               liquidityUsd: item.liquidity || 0,
-              smartMoneyNetBuySolOrEth: item.smart_money_net_buy || 10,
-              smartMoneyCount: item.smart_money_count || 5,
-              sniperRatioPercentage: item.sniper_ratio || 5,
-              devHoldingPercentage: item.dev_holding || 0,
+              smartMoneyNetBuySolOrEth: Number(item.smart_money_net_buy) || 0,
+              smartMoneyCount: Number(item.smart_money_count) || 0,
+              sniperRatioPercentage: Number(item.sniper_ratio) || 0,
+              devHoldingPercentage: Number(item.dev_holding) || 0,
               gmgnUrl: `https://gmgn.ai/${chain}/token/${item.address || item.contract_address || item.token_address}`,
-              aiThesis: `GMGN Pro API Signal: $${item.symbol} Smart Money Inflow (+${item.smart_money_net_buy || 10} SOL/ETH). Snipers: ${item.sniper_ratio || 5}%.`,
+              aiThesis: `GMGN Pro API Signal: $${item.symbol} Smart Money Inflow (+${Number(item.smart_money_net_buy) || 0} SOL/ETH). Snipers: ${Number(item.sniper_ratio) || 0}%.`,
             }));
           }
         }
