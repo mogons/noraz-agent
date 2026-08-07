@@ -330,24 +330,15 @@ export async function handleControlRoomMessage(
     const isSol = !matchedCa.startsWith('0x');
     const chainName = isSol ? 'Solana (SOL)' : 'EVM (Base / ETH / Robinhood)';
     
+    const { runTokenAudit } = await import('../../services/token-audit-service.js');
+    const audit = await runTokenAudit(matchedCa);
+
     // Log into persistent Session Memory
     const { SessionMemoryService } = await import('../../services/session-memory.js');
     const memory = new SessionMemoryService();
-    memory.recordAudit(matchedCa, isSol ? 'SOL_MEME' : 'EVM_TOKEN', isSol ? 'sol' : 'base', 88, 'HIGH CONFIDENCE RUNNER', `Audited ${matchedCa}`);
+    memory.recordAudit(matchedCa, isSol ? 'SOL_MEME' : 'EVM_TOKEN', isSol ? 'sol' : 'base', audit.success ? 80 : 0, audit.success ? 'REAL-TIME AUDIT' : 'UNAVAILABLE', `Audited ${matchedCa}`);
 
-    await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n\n` +
-      `📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n` +
-      `📊 **Market Summary:** Price **$0.0035 USD** | Market Cap: **$350,000 USD** | Volume 24h: **$1,200,000 USD**\n\n` +
-      `🛡️ **12-Point Tokenomics & Security Audit:**\n` +
-      `👥 **Top 10:** 0.67% | 👨‍💻 **Dev:** 0% | 🐋 **Snipers:** <0.01%\n` +
-      `🕵️ **Insiders:** 0% | 🤖 **Bundler:** 0% | 🎣 **Phishing:** 0.5%\n` +
-      `💳 **Dex Paid:** Paid | 🚫 **NoMint:** ✅ | 🛡️ **No Blacklist:** ✅\n` +
-      `🔥 **Burnt:** 100% | ⚠️ **Rug Risk Score:** 0.5% (Runner Safe Zone)\n\n` +
-      `🐋 **GMGN Smart Money Inflow:** +68.5 SOL Net Buy (5 Top Traders Active)\n` +
-      `🐦 **Twitter / X Trigger:** [Check X Search](https://x.com/search?q=${matchedCa})\n` +
-      `🔗 **Independent Links:** [GMGN Chart](https://gmgn.ai/${isSol ? 'sol' : 'base'}/token/${matchedCa}) | [DexScreener](https://dexscreener.com/${isSol ? 'solana' : 'base'}/${matchedCa}) | [RugCheck](https://rugcheck.xyz/tokens/${matchedCa})\n\n` +
-      `🧠 **Athena Verdict:** **HIGH CONFIDENCE RUNNER CANDIDATE (Confidence Score: 88%)**`
-    );
+    await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n\n${audit.content}`);
     return;
   }
 

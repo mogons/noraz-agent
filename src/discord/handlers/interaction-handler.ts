@@ -21,6 +21,7 @@ import { PriceAlertService } from '../../services/price-alert-service.js';
 import { TradeJournalService } from '../../services/trade-journal-service.js';
 import { WalletService } from '../../services/wallet-service.js';
 import { RelayAdapter } from '../../adapters/relay-adapter.js';
+import { runTokenAudit } from '../../services/token-audit-service.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 
 const priceFeedService = new PriceFeedService();
@@ -224,20 +225,10 @@ async function handleChatInput(
 
     const isSol = !contract.startsWith('0x');
     const chainName = isSol ? 'Solana (SOL)' : 'EVM (Base / ETH / Robinhood)';
+    const audit = await runTokenAudit(contract);
 
     await interaction.editReply({
-      content: `🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n\n` +
-        `📌 **Target Contract:** \`${contract}\` (${chainName})\n` +
-        `📊 **Market Summary:** Price **$0.0035 USD** | Market Cap: **$350,000 USD** | Volume 24h: **$1,200,000 USD**\n\n` +
-        `🛡️ **12-Point Tokenomics & Security Audit:**\n` +
-        `👥 **Top 10:** 0.67% | 👨‍💻 **Dev:** 0% | 🐋 **Snipers:** <0.01%\n` +
-        `🕵️ **Insiders:** 0% | 🤖 **Bundler:** 0% | 🎣 **Phishing:** 0.5%\n` +
-        `💳 **Dex Paid:** Paid | 🚫 **NoMint:** ✅ | 🛡️ **No Blacklist:** ✅\n` +
-        `🔥 **Burnt:** 100% | ⚠️ **Rug Risk Score:** 0.5% (Runner Safe Zone)\n\n` +
-        `🐋 **GMGN Smart Money Inflow:** +68.5 SOL Net Buy (5 Top Traders Active)\n` +
-        `🐦 **Twitter / X Trigger:** [Check X Search](https://x.com/search?q=${contract})\n` +
-        `🔗 **Independent Links:** [GMGN Chart](https://gmgn.ai/${isSol ? 'sol' : 'base'}/token/${contract}) | [DexScreener](https://dexscreener.com/${isSol ? 'solana' : 'base'}/${contract}) | [RugCheck](https://rugcheck.xyz/tokens/${contract})\n\n` +
-        `🧠 **Athena Verdict:** **HIGH CONFIDENCE RUNNER CANDIDATE (Confidence Score: 88%)**`,
+      content: `🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
     });
   } else if (commandName === 'screening') {
     await interaction.deferReply({ ephemeral: false });
@@ -362,35 +353,28 @@ async function handleChatInput(
     }
   } else if (commandName === 'price') {
     const token = interaction.options.getString('token', true);
-    await interaction.reply(`📊 **Token Price Query (\`${token}\`):**\n• Price: **$0.00245 USD** (+18.4% 24h)\n• Market Cap: **$245,000 USD**\n• Volume 24h: **$680,000 USD**`);
+    const cleanToken = token.toUpperCase().trim();
+    const price = await priceFeedService.getPrice(cleanToken);
+    if (price === null) {
+      await interaction.reply({ content: `⚠️ Data harga real-time tidak tersedia untuk **\`${token}\`** saat ini.` });
+      return;
+    }
+    await interaction.reply(`📊 **Token Price Query (\`${cleanToken}\`):**\n• Price: **$${price.toLocaleString()} USD** (CoinGecko real-time)`);
   } else if (commandName === 'chart') {
     const token = interaction.options.getString('token', true);
     await interaction.reply(`📈 **Chart View for \`${token}\`:**\n📊 DexScreener: https://dexscreener.com/solana/${token}`);
   } else if (commandName === 'holders') {
     const ca = interaction.options.getString('contract', true);
-    await interaction.reply({
-      content: `👥 **TOP HOLDERS & INSIDER AUDIT (\`${ca}\`):**\n` +
-        `• **Top 10 Share:** \`0.67%\` (Ultra Clean Dispersion)\n` +
-        `• **Developer Balance:** \`0.0%\` (Renounced / Sold Off)\n` +
-        `• **Bundler Wallets:** \`0.0%\` (No Bundled Supply Detected)\n` +
-        `• **Phishing / Flagged Holders:** \`0.0%\` (Runner Safe Zone)`,
-    });
+    const audit = await runTokenAudit(ca);
+    await interaction.reply({ content: `👥 **TOP HOLDERS & INSIDER AUDIT (\`${ca}\`):**\n${audit.content}` });
   } else if (commandName === 'wallets') {
     const ca = interaction.options.getString('contract', true);
-    await interaction.reply({
-      content: `🐋 **TOP SMART MONEY WALLETS SCAN (\`${ca}\`):**\n` +
-        `• **Active Smart Money Buyers:** \`4 Top Traders\` (GMGN Verified)\n` +
-        `• **Net Smart Money Inflow:** \`+38.5 SOL\`\n` +
-        `• **Top Trader Win Rate:** \`78.5%\` (High Conviction Accumulation)`,
-    });
+    const audit = await runTokenAudit(ca);
+    await interaction.reply({ content: `🐋 **TOP SMART MONEY WALLETS SCAN (\`${ca}\`):**\n${audit.content}` });
   } else if (commandName === 'pump') {
     const ca = interaction.options.getString('contract', true);
-    await interaction.reply({
-      content: `🎯 **PUMP.FUN BONDING CURVE TRACKER (\`${ca}\`):**\n` +
-        `• **Bonding Curve Progress:** \`88.4%\` (Near Raydium Graduation! 🔥)\n` +
-        `• **King of the Hill Status:** 👑 \`Active Crown\`\n` +
-        `• **Graduation Liquidity Target:** \`$69,000 Market Cap\``,
-    });
+    const audit = await runTokenAudit(ca);
+    await interaction.reply({ content: `🎯 **PUMP.FUN BONDING CURVE TRACKER (\`${ca}\`):**\n${audit.content}` });
   } else if (commandName === 'convert') {
     const amount = interaction.options.getNumber('amount', true);
     const symbol = interaction.options.getString('symbol', true).toUpperCase();
