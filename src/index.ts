@@ -362,7 +362,7 @@ if (discordToken && clientId) {
                   channelName: 'call-ct-alpha',
                   rawReason: r.reason,
                   payload: {
-                    domain: 'MEME_SOLANA',
+                    domain: 'CT_ALPHA',
                     title: r.signal.title,
                     symbol: r.signal.symbolMentioned || 'ALPHA',
                     contractAddress: r.signal.contractAddress || 'N/A',
