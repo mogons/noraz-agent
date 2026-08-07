@@ -169,20 +169,20 @@ async function runWizard() {
 
     if (isOpencodeChoice) {
       provider = 'opencode';
-      const defaultUrl = existingBaseUrl || 'https://opencode.ai/zen/go/v1';
-      const defaultModel = existingModelName || 'deepseek-v4-pro';
+      const defaultUrl = (existingBaseUrl && existingBaseUrl.includes('opencode.ai')) ? existingBaseUrl : 'https://opencode.ai/zen/go/v1';
+      const defaultModel = (existingProvider === 'opencode' && existingModelName) ? existingModelName : 'deepseek-v4-pro';
       baseUrl = await askQuestion(` Enter OpenCode AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
       modelName = await askQuestion(` Enter OpenCode AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
     } else if (isZaiChoice) {
       provider = 'zai';
-      const defaultUrl = existingBaseUrl || 'https://api.z.ai/api/coding/paas/v4';
-      const defaultModel = existingModelName || 'glm-4.7';
+      const defaultUrl = (existingBaseUrl && existingBaseUrl.includes('z.ai')) ? existingBaseUrl : 'https://api.z.ai/api/coding/paas/v4';
+      const defaultModel = (existingProvider === 'zai' && existingModelName) ? existingModelName : 'glm-4.7';
       baseUrl = await askQuestion(` Enter Z.ai AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
       modelName = await askQuestion(` Enter Z.ai AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
     } else if (isOpenRouterChoice) {
       provider = 'openrouter';
       baseUrl = 'https://openrouter.ai/api/v1';
-      modelName = await askQuestion(` Enter OpenRouter AI_MODEL_NAME [Default ${existingModelName || 'openrouter/auto'}]: `) || existingModelName || 'openrouter/auto';
+      modelName = await askQuestion(` Enter OpenRouter AI_MODEL_NAME [Default ${(existingProvider === 'openrouter' && existingModelName) || 'openrouter/auto'}]: `) || existingModelName || 'openrouter/auto';
     } else if (isAnthropicChoice) {
       provider = 'anthropic';
       baseUrl = 'https://api.anthropic.com/v1';
