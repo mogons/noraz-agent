@@ -1,5 +1,29 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
+/**
+ * Sanitize attacker-controlled token/tweet fields before rendering into Discord
+ * embeds. Token names/symbols come from chain data (GMGN/DexScreener) and can
+ * contain markdown link syntax, code blocks, or newlines — a crafted symbol
+ * could otherwise inject a clickable phishing link or break the embed layout.
+ * Removes markdown-significant characters; keeps alphanumerics and common punctuation.
+ */
+export function sanitizeEmbedField(value: string | undefined | null, maxLen = 200): string {
+  if (!value) return '';
+  const cleaned = String(value)
+    .replace(/[\r\n\t]+/g, ' ')            // collapse newlines/tabs first
+    .replace(/https?:\/\/\S+/gi, ' [LINK] ') // strip raw URLs (prevent link injection)
+    .replace(/[\[\](){}<>*_`|~\\]/g, '')   // then remove markdown link/code/bold/italic syntax
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return cleaned.length > maxLen ? `${cleaned.slice(0, maxLen)}…` : cleaned;
+}
+
+/** Encode a symbol safely into a URL query component. */
+export function encodeSymbolForUrl(symbol: string | undefined | null): string {
+  const clean = sanitizeEmbedField(symbol, 32);
+  return encodeURIComponent(clean);
+}
+
 export interface CallSignalPayload {
   domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION' | 'CT_ALPHA';
   title: string;
@@ -54,16 +78,16 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN 1: CT ALPHA (X / TWITTER)
   // ==========================================
   if (payload.domain === 'CT_ALPHA') {
-    embed.setTitle(`🔥 SMART CT ALPHA: ${payload.title}`);
+    embed.setTitle(`🔥 SMART CT ALPHA: ${sanitizeEmbedField(payload.title, 150)}`);
     
     if (payload.contractAddress && payload.contractAddress !== 'N/A') {
       embed.addFields({ name: '📍 Contract Mentioned', value: `\`${payload.contractAddress}\``, inline: false });
     }
 
     embed.addFields(
-      { name: '🐦 Source & Network', value: payload.network || 'X (Twitter)', inline: true },
+      { name: '🐦 Source & Network', value: sanitizeEmbedField(payload.network, 40) || 'X (Twitter)', inline: true },
       { name: '🧠 AI Sentiment Score', value: `${confidenceStr}`, inline: true },
-      { name: '💡 Actionable Takeaway', value: payload.aiThesis, inline: false }
+      { name: '💡 Actionable Takeaway', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
     );
 
     const tweetUrl = payload.dexScreenerUrl || 'https://x.com';
@@ -163,23 +187,24 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN 5: PREDICTION MARKETS (POLYMARKET)
   // ==========================================
   if (payload.domain === 'PREDICTION') {
-    embed.setTitle(`🎯 ATHENA POLYMARKET ARBITRAGE: ${payload.title}`);
+    embed.setTitle(`🎯 ATHENA POLYMARKET ARBITRAGE: ${sanitizeEmbedField(payload.title, 150)}`);
     
     embed.addFields(
-      { name: '🌐 Platform', value: payload.network || 'Polygon (Polymarket)', inline: true },
-      { name: '🎯 Recommended Outcome', value: `**${payload.symbol}**`, inline: true },
+      { name: '🌐 Platform', value: sanitizeEmbedField(payload.network, 40) || 'Polygon (Polymarket)', inline: true },
+      { name: '🎯 Recommended Outcome', value: `**${sanitizeEmbedField(payload.symbol, 20)}**`, inline: true },
       { name: '🟢 Swarm Confidence', value: confidenceStr, inline: true },
-      { name: '💡 Polymarket AI Thesis', value: payload.aiThesis, inline: false }
+      { name: '💡 Polymarket AI Thesis', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
     );
 
     const polyUrl = payload.dexScreenerUrl || 'https://polymarket.com';
+    const safePolySymbol = sanitizeEmbedField(payload.symbol, 20);
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`execute_prediction_yes_${payload.symbol}`)
+        .setCustomId(`execute_prediction_yes_${safePolySymbol}`)
         .setLabel('🎯 Bet YES (50 USDC)')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(`execute_prediction_no_${payload.symbol}`)
+        .setCustomId(`execute_prediction_no_${safePolySymbol}`)
         .setLabel('🛑 Bet NO (50 USDC)')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
@@ -199,19 +224,20 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN 6: NFT SNIPING (OPENSEA)
   // ==========================================
   if (payload.domain === 'NFT') {
-    embed.setTitle(`🖼️ ATHENA NFT SNIPE ALERT: ${payload.title} • [${confidenceStr}]`);
+    embed.setTitle(`🖼️ ATHENA NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
 
+    const safeNftSymbol = sanitizeEmbedField(payload.symbol, 40);
     embed.addFields(
-      { name: 'Collection', value: payload.symbol, inline: true },
-      { name: 'Price & Floor', value: payload.priceUsd || 'N/A', inline: true },
-      { name: 'Market Info', value: payload.marketCap || 'N/A', inline: true },
-      { name: '💡 NFT Rarity & Floor AI Thesis', value: payload.aiThesis, inline: false }
+      { name: 'Collection', value: safeNftSymbol || 'N/A', inline: true },
+      { name: 'Price & Floor', value: sanitizeEmbedField(payload.priceUsd, 40) || 'N/A', inline: true },
+      { name: 'Market Info', value: sanitizeEmbedField(payload.marketCap, 80) || 'N/A', inline: true },
+      { name: '💡 NFT Rarity & Floor AI Thesis', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
     );
 
     const openseaUrl = payload.dexScreenerUrl || 'https://opensea.io';
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`execute_nft_buy_${payload.symbol}`)
+        .setCustomId(`execute_nft_buy_${safeNftSymbol}`)
         .setLabel('🖼️ Snipe NFT (Seaport Fulfill)')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
@@ -231,10 +257,12 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN 7 & 8: MEME DEX TOKENS (SOLANA & EVM)
   // ==========================================
   const isSolana = payload.domain === 'MEME_SOLANA';
+  const safeTitle = sanitizeEmbedField(payload.title);
+  const safeSymbol = sanitizeEmbedField(payload.symbol, 32);
   embed.setTitle(
     isSolana
-      ? `🚀 ATHENA SOLANA MEME CALL: ${payload.title} ($${payload.symbol}) • [${confidenceStr}]`
-      : `🔷 ATHENA EVM MEME CALL: ${payload.title} ($${payload.symbol}) • [${confidenceStr}]`
+      ? `🚀 ATHENA SOLANA MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`
+      : `🔷 ATHENA EVM MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`
   );
 
   if (payload.contractAddress) {
@@ -289,12 +317,12 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
     embed.addFields({
       name: '🔗 Independent Verification Links',
-      value: `📊 [DexScreener](${dexscreenerLink}) | 📈 [GMGN Chart](${gmgnLink}) | 🛡️ [RugCheck](${rugcheckLink}) | 🐦 [X (Twitter) Search](https://x.com/search?q=%24${payload.symbol}&src=typed_query)`,
+      value: `📊 [DexScreener](${dexscreenerLink}) | 📈 [GMGN Chart](${gmgnLink}) | 🛡️ [RugCheck](${rugcheckLink}) | 🐦 [X (Twitter) Search](https://x.com/search?q=%24${encodeSymbolForUrl(payload.symbol)}&src=typed_query)`,
       inline: false,
     });
   }
 
-  embed.addFields({ name: '💡 AI Thesis & Signal Reasoning', value: payload.aiThesis, inline: false });
+  embed.addFields({ name: '💡 AI Thesis & Signal Reasoning', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
 
   // Custom Buttons for Solana vs EVM
   if (isSolana) {

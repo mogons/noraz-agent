@@ -3,6 +3,22 @@ import { isDryRun as isDryRunMode } from '../config/config.js';
 import { WalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
 
+/**
+ * Sanitize attacker-controlled fields before rendering into Telegram Markdown.
+ * Token names/symbols come from chain data; crafted values could inject
+ * Telegram formatting or broken links. Strips markdown-significant characters.
+ */
+function sanitizeTgField(value: string | undefined | null, maxLen = 200): string {
+  if (!value) return '';
+  return String(value)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/https?:\/\/\S+/gi, ' [LINK] ')
+    .replace(/[\[\](){}<>*_`|~\\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+}
+
 export interface TelegramConfig {
   botToken?: string;
   chatId?: string;
@@ -141,13 +157,16 @@ export class TelegramService {
     dexUrl?: string,
     topicName?: string
   ): Promise<boolean> {
-    const message = `🚨 *ATHENA CALL: ${title} ($${symbol})*
+    const safeTitle = sanitizeTgField(title, 150);
+    const safeSymbol = sanitizeTgField(symbol, 32);
+    const safeThesis = sanitizeTgField(aiThesis, 500);
+    const message = `🚨 *ATHENA CALL: ${safeTitle} ($${safeSymbol})*
 
 📋 *Contract Address (CA):*
 \`${ca}\`
 
 🧠 *AI Thesis & Reasoning:*
-${aiThesis}
+${safeThesis}
 
 ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
