@@ -139,11 +139,10 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     }
 
     // 1. Collect candidates: signal events (primary) + trenches (alpha)
-    const events = await this.gmgn.fetchTokenSignals('robinhood', this.config.signalTypes);
-    const eventTokens = events.map((e) => e.data).filter((t) => t.address);
-    const trenches = await this.gmgn.fetchTrenches('robinhood', { limit: this.config.trenchesLimit });
-    const trenchTokens = [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed];
-    const candidates = this.dedupeTokens.dedupe([...eventTokens, ...trenchTokens]);
+    const candidates = this.dedupeTokens.dedupe([
+      ...(await this.collectSignalEvents()),
+      ...(await this.collectTrenches()),
+    ]);
 
     // 2. Pre-filter (cheap) then GoPlus audit (expensive) then detect
     for (const t of candidates) {
