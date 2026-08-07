@@ -24,6 +24,16 @@ export interface SignalLedgerEntry {
 }
 
 /**
+ * Token tracked by the wallet auto-tracker — resolved on startup via GMGN token info.
+ */
+export interface TrackedToken {
+  chain: 'sol' | 'robinhood';
+  address: string;
+  symbol: string;
+  addedAt: number;
+}
+
+/**
  * Full Athena persisted state — survives bot restarts
  */
 export interface AthenaPersistedState {
@@ -50,6 +60,9 @@ export interface AthenaPersistedState {
 
   // Persistent signal dedup (survives restarts)
   dedupEntries: Record<string, number>;
+
+  // Wallet auto-tracking targets (survives restarts)
+  trackedTokens: TrackedToken[];
 
   // Metadata
   lastUpdated: string;
@@ -89,6 +102,7 @@ export class StateStore {
       agentStates: {},
       signalLedger: [],
       dedupEntries: {},
+      trackedTokens: [],
       lastUpdated: new Date().toISOString(),
       version: CURRENT_VERSION,
     };
@@ -136,6 +150,7 @@ export class StateStore {
         agentStates: data.agentStates || {},
         signalLedger: Array.isArray(data.signalLedger) ? data.signalLedger : [],
         dedupEntries: data.dedupEntries || {},
+        trackedTokens: Array.isArray(data.trackedTokens) ? data.trackedTokens : [],
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         version: CURRENT_VERSION,
       };
@@ -379,5 +394,26 @@ export class StateStore {
 
   public getAllDedupEntries(): Record<string, number> {
     return this.state.dedupEntries;
+  }
+
+  // ==========================================
+  // TRACKED TOKENS (Wallet Auto-Tracking)
+  // ==========================================
+
+  public getTrackedTokens(): TrackedToken[] {
+    return this.state.trackedTokens;
+  }
+
+  /** Add or update a tracked token, deduped by chain + address (case-insensitive). */
+  public setTrackedToken(tok: TrackedToken): void {
+    const existing = this.state.trackedTokens.findIndex(
+      (t) => t.chain === tok.chain && t.address.toLowerCase() === tok.address.toLowerCase()
+    );
+    if (existing >= 0) {
+      this.state.trackedTokens[existing] = tok;
+    } else {
+      this.state.trackedTokens.push(tok);
+    }
+    this.scheduleSave();
   }
 }

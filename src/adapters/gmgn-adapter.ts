@@ -171,6 +171,69 @@ export class GMGNAdapter {
     };
   }
 
+  /**
+   * /v1/token/info nests live metrics differently than /v1/market/rank:
+   * price/volume/buys/sells/swaps live under `data.price`, holder/supply stats at
+   * top level, smart-money counts under `data.wallet_tags_stat`, token-state fields
+   * under `data.dev`/`data.stat`. Flatten into the rank-style shape normalizeToken expects.
+   */
+  private flattenTokenInfo(data: any): any {
+    const price = data?.price && typeof data.price === 'object' ? data.price : {};
+    const stat = data?.stat && typeof data.stat === 'object' ? data.stat : {};
+    const dev = data?.dev && typeof data.dev === 'object' ? data.dev : {};
+    const walletTags = data?.wallet_tags_stat && typeof data.wallet_tags_stat === 'object' ? data.wallet_tags_stat : {};
+    const priceUsd = Number(price.price ?? data?.price ?? 0) || 0;
+    const circSupply = Number(data?.circulating_supply ?? 0);
+    const numOrNull = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const pctChange = (baseRaw: any): number | null => {
+      const base = numOrNull(baseRaw);
+      return base !== null && base > 0 ? ((priceUsd / base - 1) * 100) : null;
+    };
+    const totalFee = numOrNull(data?.total_fee);
+    return {
+      ...data,
+      price: priceUsd,
+      volume: price.volume_24h ?? data?.volume,
+      buys: price.buys_24h ?? data?.buys,
+      sells: price.sells_24h ?? data?.sells,
+      swaps: price.swaps_24h ?? data?.swaps,
+      market_cap: priceUsd > 0 && circSupply > 0 ? priceUsd * circSupply : undefined,
+      holder_count: data?.holder_count ?? stat.holder_count ?? 0,
+      smart_degen_count: walletTags.smart_wallets ?? stat.bot_degen_count ?? 0,
+      renowned_count: walletTags.renowned_wallets ?? 0,
+      creator_token_status: dev.creator_token_status ?? data?.creator_token_status ?? null,
+      cto_flag: dev.cto_flag ?? data?.cto_flag ?? 0,
+      top_10_holder_rate: numOrNull(stat.top_10_holder_rate ?? dev.top_10_holder_rate),
+      dev_team_hold_rate: numOrNull(stat.dev_team_hold_rate),
+      bundler_rate: numOrNull(stat.top_bundler_trader_percentage),
+      rat_trader_amount_rate: numOrNull(stat.top_rat_trader_percentage),
+      dexscr_boost_fee: dev.dexscr_boost_fee ?? 0,
+      dexscr_ad: dev.dexscr_ad ?? 0,
+      twitter_del_post_token_count: dev.twitter_del_post_token_count ?? 0,
+      twitter_create_token_count: dev.twitter_create_token_count ?? 0,
+      total_fee: totalFee !== null && totalFee > 0 ? totalFee : undefined,
+      price_change_percent1m: pctChange(price.price_1m),
+      price_change_percent5m: pctChange(price.price_5m),
+      price_change_percent1h: pctChange(price.price_1h),
+    };
+  }
+
+  /**
+   * Fetch a single token's detail from GMGN OpenAPI. Response nests the token under
+   * `data`; null on any failure (fail-closed).
+   */
+  public async fetchTokenInfo(chain: SolChain, address: string): Promise<GMGNRawToken | null> {
+    const res = await this.gmgnRequest<any>('GET', '/v1/token/info', { chain, address });
+    if (!res) return null;
+    const data = res?.data;
+    if (!data || typeof data !== 'object') return null;
+    return this.normalizeToken(this.flattenTokenInfo(data), chain);
+  }
+
   public async fetchRank(chain: SolChain = 'sol', opts: { interval?: RankInterval; limit?: number } = {}): Promise<GMGNRawToken[]> {
     const res = await this.gmgnRequest<any>('GET', '/v1/market/rank', {
       chain, interval: opts.interval || '1h', limit: opts.limit || 20,
