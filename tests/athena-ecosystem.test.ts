@@ -106,8 +106,10 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     // With real API: returns results only when OPENSEA_API_KEY is configured
     // Without API key: returns empty array (no fake data)
     if (reports.length > 0) {
-      expect(reports[0].confidenceScore).toBeGreaterThanOrEqual(80);
-      expect(reports[0].isFloorSurge).toBe(true);
+      // Contract shape: AgentReport<NFTSnipingReport>
+      expect(reports[0].confidence).toBeGreaterThanOrEqual(80);
+      expect(reports[0].signal.isFloorSurge).toBe(true);
+      expect(reports[0].payload?.domain).toBe('NFT');
     }
   });
 
@@ -126,7 +128,11 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     vi.unstubAllGlobals();
     expect(Array.isArray(reports)).toBe(true);
     for (const r of reports) {
-      expect(r.confidenceScore).toBeGreaterThanOrEqual(80);
+      // Contract shape: AgentReport<PredictionSignalReport>
+      expect(r.confidence).toBeGreaterThanOrEqual(80);
+      expect(r.signal.confidenceScore).toBeGreaterThanOrEqual(80);
+      expect(r.payload?.domain).toBe('PREDICTION');
+      expect(r.payload?.securityAuditPassed).toBe(true);
     }
   });
 

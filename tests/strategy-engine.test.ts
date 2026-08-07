@@ -86,9 +86,16 @@ describe('StrategyEngine', () => {
     expect(swarmStyle?.id).toBe('meme-robinhood-default');
   });
 
+  it('falls back to nft-default strategy without explicit activation', () => {
+    const engine = new StrategyEngine();
+    // No active map set — the shipped nft-default must be active out-of-the-box
+    const active = engine.getActiveStrategy('nft');
+    expect(active?.id).toBe('nft-default');
+  });
+
   it('returns null when no strategy exists for the domain', () => {
     const engine = new StrategyEngine();
-    expect(engine.getActiveStrategy('nft')).toBeNull();
+    expect(engine.getActiveStrategy('bogus-domain')).toBeNull();
   });
 
   it('loads the meme-vol-spike indicator', () => {
