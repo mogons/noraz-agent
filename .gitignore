@@ -36,6 +36,11 @@ yarn-debug.log*
 yarn-error.log*
 pino.log
 
+# Runtime state
+strategies/.active.json
+strategies/.backup/
+indicators/.backup/
+
 # IDE & OS Files
 .DS_Store
 Thumbs.db

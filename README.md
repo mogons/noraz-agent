@@ -14,8 +14,8 @@
 ```
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-19%2F19%20PASSED-brightgreen.svg)](https://vitest.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-v22%2B-green.svg)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/Tests-247%20PASSED-brightgreen.svg)](https://vitest.dev/)
 [![Discord](https://img.shields.io/badge/Discord-v14.18-5865F2.svg)](https://discord.js.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -39,42 +39,49 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 10. **🌉 Direct Multi-Provider On-Chain Execution & Relay / OpenSea Engine (`wallet-service.ts`, `relay-adapter.ts`, `opensea-adapter.ts`)**: Direct programmatic transaction signing via in-memory `WalletService` for cross-chain bridging (`/bridge`), DEX swaps (`/swap`), and token transfers (`/send`) with **dual-engine fallback routing** across **Relay.link** and **OpenSea API v2 DEX Aggregator** (supporting ERC-8257 AI Agent Tool Discovery) on Ethereum, Base, Arbitrum, Optimism, Solana, Polygon, BSC, and Zora.
 11. **🐦 Twitter / X Social Intelligence (`twitter-service.ts`)**: Integrated with **TwexAPI (`https://twexapi.io`)** and GMGN AI for live X sentiment scoring, contract address search, and influencer mention counts.
 12. **📊 Trade Journaling & Analytics Engine (`trade-journal-service.ts`)**: Auto-logs all open/closed positions, calculates Win Rate %, Total Realized PnL ($), best/worst trades, and exports `athena_trade_journal.csv` for Excel & Notion.
-13. **💾 Local Database File Persistence (`db-service.ts`)**: Atomic file persistence (`database/athena_state.json`) preserving active alerts and trade history across bot reboots.
+13. **💾 Local Database File Persistence (`state-store.ts`)**: Atomic file persistence (`database/athena_state.json`) preserving wallet keys, active alerts, trade history, agent states, and signal ledger across bot reboots.
+14. **🩺 Diagnostic Doctor (`athena doctor`)**: Runs a full system health check — API keys, sub-agent statuses, risk state, and connectivity.
 
 ---
 
 ## 📐 System Architecture Diagram
 
 ```
-                         +-----------------------------------+
-                         |    USER INTERFACE PLATFORMS       |
-                         | (Discord / Telegram / Terminal TUI)|
-                         +-----------------+-----------------+
-                                           |
-                         +-----------------v-----------------+
-                         |      ATHENA CORE ORCHESTRATOR     |
-                         | (#athena-control-room & Hub Exec)  |
-                         +-----------------+-----------------+
-                                           |
-       +--------------------+---------------+--------------------+--------------------+
-       |                    |                                    |                    |
-+------v-------------+ +----v---------------+              +-----v--------------+ +---v----------------+
-|  Solana Meme Agent | |   EVM Meme Agent   |              |   Perps Agent      | | OpenSea NFT Agent  |
-| (Pump.fun/Raydium) | |(Base/ETH/Robinhood)|              |  (Hyperliquid/CEX) | |(Base/ETH/Robinhood)|
-+---------+----------+ +-------+------------+              +----+---------------+ +---+----------------+
-          |                    |                                |                    |
-          +--------------------+--------------------------------+                    |
-                               |                                                     |
-                               v                                                     v
-               +-------------------------------+                    +----------------+---------------+
-               |    SWARM CONSENSUS ENGINE     |                    |   POLYMARKET PREDICTION AGENT  |
-               |  - Quant & Liquidity Layer    |                    | (Odds Arbitrage & Whale Bets)  |
-               |  - Catalyst & Sentiment Layer |                    +----------------+---------------+
-               |  - Security & Risk Audit      |                                     |
-               +---------------+---------------+                                     |
-                               | (Score >= 80%)                                      |
-                               v                                                     v
-             Discord Signal Channels (#call-meme-solana, #call-meme-robinhood, #call-prediction-markets, etc.)
+                    +-----------------------------------+
+                    |    USER INTERFACE PLATFORMS       |
+                    | (Discord / Telegram / Terminal TUI)|
+                    +-----------------+-----------------+
+                                      |
+                    +-----------------v-----------------+
+                    |      ATHENA CORE ORCHESTRATOR     |
+                    | (#athena-control-room & Hub Exec)  |
+                    |  (risk gate · swarm gate · dedup)  |
+                    +-----------------+-----------------+
+                                      |
+   +------------+------------+--------+--------+------------+------------+
+   |            |            |                 |            |            |
++--v---------+ +-v---------+ +-v---------+ +--v---------+ +-v---------+ +-v---------+
+| Solana     | | EVM Meme  | | Perps     | | NFT        | | Prediction| | CT Alpha  |
+| Meme Agent | | Agent     | | Agent     | | Agent      | | Agent     | | Agent     |
+| (GMGN/Ray) | |(GMGN/Base)| |(Hyperliq) | |(OpenSea)   | |(Polymarket)| |(Twitter)  |
++--+---------+ +-+---------+ +-+---------+ +--+---------+ +-+---------+ +-+---------+
+   |            |            |                 |            |            |
+   +------------+------------+-----------------+------------+------------+
+                              |
+                  +-----------v-----------+
+                  |  SWARM CONSENSUS      |
+                  |  ENGINE (>= 80 gate)  |
+                  +-----------+-----------+
+                              |
+              +---------------+---------------+
+              |                               |
+      +-------v--------+             +--------v-------+
+      | LP Solana      |             | LP EVM         |
+      | (Meteora DLMM) |             | (Uniswap v3)   |
+      +----------------+             +----------------+
+                              |
+                              v
+        Discord Signal Channels (#call-meme-solana, #call-perps-futures, ...)
 ```
 
 ---
@@ -189,6 +196,19 @@ Whenever you pull new updates from Git:
 athena update
 ```
 
+### CLI Cheatsheet
+
+| Command | Description |
+| :--- | :--- |
+| `athena run` (or `athena`) | Launch Athena (development / live bot) |
+| `athena wizard` (or `setup`) | Interactive configuration wizard for `.env` |
+| `athena terminal` (or `tui`) | Parthenon interactive terminal TUI |
+| `athena deploy` | Deploy 24/7 background daemon via PM2 |
+| `athena test` | Run automated unit test suite |
+| `athena build` | Compile TypeScript into `/dist` |
+| `athena update` | Pull latest Git updates, install & rebuild |
+| `athena doctor` (or `check`) | Run system diagnostics |
+
 ---
 
 ## 🤖 Automatic Platform Provisioning (Discord & Telegram)
@@ -214,8 +234,10 @@ Upon executing `athena run` or `athena deploy`, Athena automatically provisions 
 ## 🛡️ Security & Safety Rules
 
 - **Dry-Run Safeguard Default**: `DRY_RUN=true` environment flag ensures no live blockchain transactions are sent without explicit confirmation.
-- **Global Aegis Circuit Breaker**: Automatic trading lock if daily portfolio drawdown exceeds 5% ($500 USD).
+- **Global Aegis Circuit Breaker**: Automatic trading lock if daily portfolio drawdown exceeds the configured limit.
 - **Burner Wallet Cap**: Live trading agents strictly operate on isolated burner wallets with capped funds.
+- **Sandboxed Strategies**: User/LLM-authored strategy `.mjs` modules run with a sanitized `process.env` — they can never read private keys or API secrets.
+- **Prompt-Injection Hardening**: Token names/symbols/tweets are sanitized before rendering into Discord embeds; `set_api_key` is restricted to an allowlist (mode/private-key/infra keys are blocked).
 
 ---
 

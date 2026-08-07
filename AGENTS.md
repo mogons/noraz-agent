@@ -43,35 +43,75 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 ```
 Athena/
 ├── .agents/
-│   └── AGENTS.md                  # Project rules & coding guidelines
+│   ├── AGENTS.md                  # Project rules & coding guidelines
+│   └── skills/                    # Athena-specific skills (swarm trading, gmgn)
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── orchestrator/              # Athena Core Hub & Global Risk Engine
-│   │   ├── hub.ts
-│   │   ├── risk-manager.ts
-│   │   └── swarm-consensus.ts    # 3-Layer Signal Quality Filter Engine
-│   ├── agents/                    # Specialized screening agents
-│   │   ├── meme-solana/           # Solana DEX screening
-│   │   ├── meme-robinhood/              # EVM DEX screening (Base/ETH/Robinhood)
+│   │   ├── hub.ts                 # AthenaHub: agent states, risk gate, on-demand passes
+│   │   ├── risk-manager.ts        # Drawdown / position-size / correlation guards
+│   │   ├── risk-engine-v2.ts      # Kill-switch circuit breaker (singleton)
+│   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter Engine
+│   │   ├── swarm-learning.ts      # Outcome-driven agent weight recalibration
+│   │   ├── strategy-engine.ts     # Sandboxed .mjs strategy loader (sanitized env)
+│   │   ├── agent-registry.ts      # Single source of truth for all 8 agent domains
+│   │   ├── agent-runner.ts        # LLM tool-call loop for chat/TUI/Telegram
+│   │   ├── dispatch.ts            # Per-domain dispatch + LP payload builder
+│   │   └── tool-registry.ts       # LLM function-calling tools (chat commands)
+│   ├── agents/                    # Specialized screening agents (shared contract)
+│   │   ├── shared/
+│   │   │   ├── agent-contract.ts  # ScreeningAgent contract + CallCardPayload
+│   │   │   └── gmgn-meme-helpers.ts # Shared GMGN prefilter/dedupe/signal helpers
+│   │   ├── meme-solana/           # Solana DEX screening (GMGN + RugCheck)
+│   │   ├── meme-robinhood/        # EVM DEX screening (GMGN + GoPlus)
 │   │   ├── perps/                 # Technical setup screening (Hyperliquid)
-│   │   ├── nft/                   # EVM NFT floor & rarity screening
-│   │   └── prediction/            # Polymarket prediction market screening
+│   │   ├── nft/                   # EVM NFT floor & rarity screening (OpenSea)
+│   │   ├── prediction/            # Polymarket prediction market screening
+│   │   └── ct-alpha/              # X/Twitter smart-CT screening
 │   ├── adapters/                  # Web3 & Exchange execution adapters
-│   │   ├── solana-adapter.ts
-│   │   ├── evm-adapter.ts
-│   │   ├── gmgn-adapter.ts
-│   │   ├── hyperliquid-adapter.ts
-│   │   ├── meteora-dlmm-adapter.ts
-│   │   ├── uniswap-lp-adapter.ts
-│   │   ├── opensea-adapter.ts
-│   │   └── polymarket-adapter.ts
+│   │   ├── solana-adapter.ts      # Jupiter swaps + MEV guard (DRY_RUN)
+│   │   ├── evm-adapter.ts         # EVM swaps/sends
+│   │   ├── relay-adapter.ts       # Relay.link quote/swap/send + token maps
+│   │   ├── gmgn-adapter.ts        # GMGN OpenAPI (rank/trenches/signals/audit)
+│   │   ├── hyperliquid-adapter.ts # Perps market data + order execution
+│   │   ├── meteora-dlmm-adapter.ts # Solana LP pools (DexScreener fallback)
+│   │   ├── uniswap-lp-adapter.ts  # EVM LP pools (DexScreener fallback)
+│   │   ├── opensea-adapter.ts     # NFT floor signals + swap aggregator
+│   │   ├── polymarket-adapter.ts  # Gamma/CLOB market data + bets
+│   │   └── mev-execution-guard.ts # Transaction simulation + priority fees
 │   ├── position/                  # Auto TP/SL & Trailing Stop Position Manager
 │   │   └── position-manager.ts
 │   ├── discord/                   # Discord handlers, slash commands & embed views
-│   │   ├── commands/
+│   │   ├── commands/              # Slash command definitions
 │   │   ├── handlers/
-│   │   └── setup/
-│   └── services/                  # Shared security, price feeds, price alerts & LLM services
+│   │   │   ├── interaction-handler.ts # Thin dispatcher (entry)
+│   │   │   ├── command-handlers.ts    # Slash-command logic + service singletons
+│   │   │   ├── interaction-buttons.ts # Buttons/modals/select menus
+│   │   │   └── message-handler.ts     # Control-room NLU chat
+│   │   ├── embeds/                # Call cards, dashboard, audit embeds
+│   │   └── setup/                 # Channel bootstrap
+│   ├── services/                  # Shared security, price feeds, alerts & LLM
+│   │   ├── state-store.ts         # Persistent JSON state (database/)
+│   │   ├── price-feed-service.ts  # CoinGecko singleton
+│   │   ├── wallet-service.ts      # Wallet keys + balances (singleton)
+│   │   ├── wallet-tracker.ts      # Holdings lifecycle -> PositionManager
+│   │   ├── trade-journal-service.ts # Open/close audit trail
+│   │   ├── security-service.ts    # RugCheck (Solana)
+│   │   ├── goplus-security-service.ts # GoPlus (EVM)
+│   │   ├── token-audit-service.ts # On-demand audit pipeline
+│   │   ├── ai-service.ts          # Multi-provider LLM failover
+│   │   ├── twitter-service.ts     # TwexAPI X/Twitter feeds
+│   │   ├── session-memory.ts      # Audit memory for chat context
+│   │   ├── cron-scheduler.ts      # Process-wide cron singleton
+│   │   └── ...                    # market-regime, health-watcher, skill-loader, api-key-guard, rpc-failover
+│   ├── cli/                       # Terminal TUI + diagnostic doctor
+│   ├── telegram/                  # Telegram notification bridge + bot polling
+│   └── api/                       # Minimal REST server (health + analytics)
+├── strategies/                    # User/LLM-authored strategy .mjs modules
+├── indicators/                    # Custom technical indicator .mjs modules
+├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/doctor)
+├── scripts/                       # wizard.js (env setup), update-core.mjs (git pull+rebuild)
+├── tests/                         # Vitest suite (247 tests)
 ├── .env.example                   # Environment variable template
 ├── package.json
 └── tsconfig.json
