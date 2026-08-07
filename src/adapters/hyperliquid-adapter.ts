@@ -54,28 +54,22 @@ export class HyperliquidAdapter {
   private exchangeApiUrl = 'https://api.hyperliquid.xyz/exchange';
   private isDryRun: boolean;
 
-  // Asset index mapping for all tracked coins on Hyperliquid
-  // NOTE: Indices must be verified against live Hyperliquid meta() response
-  private assetMap: Record<string, number> = {
-    // Primary Watchlist (always analyzed every screening pass)
-    BTC: 0, ETH: 1, SOL: 4, HYPE: 132,
-    GOLD: 200, XYZ100: 201, OIL: 202,
-    // Secondary Pool (only analyzed when volume/OI triggers are exceptional)
-    ARB: 11, DOGE: 3, WIF: 98, PEPE: 51,
-    BONK: 80, ONDO: 115, SUI: 42, AVAX: 7,
-    LINK: 6, OP: 19, TIA: 72, JUP: 99,
-    W: 116, RENDER: 65, INJ: 43, SEI: 62,
-    TRX: 15, BNB: 2, PENGU: 180, ADA: 5,
-  };
+  // Live name → index resolution cache (from meta.universe), refreshed per fetch.
+  // The old hardcoded assetMap was stale (24/27 wrong, ghosts like GOLD/XYZ100/OIL
+  // that are not listed on Hyperliquid) — indices MUST come from the live meta()
+  // response so perps never scores the wrong coin's candles/OI/funding.
+  private universeByName: Map<string, number> | null = null;
+  private universeFetchedAt = 0;
+  private static readonly UNIVERSE_TTL_MS = 5 * 60 * 1000; // refresh every 5 min
 
   // Primary tickers: always screened every pass
-  public readonly primaryWatchlist: string[] = ['BTC', 'ETH', 'SOL', 'HYPE', 'GOLD', 'XYZ100', 'OIL'];
+  public readonly primaryWatchlist: string[] = ['BTC', 'ETH', 'SOL', 'HYPE'];
 
   // Secondary tickers: only screened when exceptional opportunity is detected
   public readonly secondaryPool: string[] = [
-    'ARB', 'DOGE', 'WIF', 'PEPE', 'BONK', 'ONDO', 'SUI', 'AVAX',
+    'ARB', 'DOGE', 'WIF', 'PEPE', 'ONDO', 'SUI', 'AVAX',
     'LINK', 'OP', 'TIA', 'JUP', 'W', 'RENDER', 'INJ', 'SEI',
-    'TRX', 'BNB', 'PENGU', 'ADA',
+    'TRX', 'BNB', 'ADA',
   ];
 
   constructor() {
@@ -86,14 +80,53 @@ export class HyperliquidAdapter {
   private oiSnapshots: Map<string, Array<{ ts: number; oi: number }>> = new Map();
 
   /**
+   * Resolve a coin's current asset index from the live meta() universe.
+   * meta.universe is an array where position = asset index. Cached for TTL.
+   * Returns null when the coin is not listed (fail-closed — never fall back to a stale map).
+   */
+  private async resolveAssetIndex(coin: string): Promise<number | null> {
+    const upper = coin.toUpperCase();
+    if (this.universeByName && Date.now() - this.universeFetchedAt < HyperliquidAdapter.UNIVERSE_TTL_MS) {
+      return this.universeByName.get(upper) ?? null;
+    }
+    try {
+      const res = await fetch(this.infoApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'meta' }),
+      });
+      if (!res.ok) {
+        console.error(`[HYPERLIQUID] meta() HTTP ${res.status} — cannot resolve indices`);
+        return this.universeByName?.get(upper) ?? null;
+      }
+      const meta: any = await res.json();
+      if (Array.isArray(meta?.universe)) {
+        const map = new Map<string, number>();
+        meta.universe.forEach((u: any, idx: number) => {
+          if (typeof u?.name === 'string') map.set(u.name.toUpperCase(), idx);
+        });
+        this.universeByName = map;
+        this.universeFetchedAt = Date.now();
+        return map.get(upper) ?? null;
+      }
+      console.error('[HYPERLIQUID] meta() response missing universe array');
+      return this.universeByName?.get(upper) ?? null;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[HYPERLIQUID] meta() fetch failed (${message}) — using cached universe if available`);
+      return this.universeByName?.get(upper) ?? null;
+    }
+  }
+
+  /**
    * Fetch real-time market data for a specific coin from Hyperliquid Info API
    */
   public async fetchMarketData(coin: string): Promise<HyperliquidMarketData | null> {
     try {
       const upperCoin = coin.toUpperCase();
-      const assetIndex = this.assetMap[upperCoin];
-      if (assetIndex === undefined) {
-        console.warn(`[HYPERLIQUID] Unknown coin: ${upperCoin}. Not in asset map.`);
+      const assetIndex = await this.resolveAssetIndex(upperCoin);
+      if (assetIndex === null) {
+        console.warn(`[HYPERLIQUID] Unknown coin: ${upperCoin}. Not listed in live meta() universe.`);
         return null;
       }
 
@@ -117,7 +150,7 @@ export class HyperliquidAdapter {
         return null;
       }
 
-      const [meta, assetCtxs] = data;
+      const [, assetCtxs] = data;
       if (!Array.isArray(assetCtxs) || assetIndex >= assetCtxs.length) {
         console.error(`[HYPERLIQUID] Asset index ${assetIndex} out of bounds (total: ${assetCtxs?.length || 0})`);
         return null;
@@ -203,7 +236,8 @@ export class HyperliquidAdapter {
    */
   public async fetchAllMarketData(): Promise<HyperliquidMarketData[]> {
     const results: HyperliquidMarketData[] = [];
-    for (const coin of Object.keys(this.assetMap)) {
+    const coins = [...this.primaryWatchlist, ...this.secondaryPool];
+    for (const coin of coins) {
       const data = await this.fetchMarketData(coin);
       if (data) results.push(data);
     }
@@ -221,9 +255,9 @@ export class HyperliquidAdapter {
     limitPrice?: number,
   ): Promise<HyperliquidOrderResult> {
     const upperCoin = coin.toUpperCase();
-    const assetIndex = this.assetMap[upperCoin];
-    if (assetIndex === undefined) {
-      return { success: false, error: `Unknown coin: ${upperCoin}` };
+    const assetIndex = await this.resolveAssetIndex(upperCoin);
+    if (assetIndex === null) {
+      return { success: false, error: `Unknown coin: ${upperCoin} (not listed in live meta() universe)` };
     }
 
     const side = isBuy ? 'LONG' : 'SHORT';
