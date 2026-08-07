@@ -93,7 +93,37 @@ export class SwarmConsensusEngine {
     this.stateStore = store;
   }
 
-  public evaluateSignal(candidate: SignalCandidate): ConsensusResult {
+  private activeOpposingIntents: Map<string, { domain: string; direction: 'LONG' | 'SHORT' | 'BUY' | 'SELL'; timestamp: number }> = new Map();
+
+  /**
+   * Register a direction intent from an agent (e.g. PERPS SHORT on BTC) to enable Cross-Agent Veto
+   */
+  public registerAgentIntent(symbol: string, domain: string, direction: 'LONG' | 'SHORT' | 'BUY' | 'SELL'): void {
+    const key = symbol.toUpperCase();
+    this.activeOpposingIntents.set(key, { domain, direction, timestamp: Date.now() });
+  }
+
+  public evaluateSignal(candidate: SignalCandidate & { direction?: 'LONG' | 'SHORT' | 'BUY' | 'SELL' }): ConsensusResult {
+    const symbolKey = candidate.symbol.toUpperCase();
+
+    // Cross-Agent Conflict Veto Check (e.g., PERPS SHORT vs SPOT BUY)
+    const existingIntent = this.activeOpposingIntents.get(symbolKey);
+    if (existingIntent && Date.now() - existingIntent.timestamp < 60 * 60 * 1000) {
+      const incomingDir = candidate.direction || 'BUY';
+      const isConflict = 
+        (existingIntent.direction === 'SHORT' || existingIntent.direction === 'SELL') && (incomingDir === 'BUY' || incomingDir === 'LONG') ||
+        (existingIntent.direction === 'LONG' || existingIntent.direction === 'BUY') && (incomingDir === 'SELL' || incomingDir === 'SHORT');
+
+      if (isConflict) {
+        return {
+          passed: false,
+          confidenceScore: 0,
+          breakdown: { quantScore: 0, catalystScore: 0, securityScore: 0, reputationMultiplier: 1.0 },
+          reason: `🛑 **Cross-Agent Veto Block:** Opposing intent detected! ${existingIntent.domain} has an active ${existingIntent.direction} intent on $${symbolKey}, conflicting with incoming ${candidate.domain} ${incomingDir}. Order blocked to prevent hedging self-destruction.`,
+        };
+      }
+    }
+
     // Deduplication Check (Prevent duplicate calls within 2-hour window)
     const signalHash = `${candidate.domain}_${candidate.contractAddress || candidate.symbol}`.toUpperCase();
     const lastTime = this.recentSignalHashes.get(signalHash);
