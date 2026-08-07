@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import type { AthenaStrategy, AthenaIndicator } from './strategy-types.js';
+
+const requireEsm = createRequire(import.meta.url);
 
 const PROJECT_ROOT = path.resolve(process.cwd());
 const STRATEGIES_DIR = path.join(PROJECT_ROOT, 'strategies');
@@ -204,6 +207,7 @@ export class StrategyEngine {
   }
 
   private loadModule(filePath: string): any {
-    return import(pathToFileURL(filePath).href);
+    const mod = requireEsm(filePath);
+    return mod.default || mod;
   }
 }
