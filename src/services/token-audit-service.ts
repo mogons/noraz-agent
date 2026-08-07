@@ -7,6 +7,12 @@ export interface TokenAuditResult {
   content: string;
 }
 
+/**
+ * On-demand token audit (used when a contract address is pasted into Discord).
+ * Uses GMGN fetchTokenInfo (direct per-token query — NOT the trending fallback)
+ * so any valid address gets real price/market data, not just trending tokens.
+ * Security audit via RugCheck (Solana) / GoPlus (EVM). Fail-closed on errors.
+ */
 export async function runTokenAudit(contract: string): Promise<TokenAuditResult> {
   const isSol = !contract.toLowerCase().startsWith('0x');
   try {
@@ -14,8 +20,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
       const security = new RugCheckService();
       const audit = await security.auditSolanaToken(contract);
       const gmgn = new GMGNAdapter();
-      const signals = await gmgn.fetchTrendingSignals('sol');
-      const token = signals.find((s) => s.contractAddress.toLowerCase() === contract.toLowerCase());
+      const token = await gmgn.fetchTokenInfo('sol', contract);
       const apiError = audit.risks[0]?.name === 'RugCheck API Error';
 
       if (apiError && !token) {
@@ -38,8 +43,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
     const goplus = new GoPlusSecurityService();
     const security = await goplus.auditToken('base', contract);
     const gmgn = new GMGNAdapter();
-    const signals = await gmgn.fetchTrendingSignals('base');
-    const token = signals.find((s) => s.contractAddress.toLowerCase() === contract.toLowerCase());
+    const token = await gmgn.fetchTokenInfo('base', contract);
 
     if (!security && !token) {
       return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
