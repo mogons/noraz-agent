@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { CTAlphaAgent } from '../src/agents/ct-alpha/ct-alpha-agent.js';
@@ -48,6 +48,8 @@ const mkSignal = (over: Partial<CTAlphaSignal> = {}): CTAlphaSignal => ({
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('CTAlphaAgent', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
   it('contract: domain is ct-alpha', () => {
     const agent = new CTAlphaAgent(mkFakeTwitter([]));
     expect(agent.domain).toBe('ct-alpha');
