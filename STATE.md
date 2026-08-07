@@ -138,3 +138,19 @@
 - [7] Auth model: DEFERRED — Discord/Telegram servers are private, only user has access (user confirmation). Revisit if server becomes public.
 - [8] LLM tool hardening: APPROVED (recommendation 3a) — proceed.
 - [9] Risk engine wiring: APPROVED (recommendation 2a) — proceed.
+
+## FASE 3 COMPLETE — ALL P0/P1 FIXED
+| Fix | Status |
+|---|---|
+| 1 Hyperliquid indices | ✅ a6bcce8 |
+| 2 OpenSea fail-closed | ✅ bc68e85 |
+| 3 Prompt-injection sanitize | ✅ 391f8db |
+| 4 Dead code removal | ✅ e1b98b4 |
+| 5 De-hardcode prices | ✅ 3fe4b6a |
+| 6 Robinhood wallet chain | ✅ 6b0f710 |
+| 7 Auth model | ⏸ DEFERRED (private server, user decision) |
+| 8 LLM tool hardening | ✅ 4fc0bd3 (set_api_key allowlist + sanitized env for strategy eval) |
+| 9 Risk engine wiring | ✅ ac3ab24 (drawdown/size/kill-switch enforced pre-execution) |
+| 10 Cron singleton | ⏳ P2 pending |
+
+## LOOP STATUS: 100/100 (L3) — semua P0 ditutup. Pending: deploy VPS (athena update).
