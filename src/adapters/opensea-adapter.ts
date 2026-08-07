@@ -141,7 +141,11 @@ export class OpenSeaAdapter {
       }
 
       const data = await res.json() as Record<string, unknown>;
-      const expectedOut = data.expected_out ? Number(data.expected_out) : amount * 0.998;
+      const expectedOutRaw = data.expected_out ? Number(data.expected_out) : NaN;
+      // Fail-closed: missing expected_out from the API is NOT a quote — never fabricate one.
+      if (!Number.isFinite(expectedOutRaw) || expectedOutRaw <= 0) {
+        throw new Error('OpenSea Swap API returned no expected_out');
+      }
 
       return {
         success: true,
@@ -150,7 +154,7 @@ export class OpenSeaAdapter {
         fromToken: fromSymbol,
         toToken: toSymbol,
         amountIn: amount,
-        expectedAmountOut: expectedOut,
+        expectedAmountOut: expectedOutRaw,
         feeUsd: 0.0,
         estimatedDurationSeconds: 4,
         openseaSwapUrl,
@@ -158,19 +162,20 @@ export class OpenSeaAdapter {
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[OPENSEA ADAPTER] OpenSea Swap API fallback (${errMsg}). Using simulation.`);
+      console.warn(`[OPENSEA ADAPTER] Swap quote failed: ${errMsg}`);
       return {
-        success: true,
+        success: false,
         chainName: chainInfo.name,
         chainId: chainInfo.id,
         fromToken: fromSymbol,
         toToken: toSymbol,
         amountIn: amount,
-        expectedAmountOut: Number((amount * 0.998).toFixed(4)),
+        expectedAmountOut: 0,
         feeUsd: 0.0,
-        estimatedDurationSeconds: 4,
+        estimatedDurationSeconds: 0,
         openseaSwapUrl,
-        simulated: true,
+        simulated: false,
+        error: errMsg,
       };
     }
   }
@@ -180,6 +185,12 @@ export class OpenSeaAdapter {
    */
   public async executeSwap(request: OpenSeaSwapRequest, walletService?: WalletService): Promise<OpenSeaSwapResult> {
     const quote = await this.getSwapQuote(request);
+
+    // Fail-closed: never broadcast from a failed/fabricated quote.
+    if (!quote.success || quote.expectedAmountOut <= 0) {
+      console.warn(`[OPENSEA ADAPTER] Swap aborted — quote failed (${quote.error || 'no valid quote'}).`);
+      return quote;
+    }
 
     if (this.isDryRun) {
       const simHash = `0xsim_os_swap_${quote.chainId}_${Date.now()}`;
@@ -285,8 +296,10 @@ export class OpenSeaAdapter {
       const topBuyerEntry = Object.entries(whaleBuyers).sort((a, b) => b[1] - a[1])[0];
       const topBuyer = topBuyerEntry?.[0];
       const isWhaleSweep = topBuyer ? whaleBuyers[topBuyer] >= 3 : false;
+      // Honest whale metadata: we cannot derive real PnL/wallet-age from the events feed,
+      // so verification stays false unless real values are provided elsewhere. Never fabricate.
       const whaleInfo = topBuyer
-        ? this.verifyWhaleWallet(topBuyer, volume4hEth * 2000, 1.0, 30, 7)
+        ? this.verifyWhaleWallet(topBuyer, volume4hEth * 2000, 0, 0, 0)
         : undefined;
 
       return [
@@ -298,7 +311,7 @@ export class OpenSeaAdapter {
           chain: 'ethereum',
           priceEth: floorPriceEth,
           floorPriceEth: floorPriceEth,
-          floorSurge4hPct: dayChangePct * 100,
+          floorSurge4hPct: dayChangePct, // one_day_change is already a percentage — no *100
           volumeSpike4hRatio: 1.0,
           salesVelocity1h,
           isWhaleSweep,
