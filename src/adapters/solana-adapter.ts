@@ -96,13 +96,14 @@ export class SolanaTradeAdapter {
       const swapInfo = routePlan?.[0]?.swapInfo as Record<string, unknown> | undefined;
       console.log(`[JUPITER SWAP] Best route found via ${swapInfo?.label || 'DEX Pool'}`);
 
+      // Real quote data is reported, but live broadcast is NOT enabled yet — no fabricated hash.
       return {
-        success: true,
-        txHash: `live_tx_sol_${Date.now()}`,
+        success: false,
         inputSol: request.amountSol,
         outputTokens: Number(quoteData.outAmount || 0) / 1e6,
         priceImpactPercentage: Number(quoteData.priceImpactPct || 0),
         simulated: false,
+        error: 'Live Solana buy execution not yet connected. Configure wallet and DRY_RUN=false to enable broadcast.',
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);

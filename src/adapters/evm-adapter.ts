@@ -79,15 +79,15 @@ export class EVMTradeAdapter {
     }
 
     try {
-      // In live mode, executes transaction via viem/ethers router contract
+      // Live broadcast is NOT enabled yet — return an honest "not enabled" result (no fabricated hash).
       return {
-        success: true,
-        txHash: `0x_live_evm_${Date.now()}`,
+        success: false,
         chain: String(request.chain),
         inputEth: request.amountEth,
-        outputTokens: request.amountEth * 125000,
+        outputTokens: 0,
         dexUsed: dexName,
         simulated: false,
+        error: 'Live EVM buy execution not yet connected. Configure EVM_PRIVATE_KEY and DRY_RUN=false to enable.',
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
