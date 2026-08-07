@@ -116,3 +116,10 @@
 | 2 OpenSea fail-open | ✅ DONE bc68e85 (fails closed, no fabricated output, whale/floor fixed) |
 
 | 3 Prompt injection sanitize | ✅ DONE 391f8db (sanitizeEmbedField/sanitizeTgField all domains) |
+
+| 4 Dead code | ✅ DONE e1b98b4 (backtester/db-service removed; test 11 no longer wipes state) |
+| 5 De-hardcode constants | ✅ DONE 3fe4b6a (live SOL/ETH prices in LP fee gates) |
+| 6 Robinhood in wallet-service | ✅ DONE 6b0f710 |
+
+## WAITING FOR HUMAN (blokir P0 keamanan)
+- [7] Auth model: Discord/Telegram commands open to all users. Butuh keputusan: allowlist user ID? (opsi: env ALLOWED_USER_IDS, role-based, atau private-channel-only)
