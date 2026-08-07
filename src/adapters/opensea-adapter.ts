@@ -245,43 +245,72 @@ export class OpenSeaAdapter {
   }
 
   public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins'): Promise<OpenSeaNFTSignal[]> {
-    if (this.apiKey) {
-      console.log(`[OPENSEA ADAPTER] Fetching live NFT floor stats for collection: ${collectionSlug} via OpenSea API v2...`);
-      try {
-        const headers = { 'accept': 'application/json', 'x-api-key': this.apiKey };
-        const statsRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`, { headers });
-        if (statsRes.ok) {
-          const statsData: any = await statsRes.json();
-          const totalStats = statsData.total || {};
-          const floorPrice = totalStats.floor_price || 11.2;
-          const volume4h = totalStats.volume || 100;
-
-          return [
-            {
-              collectionSlug,
-              collectionName: collectionSlug.replace(/-/g, ' ').toUpperCase(),
-              tokenId: '101',
-              name: `${collectionSlug.replace(/-/g, ' ').toUpperCase()} #101`,
-              chain: 'ethereum',
-              priceEth: floorPrice,
-              floorPriceEth: floorPrice,
-              floorSurge4hPct: 37.5,
-              volumeSpike4hRatio: 3.8,
-              salesVelocity1h: 32,
-              isWhaleSweep: true,
-              whaleInfo: this.verifyWhaleWallet('0x7a2B49...e5f', 15400, 8.2, 120, 2),
-              openseaUrl: `https://opensea.io/collection/${collectionSlug}`,
-              aiThesis: `OpenSea API v2 Pro Signal: ${collectionSlug} Floor Price at ${floorPrice} ETH. Total Volume: ${volume4h.toFixed(1)} ETH.`,
-            },
-          ];
-        }
-      } catch (err: any) {
-        console.error('[OPENSEA API FETCH ERROR]', err.message);
-      }
+    if (!this.apiKey) {
+      console.log(`[OPENSEA ADAPTER] No API key configured for ${collectionSlug}. Returning empty.`);
+      return [];
     }
+    try {
+      const headers = { 'accept': 'application/json', 'x-api-key': this.apiKey };
+      const statsRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`, { headers });
+      if (!statsRes.ok) throw new Error(`OpenSea stats HTTP ${statsRes.status}`);
+      const statsData: any = await statsRes.json();
+      const total = statsData?.total || {};
+      const floorPriceEth = Number(total.floor_price) || 0;
+      const volume24hEth = Number(total.volume) || 0;
+      const dayChangePct = Number(total.one_day_change) || 0;
+      if (!(floorPriceEth > 0)) return [];
 
-    // No API key and no live data available — return empty (no fake signals)
-    console.log(`[OPENSEA ADAPTER] No API key configured and no live data for ${collectionSlug}. Returning empty.`);
-    return [];
+      const eventsRes = await fetch(
+        `https://api.opensea.io/api/v2/events/collection/${collectionSlug}?event_type=successful&limit=50`,
+        { headers }
+      );
+      let salesVelocity1h = 0;
+      const volume4hEth = volume24hEth / 6;
+      const whaleBuyers: Record<string, number> = {};
+      if (eventsRes.ok) {
+        const eventsData: any = await eventsRes.json();
+        const events: any[] = eventsData?.events || [];
+        const now = Date.now();
+        const withTs = events.filter((e) => e?.created_date);
+        const recent = withTs.length > 0
+          ? withTs.filter((e) => new Date(e.created_date).getTime() > now - 60 * 60 * 1000)
+          : events;
+        salesVelocity1h = recent.length;
+        for (const e of recent) {
+          const addr = e?.transaction?.from_account?.address || e?.seller?.address;
+          if (addr) whaleBuyers[addr] = (whaleBuyers[addr] || 0) + 1;
+        }
+      }
+
+      const topBuyerEntry = Object.entries(whaleBuyers).sort((a, b) => b[1] - a[1])[0];
+      const topBuyer = topBuyerEntry?.[0];
+      const isWhaleSweep = topBuyer ? whaleBuyers[topBuyer] >= 3 : false;
+      const whaleInfo = topBuyer
+        ? this.verifyWhaleWallet(topBuyer, volume4hEth * 2000, 1.0, 30, 7)
+        : undefined;
+
+      return [
+        {
+          collectionSlug,
+          collectionName: collectionSlug.replace(/-/g, ' ').toUpperCase(),
+          tokenId: '',
+          name: `${collectionSlug.replace(/-/g, ' ').toUpperCase()} (floor)`,
+          chain: 'ethereum',
+          priceEth: floorPriceEth,
+          floorPriceEth: floorPriceEth,
+          floorSurge4hPct: dayChangePct * 100,
+          volumeSpike4hRatio: 1.0,
+          salesVelocity1h,
+          isWhaleSweep,
+          whaleInfo,
+          openseaUrl: `https://opensea.io/collection/${collectionSlug}`,
+          aiThesis: `OpenSea API v2 Live Signal: ${collectionSlug} floor ${floorPriceEth} ETH, ${salesVelocity1h} sales/h.`,
+        },
+      ];
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[OPENSEA API FETCH ERROR] ${message}`);
+      return [];
+    }
   }
 }
