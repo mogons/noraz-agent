@@ -279,24 +279,8 @@ export class OpenSeaAdapter {
       }
     }
 
-    const sampleWhale = this.verifyWhaleWallet('0x7a2B49...e5f', 15400, 8.2, 120, 2);
-    return [
-      {
-        collectionSlug: 'pudgypenguins',
-        collectionName: 'Pudgy Penguins',
-        tokenId: '6842',
-        name: 'Pudgy Penguin #6842',
-        chain: 'ethereum',
-        priceEth: 11.50,
-        floorPriceEth: 11.20,
-        floorSurge4hPct: 37.5,
-        volumeSpike4hRatio: 3.8,
-        salesVelocity1h: 32,
-        isWhaleSweep: true,
-        whaleInfo: sampleWhale,
-        openseaUrl: 'https://opensea.io/assets/ethereum/0xbd3531da5cf5857e7cd67d6fb357327b2072975c/6842',
-        aiThesis: '🚨 NFT MOMENTUM & WHALE SWEEP ALERT! Pudgy Penguins floor surged +37.5% in 4h with 3.8x Volume Spike! Verified Whale 0x7a2B49... ($15.4k Portfolio, +8.2 ETH PnL) swept 3 items.',
-      },
-    ];
+    // No API key and no live data available — return empty (no fake signals)
+    console.log(`[OPENSEA ADAPTER] No API key configured and no live data for ${collectionSlug}. Returning empty.`);
+    return [];
   }
 }

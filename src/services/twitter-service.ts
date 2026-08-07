@@ -56,20 +56,42 @@ export class TwitterService {
 
     try {
       console.log(`[TWEX_API] Querying TwexAPI for: "${query}"...`);
-      const realTwitterSearchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query`;
-      return [
-        {
-          id: 'twex_123',
-          text: `🔥 Hot momentum surge on $${query}! Verified CTO & Whale Inflow confirmed.`,
-          authorUsername: 'alpha_caller',
-          authorName: 'Alpha Caller ⚡',
-          likes: 512,
-          retweets: 120,
-          replies: 62,
-          createdAt: new Date().toISOString(),
-          url: realTwitterSearchUrl,
-        },
-      ];
+      const response = await fetch(`${this.twexApiUrl}/tweets/search?q=${encodeURIComponent(query)}&limit=${maxResults}`, {
+        headers: { 'Authorization': `Bearer ${this.twexApiKey}` },
+      });
+
+      if (response.ok) {
+        const data: any = await response.json();
+        const tweets = Array.isArray(data) ? data : (data.data || data.tweets || data.results || []);
+        if (Array.isArray(tweets) && tweets.length > 0) {
+          console.log(`[TWEX_API] Received ${tweets.length} live tweets for: "${query}"`);
+          return tweets.map((t: any) => ({
+            id: String(t.id || t.tweet_id || `twex_${Date.now()}`),
+            text: t.text || t.full_text || t.content || '',
+            authorUsername: t.author?.username || t.user?.screen_name || t.username || 'unknown',
+            authorName: t.author?.name || t.user?.name || t.author_name || 'Unknown',
+            likes: t.public_metrics?.like_count || t.favorite_count || t.likes || 0,
+            retweets: t.public_metrics?.retweet_count || t.retweet_count || t.retweets || 0,
+            replies: t.public_metrics?.reply_count || t.reply_count || t.replies || 0,
+            createdAt: t.created_at || new Date().toISOString(),
+            url: t.url || `https://x.com/${t.author?.username || t.user?.screen_name || 'i'}/status/${t.id || t.tweet_id}`,
+          }));
+        }
+      }
+
+      console.warn(`[TWEX_API] No results or API error for: "${query}". Falling back to X search link.`);
+      const fallbackUrl = `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query`;
+      return [{
+        id: `twex_fallback_${Date.now()}`,
+        text: `Search X for latest tweets about "${query}"`,
+        authorUsername: 'x_search',
+        authorName: 'X Search',
+        likes: 0,
+        retweets: 0,
+        replies: 0,
+        createdAt: new Date().toISOString(),
+        url: fallbackUrl,
+      }];
     } catch (err: any) {
       console.error('[TWITTER SERVICE ERROR]', err.message);
       return [];

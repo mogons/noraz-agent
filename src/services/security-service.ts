@@ -22,46 +22,89 @@ export class RugCheckService {
     try {
       console.log(`[RUGCHECK SERVICE] Auditing Solana token: ${tokenMint} via RugCheck API...`);
       
-      // In live production, performs HTTP GET to https://api.rugcheck.xyz/v1/tokens/{mint}/report
       const endpoint = `${this.apiUrl}/tokens/${tokenMint}/report`;
-      
-      /* 
       const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error(`RugCheck API HTTP error: ${response.status}`);
-      }
-      const data = await response.json();
-      */
 
-      // Simulated clean RugCheck response structure matching RugCheck API v1 schema
+      if (!response.ok) {
+        console.warn(`[RUGCHECK SERVICE] API HTTP ${response.status} for ${tokenMint}. Treating as HIGH RISK.`);
+        return this.highRiskFallback(tokenMint, `RugCheck API returned HTTP ${response.status}`);
+      }
+
+      const data: any = await response.json();
+
+      // Parse risk score (RugCheck: lower score = safer)
+      const score = typeof data.score === 'number' ? data.score : 9999;
+      const tokenType = data.tokenType || data.tokenMeta?.type || 'spl-token';
+      const mintAuthority = data.mintAuthority || data.token?.mintAuthority || null;
+      const freezeAuthority = data.freezeAuthority || data.token?.freezeAuthority || null;
+
+      // Parse top holders concentration
+      let topHoldersSharePct = 0;
+      if (Array.isArray(data.topHolders)) {
+        topHoldersSharePct = data.topHolders
+          .slice(0, 10)
+          .reduce((sum: number, h: any) => sum + (h.pct || h.percentage || 0), 0);
+      }
+
+      // Parse LP burned percentage
+      let lpBurnedPct = 0;
+      if (Array.isArray(data.markets)) {
+        for (const market of data.markets) {
+          if (market.lp && typeof market.lp.lpLockedPct === 'number') {
+            lpBurnedPct = Math.max(lpBurnedPct, market.lp.lpLockedPct);
+          }
+        }
+      }
+
+      // Parse risks array
+      const risks: Array<{ name: string; value: string; description: string; score: number }> = [];
+      if (Array.isArray(data.risks)) {
+        for (const r of data.risks) {
+          risks.push({
+            name: r.name || 'Unknown Risk',
+            value: r.value || '',
+            description: r.description || '',
+            score: typeof r.score === 'number' ? r.score : 0,
+          });
+        }
+      }
+
+      const isRugged = score >= 5000 || (data.rugged === true);
+      // Safe threshold: score < 1000, no mint/freeze authority, LP > 50% locked
+      const isSafeForRunner = score < 1000 && !mintAuthority && !freezeAuthority && !isRugged;
+
+      console.log(`[RUGCHECK SERVICE] Audit complete for ${tokenMint}: Score=${score}, Safe=${isSafeForRunner}, Risks=${risks.length}`);
+
       return {
         tokenMint,
-        score: 150, // Score < 1000 is Good / Safe
-        tokenType: 'spl-token',
-        mintAuthority: null, // Disabled -> Safe
-        freezeAuthority: null, // Disabled -> Safe
-        isRugged: false,
-        lpBurnedPercentage: 100, // 100% LP Burned
-        topHoldersSharePercentage: 0.67,
-        risks: [
-          { name: 'Single Holder Ownership', value: '0.67%', description: 'Top 10 holders control low share', score: 10 },
-        ],
-        isSafeForRunner: true,
+        score,
+        tokenType,
+        mintAuthority,
+        freezeAuthority,
+        isRugged,
+        lpBurnedPercentage: lpBurnedPct,
+        topHoldersSharePercentage: topHoldersSharePct,
+        risks,
+        isSafeForRunner,
       };
     } catch (err: any) {
       console.error('[RUGCHECK SERVICE ERROR]', err.message);
-      return {
-        tokenMint,
-        score: 9999,
-        tokenType: 'unknown',
-        mintAuthority: 'UNKNOWN',
-        freezeAuthority: 'UNKNOWN',
-        isRugged: true,
-        lpBurnedPercentage: 0,
-        topHoldersSharePercentage: 100,
-        risks: [{ name: 'RugCheck API Error', value: err.message, description: 'Failed to fetch audit report', score: 9999 }],
-        isSafeForRunner: false,
-      };
+      return this.highRiskFallback(tokenMint, err.message);
     }
+  }
+
+  private highRiskFallback(tokenMint: string, errorMessage: string): RugCheckResult {
+    return {
+      tokenMint,
+      score: 9999,
+      tokenType: 'unknown',
+      mintAuthority: 'UNKNOWN',
+      freezeAuthority: 'UNKNOWN',
+      isRugged: true,
+      lpBurnedPercentage: 0,
+      topHoldersSharePercentage: 100,
+      risks: [{ name: 'RugCheck API Error', value: errorMessage, description: 'Failed to fetch audit report', score: 9999 }],
+      isSafeForRunner: false,
+    };
   }
 }

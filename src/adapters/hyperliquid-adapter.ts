@@ -81,6 +81,9 @@ export class HyperliquidAdapter {
     this.isDryRun = process.env.DRY_RUN !== 'false';
   }
 
+  // In-memory OI snapshots for computing OI change % over time
+  private oiSnapshots: Map<string, Array<{ ts: number; oi: number }>> = new Map();
+
   /**
    * Fetch real-time market data for a specific coin from Hyperliquid Info API
    */
@@ -93,36 +96,99 @@ export class HyperliquidAdapter {
         return null;
       }
 
-      console.log(`[HYPERLIQUID] Fetching market data for ${upperCoin} (Asset #${assetIndex})...`);
+      console.log(`[HYPERLIQUID] Fetching live market data for ${upperCoin} (Asset #${assetIndex})...`);
 
-      /*
-      // PRODUCTION: Call Hyperliquid Info API
+      // Call Hyperliquid Info API for real-time market data
       const response = await fetch(this.infoApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'metaAndAssetCtxs' }),
       });
-      const [meta, assetCtxs] = await response.json();
-      const ctx = assetCtxs[assetIndex];
-      */
 
-      // Simulated market data (replaced by live API calls in production)
+      if (!response.ok) {
+        console.error(`[HYPERLIQUID] API HTTP error: ${response.status} ${response.statusText}`);
+        return null;
+      }
+
+      const data: any = await response.json();
+      if (!Array.isArray(data) || data.length < 2) {
+        console.error('[HYPERLIQUID] Unexpected API response format');
+        return null;
+      }
+
+      const [meta, assetCtxs] = data;
+      if (!Array.isArray(assetCtxs) || assetIndex >= assetCtxs.length) {
+        console.error(`[HYPERLIQUID] Asset index ${assetIndex} out of bounds (total: ${assetCtxs?.length || 0})`);
+        return null;
+      }
+
+      const ctx = assetCtxs[assetIndex];
+      const markPx = parseFloat(ctx.markPx || '0');
+      const midPx = parseFloat(ctx.midPx || '0');
+      const openInterest = parseFloat(ctx.openInterest || '0');
+      const funding = parseFloat(ctx.funding || '0');
+      const dayNtlVlm = parseFloat(ctx.dayNtlVlm || '0');
+
+      // Compute OI change from cached snapshots (in-memory tracking)
+      const now = Date.now();
+      const oiKey = upperCoin;
+      if (!this.oiSnapshots.has(oiKey)) {
+        this.oiSnapshots.set(oiKey, []);
+      }
+      const snapshots = this.oiSnapshots.get(oiKey)!;
+      snapshots.push({ ts: now, oi: openInterest * markPx });
+      // Keep only last 5 hours of snapshots
+      const fiveHoursAgo = now - 5 * 3600000;
+      while (snapshots.length > 0 && snapshots[0].ts < fiveHoursAgo) {
+        snapshots.shift();
+      }
+
+      const currentOiUsd = openInterest * markPx;
+      const oneHourAgo = now - 3600000;
+      const fourHoursAgo = now - 4 * 3600000;
+      const oi1hRef = snapshots.find(s => s.ts <= oneHourAgo)?.oi || currentOiUsd;
+      const oi4hRef = snapshots.find(s => s.ts <= fourHoursAgo)?.oi || currentOiUsd;
+      const oiChange1hPercent = oi1hRef > 0 ? ((currentOiUsd - oi1hRef) / oi1hRef) * 100 : 0;
+      const oiChange4hPercent = oi4hRef > 0 ? ((currentOiUsd - oi4hRef) / oi4hRef) * 100 : 0;
+
+      // Fetch L2 order book for bid/ask spread
+      let bestBid = midPx * 0.999;
+      let bestAsk = midPx * 1.001;
+      try {
+        const l2Res = await fetch(this.infoApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'l2Book', coin: upperCoin }),
+        });
+        if (l2Res.ok) {
+          const l2: any = await l2Res.json();
+          if (l2.levels && Array.isArray(l2.levels) && l2.levels.length >= 2) {
+            const bids = l2.levels[0];
+            const asks = l2.levels[1];
+            if (bids.length > 0) bestBid = parseFloat(bids[0].px);
+            if (asks.length > 0) bestAsk = parseFloat(asks[0].px);
+          }
+        }
+      } catch { /* L2 fetch is best-effort */ }
+
+      const spreadPct = midPx > 0 ? ((bestAsk - bestBid) / midPx) * 100 : 0;
+
       return {
         coin: upperCoin,
         assetIndex,
-        markPriceUsd: upperCoin === 'BTC' ? 63867 : upperCoin === 'ETH' ? 1871 : upperCoin === 'SOL' ? 74.12 : 55.3,
-        midPriceUsd: upperCoin === 'BTC' ? 63865 : upperCoin === 'ETH' ? 1870.5 : upperCoin === 'SOL' ? 74.1 : 55.28,
-        openInterestUsd: upperCoin === 'BTC' ? 485000000 : upperCoin === 'ETH' ? 210000000 : 45000000,
-        oiChange1hPercent: 8.5,   // +8.5% OI surge in 1h (simulated bullish)
-        oiChange4hPercent: 22.4,  // +22.4% OI surge in 4h
-        volume1hUsd: upperCoin === 'BTC' ? 120000000 : upperCoin === 'ETH' ? 68000000 : 12000000,
-        volume4hUsd: upperCoin === 'BTC' ? 380000000 : upperCoin === 'ETH' ? 195000000 : 38000000,
-        volume24hUsd: upperCoin === 'BTC' ? 1200000000 : upperCoin === 'ETH' ? 580000000 : 95000000,
-        fundingRate8h: 0.00035,    // 0.035% per 8h (mildly bullish)
-        fundingRateAnnualized: 0.00035 * 3 * 365 * 100, // Annualized %
-        bestBidUsd: upperCoin === 'BTC' ? 63860 : upperCoin === 'ETH' ? 1870 : upperCoin === 'SOL' ? 74.08 : 55.25,
-        bestAskUsd: upperCoin === 'BTC' ? 63870 : upperCoin === 'ETH' ? 1872 : upperCoin === 'SOL' ? 74.14 : 55.32,
-        spreadPercent: 0.015,
+        markPriceUsd: markPx,
+        midPriceUsd: midPx,
+        openInterestUsd: currentOiUsd,
+        oiChange1hPercent,
+        oiChange4hPercent,
+        volume1hUsd: dayNtlVlm / 24,     // Approximate 1h from 24h volume
+        volume4hUsd: (dayNtlVlm / 24) * 4,
+        volume24hUsd: dayNtlVlm,
+        fundingRate8h: funding,
+        fundingRateAnnualized: funding * 3 * 365 * 100,
+        bestBidUsd: bestBid,
+        bestAskUsd: bestAsk,
+        spreadPercent: spreadPct,
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

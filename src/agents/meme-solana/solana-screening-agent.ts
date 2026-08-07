@@ -30,9 +30,11 @@ export class SolanaScreeningAgent {
     const tokenAgeHours = signal.tokenAgeHours ?? 5.5; // Default 5.5h if unprovided
     const isMinAgePassed = tokenAgeHours >= 4.0;
 
-    // 1. Volume Spike Detection (1H Timeframe Surge)
+    // 1. Volume Spike Detection — computed from real volume/liquidity ratio
     const isVolumeSpike = signal.volume24hUsd > 100000 && signal.smartMoneyNetBuySolOrEth >= 10;
-    const volumeSpikeRatio = isVolumeSpike ? 6.2 : 1.2; // Simulated +620% 1H volume surge
+    const volumeSpikeRatio = signal.liquidityUsd > 0
+      ? signal.volume24hUsd / signal.liquidityUsd
+      : (isVolumeSpike ? 5.0 : 1.0);
 
     // 2. CTO Check (Dev holding <= 1% + Active Smart Money Inflow)
     const isDevClean = signal.devHoldingPercentage <= 1.0;
@@ -49,18 +51,26 @@ export class SolanaScreeningAgent {
     const dexscreenerLink = `https://dexscreener.com/solana/${ca}`;
     const rugcheckLink = `https://rugcheck.xyz/tokens/${ca}`;
 
-    const twitterTriggerCatalyst = `🐦 Viral X Tweet Trigger: Top KOL / CTO Announcement mentioning "$${signal.symbol}" (4.2k Likes, 850 Retweets)`;
-    const twitterSentimentScore = 88; // 88/100 Bullish Sentiment Score
+    // Compute catalyst text from real signal data
+    const twitterTriggerCatalyst = isVolumeSpike
+      ? `🐦 Volume surge detected: $${signal.symbol} — Vol/Liq ratio: ${volumeSpikeRatio.toFixed(1)}x, ${signal.smartMoneyCount} Smart Wallets buying.`
+      : `📊 Monitoring: $${signal.symbol} — Vol: $${(signal.volume24hUsd / 1000).toFixed(1)}k, Liq: $${(signal.liquidityUsd / 1000).toFixed(1)}k.`;
+
+    // Compute sentiment from RugCheck score + Smart Money signals (no LLM cost)
+    const securityBonus = rugReport.isSafeForRunner ? 15 : 0;
+    const smartMoneyBonus = Math.min(20, signal.smartMoneyCount * 5);
+    const volumeBonus = Math.min(20, Math.floor(volumeSpikeRatio * 3));
+    const twitterSentimentScore = Math.min(98, 40 + securityBonus + smartMoneyBonus + volumeBonus);
 
     let detectionReason = 'Normal Signal';
     if (!isMinAgePassed) {
       detectionReason = `⛔ IGNORED: Token age (${tokenAgeHours.toFixed(1)}h) is below minimum 4-hour safety threshold.`;
     } else if (isCTO && isRevival) {
-      detectionReason = `🔥 1H REVIVAL & CTO ALERT: Age ${tokenAgeHours.toFixed(1)}h >= 4h, Dev 0%, +620% 1H Volume Surge & 2+ Smart Money Accumulating!`;
+      detectionReason = `🔥 1H REVIVAL & CTO ALERT: Age ${tokenAgeHours.toFixed(1)}h >= 4h, Dev ${signal.devHoldingPercentage}%, +${(volumeSpikeRatio * 100).toFixed(0)}% Vol/Liq Surge & ${signal.smartMoneyCount} Smart Money Accumulating!`;
     } else if (isCTO) {
-      detectionReason = `👥 1H CTO SIGNAL: Age ${tokenAgeHours.toFixed(1)}h, Dev 0% / Renounced, Community Takeover in progress.`;
+      detectionReason = `👥 1H CTO SIGNAL: Age ${tokenAgeHours.toFixed(1)}h, Dev ${signal.devHoldingPercentage}% / Renounced, Community Takeover in progress.`;
     } else if (isRevival) {
-      detectionReason = `🧟 1H REVIVAL SIGNAL: Token waking up with +620% 1H Volume Surge!`;
+      detectionReason = `🧟 1H REVIVAL SIGNAL: Token waking up with +${(volumeSpikeRatio * 100).toFixed(0)}% Vol/Liq Surge!`;
     }
 
     return {

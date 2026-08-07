@@ -179,6 +179,10 @@ if (discordToken && clientId) {
       }
     }, 60 * 1000);
 
+    // Signal dedup cache: prevents posting same signal within 30-minute window
+    const recentSignals = new Map<string, number>(); // key: "channel:symbol:ca" -> timestamp
+    const DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
+
     // Start 24/7 Sub-Agents Background Screening Interval Loop (Every 5 minutes)
     setInterval(async () => {
       console.log('[SUB-AGENTS LOOP] Checking active sub-agent domains...');
@@ -377,8 +381,21 @@ if (discordToken && clientId) {
           }
         }
 
-        // Dispatch all passed signals to Discord channels & Telegram topics
+        // Purge expired dedup entries
+        const now = Date.now();
+        for (const [key, ts] of recentSignals.entries()) {
+          if (now - ts > DEDUP_WINDOW_MS) recentSignals.delete(key);
+        }
+
+        // Dispatch all passed signals to Discord channels & Telegram topics (with dedup)
         for (const item of dispatchedPayloads) {
+          const dedupKey = `${item.channelName}:${item.payload.symbol}:${item.payload.contractAddress || 'N/A'}`;
+          if (recentSignals.has(dedupKey)) {
+            console.log(`[DEDUP] Skipping duplicate signal: ${dedupKey} (posted ${((now - recentSignals.get(dedupKey)!) / 60000).toFixed(0)}m ago)`);
+            continue;
+          }
+          recentSignals.set(dedupKey, now);
+
           // 1. Post to Discord Channel
           const targetChannel = client.channels.cache.find(
             c => c.type === ChannelType.GuildText && c.name === item.channelName
