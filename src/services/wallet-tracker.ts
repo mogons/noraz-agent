@@ -31,6 +31,7 @@ export interface WalletHolding {
 export interface WalletAlert {
   type: string;
   reason: string;
+  address: string;
 }
 
 const ERC20_BALANCE_ABI = [
@@ -228,17 +229,19 @@ export class WalletTracker {
       } else {
         const res = this.positionManager.updateMemePosition(pos.id, tok.priceUsd, tok.volume24hUsd / 6, tok.smartDegenCount);
         if (res.triggerAlert) {
-          alerts.push({ type: res.type, reason: res.reason || '' });
+          alerts.push({ type: res.type, reason: res.reason || '', address: holding.address });
         }
       }
     }
 
-    // Auto-close positions no longer held — but only when the owning chain's scan ran
-    // successfully (fail-closed scans report ok: false, so they never trigger mass closes).
-    // EVM closes are additionally gated per token: only positions whose contract address was
-    // actually read successfully (scannedOk) may be closed, so a single failed balanceOf read
-    // can never look like a "not held" and trigger a wrongful auto-close.
-    if (this.gmgn) {
+    // Auto-close positions no longer held — but only when at least one scan actually
+    // ran successfully (fail-closed scans report ok: false, so they never trigger mass
+    // closes). Per position, a close is only allowed when the owning chain's scan ran:
+    // Solana closes need the full scan to have succeeded, EVM closes are additionally
+    // gated per token: only positions whose contract address was actually read
+    // successfully (scannedOk) may be closed, so a single failed balanceOf read can
+    // never look like a "not held" and trigger a wrongful auto-close.
+    if (solanaScan.ok || evmScan.ok) {
       for (const pos of active) {
         if (heldAddresses.has(pos.contractAddress.toLowerCase())) continue;
         const isEvm = pos.contractAddress.toLowerCase().startsWith('0x');

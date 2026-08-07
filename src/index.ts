@@ -20,6 +20,7 @@ import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
 import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
 import { EVMTradeAdapter } from './adapters/evm-adapter.js';
+import { GMGNAdapter } from './adapters/gmgn-adapter.js';
 import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
 import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
@@ -102,7 +103,7 @@ const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
 
 // Wallet auto-tracker: mirrors user's on-chain holdings into PositionManager lifecycle + exit alerts
-const walletTracker = new WalletTracker({ positionManager, stateStore });
+const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new GMGNAdapter(), walletService });
 
 const aiService = new AIService();
 const skillLoader = new SkillLoader();
@@ -521,7 +522,7 @@ if (discordToken && clientId) {
           const alerts = await walletTracker.syncPositions();
           if (alerts.length > 0) {
             for (const a of alerts) {
-              await notifyControlRoom(client, `position:${a.type}`, `🚨 **POSITION ALERT**\n${a.reason}`);
+              await notifyControlRoom(client, `position:${a.type}:${a.address}`, `🚨 **POSITION ALERT**\n${a.reason}`);
             }
           }
           console.log(`[WALLET TRACKER] ${positionManager.getActivePositions().length} positions tracked, ${alerts.length} alert(s) fired this cycle.`);
