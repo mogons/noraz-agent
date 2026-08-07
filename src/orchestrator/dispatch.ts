@@ -17,6 +17,7 @@ export interface DispatchDomainOptions {
   runPass: () => Promise<NormalizedReport[]>;
   keyReady: () => { ready: boolean; statusMessage: string };
   buildPayload: (entry: { signal: any; reason: string }) => any;
+  onHalt?: (domain: string, statusMessage: string) => void;
 }
 
 export async function dispatchDomain(opts: DispatchDomainOptions): Promise<DispatchedSignal[]> {
@@ -24,6 +25,11 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
   const keyCheck = opts.keyReady();
   if (!keyCheck.ready) {
     console.warn(keyCheck.statusMessage);
+    if (opts.onHalt) {
+      try { opts.onHalt(opts.domain, keyCheck.statusMessage); } catch (e: any) {
+        console.warn(`[DISPATCH] onHalt notification failed for ${opts.domain}: ${e.message}`);
+      }
+    }
     return [];
   }
   const reports = await opts.runPass();

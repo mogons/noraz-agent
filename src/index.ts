@@ -70,6 +70,26 @@ function gateSignal(payload: any): boolean {
   return res.passed;
 }
 
+// Rate-limited Discord notification to #athena-control-room (never spam)
+const controlRoomNotifyCooldown = new Map<string, number>();
+const CONTROL_ROOM_NOTIFY_MS = 10 * 60 * 1000; // max 1 notif per key per 10 minutes
+async function notifyControlRoom(client: any, key: string, content: string): Promise<void> {
+  const now = Date.now();
+  const last = controlRoomNotifyCooldown.get(key);
+  if (last && now - last < CONTROL_ROOM_NOTIFY_MS) return;
+  controlRoomNotifyCooldown.set(key, now);
+  try {
+    const channel = client.channels.cache.find(
+      (c: any) => c.type === ChannelType.GuildText && c.name === 'athena-control-room'
+    );
+    if (channel && 'send' in channel) {
+      await channel.send(content);
+    }
+  } catch (err: any) {
+    console.warn(`[NOTIFY] Control room notification failed (${key}): ${err.message}`);
+  }
+}
+
 
 const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
@@ -176,9 +196,12 @@ if (discordToken && clientId) {
       }
     }, 60 * 1000);
 
-    // Signal dedup cache: prevents posting same signal within 30-minute window
+    // Signal dedup cache: prevents posting same signal within 2-hour window (persisted across restarts)
     const recentSignals = new Map<string, number>(); // key: "channel:symbol:ca" -> timestamp
-    const DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
+    for (const [k, v] of Object.entries(stateStore.getAllDedupEntries())) {
+      recentSignals.set(k, v);
+    }
+    const DEDUP_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours (GMGN trending returns the same top tokens)
 
     // Real portfolio equity tracker (feeds RiskManager drawdown)
     let prevPortfolioEquityUsd: number | null = null;
@@ -228,6 +251,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('meme-solana'),
           runPass: async () => (await solanaScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-solana'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'MEME_SOLANA',
             title: `${signal.name} (${signal.symbol})`,
@@ -265,6 +289,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('meme-evm'),
           runPass: async () => (await evmScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-evm'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'MEME_EVM',
             title: `${signal.name || signal.symbol} (${signal.symbol})`,
@@ -301,6 +326,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('nft'),
           runPass: async () => (await nftScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.detectionReason })),
           keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'NFT',
             title: `${signal.collectionName} #${signal.tokenId}`,
@@ -326,6 +352,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('prediction'),
           runPass: async () => (await polymarketAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.aiThesis })),
           keyReady: () => apiKeyGuard.checkDomainKeys('prediction'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'PREDICTION',
             title: signal.question,
@@ -348,6 +375,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('perps'),
           runPass: async () => (await perpsScreeningAgent.screenAllAssets()).map((r: any) => ({ passed: r.confidence >= 80, signal: r, reason: r.aiThesis || r.signalReasons.join(', ') })),
           keyReady: () => apiKeyGuard.checkDomainKeys('perps'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'PERPS',
             title: `${signal.direction} ${signal.coin} (${signal.suggestedLeverage}x)`,
@@ -373,6 +401,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('ct-alpha'),
           runPass: async () => (await ctAlphaAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
           keyReady: () => apiKeyGuard.checkDomainKeys('ct-alpha'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'CT_ALPHA',
             title: signal.title,
@@ -474,6 +503,7 @@ if (discordToken && clientId) {
             continue;
           }
           recentSignals.set(dedupKey, now);
+          stateStore.setDedupEntry(dedupKey, now);
 
           // 1. Post to Discord Channel
           const targetChannel = client.channels.cache.find(
@@ -501,6 +531,7 @@ if (discordToken && clientId) {
         }
       } catch (err: any) {
         console.error('[SUB-AGENTS LOOP ERROR]', err.message);
+        notifyControlRoom(client, 'loop-error', `⚠️ **SCREENING LOOP ERROR**\n\`${err.message}\``);
       }
     }, 5 * 60 * 1000);
   });

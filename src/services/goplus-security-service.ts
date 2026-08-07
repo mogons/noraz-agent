@@ -23,8 +23,14 @@ export class GoPlusSecurityService {
     const chainId = CHAIN_ID_MAP[chain];
     if (!chainId) return null;
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const apiKey = process.env.GOPLUS_API_KEY;
+      if (apiKey && !apiKey.includes('YOUR_') && !apiKey.includes('placeholder')) {
+        headers['Authorization'] = apiKey;
+      }
       const res = await fetch(
-        `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`
+        `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`,
+        { headers }
       );
       if (!res.ok) return null;
       const data = (await res.json()) as { result?: Record<string, any> };

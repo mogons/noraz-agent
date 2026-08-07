@@ -317,7 +317,11 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       } else if (!text.startsWith('/') && aiService) {
         try {
           const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
-          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE;
+          const activeDomains = hub.getActiveDomains();
+          const activeAgentsLine = activeDomains.length > 0
+            ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
+            : 'Active Sub-Agents saat ini: NONE (semua paused)';
+          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}`;
 
           const aiRes = await aiService.generateCompletion([
             { role: 'system', content: systemPrompt },

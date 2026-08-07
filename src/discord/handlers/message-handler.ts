@@ -350,9 +350,15 @@ export async function handleControlRoomMessage(
 
   // Shared Athena system prompt (persona + architecture) + live operating params
   const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../../services/athena-system-prompt.js');
+  const { getAgentDomain } = await import('../../orchestrator/agent-registry.js');
+  const activeDomains = hub.getActiveDomains();
+  const activeAgentsLine = activeDomains.length > 0
+    ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
+    : '- Active Sub-Agents: NONE (semua screening agent sedang PAUSED)';
   const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters & Live Simulation Balances:
 - Execution Mode: ${isDryRun ? 'DRY_RUN Active (Simulation Mode)' : 'LIVE TRADING'}
+${activeAgentsLine}
 - Active Portfolio Simulation Balances:
   • Solana Balance: ${simSol} SOL
   • EVM Balance: ${simEth} ETH (Base / Mainnet)

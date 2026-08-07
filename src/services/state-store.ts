@@ -48,6 +48,9 @@ export interface AthenaPersistedState {
   // Signal audit ledger (append-only)
   signalLedger: SignalLedgerEntry[];
 
+  // Persistent signal dedup (survives restarts)
+  dedupEntries: Record<string, number>;
+
   // Metadata
   lastUpdated: string;
   version: number;
@@ -85,6 +88,7 @@ export class StateStore {
       walletKeys: {},
       agentStates: {},
       signalLedger: [],
+      dedupEntries: {},
       lastUpdated: new Date().toISOString(),
       version: CURRENT_VERSION,
     };
@@ -131,6 +135,7 @@ export class StateStore {
         walletKeys: data.walletKeys || {},
         agentStates: data.agentStates || {},
         signalLedger: Array.isArray(data.signalLedger) ? data.signalLedger : [],
+        dedupEntries: data.dedupEntries || {},
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         version: CURRENT_VERSION,
       };
@@ -357,5 +362,22 @@ export class StateStore {
 
   public getSignalById(id: string): SignalLedgerEntry | undefined {
     return this.state.signalLedger.find(s => s.id === id);
+  }
+
+  // ==========================================
+  // PERSISTENT SIGNAL DEDUP
+  // ==========================================
+
+  public getDedupEntry(key: string): number | undefined {
+    return this.state.dedupEntries[key];
+  }
+
+  public setDedupEntry(key: string, timestamp: number): void {
+    this.state.dedupEntries[key] = timestamp;
+    this.scheduleSave();
+  }
+
+  public getAllDedupEntries(): Record<string, number> {
+    return this.state.dedupEntries;
   }
 }

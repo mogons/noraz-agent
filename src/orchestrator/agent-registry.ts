@@ -27,7 +27,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'Solana DEX Meme Screening',
     channel: 'call-meme-solana',
     aliases: ['solana', 'solana-meme'],
-    requiredKeys: ['GMGN_API_KEY', 'AI_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'MEME',
   },
   {
@@ -36,7 +36,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'EVM DEX Meme Screening',
     channel: 'call-meme-evm',
     aliases: ['evm', 'evm-meme', 'base'],
-    requiredKeys: ['GOPLUS_API_KEY', 'AI_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'MEME',
   },
   {
@@ -45,7 +45,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'Perpetual Futures Screening (Hyperliquid)',
     channel: 'call-perps-futures',
     aliases: ['perpetual', 'hyperliquid', 'perps-futures', 'futures'],
-    requiredKeys: ['EVM_PRIVATE_KEY', 'AI_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'PERPS',
   },
   {
@@ -63,7 +63,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'Polymarket Prediction Market Arbitrage',
     channel: 'call-prediction-markets',
     aliases: ['polymarket', 'poly', 'prediction-market'],
-    requiredKeys: ['POLYMARKET_API_KEY', 'AI_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'PREDICTION',
   },
   {
@@ -81,7 +81,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'Solana Concentrated Liquidity Velocity (Meteora)',
     channel: 'call-lp-solana',
     aliases: ['meteora', 'solana-lp'],
-    requiredKeys: ['GMGN_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'LP',
   },
   {
@@ -90,7 +90,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'EVM Concentrated Liquidity Velocity (Uniswap)',
     channel: 'call-lp-evm',
     aliases: ['uniswap', 'evm-lp'],
-    requiredKeys: ['GOPLUS_API_KEY'],
+    requiredKeys: ['AI_API_KEY'],
     category: 'LP',
   },
 ];

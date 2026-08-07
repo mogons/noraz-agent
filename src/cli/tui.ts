@@ -216,8 +216,13 @@ export async function launchTUI(): Promise<void> {
           if (chatMsg.toLowerCase() === 'exit') break;
           try {
             const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+            const activeDomains = hub.getActiveDomains();
+            const activeAgentsLine = activeDomains.length > 0
+              ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
+              : 'Active Sub-Agents saat ini: NONE (semua paused)';
             const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
+- ${activeAgentsLine}
 - Execution Mode: DRY_RUN Active (Safe Simulation).
 - Global Portfolio Drawdown Limit: 50.0%.
 - Current Portfolio Drawdown: 0.0%.`;
