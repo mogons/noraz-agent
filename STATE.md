@@ -112,3 +112,5 @@
 | 4 Dead code | ⏳ |
 | 5 De-hardcode constants | ⏳ |
 | 6 Robinhood in wallet-service | ⏳ |
+
+| 2 OpenSea fail-open | ✅ DONE bc68e85 (fails closed, no fabricated output, whale/floor fixed) |
