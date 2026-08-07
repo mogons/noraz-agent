@@ -133,3 +133,8 @@
 | Date | Commit | VPS status |
 |---|---|---|
 | 2026-08-08 | 5e88da1 (loop 100) | ⏳ PENDING user athena update |
+
+### USER DECISIONS (2026-08-08)
+- [7] Auth model: DEFERRED — Discord/Telegram servers are private, only user has access (user confirmation). Revisit if server becomes public.
+- [8] LLM tool hardening: APPROVED (recommendation 3a) — proceed.
+- [9] Risk engine wiring: APPROVED (recommendation 2a) — proceed.
