@@ -175,12 +175,21 @@ export class RiskManager {
     return finalSizeUsd;
   }
 
-  public updateDrawdown(drawdownPercent: number): void {
-    this.currentDailyDrawdownPercent = drawdownPercent;
-    if (drawdownPercent >= this.limits.maxPortfolioDrawdownPercent && this.limits.stopTradingOnDrawdown) {
-      this.tradingPaused = true;
-      console.log(`[RISK MANAGER] 🛑 Circuit breaker triggered! Drawdown ${drawdownPercent.toFixed(1)}% >= ${this.limits.maxPortfolioDrawdownPercent}%. Trading PAUSED.`);
+  public updateDrawdown(currentEquityUsd: number, prevEquityUsd: number): void {
+    if (prevEquityUsd > 0) {
+      const changePct = ((currentEquityUsd - prevEquityUsd) / prevEquityUsd) * 100;
+      if (changePct < 0) {
+        this.currentDailyDrawdownPercent = Math.max(this.currentDailyDrawdownPercent, Math.abs(changePct));
+      }
     }
+    if (this.currentDailyDrawdownPercent >= this.limits.maxPortfolioDrawdownPercent && this.limits.stopTradingOnDrawdown) {
+      this.tradingPaused = true;
+      console.log(`[RISK MANAGER] 🛑 Circuit breaker triggered! Drawdown ${this.currentDailyDrawdownPercent.toFixed(1)}% >= ${this.limits.maxPortfolioDrawdownPercent}%. Trading PAUSED.`);
+    }
+  }
+
+  public getCurrentDrawdownPercent(): number {
+    return this.currentDailyDrawdownPercent;
   }
 
   public resetDailyDrawdown(): void {

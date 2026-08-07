@@ -178,10 +178,34 @@ if (discordToken && clientId) {
     const recentSignals = new Map<string, number>(); // key: "channel:symbol:ca" -> timestamp
     const DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
+    // Real portfolio equity tracker (feeds RiskManager drawdown)
+    let prevPortfolioEquityUsd: number | null = null;
+
     // Start 24/7 Sub-Agents Background Screening Interval Loop (Every 5 minutes)
     setInterval(async () => {
       console.log('[SUB-AGENTS LOOP] Checking active sub-agent domains...');
       try {
+        // Real portfolio equity -> drawdown (fail-soft: skip if data unavailable)
+        try {
+          let currentEquityUsd = 0;
+          const solBal = await walletService.getSolanaBalance();
+          const solPrice = await priceFeedService.getPrice('SOL');
+          if (solBal && solPrice !== null) currentEquityUsd += solBal.balance * solPrice;
+          const ethBal = await walletService.getEvmBalance(1);
+          const ethPrice = await priceFeedService.getPrice('ETH');
+          if (ethBal && ethPrice !== null) currentEquityUsd += ethBal.balance * ethPrice;
+          const openPositions = stateStore.getAllPositions();
+          for (const p of openPositions) {
+            currentEquityUsd += (p.currentPriceUsd ?? 0) * (p.amount ?? 0);
+          }
+          if (prevPortfolioEquityUsd !== null) {
+            hub.getRiskManager().updateDrawdown(currentEquityUsd, prevPortfolioEquityUsd);
+          }
+          prevPortfolioEquityUsd = currentEquityUsd;
+        } catch (equityErr: any) {
+          console.warn(`[RISK] Portfolio equity unavailable this pass: ${equityErr.message}`);
+        }
+
         let dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
 
         const solanaDispatched = await dispatchDomain({
