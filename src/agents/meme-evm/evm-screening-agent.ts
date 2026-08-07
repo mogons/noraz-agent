@@ -1,4 +1,5 @@
 import { GMGNAdapter, GMGNTokenSignal } from '../../adapters/gmgn-adapter.js';
+import { GoPlusSecurityService, EvmChain } from '../../services/goplus-security-service.js';
 
 export interface EVMCTODetectionReport {
   chain: 'base' | 'eth' | 'robinhood' | 'bsc';
@@ -6,122 +7,102 @@ export interface EVMCTODetectionReport {
   contractAddress: string;
   isCTO: boolean;
   isRevival: boolean;
-  volumeSpikeRatio: number; // e.g. 5.5 = +550% volume spike
+  volumeSpikeRatio: number;
   devHoldingPct: number;
   smartMoneyCount: number;
   isHoneypot: boolean;
   buyTaxPct: number;
   sellTaxPct: number;
   isBlacklisted: boolean;
-  twitterLink?: string;
+  twitterLink: string;
   gmgnLink: string;
   dexscreenerLink: string;
   goPlusLink: string;
-  aiSentimentScore: number; // 0 - 100
+  aiSentimentScore: number;
   detectionReason: string;
-  confidenceScore: number; // 0 - 100
+  confidenceScore: number;
+  auditAvailable: boolean;
 }
 
 export class EVMScreeningAgent {
   private gmgnAdapter: GMGNAdapter;
+  private goplus: GoPlusSecurityService;
 
   constructor() {
     this.gmgnAdapter = new GMGNAdapter();
+    this.goplus = new GoPlusSecurityService();
   }
 
-  /**
-   * Run 3-Layer Swarm Consensus audit on an EVM token (Base, ETH, Robinhood L2)
-   */
-  public evaluateEVMToken(
+  public async evaluateEVMToken(
     signal: GMGNTokenSignal,
     chain: 'base' | 'eth' | 'robinhood' | 'bsc' = 'base'
-  ): EVMCTODetectionReport {
-    // Strategy Filter: Minimum Token Age >= 4 Hours (240 Minutes)
-    const tokenAgeHours = signal.tokenAgeHours ?? 6.0;
+  ): Promise<EVMCTODetectionReport | null> {
+    const tokenAgeHours = signal.tokenAgeHours ?? 0;
     const isMinAgePassed = tokenAgeHours >= 4.0;
 
-    // 1. Layer 1: Quant & 1H Volume Surge Check (1h >= 300%)
+    const volumeSpikeRatio = signal.volume24hUsd > 0 ? signal.volume24hUsd / 50000 : 0;
     const hasVolumeSurge = signal.volume24hUsd >= 50000 && signal.smartMoneyNetBuySolOrEth >= 0.5;
-    const volumeSpikeRatio = hasVolumeSurge ? 5.8 : 1.1; // Simulated +580% 1H volume surge
 
-    // 2. Layer 2: Catalyst & GMGN Smart Money Accumulation
     const isDevClean = signal.devHoldingPercentage <= 10.0;
     const isSmartMoneyBuying = signal.smartMoneyCount >= 2;
     const isCTO = signal.devHoldingPercentage === 0 && isSmartMoneyBuying && isMinAgePassed;
     const isRevival = volumeSpikeRatio >= 3.0 && isSmartMoneyBuying && isMinAgePassed;
 
-    // 3. Layer 3: GoPlus Security Audit (Honeypot & Tax Check)
-    // Simulated GoPlus clean audit response for candidate EVM tokens
-    const isHoneypot = false;
-    const buyTaxPct = 0.5; // 0.5% buy tax (safe <= 5%)
-    const sellTaxPct = 0.5; // 0.5% sell tax (safe <= 5%)
-    const isBlacklisted = false;
+    // Layer 3: real GoPlus security audit (fail-closed — no audit, no signal)
+    const security = await this.goplus.auditToken(chain as EvmChain, signal.contractAddress);
+    if (!security) {
+      console.warn(`[EVM AGENT] GoPlus audit unavailable for ${signal.symbol} — skipping.`);
+      return null;
+    }
 
-    // Verification Links
     const ca = signal.contractAddress;
     const twitterLink = `https://x.com/search?q=%24${signal.symbol}&src=typed_query`;
     const gmgnLink = this.gmgnAdapter.getGMGNWebUrl(chain, ca);
     const dexscreenerLink = `https://dexscreener.com/${chain}/${ca}`;
     const goPlusLink = `https://gopluslabs.io/token-security/${chain === 'base' ? '8453' : chain === 'eth' ? '1' : '8453'}/${ca}`;
 
-    const aiSentimentScore = 84; // 84/100 Bullish EVM Sentiment
+    const aiSentimentScore = Math.min(100, Math.round(50 + signal.smartMoneyCount * 8));
 
-    // Calculate total 3-Layer Swarm Confidence Score (0-100)
-    let quantScore = signal.liquidityUsd >= 25000 && volumeSpikeRatio >= 3.0 && isMinAgePassed ? 35 : 15;
-    let catalystScore = isSmartMoneyBuying ? 35 : 15;
-    let securityScore = !isHoneypot && buyTaxPct <= 5.0 && sellTaxPct <= 5.0 && isDevClean ? 30 : 0;
-
+    const quantScore = signal.liquidityUsd >= 25000 && hasVolumeSurge && isMinAgePassed ? 35 : 15;
+    const catalystScore = isSmartMoneyBuying ? 35 : 15;
+    const securityScore = !security.isHoneypot && security.buyTaxPct <= 5.0 && security.sellTaxPct <= 5.0 && isDevClean ? 30 : 0;
     const confidenceScore = Math.min(100, quantScore + catalystScore + securityScore);
 
     let detectionReason = 'EVM Token Candidate Audited';
     if (!isMinAgePassed) {
       detectionReason = `⛔ IGNORED: Token age (${tokenAgeHours.toFixed(1)}h) is below minimum 4-hour safety threshold.`;
     } else if (isCTO && isRevival) {
-      detectionReason = `🔥 1H EVM REVIVAL & CTO ALERT: Age ${tokenAgeHours.toFixed(1)}h >= 4h, Dev 0%, +580% 1H Volume Surge & ${signal.smartMoneyCount} Smart Money Accumulating on ${chain.toUpperCase()}!`;
+      detectionReason = `🔥 1H EVM REVIVAL & CTO ALERT: Age ${tokenAgeHours.toFixed(1)}h, Dev 0%, ${volumeSpikeRatio.toFixed(1)}x 1H Volume & ${signal.smartMoneyCount} Smart Money on ${chain.toUpperCase()}!`;
     } else if (isCTO) {
-      detectionReason = `👥 1H EVM CTO SIGNAL: Age ${tokenAgeHours.toFixed(1)}h, Dev 0% / Renounced on ${chain.toUpperCase()}, Community Takeover with Smart Money inflow.`;
+      detectionReason = `👥 1H EVM CTO SIGNAL: Age ${tokenAgeHours.toFixed(1)}h, Dev 0% on ${chain.toUpperCase()}, Community Takeover with Smart Money inflow.`;
     } else if (isRevival) {
-      detectionReason = `🧟 1H EVM REVIVAL SIGNAL: Token waking up on ${chain.toUpperCase()} with +580% 1H Volume Surge!`;
+      detectionReason = `🧟 1H EVM REVIVAL SIGNAL: Token waking up on ${chain.toUpperCase()} with ${volumeSpikeRatio.toFixed(1)}x 1H Volume Surge!`;
     }
 
     return {
-      chain,
-      symbol: signal.symbol,
-      contractAddress: ca,
-      isCTO,
-      isRevival,
-      volumeSpikeRatio,
+      chain, symbol: signal.symbol, contractAddress: ca,
+      isCTO, isRevival, volumeSpikeRatio,
       devHoldingPct: signal.devHoldingPercentage,
       smartMoneyCount: signal.smartMoneyCount,
-      isHoneypot,
-      buyTaxPct,
-      sellTaxPct,
-      isBlacklisted,
-      twitterLink,
-      gmgnLink,
-      dexscreenerLink,
-      goPlusLink,
-      aiSentimentScore,
-      detectionReason,
-      confidenceScore,
+      isHoneypot: false, buyTaxPct: security.buyTaxPct, sellTaxPct: security.sellTaxPct,
+      isBlacklisted: security.isBlacklisted,
+      twitterLink, gmgnLink, dexscreenerLink, goPlusLink,
+      aiSentimentScore, detectionReason, confidenceScore,
+      auditAvailable: true,
     };
   }
 
-  public async runScreeningPass(): Promise<any[]> {
+  public async runScreeningPass(): Promise<Array<{ passed: boolean; signal: GMGNTokenSignal; reason: string }>> {
     console.log('[EVM AGENT] Running EVM Meme DEX screening pass...');
     const signals = await this.gmgnAdapter.fetchTrendingSignals('base');
     if (!signals || signals.length === 0) return [];
 
-    const results = [];
-    for (const signal of signals.slice(0, 3)) {
-      const report = this.evaluateEVMToken(signal, 'base');
-      results.push({
-        passed: report.confidenceScore >= 80,
-        signal,
-        reason: report.detectionReason,
-      });
+    const results: Array<{ passed: boolean; signal: GMGNTokenSignal; reason: string }> = [];
+    for (const signal of signals.slice(0, 5)) {
+      const report = await this.evaluateEVMToken(signal, 'base');
+      if (!report) continue;
+      results.push({ passed: report.confidenceScore >= 80, signal, reason: report.detectionReason });
     }
-
     return results;
   }
 }

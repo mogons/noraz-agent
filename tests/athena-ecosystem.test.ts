@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { SwarmConsensusEngine } from '../src/orchestrator/swarm-consensus.js';
 import { SolanaScreeningAgent } from '../src/agents/meme-solana/solana-screening-agent.js';
 import { EVMScreeningAgent } from '../src/agents/meme-evm/evm-screening-agent.js';
@@ -53,23 +53,58 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(report.volumeSpikeRatio).toBeGreaterThanOrEqual(5.0);
   });
 
-  it('3. EVM Meme Agent: Should evaluate Base, ETH, & Robinhood L2 DEX signals', () => {
+  it('3. EVM Meme Agent: evaluates EVM signals with real GoPlus security audit', async () => {
     const agent = new EVMScreeningAgent();
-    const report = agent.evaluateEVMToken(
+    // Stub GoPlus to return a clean audit; agent is fail-closed without real audit data.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        result: { '0x1234567890123456789012345678901234567890': { is_honeypot: '0', buy_tax: '0.5', sell_tax: '0.5', is_blacklisted: '0', is_open_source: '1', holder_count: '500' } },
+      }),
+    }));
+
+    const report = await agent.evaluateEVMToken(
       {
+        chain: 'base',
         symbol: 'BASEMEME',
+        name: 'Base Meme',
         contractAddress: '0x1234567890123456789012345678901234567890',
+        priceUsd: 0.001,
+        marketCapUsd: 500000,
         volume24hUsd: 120000,
+        liquidityUsd: 40000,
         smartMoneyNetBuySolOrEth: 2.5,
         devHoldingPercentage: 2.0,
         smartMoneyCount: 4,
-        dexscreenerUrl: 'https://dexscreener.com/base',
+        sniperRatioPercentage: 5,
+        gmgnUrl: 'https://gmgn.ai/base/token/0x123',
+        aiThesis: 'Test thesis',
+        tokenAgeHours: 6,
       },
       'base'
     );
 
-    expect(report.confidenceScore).toBeGreaterThanOrEqual(80);
-    expect(report.chain).toBe('base');
+    vi.unstubAllGlobals();
+    expect(report).not.toBeNull();
+    expect(report!.confidenceScore).toBeGreaterThanOrEqual(80);
+    expect(report!.chain).toBe('base');
+    expect(report!.auditAvailable).toBe(true);
+  });
+
+  it('3b. EVM Meme Agent: fail-closed when GoPlus audit unavailable', async () => {
+    const agent = new EVMScreeningAgent();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
+    const report = await agent.evaluateEVMToken(
+      {
+        chain: 'base', symbol: 'X', name: 'X', contractAddress: '0xabc',
+        priceUsd: 1, marketCapUsd: 1, volume24hUsd: 1, liquidityUsd: 1,
+        smartMoneyNetBuySolOrEth: 0, devHoldingPercentage: 0, smartMoneyCount: 0,
+        sniperRatioPercentage: 0, gmgnUrl: '', aiThesis: '',
+      },
+      'base'
+    );
+    vi.unstubAllGlobals();
+    expect(report).toBeNull();
   });
 
   it('4. Perpetual Futures Agent: Should evaluate Hyperliquid leverage setups', async () => {
