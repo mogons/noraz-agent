@@ -423,6 +423,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const { ApiKeyGuardService } = await import('../src/services/api-key-guard.js');
     const { ToolRegistry } = await import('../src/orchestrator/tool-registry.js');
 
+    process.env.AI_API_KEY = 'test_ai_key_123';
     const guard = new ApiKeyGuardService();
     const registry = new ToolRegistry();
 

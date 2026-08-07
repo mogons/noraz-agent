@@ -12,32 +12,32 @@ export class ApiKeyGuardService {
     {
       domain: 'meme-solana',
       name: 'Solana DEX Meme Screening',
-      requiredKeys: ['GMGN_API_KEY'],
+      requiredKeys: ['GMGN_API_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'meme-evm',
       name: 'EVM DEX Meme Screening',
-      requiredKeys: ['GOPLUS_API_KEY'],
+      requiredKeys: ['GOPLUS_API_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'perps',
       name: 'Perpetual Futures Screening (Hyperliquid)',
-      requiredKeys: ['EVM_PRIVATE_KEY'],
+      requiredKeys: ['EVM_PRIVATE_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'nft',
       name: 'EVM NFT Floor & Rarity Sniping (OpenSea)',
-      requiredKeys: ['OPENSEA_API_KEY'],
+      requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'prediction',
       name: 'Polymarket Prediction Market Arbitrage',
-      requiredKeys: ['POLYMARKET_API_KEY'],
+      requiredKeys: ['POLYMARKET_API_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'ct-alpha',
       name: 'Smart CT & AI Narrative Intelligence',
-      requiredKeys: ['TWEX_API_KEY'],
+      requiredKeys: ['TWEX_API_KEY', 'AI_API_KEY'],
     },
     {
       domain: 'lp-solana',
@@ -74,7 +74,10 @@ export class ApiKeyGuardService {
 
     const missingKeys: string[] = [];
     for (const key of req.requiredKeys) {
-      const val = process.env[key];
+      let val = process.env[key];
+      if (key === 'AI_API_KEY') {
+        val = val || process.env.AI_API_KEYS || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
+      }
       if (!val || val.trim() === '' || val.includes('YOUR_') || val.includes('placeholder') || val.includes('mock')) {
         missingKeys.push(key);
       }
