@@ -329,6 +329,9 @@ export class GMGNAdapter {
       smartMoneyCount: t.smartDegenCount,
       devHoldingPercentage: t.devTeamHoldRate ?? 0,
       tokenAgeHours: t.creationTimestamp ? (Date.now() - t.creationTimestamp) / 3600000 : undefined,
+      sniperRatioPercentage: 0,
+      gmgnUrl: `https://gmgn.ai/${chain}/token/${t.address}`,
+      aiThesis: `DexScreener fallback signal: $${t.symbol} — volume $${(t.volume24hUsd / 1000).toFixed(1)}k, liquidity $${(t.liquidityUsd / 1000).toFixed(1)}k.`,
     }));
   }
 }
