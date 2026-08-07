@@ -23,7 +23,7 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 
 ## 2. Technology Stack & Environment
 
-- **Runtime:** Node.js (v20+) / TypeScript
+- **Runtime:** Node.js (>=22.12) / TypeScript
 - **Discord Bot SDK:** `discord.js` (v14+)
 - **Blockchain & Crypto Web3 SDKs:**
   - `@solana/web3.js` & `@jup-ag/api` (Solana)
