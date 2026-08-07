@@ -239,7 +239,7 @@ async function handleChatInput(
     // Channel to Agent mapping
     const channelDomainMap: Record<string, { agent: string; name: string }> = {
       'call-meme-solana': { agent: 'meme-solana', name: 'Solana Meme Agent' },
-      'call-meme-evm': { agent: 'meme-evm', name: 'EVM Meme Agent' },
+      'call-meme-robinhood': { agent: 'meme-robinhood', name: 'Robinhood Meme Agent' },
       'call-perps-futures': { agent: 'perps', name: 'Perpetuals Agent' },
       'call-nft-sniping': { agent: 'nft', name: 'NFT Sniping Agent' },
       'call-lp-solana': { agent: 'lp-solana', name: 'Solana LP Agent' },
@@ -296,7 +296,7 @@ async function handleChatInput(
     } else if (subcommand === 'status') {
       const ALL_AGENTS: Array<{ id: string; label: string; emoji: string }> = [
         { id: 'meme-solana',  label: 'Solana Meme Agent',          emoji: '🚀' },
-        { id: 'meme-evm',     label: 'EVM Meme Agent',             emoji: '🔷' },
+        { id: 'meme-robinhood', label: 'Robinhood Meme Agent',    emoji: '🔷' },
         { id: 'lp-solana',    label: 'Solana LP Agent',            emoji: '💧' },
         { id: 'lp-evm',       label: 'EVM LP Agent',               emoji: '🔷' },
         { id: 'perps',        label: 'Perpetuals Agent',           emoji: '📈' },

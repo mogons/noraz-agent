@@ -51,7 +51,7 @@ Flexible thresholds designed to capture **high-potential RUNNER tokens** while a
 
 ## 2. Discord Call & Execution Standards
 
-- **Informational Calls:** Deliver to dedicated channels (`#call-meme-solana`, `#call-meme-evm`, `#call-perps-futures`, `#call-nft-sniping`).
+- **Informational Calls:** Deliver to dedicated channels (`#call-meme-solana`, `#call-meme-robinhood`, `#call-perps-futures`, `#call-nft-sniping`).
 - **Interactive Action Buttons:** Provide `[BUY 0.5 SOL/ETH]`, `[BUY 1.0 SOL/ETH]`, and `[PAUSE CHANNEL]`.
 - **Command Execution:** User buys are executed securely via Athena Core Hub in `#athena-control-room`.
 

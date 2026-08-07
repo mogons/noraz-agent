@@ -11,7 +11,7 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 2. Swarm Consensus Engine: Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring >= 80% Confidence Score.
 3. Specialist Screening Sub-Agents:
    - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival Volume Spikes (>300%).
-   - EVM Meme Agent (#call-meme-evm): Base L2, Ethereum Mainnet, Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit.
+   - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit.
    - Perps & Futures Agent (#call-perps-futures): Hyperliquid & CEX 5-Role Swarm (Macro, Quant, Risk, Catalyst, H1/H4 Technical EMA/RSI).
    - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-evm): Meteora DLMM & Uniswap v3 aggressive fee harvesting (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
    - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.

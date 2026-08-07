@@ -63,8 +63,8 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   );
 
   const memeEvmId = await getOrCreateChannel(
-    'call-meme-evm',
-    '🔷 High-Confidence EVM Signal Calls (Base Aerodrome, Ethereum Uniswap)'
+    'call-meme-robinhood',
+    '🔷 High-Confidence Robinhood Chain Meme Signal Calls (Robinhood Chain L2 DEX)'
   );
 
   const perpsId = await getOrCreateChannel(

@@ -73,7 +73,7 @@ export class TelegramService {
       'athena-control-room',
       'audit-on-demand',
       'call-meme-solana',
-      'call-meme-evm',
+      'call-meme-robinhood',
       'call-perps-futures',
       'call-lp-solana',
       'call-lp-evm',
@@ -170,7 +170,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
 🤖 *Active Sub-Agents Status:*
 • 🐣 Solana Meme (\`meme-solana\`): ${getStatus('meme-solana')}
-• 🔷 EVM Meme (\`meme-evm\`): ${getStatus('meme-evm')}
+• 🔷 Robinhood Meme (\`meme-robinhood\`): ${getStatus('meme-robinhood')}
 • ⚡ Solana LP (\`lp-solana\`): ${getStatus('lp-solana')}
 • 💧 EVM LP (\`lp-evm\`): ${getStatus('lp-evm')}
 • 📈 Perps Futures (\`perps\`): ${getStatus('perps')}
@@ -184,7 +184,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       inline_keyboard: [
         [
           { text: '▶️ Toggle SOL Meme', callback_data: 'toggle_meme-solana' },
-          { text: '▶️ Toggle EVM Meme', callback_data: 'toggle_meme-evm' },
+          { text: '▶️ Toggle Robinhood Meme', callback_data: 'toggle_meme-robinhood' },
         ],
         [
           { text: '▶️ Toggle SOL LP', callback_data: 'toggle_lp-solana' },
@@ -258,10 +258,10 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         hub.toggleChannelScreening('telegram-forum', domain, !active);
         await this.sendMessage(`⚡ Sub-agent domain \`${domain}\` is now **${!active ? 'ACTIVE' : 'PAUSED'}** on Telegram!`, 'Markdown', undefined, threadId);
       } else if (data === 'start_all') {
-        ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, true));
+        ['meme-solana', 'meme-robinhood', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, true));
         await this.sendMessage('⚡ **GLOBAL MASTER SCREENING ACTIVATED!** All 8 Sub-Agents are active on Telegram.', 'Markdown', undefined, threadId);
       } else if (data === 'pause_all') {
-        ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
+        ['meme-solana', 'meme-robinhood', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
         await this.sendMessage('⏸️ **GLOBAL MASTER SCREENING PAUSED!** All 8 Sub-Agents are paused on Telegram.', 'Markdown', undefined, threadId);
       } else if (data === 'balances') {
         const isDryRun = isDryRunMode();

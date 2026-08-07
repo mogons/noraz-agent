@@ -4,7 +4,7 @@ import { getAgentDomain, normalizeDomainKey, AGENT_DOMAINS } from '../src/orches
 describe('agent registry', () => {
   it('contains all 8 agent domains with channels', () => {
     expect(AGENT_DOMAINS.map((d) => d.id).sort()).toEqual(
-      ['ct-alpha', 'lp-evm', 'lp-solana', 'meme-evm', 'meme-solana', 'nft', 'perps', 'prediction'].sort()
+      ['ct-alpha', 'lp-evm', 'lp-solana', 'meme-robinhood', 'meme-solana', 'nft', 'perps', 'prediction'].sort()
     );
   });
 
@@ -17,7 +17,8 @@ describe('agent registry', () => {
 
   it('normalizeDomainKey strips prefixes consistently', () => {
     expect(normalizeDomainKey('MEME_SOLANA')).toBe('meme-solana');
-    expect(normalizeDomainKey('call-meme-evm')).toBe('meme-evm');
+    expect(normalizeDomainKey('call-meme-robinhood')).toBe('meme-robinhood');
+    expect(normalizeDomainKey('meme-evm')).toBe('meme-robinhood');
     expect(normalizeDomainKey('solana-meme')).toBe('meme-solana');
   });
 });

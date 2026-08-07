@@ -136,9 +136,9 @@ export class AthenaHub {
         const agent = new SolanaScreeningAgent();
         return await agent.runScreeningPass();
       }
-      if (key.includes('evm') || key.includes('meme-evm')) {
-        const { EVMScreeningAgent } = await import('../agents/meme-evm/evm-screening-agent.js');
-        const agent = new EVMScreeningAgent();
+      if (key.includes('evm') || key.includes('meme-evm') || key.includes('robinhood') || key.includes('base')) {
+        const { RobinhoodScreeningAgent } = await import('../agents/meme-robinhood/robinhood-screening-agent.js');
+        const agent = new RobinhoodScreeningAgent();
         return await agent.runScreeningPass();
       }
       if (key.includes('nft')) {

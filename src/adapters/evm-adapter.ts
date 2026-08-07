@@ -40,6 +40,7 @@ const CHAIN_ID_MAP: Record<string, number> = {
   optimism: 10, op: 10, '10': 10,
   polygon: 137, poly: 137, '137': 137,
   bsc: 56, binance: 56, '56': 56,
+  robinhood: 5318008, '5318008': 5318008,
 };
 
 export class EVMTradeAdapter {
@@ -66,16 +67,58 @@ export class EVMTradeAdapter {
     console.log(`[EVM ADAPTER] Initiating Buy Order on ${String(request.chain).toUpperCase()} via ${dexName} (Amount: ${request.amountEth} ETH/BNB)`);
 
     if (this.isDryRun) {
-      console.log(`[EVM ADAPTER] DRY_RUN=true -> Executing EVM Router trade simulation...`);
-      return {
-        success: true,
-        txHash: `sim_evm_${request.chain}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-        chain: String(request.chain),
-        inputEth: request.amountEth,
-        outputTokens: request.amountEth * 125000,
-        dexUsed: dexName,
-        simulated: true,
-      };
+      // Realistic dry run: fetch REAL quote from the Uniswap API, report real numbers, do NOT broadcast.
+      console.log(`[EVM ADAPTER] DRY_RUN=true -> Fetching REAL Uniswap API quote (no broadcast)...`);
+
+      // Fail closed: entry is not usable without a quote API key.
+      if (!process.env.UNISWAP_API_KEY) {
+        return {
+          success: false,
+          chain: String(request.chain),
+          inputEth: request.amountEth,
+          outputTokens: 0,
+          dexUsed: dexName,
+          simulated: true,
+          error: 'UNISWAP_API_KEY missing — cannot fetch real quote. Set UNISWAP_API_KEY in .env (dry-run stays simulated).',
+        };
+      }
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const quoteRes = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-api-key': process.env.UNISWAP_API_KEY || '', 'accept': 'application/json' },
+          body: JSON.stringify({
+            tokenIn: '0x0000000000000000000000000000000000000000', // native ETH
+            tokenOut: request.tokenAddress,
+            amount: BigInt(Math.round(request.amountEth * 1e18)).toString(),
+            type: 'EXACT_INPUT',
+            chainId: 5318008,
+            configs: [{ protocols: ['V2','V3','V4'], routingType: 'CLASSIC', enableUniversalRouter: true }],
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!quoteRes.ok) {
+          return { success: false, chain: String(request.chain), inputEth: request.amountEth, outputTokens: 0, dexUsed: dexName, simulated: true, error: `Uniswap API Quote Failed: ${await quoteRes.text()}` };
+        }
+        const quote = await quoteRes.json() as Record<string, unknown>;
+        return {
+          success: true,
+          txHash: `sim_evm_${request.chain}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          chain: String(request.chain),
+          inputEth: request.amountEth,
+          // TODO(phase2): resolve token decimals via token metadata — 1e18 assumption for output token
+          outputTokens: Number(quote.amountOut || 0) / 1e18,
+          dexUsed: 'Uniswap API (Robinhood L2)',
+          simulated: true,
+        };
+      } catch (err: unknown) {
+        clearTimeout(timer);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return { success: false, chain: String(request.chain), inputEth: request.amountEth, outputTokens: 0, dexUsed: dexName, simulated: true, error: errMsg };
+      }
     }
 
     try {
