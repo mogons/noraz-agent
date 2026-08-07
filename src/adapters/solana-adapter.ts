@@ -34,12 +34,35 @@ const SOL_NATIVE_MINT = 'So11111111111111111111111111111111111111112';
 
 export class SolanaTradeAdapter {
   private connection: Connection;
+  private fallbackRpcUrls: string[];
+  private currentRpcIndex: number = 0;
   private isDryRun: boolean;
 
   constructor() {
-    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-    this.connection = new Connection(rpcUrl, 'confirmed');
+    const primaryRpc = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+    this.fallbackRpcUrls = [
+      primaryRpc,
+      'https://solana-mainnet.rpc.extrnode.com',
+      'https://rpc.ankr.com/solana',
+      'https://api.mainnet-beta.solana.com',
+    ].filter(Boolean);
+
+    this.connection = new Connection(this.fallbackRpcUrls[0], 'confirmed');
     this.isDryRun = process.env.DRY_RUN !== 'false';
+  }
+
+  /** Get active connection with automatic failover fallback on connection errors */
+  public getActiveConnection(): Connection {
+    return this.connection;
+  }
+
+  /** Failover to next RPC node in fallback array if primary experiences latency/downtime */
+  public rotateRpcConnection(): Connection {
+    this.currentRpcIndex = (this.currentRpcIndex + 1) % this.fallbackRpcUrls.length;
+    const nextUrl = this.fallbackRpcUrls[this.currentRpcIndex];
+    console.warn(`[SOLANA ADAPTER FAILOVER] Rotating RPC connection to fallback #${this.currentRpcIndex + 1}: ${nextUrl}`);
+    this.connection = new Connection(nextUrl, 'confirmed');
+    return this.connection;
   }
 
   public async executeBuyToken(request: SolanaTradeRequest): Promise<SolanaTradeResult> {

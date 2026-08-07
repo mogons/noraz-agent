@@ -123,9 +123,14 @@ export class SwarmConsensusEngine {
     // Layer 3: Security & Risk Audit Score
     const securityScore = candidate.securityAuditPassed ? 100 : 0;
 
+    // Fast-Lane Execution Check (Quant >= 90% and Security 100% Clean)
+    const isFastLane = quantScore >= 90 && candidate.securityAuditPassed;
+
     // Calculate Weighted Confidence Score with Agent Reputation
     const baseConfidence = quantScore * 0.35 + catalystScore * 0.35 + securityScore * 0.30;
-    const confidenceScore = Math.min(100, Math.round(baseConfidence * reputationMultiplier));
+    const confidenceScore = isFastLane
+      ? Math.max(88, Math.min(100, Math.round(baseConfidence * reputationMultiplier)))
+      : Math.min(100, Math.round(baseConfidence * reputationMultiplier));
 
     const passed = confidenceScore >= 80 && candidate.securityAuditPassed;
 
@@ -143,7 +148,9 @@ export class SwarmConsensusEngine {
         reputationMultiplier,
       },
       reason: passed
-        ? `Signal passed Swarm Consensus with ${confidenceScore}% confidence (Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
+        ? isFastLane 
+          ? `⚡ **FAST-LANE SWARM BYPASS PASSED** (${confidenceScore}% confidence, Sub-second High Conviction, Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
+          : `Signal passed Swarm Consensus with ${confidenceScore}% confidence (Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
         : `Signal rejected (${confidenceScore}% confidence below 80% threshold or security failed).`,
     };
 

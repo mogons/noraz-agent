@@ -113,6 +113,40 @@ export class RiskManager {
     };
   }
 
+  /**
+   * Dev/Deployer Cluster Risk Guard
+   * Prevents over-exposure to tokens launched by the same deployer wallet address.
+   */
+  public checkDeployerClusterRisk(
+    deployerAddress: string,
+    activePositions: OpenPosition[],
+    maxPositionsPerCluster: number = 2
+  ): CorrelationCheckResult {
+    if (!deployerAddress) return { allowed: true, existingCount: 0, existingExposureUsd: 0 };
+
+    const depLower = deployerAddress.toLowerCase();
+    const clusterPositions = activePositions.filter(
+      p => (p as any).deployerAddress?.toLowerCase() === depLower
+    );
+
+    const existingCount = clusterPositions.length;
+    const existingExposureUsd = clusterPositions.reduce(
+      (sum, p) => sum + (p.currentPriceUsd * p.amount),
+      0
+    );
+
+    if (existingCount >= maxPositionsPerCluster) {
+      return {
+        allowed: false,
+        reason: `🚫 **Deployer Cluster Risk Block:** Already ${existingCount} open positions from deployer cluster \`${deployerAddress.slice(0, 8)}...\` (max: ${maxPositionsPerCluster}). Prevents cluster rug exposure.`,
+        existingCount,
+        existingExposureUsd,
+      };
+    }
+
+    return { allowed: true, existingCount, existingExposureUsd };
+  }
+
   public updateDrawdown(drawdownPercent: number): void {
     this.currentDailyDrawdownPercent = drawdownPercent;
     if (drawdownPercent >= this.limits.maxPortfolioDrawdownPercent && this.limits.stopTradingOnDrawdown) {
