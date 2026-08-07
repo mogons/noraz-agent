@@ -175,16 +175,12 @@ export async function launchTUI(): Promise<void> {
       case '3':
         console.clear();
         console.log(`${C.cyan}=== ⚡ BACKGROUND SCREENING SUB-AGENTS CONTROL ===${C.reset}`);
-        const subAgentsList = [
-          { id: '1', domain: 'meme-solana', label: 'Solana Meme Agent (Pump.fun / Raydium)' },
-          { id: '2', domain: 'meme-evm', label: 'EVM Meme Agent (Base / ETH / Robinhood)' },
-          { id: '3', domain: 'lp-solana', label: 'Solana LP Agent (Meteora DLMM)' },
-          { id: '4', domain: 'lp-evm', label: 'EVM LP Agent (Uniswap V3)' },
-          { id: '5', domain: 'perps', label: 'Perpetuals Agent (Hyperliquid)' },
-          { id: '6', domain: 'nft', label: 'NFT Sniping Agent (OpenSea)' },
-          { id: '7', domain: 'prediction', label: 'Polymarket Agent (Polygon L2)' },
-          { id: '8', domain: 'ct-alpha', label: 'Smart CT & AI Alpha Agent (X/Twitter)' },
-        ];
+        const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
+        const subAgentsList = AGENT_DOMAINS.map((d, i) => ({
+          id: String(i + 1),
+          domain: d.id,
+          label: `${d.displayName.replace(/-/g, ' ')} (${d.channel.replace('call-', '#')})`,
+        }));
         const activeDomains = hub.getActiveDomains();
         subAgentsList.forEach(a => {
           const isActive = activeDomains.includes(a.domain);

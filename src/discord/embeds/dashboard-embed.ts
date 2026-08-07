@@ -7,6 +7,7 @@ import {
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
+import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode } from '../../config/config.js';
 
 export interface DashboardEmbedOptions {
@@ -77,45 +78,20 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
     .setTimestamp();
 
   // Dropdown Select Menu to Toggle Agents
+  const CATEGORY_EMOJI: Record<string, string> = {
+    MEME: '🐣', LP: '💧', PERPS: '📈', NFT: '🖼️', PREDICTION: '🎯', CT_ALPHA: '💡',
+  };
   const agentSelect = new StringSelectMenuBuilder()
     .setCustomId('select_toggle_agent')
     .setPlaceholder('👇 Select a Sub-Agent to Toggle (START / PAUSE)')
     .addOptions(
-      new StringSelectMenuOptionBuilder()
-        .setLabel('Solana Meme Agent')
-        .setValue('meme-solana')
-        .setDescription('Pump.fun, Raydium, CTO & Revival Volume Spikes')
-        .setEmoji('🐣'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('EVM Meme Agent')
-        .setValue('meme-evm')
-        .setDescription('Base L2, ETH Mainnet, Robinhood L2 DEX tokens')
-        .setEmoji('🔷'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('Perpetuals Agent')
-        .setValue('perps')
-        .setDescription('Hyperliquid & CEX 5-Role Swarm Setups')
-        .setEmoji('📈'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('Trade+LP Velocity Engine')
-        .setValue('lp-solana')
-        .setDescription('High-volume LP harvesting (>5% 4h Fee/TVL)')
-        .setEmoji('💧'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('NFT Sniping Agent')
-        .setValue('nft')
-        .setDescription('OpenSea EVM floor drops >= 10% & rare mispricings')
-        .setEmoji('🖼️'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('Polymarket Agent')
-        .setValue('prediction')
-        .setDescription('Polygon L2 odds arbitrage & whale bet tracking')
-        .setEmoji('🎯'),
-      new StringSelectMenuOptionBuilder()
-        .setLabel('Smart CT & AI Alpha Agent')
-        .setValue('ct-alpha')
-        .setDescription('X/Twitter AI Agent launches, airdrop threads, & CT calls')
-        .setEmoji('💡')
+      ...AGENT_DOMAINS.map((d) =>
+        new StringSelectMenuOptionBuilder()
+          .setLabel(d.displayName.replace(/-/g, ' '))
+          .setValue(d.id)
+          .setDescription(d.name)
+          .setEmoji(CATEGORY_EMOJI[d.category] || '🤖')
+      )
     );
 
   // Row 1: Master Toggles

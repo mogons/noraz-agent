@@ -1,4 +1,5 @@
 import { RiskManager } from './risk-manager.js';
+import { AGENT_DOMAINS, normalizeDomainKey as registryNormalizeDomain } from './agent-registry.js';
 
 export interface ChannelStatus {
   channelId: string;
@@ -23,7 +24,7 @@ export class AthenaHub {
   public attachStateStore(store: any): void {
     this.stateStore = store;
     const savedStates = store.getAllAgentStates ? store.getAllAgentStates() : {};
-    const domains = ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'];
+    const domains = AGENT_DOMAINS.map((d) => d.id);
     for (const d of domains) {
       const savedState = savedStates[d];
       // Default strictly to false (PAUSED) unless explicitly enabled in state
@@ -35,7 +36,7 @@ export class AthenaHub {
 
   private initializeAgentStatesDefaultPaused(): void {
     // All sub-agents are PAUSED by default on startup until explicitly resumed by user
-    const domains = ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'];
+    const domains = AGENT_DOMAINS.map((d) => d.id);
     for (const d of domains) {
       this.agentStates.set(d, false);
       this.autoExecuteStates.set(d, { enabled: false, maxTradeAmount: 0.1 });
@@ -43,16 +44,7 @@ export class AthenaHub {
   }
 
   public normalizeDomainKey(domain: string): string {
-    const d = domain.toLowerCase().trim();
-    if (d === 'solana' || d === 'solana-meme' || d === 'meme-solana') return 'meme-solana';
-    if (d === 'evm' || d === 'evm-meme' || d === 'meme-evm' || d === 'base') return 'meme-evm';
-    if (d === 'perps' || d === 'perpetual' || d === 'hyperliquid') return 'perps';
-    if (d === 'nft' || d === 'opensea') return 'nft';
-    if (d === 'prediction' || d === 'polymarket' || d === 'poly') return 'prediction';
-    if (d === 'ct-alpha' || d === 'twitter' || d === 'ct') return 'ct-alpha';
-    if (d === 'lp-solana' || d === 'meteora') return 'lp-solana';
-    if (d === 'lp-evm' || d === 'uniswap') return 'lp-evm';
-    return d;
+    return registryNormalizeDomain(domain);
   }
 
   public setAgentActive(domain: string, active: boolean): void {

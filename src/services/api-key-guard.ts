@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { AGENT_DOMAINS, normalizeDomainKey } from '../orchestrator/agent-registry.js';
 
 export interface DomainKeyRequirement {
   domain: string;
@@ -8,60 +9,14 @@ export interface DomainKeyRequirement {
 }
 
 export class ApiKeyGuardService {
-  private requirements: DomainKeyRequirement[] = [
-    {
-      domain: 'meme-solana',
-      name: 'Solana DEX Meme Screening',
-      requiredKeys: ['GMGN_API_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'meme-evm',
-      name: 'EVM DEX Meme Screening',
-      requiredKeys: ['GOPLUS_API_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'perps',
-      name: 'Perpetual Futures Screening (Hyperliquid)',
-      requiredKeys: ['EVM_PRIVATE_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'nft',
-      name: 'EVM NFT Floor & Rarity Sniping (OpenSea)',
-      requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'prediction',
-      name: 'Polymarket Prediction Market Arbitrage',
-      requiredKeys: ['POLYMARKET_API_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'ct-alpha',
-      name: 'Smart CT & AI Narrative Intelligence',
-      requiredKeys: ['TWEX_API_KEY', 'AI_API_KEY'],
-    },
-    {
-      domain: 'lp-solana',
-      name: 'Solana Concentrated Liquidity Velocity (Meteora)',
-      requiredKeys: ['GMGN_API_KEY'],
-    },
-    {
-      domain: 'lp-evm',
-      name: 'EVM Concentrated Liquidity Velocity (Uniswap)',
-      requiredKeys: ['GOPLUS_API_KEY'],
-    },
-  ];
+  private requirements: DomainKeyRequirement[] = AGENT_DOMAINS.map((d) => ({
+    domain: d.id,
+    name: d.name,
+    requiredKeys: d.requiredKeys,
+  }));
 
   public normalizeDomain(domain: string): string {
-    const d = domain.toLowerCase().trim();
-    if (d === 'solana' || d === 'solana-meme' || d === 'meme-solana') return 'meme-solana';
-    if (d === 'evm' || d === 'evm-meme' || d === 'meme-evm' || d === 'base') return 'meme-evm';
-    if (d === 'perps' || d === 'perpetual' || d === 'hyperliquid') return 'perps';
-    if (d === 'nft' || d === 'opensea') return 'nft';
-    if (d === 'prediction' || d === 'polymarket' || d === 'poly') return 'prediction';
-    if (d === 'ct-alpha' || d === 'twitter' || d === 'ct') return 'ct-alpha';
-    if (d === 'lp-solana' || d === 'meteora') return 'lp-solana';
-    if (d === 'lp-evm' || d === 'uniswap') return 'lp-evm';
-    return d;
+    return normalizeDomainKey(domain);
   }
 
   public checkDomainKeys(domain: string): { ready: boolean; missingKeys: string[]; statusMessage: string } {
