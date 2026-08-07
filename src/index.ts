@@ -33,6 +33,7 @@ import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
 import { ApiKeyGuardService } from './services/api-key-guard.js';
+import { WalletTracker } from './services/wallet-tracker.js';
 
 dotenv.config();
 
@@ -99,6 +100,9 @@ async function notifyControlRoom(client: any, key: string, content: string): Pro
 
 const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
+
+// Wallet auto-tracker: mirrors user's on-chain holdings into PositionManager lifecycle + exit alerts
+const walletTracker = new WalletTracker({ positionManager, stateStore });
 
 const aiService = new AIService();
 const skillLoader = new SkillLoader();
@@ -503,6 +507,26 @@ if (discordToken && clientId) {
             );
             console.log(`[TELEGRAM DISPATCH] Broadcasted signal call for "${item.payload.symbol}" to topic: ${item.channelName}`);
           }
+
+          // 3. Register called tokens for wallet auto-tracking (own-position detection + exit alerts)
+          if (item.channelName === 'call-meme-solana' && item.payload.contractAddress) {
+            walletTracker.registerTrackedToken('sol', item.payload.contractAddress, item.payload.symbol);
+          } else if (item.channelName === 'call-meme-robinhood' && item.payload.contractAddress) {
+            walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
+          }
+        }
+
+        // Wallet Auto-Tracking: detect user's own positions + exit alerts
+        try {
+          const alerts = await walletTracker.syncPositions();
+          if (alerts.length > 0) {
+            for (const a of alerts) {
+              await notifyControlRoom(client, `position:${a.type}`, `🚨 **POSITION ALERT**\n${a.reason}`);
+            }
+          }
+          console.log(`[WALLET TRACKER] ${positionManager.getActivePositions().length} positions tracked, ${alerts.length} alert(s) fired this cycle.`);
+        } catch (wtErr: any) {
+          console.warn(`[WALLET TRACKER] sync failed this cycle: ${wtErr.message}`);
         }
       } catch (err: any) {
         console.error('[SUB-AGENTS LOOP ERROR]', err.message);
