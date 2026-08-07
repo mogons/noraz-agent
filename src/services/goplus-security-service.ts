@@ -23,17 +23,16 @@ export class GoPlusSecurityService {
     const chainId = CHAIN_ID_MAP[chain];
     if (!chainId) return null;
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      // GoPlus accepts the API key as `api_key` query param; Authorization header is rejected (code 4012).
+      let url = `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`;
       const apiKey = process.env.GOPLUS_API_KEY;
-      if (apiKey && !apiKey.includes('YOUR_') && !apiKey.includes('placeholder')) {
-        headers['Authorization'] = apiKey;
+      if (apiKey && !apiKey.includes('YOUR_') && !apiKey.includes('placeholder') && !apiKey.includes('mock')) {
+        url += `&api_key=${encodeURIComponent(apiKey)}`;
       }
-      const res = await fetch(
-        `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`,
-        { headers }
-      );
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) return null;
-      const data = (await res.json()) as { result?: Record<string, any> };
+      const data = (await res.json()) as { code?: number; result?: Record<string, any> };
+      if (data.code && data.code !== 1) return null;
       const r = data.result?.[contractAddress.toLowerCase()];
       if (!r) return null;
       const isHoneypot = r.is_honeypot === '1';
