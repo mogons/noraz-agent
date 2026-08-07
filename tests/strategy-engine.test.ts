@@ -57,4 +57,29 @@ describe('StrategyEngine', () => {
     const listAfter = engine.listStrategies();
     expect(listAfter.find((s) => s.id === 'test-momentum')?.active).toBe(true);
   });
+
+  it('activates the default meme-solana strategy', () => {
+    const engine = new StrategyEngine();
+    const res = engine.setActiveStrategy('meme-solana', 'meme-solana-default');
+    expect(res.success).toBe(true);
+    const active = engine.getActiveStrategy('meme-solana');
+    expect(active?.id).toBe('meme-solana-default');
+  });
+
+  it('loads the meme-vol-spike indicator', () => {
+    const engine = new StrategyEngine();
+    const ind = engine.getIndicator('meme-vol-spike');
+    expect(ind).not.toBeNull();
+    expect(ind!.id).toBe('meme-vol-spike');
+    const candles = Array.from({ length: 30 }, (_, i) => ({
+      time: i * 3600,
+      open: 1,
+      high: 1,
+      low: 1,
+      close: 1,
+      volume: i % 4 === 0 ? 500 : 50,
+    }));
+    const out = ind!.calculate(candles);
+    expect(out.length).toBe(30);
+  });
 });

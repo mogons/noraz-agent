@@ -134,17 +134,7 @@ export class AthenaHub {
       if (key.includes('solana') || key.includes('meme-solana')) {
         const { SolanaScreeningAgent } = await import('../agents/meme-solana/solana-screening-agent.js');
         const agent = new SolanaScreeningAgent();
-        const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
-        const { RugCheckService } = await import('../services/security-service.js');
-        const gmgn = new GMGNAdapter();
-        const rugCheck = new RugCheckService();
-        const signals = await gmgn.fetchTrendingSignals('sol');
-        const reports = [];
-        for (const s of signals.slice(0, 5)) {
-          const audit = await rugCheck.auditSolanaToken(s.contractAddress);
-          reports.push(agent.detectRevivalAndCTO(s, audit));
-        }
-        return reports;
+        return await agent.runScreeningPass();
       }
       if (key.includes('evm') || key.includes('meme-evm')) {
         const { EVMScreeningAgent } = await import('../agents/meme-evm/evm-screening-agent.js');

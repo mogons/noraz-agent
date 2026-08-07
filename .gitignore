@@ -13,6 +13,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.bak.*
 *.pem
 
 # Database & Storage
@@ -22,6 +23,9 @@ build/
 database/*.json
 database/athena_state.json*
 prisma/dev.db
+
+# Strategy Engine runtime state
+strategies/.active.json
 
 # Logs & Diagnostics
 logs/

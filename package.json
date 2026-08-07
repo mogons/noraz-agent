@@ -32,6 +32,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=22.12"
+  },
   "dependencies": {
     "@jup-ag/api": "^6.0.30",
     "@meteora-ag/dlmm": "^1.4.0",

@@ -61,10 +61,11 @@ export async function launchTUI(): Promise<void> {
     console.log(` ${C.green}[5]${C.reset} ⚙️ Global Risk Management & Position Size Safeguards`);
     console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Realized PnL Analytics (View Summary)`);
     console.log(` ${C.green}[7]${C.reset} 🛑 Emergency Circuit Breaker (Halt All Active Agents)`);
+    console.log(` ${C.green}[8]${C.reset} ▶️ Run Screening Pass (Test One Sub-Agent Locally)`);
     console.log(` ${C.red}[0]${C.reset} ❌ Exit Parthenon Control Center`);
     console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
 
-    const choice = await prompt(`${C.bright}⚔️ Select Command Option (0-7): ${C.reset}`);
+    const choice = await prompt(`${C.bright}⚔️ Select Command Option (0-8): ${C.reset}`);
 
     if (choice === '0') {
       console.log(`\n${C.yellow}May Athena's wisdom guide your trades. Exiting Parthenon... 👋${C.reset}\n`);
@@ -274,6 +275,35 @@ Current Operating Parameters:
         console.log(`${C.red}Aegis Shield engaged! All screening agents and pending orders halted!${C.reset}`);
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
+
+      case '8': {
+        console.clear();
+        console.log(`${C.cyan}=== ▶️ RUN SCREENING PASS (LOCAL TEST) ===${C.reset}`);
+        const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
+        AGENT_DOMAINS.forEach((d, i) => console.log(`[${i + 1}] ${d.displayName} (${d.channel})`));
+        console.log('[0] Back\n');
+        const sel = await prompt('Select Agent (1-8): ');
+        const chosen = AGENT_DOMAINS[parseInt(sel) - 1];
+        if (!chosen) { await prompt(`${C.red}Invalid. Press Enter...${C.reset}`); break; }
+        console.log(`\n${C.yellow}Running ${chosen.displayName} screening pass...${C.reset}`);
+        const results = await hub.triggerAgentPass(chosen.id);
+        if (results.length === 0) {
+          console.log(`${C.yellow}No signals passed. (Data unavailable or filtered out — check logs.)${C.reset}`);
+        }
+        for (const r of results) {
+          const payload = (r as any).payload;
+          if (payload) {
+            console.log(`\n${C.green}✅ ${payload.symbol} (${payload.title}) — ${payload.confidenceScore}%${C.reset}`);
+            console.log(`   MC: ${payload.marketCap} | Liq: ${payload.liquidity} | Vol1h: ${payload.volume1h}`);
+            console.log(`   Tx: ${payload.txRatio} | Dev: ${payload.devHoldingPct} | Bundler: ${payload.bundlerPct}`);
+            console.log(`   Thesis: ${payload.aiThesis}`);
+          } else {
+            console.log(`\n${C.green}✅ Signal: ${r.reason}${C.reset}`);
+          }
+        }
+        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        break;
+      }
 
       default:
         await prompt(`${C.red}Invalid option. Press Enter to try again...${C.reset}`);
