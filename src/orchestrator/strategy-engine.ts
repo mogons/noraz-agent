@@ -182,16 +182,30 @@ export class StrategyEngine {
   public getActiveStrategy(domain: string): AthenaStrategy | null {
     const map = this.readActiveMap();
     const activeId = Object.keys(map).find((k) => map[k] === true);
-    if (!activeId) return null;
-    const file = path.join(STRATEGIES_DIR, `${activeId}.mjs`);
-    if (!fs.existsSync(file)) return null;
-    try {
-      const mod = this.loadModule(file);
-      return mod.default || mod;
-    } catch (err: any) {
-      console.warn(`[STRATEGY ENGINE] Gagal load strategi aktif ${activeId}: ${err.message}`);
-      return null;
+    if (activeId) {
+      const file = path.join(STRATEGIES_DIR, `${activeId}.mjs`);
+      if (fs.existsSync(file)) {
+        try {
+          const mod = this.loadModule(file);
+          return mod.default || mod;
+        } catch (err: any) {
+          console.warn(`[STRATEGY ENGINE] Gagal load strategi aktif ${activeId}: ${err.message}`);
+        }
+      }
     }
+    // Fallback: domain-default strategy (e.g. meme-solana-default.mjs) is active
+    // out-of-the-box when no explicit strategy has been set yet.
+    const defaultId = `${domain.toLowerCase().replace(/[_\s]+/g, '-')}-default`;
+    const defaultFile = path.join(STRATEGIES_DIR, `${defaultId}.mjs`);
+    if (fs.existsSync(defaultFile)) {
+      try {
+        const mod = this.loadModule(defaultFile);
+        return mod.default || mod;
+      } catch (err: any) {
+        console.warn(`[STRATEGY ENGINE] Gagal load strategi default ${defaultId}: ${err.message}`);
+      }
+    }
+    return null;
   }
 
   public getIndicator(id: string): AthenaIndicator | null {
