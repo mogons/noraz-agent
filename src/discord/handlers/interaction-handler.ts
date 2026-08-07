@@ -467,23 +467,38 @@ async function handleChatInput(
     }
   } else if (commandName === 'update') {
     await interaction.reply({
-      content: '🔄 **Athena Self-Update Sequence Initiated...**\nPulling latest patches from Git repository and re-building TypeScript bundle...',
+      content: '🔄 **Athena Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
       ephemeral: true,
     });
 
     try {
-      const { execSync } = await import('child_process');
-      const gitRes = execSync('git pull', { encoding: 'utf-8' });
-      const buildRes = execSync('npm run build', { encoding: 'utf-8' });
+      const { exec } = await import('child_process');
+      const run = (cmd: string, timeoutMs = 600000) =>
+        new Promise<string>((resolve, reject) => {
+          exec(cmd, { encoding: 'utf-8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
+            if (err) reject(new Error((stderr || stdout || '').trim() || err.message));
+            else resolve((stdout || '').trim());
+          });
+        });
+
+      const gitRes = await run('git pull --ff-only');
+      const installRes = await run('npm install');
+      const buildRes = await run('npm run build');
 
       await interaction.followUp({
         content:
           `✅ **Athena Upgrade Complete!**\n\n` +
-          `• **Git Pull Result:** \`${gitRes.trim()}\`\n` +
-          `• **Build Status:** \`TypeScript Re-compiled Successfully (0 Errors)\`\n` +
-          `Athena running latest code!`,
+          `• **Git Pull:** \`${gitRes.split('\n').filter(Boolean).slice(-2).join(' | ')}\`\n` +
+          `• **Dependencies:** \`${(installRes.split('\n').filter(Boolean).slice(-3).join(' | ')) || 'installed'}\`\n` +
+          `• **Build:** \`TypeScript Re-compiled Successfully (0 Errors)\`\n` +
+          `🔄 **Restarting PM2 agent to load new code...**`,
         ephemeral: true,
       });
+
+      // Restart PM2 so the new build actually runs (fire-and-forget; don't block the reply)
+      run('pm2 restart athena-agent --update-env || npx pm2 restart athena-agent --update-env', 120000)
+        .then(() => console.log('[UPDATE] PM2 agent restarted successfully.'))
+        .catch((err: any) => console.error('[UPDATE] PM2 restart failed:', err.message));
     } catch (err: any) {
       await interaction.followUp({
         content: `❌ **Update Exception:** ${err.message}`,
