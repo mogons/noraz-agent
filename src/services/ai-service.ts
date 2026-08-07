@@ -72,6 +72,12 @@ export class AIService {
     this.activeKeyIndex = 0;
   }
 
+  public updateProviderConfig(provider: string, modelName: string): void {
+    this.config.provider = provider as any;
+    this.config.modelName = modelName;
+    console.log(`[AI SERVICE] Updated active provider to: ${provider} | Model: ${modelName}`);
+  }
+
   public getConfig(): AIProviderConfig {
     return { ...this.config };
   }

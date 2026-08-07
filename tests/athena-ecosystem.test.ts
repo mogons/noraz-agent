@@ -326,6 +326,34 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(manifest.name).toBe('Athena OpenSea Agent Tools');
     expect(Array.isArray(manifest.capabilities)).toBe(true);
   });
+
+  it('20. Tool Registry & Hub Control: Should execute sub-agent pause, resume, and risk limit tools', async () => {
+    const { ToolRegistry } = await import('../src/orchestrator/tool-registry.js');
+    const { AthenaHub } = await import('../src/orchestrator/hub.js');
+    const { AIService } = await import('../src/services/ai-service.js');
+
+    const hub = new AthenaHub();
+    const aiService = new AIService();
+    const registry = new ToolRegistry();
+    registry.attachOrchestrator(hub);
+    registry.attachAIService(aiService);
+
+    const toolDefs = registry.getToolDefinitions();
+    expect(toolDefs.length).toBeGreaterThan(4);
+    expect(toolDefs.some(t => t.name === 'pause_sub_agent')).toBe(true);
+
+    const pauseRes = await registry.executeToolCall('pause_sub_agent', { agentId: 'solana-meme' });
+    expect(pauseRes.success).toBe(true);
+    expect(hub.isAgentActive('solana-meme')).toBe(false);
+
+    const resumeRes = await registry.executeToolCall('resume_sub_agent', { agentId: 'solana-meme' });
+    expect(resumeRes.success).toBe(true);
+    expect(hub.isAgentActive('solana-meme')).toBe(true);
+
+    const riskRes = await registry.executeToolCall('set_risk_limit', { maxDrawdownPct: 40 });
+    expect(riskRes.success).toBe(true);
+    expect(hub.getRiskManager().getRiskState().maxDrawdownLimitPct).toBe(40);
+  });
 });
 
 

@@ -126,6 +126,27 @@ export class RiskManager {
     this.tradingPaused = false;
   }
 
+  public setDrawdownLimit(percent: number): void {
+    this.limits.maxPortfolioDrawdownPercent = percent > 1 ? percent : percent * 100;
+    console.log(`[RISK MANAGER] Updated Max Drawdown Limit to ${this.limits.maxPortfolioDrawdownPercent}%`);
+  }
+
+  public setMaxPositionSizeUsd(amountUsd: number): void {
+    this.limits.maxTradeAmountUsd = amountUsd;
+    console.log(`[RISK MANAGER] Updated Max Position Size to $${amountUsd}`);
+  }
+
+  public getRiskState() {
+    return {
+      paused: this.tradingPaused,
+      currentDrawdownPct: this.currentDailyDrawdownPercent,
+      maxDrawdownLimitPct: this.limits.maxPortfolioDrawdownPercent,
+      maxPositionSizeUsd: this.limits.maxTradeAmountUsd,
+      maxSectorExposurePercent: this.limits.maxSectorExposurePercent,
+      maxCorrelatedPositions: this.limits.maxCorrelatedPositions,
+    };
+  }
+
   public getRiskStatus() {
     return {
       paused: this.tradingPaused,

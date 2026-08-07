@@ -76,6 +76,12 @@ switch (subCommand) {
     runCommand('npm', ['run', 'update']);
     break;
 
+  case 'doctor':
+  case 'check':
+    console.log('🩺 Running Athena Diagnostic Doctor...\n');
+    runCommand('npx', ['tsx', 'src/cli/doctor.ts']);
+    break;
+
   case 'help':
   case '--help':
   case '-h':

@@ -65,6 +65,69 @@ export async function handleControlRoomMessage(
     await message.channel.sendTyping();
   }
 
+  // Attach ToolRegistry to Hub & AI Service for full execution authority
+  const { ToolRegistry } = await import('../../orchestrator/tool-registry.js');
+  const toolRegistry = new ToolRegistry();
+  toolRegistry.attachOrchestrator(hub);
+  toolRegistry.attachAIService(aiService);
+
+  const lowerQuery = userQuery.toLowerCase();
+
+  // 0a. Sub-agent PAUSE / STOP intent
+  if (lowerQuery.includes('pause') || lowerQuery.includes('stop') || lowerQuery.includes('matikan') || lowerQuery.includes('hentikan')) {
+    if (lowerQuery.includes('agent') || lowerQuery.includes('sub agent') || lowerQuery.includes('screening')) {
+      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm', 'all'];
+      const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
+      const result = await toolRegistry.executeToolCall('pause_sub_agent', { agentId: foundDomain });
+      await message.reply(`🔴 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
+      return;
+    }
+  }
+
+  // 0b. Sub-agent RESUME / START intent
+  if (lowerQuery.includes('resume') || lowerQuery.includes('start') || lowerQuery.includes('nyalakan') || lowerQuery.includes('aktifkan')) {
+    if (lowerQuery.includes('agent') || lowerQuery.includes('sub agent') || lowerQuery.includes('screening')) {
+      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm', 'all'];
+      const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
+      const result = await toolRegistry.executeToolCall('resume_sub_agent', { agentId: foundDomain });
+      await message.reply(`🟢 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
+      return;
+    }
+  }
+
+  // 0c. Trigger ON-DEMAND Screening Pass intent
+  if (lowerQuery.includes('jalankan screening') || lowerQuery.includes('run screening') || lowerQuery.includes('trigger screening')) {
+    const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm'];
+    const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'solana-meme';
+    await message.reply(`⚡ **ATHENA ON-DEMAND SCREENING TRIGGERED** for \`${foundDomain.toUpperCase()}\`...\nScreening pass in progress.`);
+    const result = await toolRegistry.executeToolCall('trigger_screening_pass', { agentId: foundDomain });
+    await message.reply(`✅ **SCREENING COMPLETE** for \`${foundDomain.toUpperCase()}\`: Found **${result.data?.length || 0}** signals passing 3-Layer Swarm Filter.`);
+    return;
+  }
+
+  // 0d. Risk Parameter / Drawdown Limit intent
+  if ((lowerQuery.includes('drawdown limit') || lowerQuery.includes('drawdown')) && (lowerQuery.includes('ubah') || lowerQuery.includes('set') || lowerQuery.includes('ganti') || lowerQuery.includes('jadi'))) {
+    const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
+    if (numbers && numbers.length > 0) {
+      const val = parseFloat(numbers[0]);
+      const result = await toolRegistry.executeToolCall('set_risk_limit', { maxDrawdownPct: val });
+      await message.reply(`🛡️ **ATHENA RISK MANAGER UPDATED**: ${result.message}`);
+      return;
+    }
+  }
+
+  // 0e. Agent Status Matrix intent
+  if (lowerQuery.includes('status agent') || lowerQuery.includes('status sub agent') || lowerQuery.includes('agent status')) {
+    const result = await toolRegistry.executeToolCall('get_agent_statuses', {});
+    const statuses = result.data || {};
+    let statusText = `🏛️ **ATHENA SUB-AGENT REAL-TIME STATUS MATRIX**\n\n`;
+    for (const [name, state] of Object.entries(statuses) as [string, any][]) {
+      statusText += `• **${name.toUpperCase()}**: ${state.active ? '🟢 ACTIVE (24/7 Running)' : '🔴 PAUSED'}\n`;
+    }
+    await message.reply(statusText);
+    return;
+  }
+
   // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "kabari kalau BTC 70k")
   const parsedAlert = priceAlertService.parseNaturalLanguageAlert(userQuery, message.author.id, message.channelId);
   if (parsedAlert) {
@@ -80,7 +143,6 @@ export async function handleControlRoomMessage(
   }
 
   // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Base lewat Relay")
-  const lowerQuery = userQuery.toLowerCase();
   const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
   if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
