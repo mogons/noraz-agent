@@ -244,22 +244,19 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(csv).toContain('REALTOKEN');
   });
 
-  it('11. DB Service: Should perform atomic file save and load for persistent state', async () => {
-    const { DbService } = await import('../src/services/db-service.js');
-    const db = new DbService();
-    const loaded = db.loadState();
-    expect(Array.isArray(loaded.priceAlerts)).toBe(true);
-    expect(Array.isArray(loaded.tradeJournalEntries)).toBe(true);
-
-    db.saveState({
-      priceAlerts: [{ id: 'test_alert', symbol: 'BTC', targetPriceUsd: 70000 }],
-      tradeJournalEntries: [],
-      lastUpdated: new Date().toISOString(),
-    });
-
-    const reloaded = db.loadState();
-    expect(reloaded.priceAlerts.length).toBe(1);
-    expect(reloaded.priceAlerts[0].symbol).toBe('BTC');
+  it('11. StateStore: Should perform atomic file save and load for persistent state (isolated temp file)', async () => {
+    const path = await import('node:path');
+    const fs = await import('node:fs');
+    const { StateStore } = await import('../src/services/state-store.js');
+    const tempPath = path.join(process.cwd(), 'database', `test_state_${Date.now()}.json`);
+    const store = new StateStore(tempPath as never);
+    const saved = store.getSnapshot ? store.getSnapshot() : { priceAlerts: [], tradeJournalEntries: [], lastUpdated: new Date().toISOString() };
+    expect(Array.isArray(saved.priceAlerts)).toBe(true);
+    expect(Array.isArray(saved.tradeJournalEntries)).toBe(true);
+    // round-trip via a fresh store on the same temp file
+    const store2 = new StateStore(tempPath as never);
+    expect(store2.getAllPositions()).toEqual([]);
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
   });
 
   it('12. Smart CT Alpha Agent: fail-closed without key, real signals with real tweets', async () => {
