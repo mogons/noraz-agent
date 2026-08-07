@@ -287,8 +287,17 @@ async function runWizard() {
   const dryRunChoice = await askQuestion(' 1. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
   const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
 
-  const simSolBalance = await askQuestion(' 2. Starting Simulation Balance for Solana (SOL) [Default 10.0]: ') || '10.0';
-  const simEthBalance = await askQuestion(' 3. Starting Simulation Balance for EVM (ETH) [Default 1.0]: ') || '1.0';
+  const defaultSolSim = existingEnv.SIMULATION_BALANCE_SOL ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_SOL} SOL]` : ' [Default 10.0]';
+  const simSolBalance = await askQuestion(` 2. Starting Simulation Balance for Solana (SOL)${defaultSolSim}: `) || existingEnv.SIMULATION_BALANCE_SOL || '10.0';
+
+  const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
+  const simEthBalance = await askQuestion(` 3. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
+
+  const defaultPolySim = existingEnv.SIMULATION_BALANCE_POLYMARKET ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_POLYMARKET} USDC]` : ' [Default 500.0]';
+  const simPolyBalance = await askQuestion(` 4. Starting Simulation Balance for Polymarket (USDC)${defaultPolySim}: `) || existingEnv.SIMULATION_BALANCE_POLYMARKET || '500.0';
+
+  const defaultHlSim = existingEnv.SIMULATION_BALANCE_HYPERLIQUID ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_HYPERLIQUID} USDC]` : ' [Default 1000.0]';
+  const simHlBalance = await askQuestion(` 5. Starting Simulation Balance for Hyperliquid Perps (USDC)${defaultHlSim}: `) || existingEnv.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
 
   const primaryAiKey = allKeys[0] || '';
 
@@ -299,6 +308,8 @@ LOG_LEVEL=info
 # Simulated Starting Balance (Used in DRY_RUN / Demo mode)
 SIMULATION_BALANCE_SOL=${simSolBalance.trim()}
 SIMULATION_BALANCE_ETH=${simEthBalance.trim()}
+SIMULATION_BALANCE_POLYMARKET=${simPolyBalance.trim()}
+SIMULATION_BALANCE_HYPERLIQUID=${simHlBalance.trim()}
 
 # Discord Credentials
 DISCORD_BOT_TOKEN=${botToken.trim()}

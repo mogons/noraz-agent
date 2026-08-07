@@ -146,8 +146,9 @@ export class WalletService {
   /** Get Solana SOL balance */
   public async getSolanaBalance(): Promise<BalanceResult> {
     const isDryRun = process.env.DRY_RUN !== 'false';
+    const simSol = parseFloat(process.env.SIMULATION_BALANCE_SOL || '10.0');
     if (isDryRun) {
-      return { balance: 10.0, symbol: 'SOL', chain: 'Solana' };
+      return { balance: simSol, symbol: 'SOL', chain: 'Solana' };
     }
     try {
       const keypair = this.getSolanaKeypair();
@@ -158,7 +159,7 @@ export class WalletService {
         chain: 'Solana',
       };
     } catch {
-      return { balance: 10.0, symbol: 'SOL', chain: 'Solana' };
+      return { balance: simSol, symbol: 'SOL', chain: 'Solana' };
     }
   }
 
@@ -232,6 +233,18 @@ export class WalletService {
     });
   }
 
+  /** Get Polymarket USDC balance */
+  public async getPolymarketBalance(): Promise<BalanceResult> {
+    const simPoly = parseFloat(process.env.SIMULATION_BALANCE_POLYMARKET || '500.0');
+    return { balance: simPoly, symbol: 'USDC', chain: 'Polygon (Polymarket)' };
+  }
+
+  /** Get Hyperliquid Perps USDC balance */
+  public async getHyperliquidBalance(): Promise<BalanceResult> {
+    const simHl = parseFloat(process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0');
+    return { balance: simHl, symbol: 'USDC', chain: 'Hyperliquid Perps' };
+  }
+
   /** Get EVM native balance (ETH/BNB/MATIC) */
   public async getEvmBalance(chainId: number): Promise<BalanceResult> {
     const chainConfig = EVM_CHAINS[chainId];
@@ -242,8 +255,9 @@ export class WalletService {
     const chainName = chainConfig?.chain.name || `Chain #${chainId}`;
 
     const isDryRun = process.env.DRY_RUN !== 'false';
+    const simEth = parseFloat(process.env.SIMULATION_BALANCE_ETH || '1.0');
     if (isDryRun) {
-      return { balance: 1.0, symbol, chain: chainName };
+      return { balance: simEth, symbol, chain: chainName };
     }
 
     try {
@@ -257,7 +271,7 @@ export class WalletService {
         chain: chainName,
       };
     } catch {
-      return { balance: 1.0, symbol, chain: chainName };
+      return { balance: simEth, symbol, chain: chainName };
     }
   }
 

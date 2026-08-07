@@ -350,6 +350,12 @@ export async function handleControlRoomMessage(
     return;
   }
 
+  const simSol = process.env.SIMULATION_BALANCE_SOL || '10.0';
+  const simEth = process.env.SIMULATION_BALANCE_ETH || '1.0';
+  const simPoly = process.env.SIMULATION_BALANCE_POLYMARKET || '500.0';
+  const simHl = process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
+  const isDryRun = process.env.DRY_RUN !== 'false';
+
   // Comprehensive System Prompt for Athena AI with Casual Interactive Tone & Architecture Self-Awareness
   const systemPrompt = `You are Athena, a chill, brilliant, and interactive AI crypto trading companion.
 You chat naturally and casually like a smart crypto-native friend (gaya bahasa santai, ramah, dan interaktif), but always stay sharp, accurate, and direct.
@@ -373,10 +379,15 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Direct On-Chain Execution: Intent-based /bridge, /swap, and /send via Relay.link and OpenSea API v2.
 
-Current Operating Parameters:
-- Execution Mode: DRY_RUN Active (Safe Simulation).
-- Global Portfolio Drawdown Limit: 50.0%.
-- Current Portfolio Drawdown: 0.0%.`;
+Current Operating Parameters & Live Simulation Balances:
+- Execution Mode: ${isDryRun ? 'DRY_RUN Active (Simulation Mode)' : 'LIVE TRADING'}
+- Active Portfolio Simulation Balances:
+  • Solana Balance: ${simSol} SOL
+  • EVM Balance: ${simEth} ETH (Base / Mainnet)
+  • Polymarket Balance: $${simPoly} USDC (Polygon L2)
+  • Hyperliquid Perps Balance: $${simHl} USDC
+- Global Portfolio Drawdown Limit: 50.0%
+- Current Portfolio Drawdown: 0.0%`;
 
   try {
     const response = await aiService.generateCompletion([
