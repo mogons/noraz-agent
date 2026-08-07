@@ -104,6 +104,7 @@ describe('CTAlphaAgent', () => {
     const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(0);
@@ -113,6 +114,7 @@ describe('CTAlphaAgent', () => {
     const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(1);

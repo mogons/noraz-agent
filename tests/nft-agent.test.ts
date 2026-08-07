@@ -157,6 +157,7 @@ describe('NFTScreeningAgent', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([mkSignal()]));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(0);
@@ -166,6 +167,7 @@ describe('NFTScreeningAgent', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([mkSignal()]));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const raw = agent.evaluateListing(mkSignal())!;
     const expected = Math.round(raw.confidenceScore * 0.7 + 0.3 * 90);

@@ -182,6 +182,7 @@ describe('PerpsScreeningAgent', () => {
     const agent = new PerpsScreeningAgent(mkFakeAdapter({ BTC: mkMarket() }));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(0);
@@ -192,6 +193,7 @@ describe('PerpsScreeningAgent', () => {
     const agent = new PerpsScreeningAgent(mkFakeAdapter({ BTC: mkMarket() }));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
+      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
     };
     const raw = await (agent as any).evaluateSetup(mkMarket());
     const expected = Math.round(raw.confidence * 0.7 + 0.3 * 90);
