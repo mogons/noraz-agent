@@ -254,28 +254,32 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
   embed.addFields({
     name: '📊 Market Metrics',
-    value: `💰 **MC:** ${payload.marketCap || 'N/A'}${priceStr}\n💧 **Liquidity:** ${payload.liquidity || 'N/A'} (🔥 100% Burnt)${volStr}${txStr}`,
+    value: `💰 **MC:** ${payload.marketCap || 'N/A'}${priceStr}\n💧 **Liquidity:** ${payload.liquidity || 'N/A'}${volStr}${txStr}`,
     inline: false,
   });
 
-  const top10 = payload.top10Pct || '22.4%';
-  const devPct = payload.devHoldingPct || '0.0%';
-  const sniper = payload.sniperPct || '7.8%';
-  const bundler = payload.bundlerPct || '11.2%';
-  const dexPaid = payload.dexPaidStatus || '✅ Paid';
+  const securityParts: string[] = [];
+  if (payload.top10Pct) securityParts.push(`👥 **Top 10:** ${payload.top10Pct}`);
+  if (payload.devHoldingPct) securityParts.push(`👨‍💻 **Dev:** ${payload.devHoldingPct}`);
+  if (payload.sniperPct) securityParts.push(`🐋 **Snipers:** ${payload.sniperPct}`);
+  if (payload.bundlerPct) securityParts.push(`🤖 **Bundler:** ${payload.bundlerPct}`);
+  if (payload.dexPaidStatus) securityParts.push(`💳 **DEX Paid:** ${payload.dexPaidStatus}`);
 
-  embed.addFields({
-    name: '🛡️ Security & Holder Audit Checklist',
-    value: `👥 **Top 10:** ${top10} | 👨‍💻 **Dev:** ${devPct} | 🐋 **Snipers:** ${sniper}\n🤖 **Bundler:** ${bundler} | 💳 **DEX Paid:** ${dexPaid} | ⚠️ **Risk:** 0/100 (Safe)\n🚫 **NoMint:** ✅ | ❄️ **NoFreeze:** ✅ | 🔥 **LP Burnt:** 100%`,
-    inline: false,
-  });
+  if (securityParts.length > 0) {
+    embed.addFields({
+      name: '🛡️ Security & Holder Audit',
+      value: securityParts.join(' | '),
+      inline: false,
+    });
+  }
 
-  const smartMoneyText = payload.smartMoneyInfo || (isSolana ? '🧠 **Smart Traders:** 3 Smart Wallets Accumulating (+12.4 SOL)' : '🧠 **Smart Traders:** 3 Smart Wallets Accumulating (+1.5 ETH)');
-  embed.addFields({
-    name: '🧠 Smart Money Tracking & AI Consensus',
-    value: `${smartMoneyText}\n🟢 **Swarm Consensus Score:** **${confidenceStr} (PASSED)**`,
-    inline: false,
-  });
+  if (payload.smartMoneyInfo) {
+    embed.addFields({
+      name: '🧠 Smart Money Tracking & AI Consensus',
+      value: `${payload.smartMoneyInfo}\n🟢 **Swarm Consensus Score:** **${confidenceStr} (PASSED)**`,
+      inline: false,
+    });
+  }
 
   if (payload.contractAddress) {
     const ca = payload.contractAddress;

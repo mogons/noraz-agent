@@ -28,6 +28,25 @@ export const priceAlertService = new PriceAlertService();
 export const tradeJournalService = new TradeJournalService();
 export const walletService = new WalletService();
 
+async function buildDashboardOptions(): Promise<import('../embeds/dashboard-embed.js').DashboardEmbedOptions> {
+  let solBalance: string | null = null;
+  let ethBalance: string | null = null;
+  try {
+    const sol = await walletService.getSolanaBalance();
+    if (sol) solBalance = `${sol.balance.toFixed(4)} SOL${sol.simulated ? ' (Simulated)' : ''}`;
+  } catch {
+    solBalance = null;
+  }
+  try {
+    const eth = await walletService.getEvmBalance(1);
+    if (eth) ethBalance = `${eth.balance.toFixed(4)} ETH${eth.simulated ? ' (Simulated)' : ''}`;
+  } catch {
+    ethBalance = null;
+  }
+  const activeAlerts = priceAlertService.listAlerts().filter((a) => !a.triggered).length;
+  return { solBalance, ethBalance, activeAlerts };
+}
+
 export async function handleInteraction(
   interaction: Interaction,
   hub: AthenaHub,
@@ -424,7 +443,7 @@ async function handleChatInput(
       }
     }
   } else if (commandName === 'menu' || commandName === 'dashboard') {
-    const dash = createDashboardComponents(hub);
+    const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.reply(dash);
   } else if (commandName === 'journal') {
     const subcommand = interaction.options.getSubcommand();
@@ -640,7 +659,7 @@ async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: A
     const newState = !currentState;
     hub.setAgentActive(selectedAgent, newState);
 
-    const dash = createDashboardComponents(hub);
+    const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.update(dash);
   }
 }
@@ -677,23 +696,27 @@ async function handleButtonPress(interaction: ButtonInteraction, hub: AthenaHub)
 
   if (customId === 'btn_start_all_agents') {
     hub.setAllAgentsActive(true);
-    const dash = createDashboardComponents(hub);
+    const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.update(dash);
   } else if (customId === 'btn_pause_all_agents') {
     hub.setAllAgentsActive(false);
-    const dash = createDashboardComponents(hub);
+    const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.update(dash);
   } else if (customId === 'btn_emergency_stop') {
     hub.setAllAgentsActive(false);
     await interaction.reply({ content: '🛑 **EMERGENCY CIRCUIT BREAKER TRIGGERED!** All sub-agents paused & pending orders halted.', ephemeral: false });
   } else if (customId === 'btn_view_wallets') {
-    await interaction.reply({ content: '🔑 **Burner Wallets:** Solana: `10.00 SOL` | EVM: `1.50 ETH` (DRY_RUN Active).', ephemeral: true });
+    const sol = await walletService.getSolanaBalance();
+    const eth = await walletService.getEvmBalance(1);
+    const solStr = sol ? `${sol.balance.toFixed(4)} SOL${sol.simulated ? ' (Simulated)' : ''}` : '— (unavailable)';
+    const ethStr = eth ? `${eth.balance.toFixed(4)} ETH${eth.simulated ? ' (Simulated)' : ''}` : '— (unavailable)';
+    await interaction.reply({ content: `🔑 **Burner Wallets:** Solana: \`${solStr}\` | EVM: \`${ethStr}\`.`, ephemeral: true });
   } else if (customId === 'btn_view_alerts') {
     const alerts = priceAlertService.listAlerts(interaction.user.id);
     const count = alerts.length;
     await interaction.reply({ content: `🔔 **Active Price Alerts:** You have \`${count}\` active price alerts set. Use \`/alert list\` to view.`, ephemeral: true });
   } else if (customId === 'btn_refresh_dashboard') {
-    const dash = createDashboardComponents(hub);
+    const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.update(dash);
   } else if (customId.startsWith('execute_buy_')) {
     const parts = customId.split('_');

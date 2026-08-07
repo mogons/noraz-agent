@@ -7,13 +7,27 @@ import {
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
+import { isDryRun as isDryRunMode } from '../../config/config.js';
 
-export function createDashboardComponents(hub: AthenaHub) {
+export interface DashboardEmbedOptions {
+  solBalance?: string | null;
+  ethBalance?: string | null;
+  activeAlerts?: number;
+}
+
+export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOptions = {}) {
   const isTwexSet = Boolean(process.env.TWEX_API_KEY);
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 
   const getStatusBadge = (domain: string) => (hub.isAgentActive(domain) ? '`🟢 RUNNING`' : '`🔴 PAUSED`');
+
+  const risk = hub.getRiskManager().getRiskState();
+  const executionMode = isDryRunMode() ? 'DRY_RUN (Safe Simulation)' : 'LIVE';
+  const drawdownStr = `Current Drawdown: \`${risk.currentDrawdownPct.toFixed(1)}%\` (Max: \`${risk.maxDrawdownLimitPct.toFixed(1)}%\`)`;
+  const solBalanceStr = opts.solBalance ?? '`— (unavailable)`';
+  const ethBalanceStr = opts.ethBalance ?? '`— (unavailable)`';
+  const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
   const embed = new EmbedBuilder()
     .setTitle('🏛️ ATHENA MULTI-AGENT CONTROL CENTER')
@@ -26,9 +40,8 @@ export function createDashboardComponents(hub: AthenaHub) {
       {
         name: '⚙️ Operating Mode & Risk Safeguards',
         value:
-          '• **Execution Mode:** `DRY_RUN (Safe Simulation)`\n' +
-          '• **Max Daily Drawdown:** `50.0%`\n' +
-          '• **Current Drawdown:** `0.0%`',
+          `• **Execution Mode:** \`${executionMode}\`\n` +
+          `• ${drawdownStr}`,
         inline: false,
       },
       {
@@ -46,17 +59,17 @@ export function createDashboardComponents(hub: AthenaHub) {
       {
         name: '🌐 Connected API Keys & Social Intelligence Status',
         value:
-          `• 🐦 **TwexAPI (X/Twitter Scraping):** ${isTwexSet ? '`🟢 CONFIGURED`' : '`⚪ FREE FALLBACK`'}\n` +
-          `• 🖼️ **OpenSea API (NFT Data):** ${isOpenSeaSet ? '`🟢 CONFIGURED`' : '`⚪ MOCK SIMULATION`'}\n` +
-          `• 🧠 **LLM AI Reasoning API:** ${isLlmSet ? '`🟢 CONFIGURED`' : '`⚪ LOCAL HEURISTIC MODE`'}`,
+          `• 🐦 **TwexAPI (X/Twitter Scraping):** ${isTwexSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED (fail-closed)`'}\n` +
+          `• 🖼️ **OpenSea API (NFT Data):** ${isOpenSeaSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED (fail-closed)`'}\n` +
+          `• 🧠 **LLM AI Reasoning API:** ${isLlmSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED`'}`,
         inline: false,
       },
       {
         name: '🔑 Wallet Balances & Active Alerts',
         value:
-          '• **Solana Balance:** `10.00 SOL` ($2,100 USD)\n' +
-          '• **EVM Balance:** `1.50 ETH` ($4,200 USD)\n' +
-          '• **Active Price Alerts:** `0 Active Alerts` (Use `/alert` or ask in chat)',
+          `• **Solana Balance:** ${solBalanceStr}\n` +
+          `• **EVM Balance:** ${ethBalanceStr}\n` +
+          `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
         inline: false,
       }
     )
