@@ -36,19 +36,26 @@ const CHAIN_MAP: Record<string, 'Base' | 'Ethereum' | 'Robinhood'> = {
   robinhood: 'Robinhood',
 };
 
+// Uniswap v3 is scarce on Base; Aerodrome is the dominant concentrated-liquidity DEX there.
+const EVM_LP_QUERIES: Array<{ q: string; dexIds: string[] }> = [
+  { q: 'uniswap v3', dexIds: ['uniswap'] },
+  { q: 'aerodrome', dexIds: ['aerodrome', 'aerodrome_finance', 'aerodrome-v1'] },
+];
+
 export class UniswapLPAdapter {
   public async fetchTopYieldEVMPools(minTvlUsd: number = 5000): Promise<UniswapPoolSignal[]> {
     try {
       const pools: UniswapPoolSignal[] = [];
       for (const chainId of ['base', 'ethereum']) {
-        const url = `https://api.dexscreener.com/latest/dex/search?q=uniswap%20v3`;
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const data = (await res.json()) as { pairs?: DexScreenerPair[] };
-        const pairs = (data.pairs || [])
-          .filter((p) => p.dexId === 'uniswap' && p.chainId === chainId)
-          .slice(0, 10);
-        for (const p of pairs) {
+        for (const query of EVM_LP_QUERIES) {
+          const url = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query.q)}`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = (await res.json()) as { pairs?: DexScreenerPair[] };
+          const pairs = (data.pairs || [])
+            .filter((p) => query.dexIds.includes(p.dexId) && p.chainId === chainId)
+            .slice(0, 10);
+          for (const p of pairs) {
           const tvlUsd = Number(p.liquidity?.usd) || 0;
           const volume24hUsd = Number(p.volume?.h24) || 0;
           if (!p.pairAddress || !(tvlUsd > 0) || !(volume24hUsd > 0)) continue;
@@ -60,7 +67,7 @@ export class UniswapLPAdapter {
           const activeTvlUsd = tvlUsd * 0.3;
           pools.push({
             poolAddress: p.pairAddress,
-            pairName: `${p.baseToken.symbol}-${p.quoteToken.symbol} (Uniswap v3 ${network})`,
+            pairName: `${p.baseToken.symbol}-${p.quoteToken.symbol} (${p.dexId} ${network})`,
             network,
             feeTierPercentage: feeTierPct,
             tvlUsd,
@@ -78,8 +85,9 @@ export class UniswapLPAdapter {
               minPrice: Number(p.priceUsd) * 0.95 || 0,
               maxPrice: Number(p.priceUsd) * 1.05 || 0,
             },
-            aiRecommendation: `Live Uniswap v3 pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume4hUsd / 1000).toFixed(1)}k 4h volume.`,
+            aiRecommendation: `Live ${p.dexId} pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume4hUsd / 1000).toFixed(1)}k 4h volume.`,
           });
+        }
         }
       }
       return pools.filter((p) => p.tvlUsd >= minTvlUsd);
