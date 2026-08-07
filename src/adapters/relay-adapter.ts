@@ -186,6 +186,20 @@ export class RelayAdapter {
     return `https://relay.link/swap?fromChain=${chainId}&toChain=${chainId}&fromCurrency=${encodeURIComponent(fromCurrency)}&toCurrency=${encodeURIComponent(toCurrency)}&amount=${amount}`;
   }
 
+  private async callRelayQuote(payload: Record<string, unknown>): Promise<{ ok: boolean; data?: any; err?: string }> {
+    try {
+      const res = await fetch('https://api.relay.link/quote/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return { ok: false, err: `Relay API returned HTTP ${res.status}` };
+      return { ok: true, data: await res.json() };
+    } catch (err: unknown) {
+      return { ok: false, err: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
   public async getBridgeQuote(request: RelayQuoteRequest): Promise<RelayQuoteResult> {
     const origin = this.parseChain(request.originChain);
     const destination = this.parseChain(request.destinationChain);
@@ -214,65 +228,55 @@ export class RelayAdapter {
       };
     }
 
-    try {
-      const apiUrl = 'https://api.relay.link/quote/v2';
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: request.userAddress || '0x0000000000000000000000000000000000000000',
-          originChainId: origin.id,
-          destinationChainId: destination.id,
-          currency: tokenSymbol,
-          amount: (amount * 1e18).toString(),
-        }),
-      });
+    const res = await this.callRelayQuote({
+      user: request.userAddress || '0x0000000000000000000000000000000000000000',
+      originChainId: origin.id,
+      destinationChainId: destination.id,
+      currency: tokenSymbol,
+      amount: (amount * 1e18).toString(),
+    });
 
-      if (!response.ok) {
-        throw new Error(`Relay API returned HTTP ${response.status}`);
-      }
-
-      const data: Record<string, unknown> = await response.json() as Record<string, unknown>;
-      const details = data.details as Record<string, unknown> | undefined;
-      const fees = data.fees as Record<string, unknown> | undefined;
-      const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
-      const relayer = fees?.relayer as Record<string, unknown> | undefined;
-      const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : amount * 0.9985;
-      const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 1.25;
-      const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 15;
-
+    if (!res.ok) {
       return {
-        success: true,
+        success: false,
         originChainName: origin.name,
         originChainId: origin.id,
         destinationChainName: destination.name,
         destinationChainId: destination.id,
         amountIn: amount,
-        expectedAmountOut: expectedOut,
+        expectedAmountOut: 0,
         tokenSymbol,
-        feeUsd,
-        estimatedDurationSeconds: timeSec,
+        feeUsd: 0,
+        estimatedDurationSeconds: 0,
         relayWebUrl,
         simulated: false,
-      };
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[RELAY ADAPTER] Relay API live call fallback (${errMsg}). Using Relay Web Link.`);
-      return {
-        success: true,
-        originChainName: origin.name,
-        originChainId: origin.id,
-        destinationChainName: destination.name,
-        destinationChainId: destination.id,
-        amountIn: amount,
-        expectedAmountOut: Number((amount * 0.9985).toFixed(6)),
-        tokenSymbol,
-        feeUsd: 1.25,
-        estimatedDurationSeconds: 15,
-        relayWebUrl,
-        simulated: true,
+        error: res.err || 'Relay quote unavailable.',
       };
     }
+
+    const data = res.data as Record<string, unknown>;
+    const details = data.details as Record<string, unknown> | undefined;
+    const fees = data.fees as Record<string, unknown> | undefined;
+    const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
+    const relayer = fees?.relayer as Record<string, unknown> | undefined;
+    const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : 0;
+    const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0;
+    const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 0;
+
+    return {
+      success: true,
+      originChainName: origin.name,
+      originChainId: origin.id,
+      destinationChainName: destination.name,
+      destinationChainId: destination.id,
+      amountIn: amount,
+      expectedAmountOut: expectedOut,
+      tokenSymbol,
+      feeUsd,
+      estimatedDurationSeconds: timeSec,
+      relayWebUrl,
+      simulated: false,
+    };
   }
 
   /**
@@ -324,65 +328,55 @@ export class RelayAdapter {
       };
     }
 
-    try {
-      const apiUrl = 'https://api.relay.link/quote/v2';
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: request.userAddress || '0x0000000000000000000000000000000000000000',
-          originChainId: chain.id,
-          destinationChainId: chain.id,
-          originCurrency: fromAddress,
-          destinationCurrency: toAddress,
-          amount: (amount * 1e18).toString(),
-          tradeType: 'EXACT_INPUT',
-        }),
-      });
+    const res = await this.callRelayQuote({
+      user: request.userAddress || '0x0000000000000000000000000000000000000000',
+      originChainId: chain.id,
+      destinationChainId: chain.id,
+      originCurrency: fromAddress,
+      destinationCurrency: toAddress,
+      amount: (amount * 1e18).toString(),
+      tradeType: 'EXACT_INPUT',
+    });
 
-      if (!response.ok) {
-        throw new Error(`Relay Swap API returned HTTP ${response.status}`);
-      }
-
-      const data: Record<string, unknown> = await response.json() as Record<string, unknown>;
-      const details = data.details as Record<string, unknown> | undefined;
-      const fees = data.fees as Record<string, unknown> | undefined;
-      const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
-      const relayer = fees?.relayer as Record<string, unknown> | undefined;
-      const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : amount * 0.997;
-      const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0.85;
-      const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 5;
-
+    if (!res.ok) {
       return {
-        success: true,
+        success: false,
         chainName: chain.name,
         chainId: chain.id,
         fromToken: fromSymbol,
         toToken: toSymbol,
         amountIn: amount,
-        expectedAmountOut: expectedOut,
-        feeUsd,
-        estimatedDurationSeconds: timeSec,
+        expectedAmountOut: 0,
+        feeUsd: 0,
+        estimatedDurationSeconds: 0,
         relayWebUrl,
         simulated: false,
-      };
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[RELAY ADAPTER] Relay Swap API fallback (${errMsg}). Using Relay Web Link.`);
-      return {
-        success: true,
-        chainName: chain.name,
-        chainId: chain.id,
-        fromToken: fromSymbol,
-        toToken: toSymbol,
-        amountIn: amount,
-        expectedAmountOut: Number((amount * 0.997).toFixed(6)),
-        feeUsd: 0.85,
-        estimatedDurationSeconds: 5,
-        relayWebUrl,
-        simulated: true,
+        error: res.err || 'Relay swap quote unavailable.',
       };
     }
+
+    const data = res.data as Record<string, unknown>;
+    const details = data.details as Record<string, unknown> | undefined;
+    const fees = data.fees as Record<string, unknown> | undefined;
+    const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
+    const relayer = fees?.relayer as Record<string, unknown> | undefined;
+    const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : 0;
+    const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0;
+    const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 0;
+
+    return {
+      success: true,
+      chainName: chain.name,
+      chainId: chain.id,
+      fromToken: fromSymbol,
+      toToken: toSymbol,
+      amountIn: amount,
+      expectedAmountOut: expectedOut,
+      feeUsd,
+      estimatedDurationSeconds: timeSec,
+      relayWebUrl,
+      simulated: false,
+    };
   }
 
   /**
@@ -416,67 +410,57 @@ export class RelayAdapter {
       };
     }
 
-    try {
-      const tokenAddress = this.resolveTokenAddress(tokenSymbol, chain.id);
-      const apiUrl = 'https://api.relay.link/quote/v2';
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: request.userAddress || '0x0000000000000000000000000000000000000000',
-          recipient,
-          originChainId: chain.id,
-          destinationChainId: chain.id,
-          originCurrency: tokenAddress,
-          destinationCurrency: tokenAddress,
-          amount: (amount * 1e18).toString(),
-          tradeType: 'EXACT_INPUT',
-        }),
-      });
+    const tokenAddress = this.resolveTokenAddress(tokenSymbol, chain.id);
+    const res = await this.callRelayQuote({
+      user: request.userAddress || '0x0000000000000000000000000000000000000000',
+      recipient,
+      originChainId: chain.id,
+      destinationChainId: chain.id,
+      originCurrency: tokenAddress,
+      destinationCurrency: tokenAddress,
+      amount: (amount * 1e18).toString(),
+      tradeType: 'EXACT_INPUT',
+    });
 
-      if (!response.ok) {
-        throw new Error(`Relay Send API returned HTTP ${response.status}`);
-      }
-
-      const data: Record<string, unknown> = await response.json() as Record<string, unknown>;
-      const details = data.details as Record<string, unknown> | undefined;
-      const fees = data.fees as Record<string, unknown> | undefined;
-      const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
-      const relayer = fees?.relayer as Record<string, unknown> | undefined;
-      const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : amount * 0.999;
-      const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0.35;
-      const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 3;
-
+    if (!res.ok) {
       return {
-        success: true,
+        success: false,
         chainName: chain.name,
         chainId: chain.id,
         tokenSymbol,
         amountIn: amount,
-        expectedAmountOut: expectedOut,
+        expectedAmountOut: 0,
         recipientAddress: recipient,
-        feeUsd,
-        estimatedDurationSeconds: timeSec,
+        feeUsd: 0,
+        estimatedDurationSeconds: 0,
         relayWebUrl,
         simulated: false,
-      };
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[RELAY ADAPTER] Relay Send API fallback (${errMsg}). Using Relay Web Link.`);
-      return {
-        success: true,
-        chainName: chain.name,
-        chainId: chain.id,
-        tokenSymbol,
-        amountIn: amount,
-        expectedAmountOut: Number((amount * 0.999).toFixed(6)),
-        recipientAddress: recipient,
-        feeUsd: 0.35,
-        estimatedDurationSeconds: 3,
-        relayWebUrl,
-        simulated: true,
+        error: res.err || 'Relay send quote unavailable.',
       };
     }
+
+    const data = res.data as Record<string, unknown>;
+    const details = data.details as Record<string, unknown> | undefined;
+    const fees = data.fees as Record<string, unknown> | undefined;
+    const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
+    const relayer = fees?.relayer as Record<string, unknown> | undefined;
+    const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : 0;
+    const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0;
+    const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 0;
+
+    return {
+      success: true,
+      chainName: chain.name,
+      chainId: chain.id,
+      tokenSymbol,
+      amountIn: amount,
+      expectedAmountOut: expectedOut,
+      recipientAddress: recipient,
+      feeUsd,
+      estimatedDurationSeconds: timeSec,
+      relayWebUrl,
+      simulated: false,
+    };
   }
 
   /**
@@ -495,25 +479,12 @@ export class RelayAdapter {
       };
     }
 
-    if (!walletService) {
-      return quote;
-    }
-
-    try {
-      if (quote.originChainId === 792703809) {
-        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
-        const solanaAdapter = new SolanaTradeAdapter();
-        const res = await solanaAdapter.sendToken({ recipientAddress: quote.relayWebUrl, amountSol: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      } else {
-        const { EVMTradeAdapter } = await import('./evm-adapter.js');
-        const evmAdapter = new EVMTradeAdapter();
-        const res = await evmAdapter.swapToken({ chain: quote.originChainId, fromToken: request.tokenSymbol || 'ETH', toToken: request.tokenSymbol || 'ETH', amountEth: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      }
-    } catch (err: any) {
-      return { ...quote, error: err.message };
-    }
+    // Honest stub: live bridge execution is not enabled. Never fabricate a fill.
+    return {
+      ...quote,
+      success: false,
+      error: 'Live bridge execution not enabled. Configure DRY_RUN=false and execution wallet first.',
+    };
   }
 
   /**

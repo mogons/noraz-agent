@@ -316,13 +316,8 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         }
       } else if (!text.startsWith('/') && aiService) {
         try {
-          const systemPrompt = `You are Athena, a chill, brilliant, and interactive AI crypto trading companion.
-You chat naturally and casually like a smart crypto-native friend (gaya bahasa santai, ramah, dan interaktif), but always stay sharp, accurate, and direct.
-
-CRITICAL TONE & COST EFFICIENCY RULES:
-- Be casual, friendly, and conversational (bahasa santai, ga kaku, ga kelewat formal).
-- Be extremely TO THE POINT and concise. NO fluff, NO introductory fillers, NO repetitive summaries (hemat token, langsung ke inti).
-- Use clear markdown bullet points when explaining technical data or steps.`;
+          const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE;
 
           const aiRes = await aiService.generateCompletion([
             { role: 'system', content: systemPrompt },
