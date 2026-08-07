@@ -223,6 +223,7 @@ async function handleChatInput(
         `🧠 **Athena Verdict:** **HIGH CONFIDENCE RUNNER CANDIDATE (Confidence Score: 88%)**`,
     });
   } else if (commandName === 'screening') {
+    await interaction.deferReply({ ephemeral: false });
     const subcommand = interaction.options.getSubcommand();
     const explicitAgent = interaction.options.getString('agent');
     const channelName = (interaction.channel as any)?.name?.toLowerCase() || '';
@@ -250,16 +251,15 @@ async function handleChatInput(
         // Control room / general channel — operate on ALL agents
         if (subcommand === 'start') {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, true));
-          await interaction.reply('⚡ **Global Master Screening Activated!** All 8 Sub-Agent domains are now active.');
+          await interaction.editReply('⚡ **Global Master Screening Activated!** All 8 Sub-Agent domains are now active.');
         } else {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, false));
-          await interaction.reply('⏸️ **Global Master Screening Paused!** All 8 Sub-Agent domains are now paused.');
+          await interaction.editReply('⏸️ **Global Master Screening Paused!** All 8 Sub-Agent domains are now paused.');
         }
         return;
       } else {
-        await interaction.reply({
+        await interaction.editReply({
           content: '⚠️ Please specify an agent domain (e.g. `/screening start agent:meme-solana`) or run this command inside a dedicated `#call-*` channel!',
-          ephemeral: true,
         });
         return;
       }
@@ -268,21 +268,20 @@ async function handleChatInput(
     // Validate channel alignment if explicit agent was specified
     const currentChannelMapping = channelDomainMap[channelName];
     if (currentChannelMapping && explicitAgent && currentChannelMapping.agent !== explicitAgent) {
-      await interaction.reply({
+      await interaction.editReply({
         content: `⚠️ **Channel Misalignment Notice:**\n` +
           `Channel <#${interaction.channelId}> is dedicated to **${currentChannelMapping.name}** (\`${currentChannelMapping.agent}\`).\n\n` +
           `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#athena-control-room**!`,
-        ephemeral: true,
       });
       return;
     }
 
     if (subcommand === 'start') {
       hub.toggleChannelScreening(interaction.channelId, targetAgent, true);
-      await interaction.reply(`⚡ **Screening Activated** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
+      await interaction.editReply(`⚡ **Screening Activated** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     } else if (subcommand === 'stop') {
       hub.toggleChannelScreening(interaction.channelId, targetAgent, false);
-      await interaction.reply(`⏸️ **Screening Stopped** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
+      await interaction.editReply(`⏸️ **Screening Stopped** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     }
   } else if (commandName === 'cancel') {
     await interaction.reply({
