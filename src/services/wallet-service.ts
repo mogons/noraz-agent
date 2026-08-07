@@ -16,6 +16,7 @@ export interface BalanceResult {
   symbol: string;
   chain: string;
   usdValue?: number;
+  simulated?: boolean;
 }
 
 /** Supported EVM chain configurations */
@@ -144,12 +145,12 @@ export class WalletService {
     return this.getSolanaKeypair().publicKey.toBase58();
   }
 
-  /** Get Solana SOL balance */
-  public async getSolanaBalance(): Promise<BalanceResult> {
+  /** Get Solana SOL balance (fail-closed: null on live RPC failure) */
+  public async getSolanaBalance(): Promise<BalanceResult | null> {
     const isDryRun = isDryRunMode();
     const simSol = parseFloat(process.env.SIMULATION_BALANCE_SOL || '10.0');
     if (isDryRun) {
-      return { balance: simSol, symbol: 'SOL', chain: 'Solana' };
+      return { balance: simSol, symbol: 'SOL', chain: 'Solana', simulated: true };
     }
     try {
       const keypair = this.getSolanaKeypair();
@@ -158,9 +159,12 @@ export class WalletService {
         balance: balance / LAMPORTS_PER_SOL,
         symbol: 'SOL',
         chain: 'Solana',
+        simulated: false,
       };
-    } catch {
-      return { balance: simSol, symbol: 'SOL', chain: 'Solana' };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] Solana balance query failed: ${message}`);
+      return null;
     }
   }
 
@@ -234,20 +238,82 @@ export class WalletService {
     });
   }
 
-  /** Get Polymarket USDC balance */
-  public async getPolymarketBalance(): Promise<BalanceResult> {
+  /** Get Polymarket USDC balance (real on Polygon; simulated only when DRY_RUN) */
+  public async getPolymarketBalance(): Promise<BalanceResult | null> {
+    const isDryRun = isDryRunMode();
     const simPoly = parseFloat(process.env.SIMULATION_BALANCE_POLYMARKET || '500.0');
-    return { balance: simPoly, symbol: 'USDC', chain: 'Polygon (Polymarket)' };
+    if (isDryRun) {
+      return { balance: simPoly, symbol: 'USDC', chain: 'Polygon (Polymarket)', simulated: true };
+    }
+    let address: string;
+    try {
+      address = this.getEvmAddress();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] Polymarket balance unavailable (no EVM wallet): ${message}`);
+      return null;
+    }
+    try {
+      const rpc = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1, method: 'eth_call',
+          params: [{
+            to: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+            data: `0x70a08231000000000000000000000000${address.replace(/^0x/, '').toLowerCase()}`,
+          }, 'latest'],
+        }),
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { result?: string };
+      const raw = data?.result;
+      if (!raw || raw === '0x') return null;
+      const balance = parseInt(raw, 16) / 1e6;
+      return { balance, symbol: 'USDC', chain: 'Polygon (Polymarket)', simulated: false };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] Polymarket balance query failed: ${message}`);
+      return null;
+    }
   }
 
-  /** Get Hyperliquid Perps USDC balance */
-  public async getHyperliquidBalance(): Promise<BalanceResult> {
+  /** Get Hyperliquid Perps USDC balance (real via info API; simulated only when DRY_RUN) */
+  public async getHyperliquidBalance(): Promise<BalanceResult | null> {
+    const isDryRun = isDryRunMode();
     const simHl = parseFloat(process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0');
-    return { balance: simHl, symbol: 'USDC', chain: 'Hyperliquid Perps' };
+    if (isDryRun) {
+      return { balance: simHl, symbol: 'USDC', chain: 'Hyperliquid Perps', simulated: true };
+    }
+    let address: string;
+    try {
+      address = this.getEvmAddress();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] Hyperliquid balance unavailable (no EVM wallet): ${message}`);
+      return null;
+    }
+    try {
+      const res = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'clearinghouseState', user: address }),
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { marginSummary?: { accountValue?: string } };
+      const value = Number(data.marginSummary?.accountValue);
+      if (!(value > 0)) return null;
+      return { balance: value, symbol: 'USDC', chain: 'Hyperliquid Perps', simulated: false };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] Hyperliquid balance query failed: ${message}`);
+      return null;
+    }
   }
 
-  /** Get EVM native balance (ETH/BNB/MATIC) */
-  public async getEvmBalance(chainId: number): Promise<BalanceResult> {
+  /** Get EVM native balance (ETH/BNB/MATIC); fail-closed on live RPC failure */
+  public async getEvmBalance(chainId: number): Promise<BalanceResult | null> {
     const chainConfig = EVM_CHAINS[chainId];
     const nativeSymbols: Record<number, string> = {
       1: 'ETH', 8453: 'ETH', 42161: 'ETH', 10: 'ETH', 137: 'MATIC', 56: 'BNB',
@@ -258,7 +324,7 @@ export class WalletService {
     const isDryRun = isDryRunMode();
     const simEth = parseFloat(process.env.SIMULATION_BALANCE_ETH || '1.0');
     if (isDryRun) {
-      return { balance: simEth, symbol, chain: chainName };
+      return { balance: simEth, symbol, chain: chainName, simulated: true };
     }
 
     try {
@@ -270,9 +336,12 @@ export class WalletService {
         balance: Number(formatEther(balance)),
         symbol,
         chain: chainName,
+        simulated: false,
       };
-    } catch {
-      return { balance: simEth, symbol, chain: chainName };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[WALLET] EVM balance query failed on chain ${chainId}: ${message}`);
+      return null;
     }
   }
 

@@ -134,7 +134,7 @@ async function handleChatInput(
         try {
           solAddrStr = `\`${walletService.getSolanaAddress()}\``;
           const b = await walletService.getSolanaBalance();
-          solBalStr = `\`${b.balance.toFixed(4)} SOL\``;
+          solBalStr = b === null ? '`— (unavailable)`' : `\`${b.balance.toFixed(4)} SOL\``;
         } catch (e: any) {
           solBalStr = `Error: ${e.message}`;
         }
@@ -144,7 +144,7 @@ async function handleChatInput(
         try {
           evmAddrStr = `\`${walletService.getEvmAddress()}\``;
           const b = await walletService.getEvmBalance(1); // Ethereum
-          evmBalStr = `\`${b.balance.toFixed(4)} ETH\``;
+          evmBalStr = b === null ? '`— (unavailable)`' : `\`${b.balance.toFixed(4)} ETH\``;
         } catch (e: any) {
           evmBalStr = `Error: ${e.message}`;
         }
