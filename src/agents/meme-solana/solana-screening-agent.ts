@@ -1,5 +1,6 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { RugCheckService, RugCheckResult } from '../../services/security-service.js';
+import { PriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 
@@ -18,6 +19,7 @@ export interface SolanaScreeningConfig {
   maxRatTraderRate: number;  // 0.3
   maxBundlerRate: number;    // 0.5
   maxTop10HolderRate: number;// 0.4
+  minTotalFeeUsd: number;    // 500 — global total fees (SOL/ETH native) converted to USD
   passThreshold: number;     // 80
   signalTypes: number[];     // [1..13, 17..21]
   rankLimit: number;         // 20
@@ -32,6 +34,7 @@ const DEFAULT_CONFIG: SolanaScreeningConfig = {
   maxRatTraderRate: 0.3,
   maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
+  minTotalFeeUsd: 500,
   passThreshold: 80,
   signalTypes: [1,2,3,4,5,6,7,8,9,10,11,12,13,17,18,19,20,21],
   rankLimit: 20,
@@ -42,6 +45,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   readonly domain = 'meme-solana';
   private gmgn: GMGNAdapter;
   private rugCheck: RugCheckService;
+  private priceFeed: PriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: SolanaScreeningConfig;
   private seenTokens: Map<string, number> = new Map(); // CA -> timestamp (internal dedup, pruned after 5 min)
@@ -49,6 +53,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   constructor(config?: Partial<SolanaScreeningConfig>) {
     this.gmgn = new GMGNAdapter();
     this.rugCheck = new RugCheckService();
+    this.priceFeed = new PriceFeedService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -65,8 +70,8 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     return [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed].filter((t) => t.address);
   }
 
-  /** Fail-closed pre-filter (pure math, no external API) */
-  public preFilter(t: GMGNRawToken): { ok: boolean; reason: string } {
+  /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
+  public preFilter(t: GMGNRawToken, nativePriceUsd: number | null = null): { ok: boolean; reason: string } {
     if (t.source === 'dexscreener') {
       // DexScreener fallback lacks GMGN social/CTO fields — allow only volume-based Momentum, still age-gated
       if (t.creationTimestamp === null) return { ok: false, reason: `⛔ ${t.symbol}: umur tidak diketahui (fail-closed).` };
@@ -86,6 +91,11 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= this.config.maxRatTraderRate) return { ok: false, reason: `⛔ ${t.symbol}: insider ${(t.ratTraderAmountRate*100).toFixed(0)}% >= ${this.config.maxRatTraderRate*100}%.` };
     if (t.bundlerRate !== null && t.bundlerRate >= this.config.maxBundlerRate) return { ok: false, reason: `⛔ ${t.symbol}: bundler ${(t.bundlerRate*100).toFixed(0)}% >= ${this.config.maxBundlerRate*100}%.` };
     if (t.top10HolderRate !== null && t.top10HolderRate >= this.config.maxTop10HolderRate) return { ok: false, reason: `⛔ ${t.symbol}: top-10 holder ${(t.top10HolderRate*100).toFixed(0)}% >= ${this.config.maxTop10HolderRate*100}%.` };
+    // Global total fees gate: total_fee (native SOL/ETH) × live native price must exceed minTotalFeeUsd
+    if (t.totalFeeNative === null) return { ok: false, reason: `⛔ ${t.symbol}: total fee tidak diketahui (fail-closed).` };
+    if (nativePriceUsd === null || nativePriceUsd <= 0) return { ok: false, reason: `⛔ ${t.symbol}: harga live tidak tersedia — gagal konversi fee (fail-closed).` };
+    const totalFeeUsd = t.totalFeeNative * nativePriceUsd;
+    if (totalFeeUsd < this.config.minTotalFeeUsd) return { ok: false, reason: `⛔ ${t.symbol}: total fee $${totalFeeUsd.toFixed(0)} < $${this.config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).` };
     return { ok: true, reason: 'ok' };
   }
 
@@ -184,6 +194,15 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     console.log('[SOLANA AGENT] Screening pass started (GMGN OpenAPI)...');
     const reports: AgentReport<SolanaSignal>[] = [];
 
+    // 0. Live native price (SOL) — needed once per pass to convert total fees to USD (cached 60s)
+    let nativePriceUsd: number | null = null;
+    try {
+      nativePriceUsd = await this.priceFeed.getPrice('SOL');
+      console.log(`[SOLANA AGENT] SOL price: ${nativePriceUsd !== null ? '$' + nativePriceUsd.toFixed(2) : 'UNAVAILABLE (fee gate will reject all)'}`);
+    } catch (err: any) {
+      console.warn(`[SOLANA AGENT] Gagal ambil harga SOL: ${err.message}`);
+    }
+
     // 1. Collect candidates: signal events (primary) + trenches (alpha)
     const events = await this.gmgn.fetchTokenSignals('sol', this.config.signalTypes);
     const eventTokens = events.map((e) => e.data).filter((t) => t.address);
@@ -193,7 +212,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
 
     // 2. Pre-filter (cheap) then RugCheck (expensive) then detect
     for (const t of candidates) {
-      const filter = this.preFilter(t);
+      const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[SOLANA AGENT] ${filter.reason}`); continue; }
 
       const audit: RugCheckResult = await this.rugCheck.auditSolanaToken(t.address);
@@ -219,7 +238,8 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
             priceUsd: t.priceUsd, liquidityUsd: t.liquidityUsd,
             volume24hUsd: t.volume24hUsd, volume1hUsd: t.volume24hUsd/24,
             smartMoneyCount: t.smartDegenCount, securityAuditPassed: true,
-            socialHypeScore: confidence, gmgn: this.toStrategyGmgn(t),
+            socialHypeScore: confidence,
+            gmgn: { ...this.toStrategyGmgn(t), native_price_usd: nativePriceUsd },
           });
           if (ev && typeof ev.confidence === 'number') {
             if (ev.recommendedAction === 'SKIP') { console.log(`[SOLANA AGENT] ⛔ ${t.symbol}: strategi menolak (${ev.reason})`); continue; }
@@ -271,6 +291,8 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       volume_24h: t.volume24hUsd,
       liquidity: t.liquidityUsd,
       is_wash_trading: t.isWashTrading ? 1 : 0,
+      total_fee: t.totalFeeNative,
+      native_price_usd: null, // filled by the agent per pass (live SOL/ETH price) — see runScreeningPass
       cto_flag: t.ctoFlag ? 1 : 0,
       creator_close: t.creatorClose,
       creator_token_status: t.creatorTokenStatus,

@@ -43,6 +43,7 @@ export interface GMGNRawToken {
   sellTax: string | null;
   dexscrBoostFee: number;
   dexscrAd: number;
+  totalFeeNative: number | null;
   source: 'gmgn' | 'dexscreener';
 }
 
@@ -163,6 +164,9 @@ export class GMGNAdapter {
       sellTax: raw.sell_tax !== undefined && raw.sell_tax !== '' ? String(raw.sell_tax) : null,
       dexscrBoostFee: Number(raw.dexscr_boost_fee ?? 0),
       dexscrAd: Number(raw.dexscr_ad ?? 0),
+      totalFeeNative: typeof raw.total_fee === 'number' && raw.total_fee > 0
+        ? raw.total_fee
+        : (typeof raw.gas_fee === 'number' && raw.gas_fee > 0 ? raw.gas_fee : null),
       source,
     };
   }
@@ -311,6 +315,7 @@ export class GMGNAdapter {
       sellTax: null,
       dexscrBoostFee: 0,
       dexscrAd: 0,
+      totalFeeNative: null, // DexScreener does not expose total fees
       source: 'dexscreener',
     };
   }

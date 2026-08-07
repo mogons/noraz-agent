@@ -19,6 +19,7 @@ export default {
     maxTwitterRenameCount: 3,
     maxTwitterDelPostCount: 5,
     maxTwitterCreateTokenCount: 10,
+    minTotalFeeUsd: 500,
   },
   evaluate(ctx) {
     const p = this.params;
@@ -47,6 +48,14 @@ export default {
     if (top10Holder !== null && top10Holder >= p.maxTop10HolderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Top-10 holder ${(top10Holder * 100).toFixed(1)}% >= ${p.maxTop10HolderRate * 100}%.` };
 
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan (RugCheck) tidak lolos.' };
+
+    // ── Global total fees gate: total_fee (native SOL/ETH) × live native price > $500 ──
+    const totalFeeNative = typeof g.total_fee === 'number' && g.total_fee > 0 ? g.total_fee : null;
+    const nativePriceUsd = typeof g.native_price_usd === 'number' && g.native_price_usd > 0 ? g.native_price_usd : null;
+    if (totalFeeNative === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Total fee tidak diketahui (fail-closed).' };
+    if (nativePriceUsd === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga native live tidak tersedia — gagal konversi fee (fail-closed).' };
+    const totalFeeUsd = totalFeeNative * nativePriceUsd;
+    if (totalFeeUsd < p.minTotalFeeUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Total fee $${totalFeeUsd.toFixed(0)} < $${p.minTotalFeeUsd} (${totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).` };
 
     // ── Social red flags (Twitter/X dev behavior, free — from GMGN fields) ──
     const twitterRename = Number(g.twitter_rename_count ?? 0);
