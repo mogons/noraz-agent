@@ -44,8 +44,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   private rugCheck: RugCheckService;
   private strategyEngine: StrategyEngine;
   private config: SolanaScreeningConfig;
-  private seenTokens: Map<string, number> = new Map(); // CA -> timestamp (internal dedup)
-  private trackedCandidates: Map<string, GMGNRawToken> = new Map(); // CA -> enriched token
+  private seenTokens: Map<string, number> = new Map(); // CA -> timestamp (internal dedup, pruned after 5 min)
 
   constructor(config?: Partial<SolanaScreeningConfig>) {
     this.gmgn = new GMGNAdapter();
@@ -64,14 +63,6 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   public async collectTrenches(): Promise<GMGNRawToken[]> {
     const trenches = await this.gmgn.fetchTrenches('sol', { limit: this.config.trenchesLimit });
     return [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed].filter((t) => t.address);
-  }
-
-  /** 5-min cadence: rank enrichment for tracked candidates */
-  public async enrichTracked(): Promise<void> {
-    const rankTokens = await this.gmgn.fetchRank('sol', { interval: '1h', limit: this.config.rankLimit });
-    for (const r of rankTokens) {
-      if (r.address) this.trackedCandidates.set(r.address.toLowerCase(), r);
-    }
   }
 
   /** Fail-closed pre-filter (pure math, no external API) */
@@ -164,8 +155,9 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       priceUsd: t.priceUsd > 0 ? `$${t.priceUsd}` : 'N/A',
       marketCap: t.marketCapUsd > 0 ? `$${(t.marketCapUsd/1000).toFixed(1)}k` : 'N/A',
       liquidity: t.liquidityUsd > 0 ? `$${(t.liquidityUsd/1000).toFixed(1)}k` : 'N/A',
-      volume5m: t.priceChange5m !== null ? `${t.priceChange5m > 0 ? '+' : ''}${t.priceChange5m.toFixed(1)}%` : 'N/A',
-      volume1h: t.priceChange1h !== null ? `${t.priceChange1h > 0 ? '+' : ''}${t.priceChange1h.toFixed(1)}%` : 'N/A',
+      // Honest card: we have no real 5m/1h volume breakdown — price-change data lives in reasons/thesis
+      volume5m: 'N/A',
+      volume1h: 'N/A',
       volume24h: t.volume24hUsd > 0 ? `$${(t.volume24hUsd/1000).toFixed(1)}k` : 'N/A',
       txRatio,
       top10Pct: top10Str,
@@ -199,15 +191,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     const trenchTokens = [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed];
     const candidates = this.dedupe([...eventTokens, ...trenchTokens]);
 
-    // 2. Enrich tracked candidates with rank data (5-min cadence info)
-    const rankTokens = await this.gmgn.fetchRank('sol', { interval: '1h', limit: this.config.rankLimit });
-    const rankByAddr = new Map(rankTokens.map((r) => [r.address.toLowerCase(), r]));
-    for (const t of candidates) {
-      const enriched = rankByAddr.get(t.address.toLowerCase());
-      if (enriched) this.trackedCandidates.set(t.address.toLowerCase(), enriched);
-    }
-
-    // 3. Pre-filter (cheap) then RugCheck (expensive) then detect
+    // 2. Pre-filter (cheap) then RugCheck (expensive) then detect
     for (const t of candidates) {
       const filter = this.preFilter(t);
       if (!filter.ok) { console.log(`[SOLANA AGENT] ${filter.reason}`); continue; }
@@ -259,6 +243,10 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   /** Dedupe by contract address (case-insensitive), 60s cooldown via internal map */
   public dedupe(tokens: GMGNRawToken[]): GMGNRawToken[] {
     const now = Date.now();
+    // Prune stale entries (> 5 min) so the 24/7 daemon never leaks memory
+    for (const [ca, ts] of this.seenTokens) {
+      if (now - ts > 300_000) this.seenTokens.delete(ca);
+    }
     const out: GMGNRawToken[] = [];
     for (const t of tokens) {
       const key = t.address.toLowerCase();
@@ -271,7 +259,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     return out;
   }
 
-  /** Map GMGNRawToken -> plain object for the strategy extension context */
+  /** Map GMGNRawToken -> snake_case GMGN field contract consumed by strategy .mjs modules */
   public toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
     return {
       chain: t.chain,
@@ -279,26 +267,31 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       symbol: t.symbol,
       name: t.name,
       source: t.source,
-      ctoFlag: t.ctoFlag,
-      creatorClose: t.creatorClose,
-      creatorTokenStatus: t.creatorTokenStatus,
-      devTeamHoldRate: t.devTeamHoldRate,
-      rugRatio: t.rugRatio,
-      bundlerRate: t.bundlerRate,
-      ratTraderAmountRate: t.ratTraderAmountRate,
-      top10HolderRate: t.top10HolderRate,
-      smartDegenCount: t.smartDegenCount,
-      renownedCount: t.renownedCount,
+      ageHours: t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null,
+      volume_24h: t.volume24hUsd,
+      liquidity: t.liquidityUsd,
+      is_wash_trading: t.isWashTrading ? 1 : 0,
+      cto_flag: t.ctoFlag ? 1 : 0,
+      creator_close: t.creatorClose,
+      creator_token_status: t.creatorTokenStatus,
+      dev_team_hold_rate: t.devTeamHoldRate,
+      rug_ratio: t.rugRatio,
+      bundler_rate: t.bundlerRate,
+      rat_trader_amount_rate: t.ratTraderAmountRate,
+      top_10_holder_rate: t.top10HolderRate,
+      smart_degen_count: t.smartDegenCount,
+      renowned_count: t.renownedCount,
       buys: t.buys,
       sells: t.sells,
       swaps: t.swaps,
-      holderCount: t.holderCount,
-      marketCapUsd: t.marketCapUsd,
-      priceChange5m: t.priceChange5m,
-      priceChange1h: t.priceChange1h,
-      visitingCount: t.visitingCount,
-      squareMentions: t.squareMentions,
-      twitterRenameCount: t.twitterRenameCount,
+      holder_count: t.holderCount,
+      market_cap_usd: t.marketCapUsd,
+      price_change_percent5m: t.priceChange5m,
+      price_change_percent1h: t.priceChange1h,
+      visiting_count: t.visitingCount,
+      twitter_rename_count: t.twitterRenameCount,
+      twitter_del_post_token_count: t.twitterDelPostCount,
+      twitter_create_token_count: t.twitterCreateTokenCount,
     };
   }
 

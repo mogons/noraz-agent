@@ -24,6 +24,9 @@ database/*.json
 database/athena_state.json*
 prisma/dev.db
 
+# Strategy Engine runtime state
+strategies/.active.json
+
 # Logs & Diagnostics
 logs/
 *.log

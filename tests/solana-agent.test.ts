@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { SolanaScreeningAgent, SolanaSignal } from '../src/agents/meme-solana/solana-screening-agent.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
+
+const requireEsm = createRequire(import.meta.url);
 
 const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   chain: 'sol', address: 'addr1', symbol: 'TEST', name: 'Test Token',
@@ -70,5 +74,42 @@ describe('SolanaScreeningAgent', () => {
     const reports = await agent.runScreeningPass();
     expect(Array.isArray(reports)).toBe(true);
     expect(reports.length).toBe(0);
+  });
+
+  it('toStrategyGmgn contract feeds the default strategy to a pass (no silent SKIP)', async () => {
+    const agent = new SolanaScreeningAgent();
+    const token = mkToken(); // healthy CTO token
+    const gmgnCtx = agent.toStrategyGmgn(token);
+    expect(gmgnCtx.ageHours).toBeGreaterThan(0);
+    expect(gmgnCtx.cto_flag).toBe(1);
+    expect(gmgnCtx.volume_24h).toBe(token.volume24hUsd);
+
+    const strat = (requireEsm(path.join(process.cwd(), 'strategies', 'meme-solana-default.mjs')) as any).default;
+    const ev = strat.evaluate({
+      domain: 'MEME_SOLANA',
+      symbol: token.symbol,
+      contractAddress: token.address,
+      priceUsd: token.priceUsd,
+      liquidityUsd: token.liquidityUsd,
+      volume24hUsd: token.volume24hUsd,
+      volume1hUsd: token.volume24hUsd / 24,
+      smartMoneyCount: token.smartDegenCount,
+      securityAuditPassed: true,
+      socialHypeScore: 85,
+      gmgn: gmgnCtx,
+    });
+    expect(ev.recommendedAction).not.toBe('SKIP');
+    expect(ev.confidence).toBeGreaterThanOrEqual(80);
+  });
+
+  it('dedupe prunes seenTokens entries older than 5 minutes', () => {
+    const agent = new SolanaScreeningAgent();
+    const old = Date.now() - 6 * 60 * 1000;
+    (agent as any).seenTokens.set('stale1', old);
+    (agent as any).seenTokens.set('fresh1', Date.now());
+    agent.dedupe([mkToken({ address: 'fresh1' })]);
+    const seen = (agent as any).seenTokens;
+    expect(seen.has('stale1')).toBe(false);
+    expect(seen.has('fresh1')).toBe(true);
   });
 });

@@ -72,9 +72,12 @@ export class SolanaTradeAdapter {
     if (this.isDryRun) {
       // Realistic dry run: fetch REAL Jupiter quote, report real numbers, do NOT broadcast.
       console.log(`[SOLANA ADAPTER] DRY_RUN=true -> Fetching REAL Jupiter quote (no broadcast)...`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
       try {
-        const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${request.outputMint}&amount=${request.amountSol * 1e9}&slippageBps=${request.slippageBps || 150}`;
-        const quoteRes = await fetch(quoteUrl);
+        const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${request.outputMint}&amount=${Math.round(request.amountSol * 1e9)}&slippageBps=${request.slippageBps || 150}`;
+        const quoteRes = await fetch(quoteUrl, { signal: controller.signal });
+        clearTimeout(timer);
         if (!quoteRes.ok) {
           return { success: false, inputSol: request.amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: `Jupiter Quote Failed: ${await quoteRes.text()}` };
         }
@@ -84,11 +87,13 @@ export class SolanaTradeAdapter {
           success: true,
           txHash: `sim_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           inputSol: request.amountSol,
+          // TODO(phase2): resolve decimals via token meta — 6-decimal assumption (meme coins are often 9-decimal)
           outputTokens: outAmountLamports / 1e6,
           priceImpactPercentage: Number(quoteData.priceImpactPct || 0),
           simulated: true,
         };
       } catch (err: unknown) {
+        clearTimeout(timer);
         const errMsg = err instanceof Error ? err.message : String(err);
         return { success: false, inputSol: request.amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: errMsg };
       }
@@ -113,6 +118,7 @@ export class SolanaTradeAdapter {
       return {
         success: false,
         inputSol: request.amountSol,
+        // TODO(phase2): resolve decimals via token meta — 6-decimal assumption (meme coins are often 9-decimal)
         outputTokens: Number(quoteData.outAmount || 0) / 1e6,
         priceImpactPercentage: Number(quoteData.priceImpactPct || 0),
         simulated: false,
@@ -198,10 +204,13 @@ export class SolanaTradeAdapter {
       // Realistic dry run: fetch REAL Jupiter quote, report real numbers, do NOT broadcast.
       console.log(`[SOLANA ADAPTER] DRY_RUN=true -> Fetching REAL Jupiter quote (no broadcast)...`);
       const simHash = `sim_sol_swap_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
       try {
         const lamports = Math.round(amountSol * 1e9);
         const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMintAddr}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippageBps || 150}`;
-        const quoteRes = await fetch(quoteUrl);
+        const quoteRes = await fetch(quoteUrl, { signal: controller.signal });
+        clearTimeout(timer);
         if (!quoteRes.ok) {
           return { success: false, inputSol: amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: `Jupiter Quote Failed: ${await quoteRes.text()}` };
         }
@@ -212,11 +221,13 @@ export class SolanaTradeAdapter {
           txHash: simHash,
           explorerUrl: `https://solscan.io/tx/${simHash}`,
           inputSol: amountSol,
+          // TODO(phase2): resolve decimals via token meta — 6-decimal assumption (meme coins are often 9-decimal)
           outputTokens: outAmountLamports / 1e6,
           priceImpactPercentage: Number(quoteData.priceImpactPct || 0),
           simulated: true,
         };
       } catch (err: unknown) {
+        clearTimeout(timer);
         const errMsg = err instanceof Error ? err.message : String(err);
         return { success: false, inputSol: amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: errMsg };
       }
@@ -273,6 +284,7 @@ export class SolanaTradeAdapter {
         txHash,
         explorerUrl: `https://solscan.io/tx/${txHash}`,
         inputSol: amountSol,
+        // TODO(phase2): resolve decimals via token meta — 6-decimal assumption (meme coins are often 9-decimal)
         outputTokens: Number(quoteData.outAmount || 0) / 1e6,
         priceImpactPercentage: Number(quoteData.priceImpactPct || 0),
         simulated: false,

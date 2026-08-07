@@ -172,9 +172,12 @@ export class SwarmConsensusEngine {
       ? Math.max(88, Math.min(100, Math.round(baseConfidence * reputationMultiplier)))
       : Math.min(100, Math.round(baseConfidence * reputationMultiplier));
 
-    // Optional active strategy override (StrategyEngine) — blend with its evaluate() confidence
+    // Optional active strategy override (StrategyEngine) — blend with its evaluate() confidence.
+    // NOT applied on the agent-confidence path: the agent already ran its own strategy extension in
+    // runScreeningPass, and a global strategy must never suppress other domains via an empty ctx.
+    const isAgentConfidencePath = typeof candidate.confidence === 'number' && candidate.confidence > 0;
     let strategyReason: string | null = null;
-    if (SwarmConsensusEngine.strategyProvider) {
+    if (!isAgentConfidencePath && SwarmConsensusEngine.strategyProvider) {
       try {
         const strat = SwarmConsensusEngine.strategyProvider(candidate.domain);
         if (strat?.evaluate) {
