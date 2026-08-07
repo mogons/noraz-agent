@@ -37,6 +37,16 @@ export class CTAlphaAgent {
     const signals: CTAlphaSignal[] = [];
 
     for (const t of tweets) {
+      // Strict Realtime Filter: Ignore tweets older than 1 hour (max 3600000 ms)
+      const tweetDate = t.createdAt ? new Date(t.createdAt).getTime() : Date.now();
+      const tweetAgeMs = Date.now() - tweetDate;
+      const MAX_AGE_MS = 60 * 60 * 1000; // 1 Hour Max
+
+      if (!t.createdAt || isNaN(tweetAgeMs) || tweetAgeMs > MAX_AGE_MS) {
+        console.log(`[CT ALPHA AGENT] Skipping stale/historical tweet from ${t.authorUsername} (Age: ${(tweetAgeMs / 3600000).toFixed(1)}h > 1h max limit).`);
+        continue;
+      }
+
       const isAiNarrative = t.text.toLowerCase().includes('ai') || t.text.toLowerCase().includes('agent');
       const isYield = t.text.toLowerCase().includes('yield') || t.text.toLowerCase().includes('airdrop') || t.text.toLowerCase().includes('farm');
 
@@ -58,7 +68,7 @@ export class CTAlphaAgent {
         tweetUrl: t.url,
         likes: t.likes,
         retweets: t.retweets,
-        actionableTakeaway: `💡 Actionable Alpha: Smart CT accumulation detected. ${isAiNarrative ? 'High AI agent narrative momentum.' : 'High yield / airdrop potential.'}`,
+        actionableTakeaway: `💡 Actionable Alpha: Realtime Smart CT accumulation detected (< 1h). ${isAiNarrative ? 'High AI agent narrative momentum.' : 'High yield / airdrop potential.'}`,
         symbolMentioned: query.toUpperCase(),
         confidenceScore,
         postedAt: t.createdAt,
