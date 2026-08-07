@@ -1,0 +1,15 @@
+{
+  "auditMemories": [
+    {
+      "id": "AUDIT_1786068257319_c08e",
+      "contractAddress": "0x71c7656ec7ab88b098defb751b7401b5f6d8976f",
+      "symbol": "PEPE",
+      "chain": "eth",
+      "score": 92,
+      "verdict": "RUNNER",
+      "timestampIso": "2026-08-07T02:04:17.319Z",
+      "details": "Test PEPE Audit"
+    }
+  ],
+  "userQueries": []
+}

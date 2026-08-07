@@ -354,6 +354,46 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(riskRes.success).toBe(true);
     expect(hub.getRiskManager().getRiskState().maxDrawdownLimitPct).toBe(40);
   });
+
+  it('21. Cron Scheduler: Should parse natural language intervals and store active schedules', async () => {
+    const { CronSchedulerService } = await import('../src/services/cron-scheduler.js');
+    const scheduler = new CronSchedulerService();
+
+    const intervalMs = scheduler.parseNaturalLanguageInterval('every 4 hours');
+    expect(intervalMs).toBe(4 * 60 * 60 * 1000);
+
+    const task = scheduler.addSchedule('every 2 hours', 'screening', 'evm-meme');
+    expect(task.id).toContain('CRON_');
+    expect(task.enabled).toBe(true);
+
+    const all = scheduler.getAllSchedules();
+    expect(all.length).toBeGreaterThan(0);
+    scheduler.removeSchedule(task.id);
+  });
+
+  it('22. Session Memory: Should record audits and perform fast zero-LLM-token keyword search', async () => {
+    const { SessionMemoryService } = await import('../src/services/session-memory.js');
+    const memory = new SessionMemoryService();
+
+    const rec = memory.recordAudit('0x71c7656ec7ab88b098defb751b7401b5f6d8976f', 'PEPE', 'eth', 92, 'RUNNER', 'Test PEPE Audit');
+    expect(rec.symbol).toBe('PEPE');
+
+    const searchRes = memory.searchAudits('PEPE');
+    expect(searchRes.length).toBeGreaterThan(0);
+    expect(searchRes[0].symbol).toBe('PEPE');
+  });
+
+  it('23. Swarm Learning Engine: Should record signal calls and recalibrate weights on TP hits', async () => {
+    const { SwarmLearningEngine } = await import('../src/orchestrator/swarm-learning.js');
+    const engine = new SwarmLearningEngine();
+
+    const call = engine.recordSignalCall('solana-meme', 'BONK', 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 0.00001, 88);
+    expect(call.result).toBe('OPEN');
+
+    const initialWeight = engine.getWeights().smartMoneyWeight;
+    engine.updateSignalPrice(call.id, 0.000025); // 2.5x gain -> TAKE_PROFIT_2X
+    expect(engine.getWeights().smartMoneyWeight).toBeGreaterThan(initialWeight);
+  });
 });
 
 

@@ -112,6 +112,42 @@ export class ToolRegistry {
           },
         },
       },
+      {
+        name: 'schedule_automation',
+        description: 'Schedule a recurring automation task in natural language (e.g., "every 4 hours", "every 30 mins", "daily at 09:00").',
+        parameters: {
+          type: 'object',
+          properties: {
+            interval: {
+              type: 'string',
+              description: 'Interval or natural language schedule expression (e.g. "every 4 hours", "every 30 mins").',
+            },
+            action: {
+              type: 'string',
+              description: 'Action to trigger: "screening", "portfolio_recap", or "custom_prompt".',
+            },
+            agentId: {
+              type: 'string',
+              description: 'Target sub-agent ID (e.g. solana-meme, evm-meme, perps, nft).',
+            },
+          },
+          required: ['interval'],
+        },
+      },
+      {
+        name: 'search_memory',
+        description: 'Search past token audits, price alerts, and conversation memories using fast zero-LLM-token keyword search.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Keyword search term (contract address, token symbol, or chain name).',
+            },
+          },
+          required: ['query'],
+        },
+      },
     ];
   }
 
@@ -189,6 +225,37 @@ export class ToolRegistry {
           return {
             success: false,
             message: 'Failed to switch AI model: Provider or modelName missing.',
+          };
+        }
+
+        case 'schedule_automation': {
+          const { CronSchedulerService } = await import('../services/cron-scheduler.js');
+          const scheduler = new CronSchedulerService();
+          if (this.orchestrator) {
+            scheduler.attachHub(this.orchestrator);
+          }
+
+          const interval = String(args.interval || 'every 1 hour');
+          const action = (args.action || 'screening') as any;
+          const agentId = String(args.agentId || 'solana-meme');
+
+          const task = scheduler.addSchedule(interval, action, agentId);
+          return {
+            success: true,
+            message: `Registered schedule: "${interval}" (${action} -> ${agentId}) [Task ID: ${task.id}].`,
+            data: task,
+          };
+        }
+
+        case 'search_memory': {
+          const { SessionMemoryService } = await import('../services/session-memory.js');
+          const memory = new SessionMemoryService();
+          const query = String(args.query || '');
+          const results = memory.searchAudits(query);
+          return {
+            success: true,
+            message: `Found ${results.length} memory records matching query: "${query}".`,
+            data: results,
           };
         }
 

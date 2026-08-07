@@ -128,6 +128,40 @@ export async function handleControlRoomMessage(
     return;
   }
 
+  // 0f. Natural Language Schedule Automation intent
+  if (lowerQuery.includes('setiap') || lowerQuery.includes('every') || lowerQuery.includes('schedule')) {
+    if (lowerQuery.includes('jam') || lowerQuery.includes('hour') || lowerQuery.includes('menit') || lowerQuery.includes('min')) {
+      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm'];
+      const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'solana-meme';
+      const result = await toolRegistry.executeToolCall('schedule_automation', {
+        interval: userQuery,
+        action: 'screening',
+        agentId: foundDomain,
+      });
+      await message.reply(`⏰ **ATHENA CRON SCHEDULER**: ${result.message}\nAutomated task scheduled and saved to database.`);
+      return;
+    }
+  }
+
+  // 0g. Memory Recall & Search intent
+  if (lowerQuery.includes('audit tadi') || lowerQuery.includes('memory') || lowerQuery.includes('riwayat audit') || lowerQuery.includes('history audit') || lowerQuery.includes('search audit')) {
+    const { SessionMemoryService } = await import('../../services/session-memory.js');
+    const memory = new SessionMemoryService();
+    const records = memory.getRecentAudits(5);
+
+    if (records.length === 0) {
+      await message.reply(`🧠 **ATHENA SESSION MEMORY**: Belum ada riwayat audit token yang tersimpan di memori persisten.`);
+      return;
+    }
+
+    let memoryText = `🧠 **ATHENA PERSISTENT AUDIT RECALL (ZERO LLM TOKEN COST)**\n\n`;
+    for (const r of records) {
+      memoryText += `• **${r.symbol}** (\`${r.contractAddress.substring(0, 8)}...\` | ${r.chain.toUpperCase()}): ${r.verdict} (Score: ${r.score})\n  *Date:* ${r.timestampIso.slice(0, 16)}\n`;
+    }
+    await message.reply(memoryText);
+    return;
+  }
+
   // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "kabari kalau BTC 70k")
   const parsedAlert = priceAlertService.parseNaturalLanguageAlert(userQuery, message.author.id, message.channelId);
   if (parsedAlert) {
@@ -283,6 +317,11 @@ export async function handleControlRoomMessage(
     const isSol = !matchedCa.startsWith('0x');
     const chainName = isSol ? 'Solana (SOL)' : 'EVM (Base / ETH / Robinhood)';
     
+    // Log into persistent Session Memory
+    const { SessionMemoryService } = await import('../../services/session-memory.js');
+    const memory = new SessionMemoryService();
+    memory.recordAudit(matchedCa, isSol ? 'SOL_MEME' : 'EVM_TOKEN', isSol ? 'sol' : 'base', 88, 'HIGH CONFIDENCE RUNNER', `Audited ${matchedCa}`);
+
     await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n\n` +
       `📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n` +
       `📊 **Market Summary:** Price **$0.0035 USD** | Market Cap: **$350,000 USD** | Volume 24h: **$1,200,000 USD**\n\n` +

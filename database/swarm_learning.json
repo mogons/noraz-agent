@@ -1,0 +1,22 @@
+{
+  "outcomes": [
+    {
+      "id": "CALL_1786068257330_icus",
+      "agentId": "solana-meme",
+      "symbol": "BONK",
+      "contractAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      "initialPriceUsd": 0.00001,
+      "maxPriceReachedUsd": 0.000025,
+      "lowestPriceReachedUsd": 0.00001,
+      "result": "TAKE_PROFIT_2X",
+      "confidenceScore": 88,
+      "timestampIso": "2026-08-07T02:04:17.330Z"
+    }
+  ],
+  "weights": {
+    "smartMoneyWeight": 0.36,
+    "liquidityWeight": 0.26,
+    "devHoldingWeight": 0.2,
+    "twitterWeight": 0.2
+  }
+}
