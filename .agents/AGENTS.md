@@ -12,7 +12,7 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels:
   - `#call-meme-solana` (Solana DEX tokens / Pump.fun / Raydium)
-  - `#call-meme-evm` (EVM L1/L2 tokens / Uniswap / Aerodrome)
+  - `#call-meme-robinhood` (EVM L1/L2 tokens / Uniswap / Aerodrome)
   - `#call-perps-futures` (Leverage trading setups / Hyperliquid / CEXs)
   - `#call-nft-sniping` (NFT floor & rarity alerts / MagicEden / Blur)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops).
@@ -48,7 +48,7 @@ Athena/
 │   │   └── swarm-consensus.ts    # 3-Layer Signal Quality Filter Engine
 │   ├── agents/                    # Specialized screening agents
 │   │   ├── meme-solana/           # Solana DEX screening
-│   │   ├── meme-evm/              # EVM DEX screening
+│   │   ├── meme-robinhood/              # EVM DEX screening
 │   │   ├── perps/                 # Technical setup screening
 │   │   └── nft/                   # NFT floor & rarity screening
 │   ├── adapters/                  # Web3 & Exchange execution adapters
