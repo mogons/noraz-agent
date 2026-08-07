@@ -147,6 +147,34 @@ export class RiskManager {
     return { allowed: true, existingCount, existingExposureUsd };
   }
 
+  /**
+   * Dynamic Volatility-Based Position Sizing
+   * Scales down trade allocation for high-volatility / pre-pumped (>300% surge) assets to prevent chasing tops.
+   */
+  public calculateDynamicPositionSizeUsd(
+    baseTradeSizeUsd: number,
+    volumeSurgeSpikeRatio: number = 1.0,
+    confidenceScore: number = 80
+  ): number {
+    let multiplier = 1.0;
+
+    // High volatility / extreme pump surge reduction (> 3.0x / +300% surge)
+    if (volumeSurgeSpikeRatio >= 5.0) {
+      multiplier = 0.5; // Cut position size in half for hyper-pumped tokens
+    } else if (volumeSurgeSpikeRatio >= 3.0) {
+      multiplier = 0.75;
+    }
+
+    // High conviction boost (Confidence >= 90%)
+    if (confidenceScore >= 90) {
+      multiplier *= 1.2;
+    }
+
+    const finalSizeUsd = Math.min(this.limits.maxTradeAmountUsd, Math.round(baseTradeSizeUsd * multiplier));
+    console.log(`[RISK MANAGER DYNAMIC SIZING] Base: $${baseTradeSizeUsd} | Spike Ratio: ${volumeSurgeSpikeRatio.toFixed(1)}x | Final Size: $${finalSizeUsd} USD`);
+    return finalSizeUsd;
+  }
+
   public updateDrawdown(drawdownPercent: number): void {
     this.currentDailyDrawdownPercent = drawdownPercent;
     if (drawdownPercent >= this.limits.maxPortfolioDrawdownPercent && this.limits.stopTradingOnDrawdown) {

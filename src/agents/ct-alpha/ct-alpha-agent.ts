@@ -47,6 +47,13 @@ export class CTAlphaAgent {
         continue;
       }
 
+      // Strict Engagement Filter: Ignore low-engagement noise (min 50 likes & 10 retweets)
+      const isHighEngagement = t.likes >= 50 && t.retweets >= 10;
+      if (!isHighEngagement) {
+        console.log(`[CT ALPHA AGENT] Skipping low-engagement tweet from @${t.authorUsername} (${t.likes} likes / ${t.retweets} retweets < min 50/10 threshold).`);
+        continue;
+      }
+
       const isAiNarrative = t.text.toLowerCase().includes('ai') || t.text.toLowerCase().includes('agent');
       const isYield = t.text.toLowerCase().includes('yield') || t.text.toLowerCase().includes('airdrop') || t.text.toLowerCase().includes('farm');
 
@@ -56,7 +63,8 @@ export class CTAlphaAgent {
         ? 'AIRDROP_YIELD'
         : 'SMART_CT_CALL';
 
-      const confidenceScore = Math.min(98, 80 + Math.floor((t.likes / 50)));
+      const engagementFactor = Math.min(18, Math.floor(t.likes / 50) + Math.floor(t.retweets / 10));
+      const confidenceScore = Math.min(98, 80 + engagementFactor);
 
       signals.push({
         id: `ct_alpha_${t.id}`,
