@@ -36,15 +36,19 @@ export class EVMScreeningAgent {
     signal: GMGNTokenSignal,
     chain: 'base' | 'eth' | 'robinhood' | 'bsc' = 'base'
   ): EVMCTODetectionReport {
-    // 1. Layer 1: Quant & Volume Surge Check (5m / 1h >= 300%)
+    // Strategy Filter: Minimum Token Age >= 4 Hours (240 Minutes)
+    const tokenAgeHours = signal.tokenAgeHours ?? 6.0;
+    const isMinAgePassed = tokenAgeHours >= 4.0;
+
+    // 1. Layer 1: Quant & 1H Volume Surge Check (1h >= 300%)
     const hasVolumeSurge = signal.volume24hUsd >= 50000 && signal.smartMoneyNetBuySolOrEth >= 0.5;
-    const volumeSpikeRatio = hasVolumeSurge ? 5.8 : 1.1; // Simulated +580% volume surge
+    const volumeSpikeRatio = hasVolumeSurge ? 5.8 : 1.1; // Simulated +580% 1H volume surge
 
     // 2. Layer 2: Catalyst & GMGN Smart Money Accumulation
     const isDevClean = signal.devHoldingPercentage <= 10.0;
     const isSmartMoneyBuying = signal.smartMoneyCount >= 2;
-    const isCTO = signal.devHoldingPercentage === 0 && isSmartMoneyBuying;
-    const isRevival = volumeSpikeRatio >= 3.0 && isSmartMoneyBuying;
+    const isCTO = signal.devHoldingPercentage === 0 && isSmartMoneyBuying && isMinAgePassed;
+    const isRevival = volumeSpikeRatio >= 3.0 && isSmartMoneyBuying && isMinAgePassed;
 
     // 3. Layer 3: GoPlus Security Audit (Honeypot & Tax Check)
     // Simulated GoPlus clean audit response for candidate EVM tokens
@@ -63,19 +67,21 @@ export class EVMScreeningAgent {
     const aiSentimentScore = 84; // 84/100 Bullish EVM Sentiment
 
     // Calculate total 3-Layer Swarm Confidence Score (0-100)
-    let quantScore = signal.liquidityUsd >= 25000 && volumeSpikeRatio >= 3.0 ? 35 : 15;
+    let quantScore = signal.liquidityUsd >= 25000 && volumeSpikeRatio >= 3.0 && isMinAgePassed ? 35 : 15;
     let catalystScore = isSmartMoneyBuying ? 35 : 15;
     let securityScore = !isHoneypot && buyTaxPct <= 5.0 && sellTaxPct <= 5.0 && isDevClean ? 30 : 0;
 
     const confidenceScore = Math.min(100, quantScore + catalystScore + securityScore);
 
     let detectionReason = 'EVM Token Candidate Audited';
-    if (isCTO && isRevival) {
-      detectionReason = `🔥 EVM REVIVAL & CTO ALERT: Dev 0%, +580% Volume Surge & ${signal.smartMoneyCount} Smart Money Accumulating on ${chain.toUpperCase()}!`;
+    if (!isMinAgePassed) {
+      detectionReason = `⛔ IGNORED: Token age (${tokenAgeHours.toFixed(1)}h) is below minimum 4-hour safety threshold.`;
+    } else if (isCTO && isRevival) {
+      detectionReason = `🔥 1H EVM REVIVAL & CTO ALERT: Age ${tokenAgeHours.toFixed(1)}h >= 4h, Dev 0%, +580% 1H Volume Surge & ${signal.smartMoneyCount} Smart Money Accumulating on ${chain.toUpperCase()}!`;
     } else if (isCTO) {
-      detectionReason = `👥 EVM CTO SIGNAL: Dev 0% / Renounced on ${chain.toUpperCase()}, Community Takeover with Smart Money inflow.`;
+      detectionReason = `👥 1H EVM CTO SIGNAL: Age ${tokenAgeHours.toFixed(1)}h, Dev 0% / Renounced on ${chain.toUpperCase()}, Community Takeover with Smart Money inflow.`;
     } else if (isRevival) {
-      detectionReason = `🧟 EVM REVIVAL SIGNAL: Token waking up on ${chain.toUpperCase()} with +580% Volume Surge!`;
+      detectionReason = `🧟 1H EVM REVIVAL SIGNAL: Token waking up on ${chain.toUpperCase()} with +580% 1H Volume Surge!`;
     }
 
     return {

@@ -12,13 +12,15 @@ This skill defines the operational standards, decision pipelines, and multi-agen
 ## 1. Solana Meme Potential Signal Categories
 
 Screening agents scan across 3 high-potential token opportunities:
-1. 🐣 **Fresh Launches & Pump.fun Graduation:** New tokens (< 2h) with fast bonding curve progress and 100% burned LP.
-2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Older tokens (> 6h) that hit a bottom but experience a sudden **+500% 5m volume spike**, **2+ GMGN Smart Wallet accumulation**, and dev 0% / CTO (Community Takeover).
-3. 🚀 **Volume Surge & Trend Breakouts:** Established tokens breaking key resistance levels confirmed by GMGN Smart Money Net Inflows.
+1. 🐣 **Established Launches & CTO Tokens:** Tokens with minimum **4 Hours Age** and active bonding curve/DEX liquidity.
+2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Established tokens (> 4h age) experiencing a sudden **+500% 1H volume surge**, **2+ GMGN Smart Wallet accumulation**, and dev 0% / CTO (Community Takeover).
+3. 🚀 **Volume Surge & Trend Breakouts:** Tokens breaking key resistance levels confirmed by 1H GMGN Smart Money Net Inflows.
 
 ### Layer 1: Quant & Liquidity Audit
+- **Timeframe Standard:** 1H (1-Hour rolling volume surge, fee velocity, and trend evaluation).
+- **Minimum Token Age:** **4.0 Hours (240 Minutes)** minimum age required across all Meme & LP strategies.
 - **Minimum Liquidity:** $25,000 USD (DEX pools).
-- **Volume Surge:** 5-minute / 1-hour volume spike check (> 300% for fresh, > 500% for revival).
+- **Volume Surge:** 1-Hour volume spike check (> 300% volume surge).
 - **Transaction Ratio:** Buy vs Sell transaction ratio evaluation.
 
 ### Layer 2: Catalyst & Social Hype Audit (Twitter/X Sentiment)

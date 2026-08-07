@@ -384,8 +384,10 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
   });
 
   it('23. Swarm Learning Engine: Should record signal calls and recalibrate weights on TP hits', async () => {
+    const path = await import('path');
     const { SwarmLearningEngine } = await import('../src/orchestrator/swarm-learning.js');
-    const engine = new SwarmLearningEngine();
+    const testDbPath = path.join(process.cwd(), 'database', `test_swarm_learning_${Date.now()}.json`);
+    const engine = new SwarmLearningEngine(testDbPath);
 
     const call = engine.recordSignalCall('solana-meme', 'BONK', 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 0.00001, 88);
     expect(call.result).toBe('OPEN');

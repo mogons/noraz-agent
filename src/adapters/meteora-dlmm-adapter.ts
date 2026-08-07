@@ -88,8 +88,8 @@ export class MeteoraDLMMAdapter {
       // 5. Min 65% organic trading activity in the last 4 hours (ignores bot manipulation)
       const passesOrganicScore = pool.organicVolumeScore4h >= 65; 
       
-      // 6. Min token age of 6 hours (360 minutes) to avoid quick launch rugpulls
-      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 360 : true; 
+      // 6. Min token age of 4 hours (240 minutes) to avoid quick launch rugpulls
+      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 240 : true; 
 
       return passesMinFeesSol && passesFeesRatio && passesVolumeToTvl && passesVolumeVelocity && passesOrganicScore && passesAge;
     });
