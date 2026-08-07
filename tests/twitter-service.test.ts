@@ -2,11 +2,13 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TwitterService } from '../src/services/twitter-service.js';
 
 const realTweet = {
-  id: '123',
-  text: '$TEST pumping hard today',
-  author: { username: 'real_user', name: 'Real User' },
-  public_metrics: { like_count: 150, retweet_count: 40, reply_count: 12 },
-  created_at: new Date().toISOString(),
+  tweet_id: '123',
+  full_text: '$TEST pumping hard today',
+  user: { screen_name: 'real_user', name: 'Real User' },
+  favorite_count: 150,
+  retweet_count: 40,
+  reply_count: 12,
+  created_at_datetime: new Date().toISOString(),
 };
 
 describe('TwitterService', () => {

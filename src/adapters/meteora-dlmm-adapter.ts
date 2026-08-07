@@ -65,6 +65,8 @@ export class MeteoraDLMMAdapter {
         const volume4hUsd = Number(p.volume?.h6) || volume24hUsd / 6;
         const fee4hUsd = volume4hUsd * 0.003;
         const activeTvlUsd = tvlUsd * 0.3;
+        const volumeToTvlRatio4h = volume4hUsd / tvlUsd;
+        const organicVolumeScore4h = Math.min(100, 40 + Math.round(volumeToTvlRatio4h * 15));
         const tokenAgeSec = Number(p.pairCreatedAt) > 0
           ? Date.now() / 1000 - Number(p.pairCreatedAt) / 1000
           : 0;
@@ -80,9 +82,9 @@ export class MeteoraDLMMAdapter {
           fees24hSol: (fee4hUsd * 6) / 200,
           feeAprPercentage: Number(((fee4hUsd / tvlUsd) * 6 * 365 * 100).toFixed(1)) || 0,
           feesToTvlRatio4h: fee4hUsd / tvlUsd,
-          volumeToTvlRatio4h: volume4hUsd / tvlUsd,
+          volumeToTvlRatio4h,
           volumeToActiveTvlRatio4h: activeTvlUsd > 0 ? volume4hUsd / activeTvlUsd : 0,
-          organicVolumeScore4h: 50,
+          organicVolumeScore4h,
           tokenAgeMinutes: tokenAgeSec > 0 ? Math.floor(tokenAgeSec / 60) : undefined,
           recommendedDistribution: 'Spot' as const,
           aiRecommendation: `Live Meteora pool (via DexScreener): ${p.baseToken.symbol}-${p.quoteToken.symbol} dengan $${(tvlUsd / 1000).toFixed(1)}k TVL & $${(volume4hUsd / 1000).toFixed(1)}k 4h volume.`,

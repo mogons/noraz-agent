@@ -24,7 +24,7 @@ const INFLUENCERS = ['ansem', 'machibigbrother', 'beanie', 'pranksy'];
 
 export class TwitterService {
   private twexApiKey?: string;
-  private twexApiUrl = 'https://twexapi.io/api/v1';
+  private twexApiUrl = 'https://api.twexapi.io';
 
   constructor(apiKey?: string) {
     this.twexApiKey = apiKey || process.env.TWEX_API_KEY;
@@ -41,23 +41,34 @@ export class TwitterService {
     }
     try {
       const response = await fetch(
-        `${this.twexApiUrl}/tweets/search?q=${encodeURIComponent(query)}&limit=${maxResults}`,
-        { headers: { 'Authorization': `Bearer ${this.twexApiKey}` } }
+        `${this.twexApiUrl}/twitter/advanced_search`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${this.twexApiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchTerms: [query],
+            maxItems: maxResults,
+            sortBy: 'Latest',
+          }),
+        }
       );
-      if (!response.ok) return [];
-      const data: any = await response.json();
-      const tweets = Array.isArray(data) ? data : (data.data || data.tweets || data.results || []);
+      if (!response.ok) {
+        console.warn(`[TWITTER SERVICE] TwexAPI HTTP ${response.status} for "${query}" — returning empty.`);
+        return [];
+      }
+      const payload: any = await response.json();
+      const tweets = Array.isArray(payload) ? payload : (payload.data || payload.tweets || payload.results || []);
       if (!Array.isArray(tweets) || tweets.length === 0) return [];
       return tweets.map((t: any) => ({
-        id: String(t.id || t.tweet_id || ''),
+        id: String(t.tweet_id || t.id || ''),
         text: t.text || t.full_text || t.content || '',
-        authorUsername: t.author?.username || t.user?.screen_name || t.username || 'unknown',
-        authorName: t.author?.name || t.user?.name || t.author_name || 'Unknown',
-        likes: Number(t.public_metrics?.like_count || t.favorite_count || t.likes || 0),
-        retweets: Number(t.public_metrics?.retweet_count || t.retweet_count || t.retweets || 0),
-        replies: Number(t.public_metrics?.reply_count || t.reply_count || t.replies || 0),
-        createdAt: t.created_at || '',
-        url: t.url || '',
+        authorUsername: t.user?.screen_name || t.author?.username || t.username || 'unknown',
+        authorName: t.user?.name || t.author?.name || t.author_name || 'Unknown',
+        likes: Number(t.favorite_count || t.public_metrics?.like_count || t.likes || 0),
+        retweets: Number(t.retweet_count || t.public_metrics?.retweet_count || t.retweets || 0),
+        replies: Number(t.reply_count || t.public_metrics?.reply_count || t.replies || 0),
+        createdAt: t.created_at_datetime || t.created_at || '',
+        url: t.url || `https://x.com/${t.user?.screen_name || t.author?.username || 'i'}/status/${t.tweet_id || t.id}`,
       })).filter((t: TweetItem) => t.id !== '');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

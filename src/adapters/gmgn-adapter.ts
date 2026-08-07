@@ -47,7 +47,7 @@ export class GMGNAdapter {
           const gmgnData: any = await gmgnRes.json();
           const items = Array.isArray(gmgnData) ? gmgnData : (gmgnData.data || gmgnData.rank);
           if (Array.isArray(items) && items.length > 0) {
-            return items.map((item: any) => ({
+            const signals = items.map((item: any) => ({
               chain,
               symbol: item.symbol || 'TOKEN',
               name: item.name || item.symbol || 'Token',
@@ -63,6 +63,11 @@ export class GMGNAdapter {
               gmgnUrl: `https://gmgn.ai/${chain}/token/${item.address || item.contract_address || item.token_address}`,
               aiThesis: `GMGN Pro API Signal: $${item.symbol} Smart Money Inflow (+${Number(item.smart_money_net_buy) || 0} SOL/ETH). Snipers: ${Number(item.sniper_ratio) || 0}%.`,
             }));
+            // GMGN API often omits token age — enrich via DexScreener (one batch call)
+            if (chain !== 'sol') {
+              return await this.enrichTokenAges(signals);
+            }
+            return signals;
           }
         }
       } catch (err: any) {
@@ -108,6 +113,7 @@ export class GMGNAdapter {
                   smartMoneyCount: 0,
                   sniperRatioPercentage: 0,
                   devHoldingPercentage: 0,
+                  tokenAgeHours: pair.pairCreatedAt ? (Date.now() - pair.pairCreatedAt) / 3600000 : undefined,
                   gmgnUrl: `https://gmgn.ai/${chain}/token/${tokenAddr}`,
                   aiThesis: `Real-time DexScreener surge: $${symbol} (${name}) with $${(volume24h / 1000).toFixed(1)}k 24h volume & $${(liquidityUsd / 1000).toFixed(1)}k liquidity on ${chain.toUpperCase()}.`,
                 };
@@ -148,6 +154,7 @@ export class GMGNAdapter {
                 smartMoneyCount: 0,
                 sniperRatioPercentage: 0,
                 devHoldingPercentage: 0,
+                tokenAgeHours: pair.pairCreatedAt ? (Date.now() - pair.pairCreatedAt) / 3600000 : undefined,
                 gmgnUrl: `https://gmgn.ai/${chain}/token/${tokenAddr}`,
                 aiThesis: `DexScreener Search Surge: $${symbol} (${name}) with $${(volume24h / 1000).toFixed(1)}k 24h volume & $${(liquidityUsd / 1000).toFixed(1)}k liquidity.`,
               };
@@ -160,5 +167,35 @@ export class GMGNAdapter {
     }
 
     return [];
+  }
+
+  /**
+   * Enrich EVM signals with token age via a single batch DexScreener call (pairCreatedAt).
+   */
+  private async enrichTokenAges(signals: GMGNTokenSignal[]): Promise<GMGNTokenSignal[]> {
+    const missing = signals.filter((s) => !s.tokenAgeHours || s.tokenAgeHours <= 0);
+    if (missing.length === 0) return signals;
+    try {
+      const addrs = missing.map((s) => s.contractAddress).join(',');
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addrs}`);
+      if (!res.ok) return signals;
+      const data: any = await res.json();
+      const ageByAddr: Record<string, number> = {};
+      if (Array.isArray(data.pairs)) {
+        for (const pair of data.pairs) {
+          const addr = pair.baseToken?.address?.toLowerCase();
+          if (addr && pair.pairCreatedAt) {
+            ageByAddr[addr] = (Date.now() - pair.pairCreatedAt) / 3600000;
+          }
+        }
+      }
+      return signals.map((s) => {
+        const age = ageByAddr[s.contractAddress.toLowerCase()];
+        return age !== undefined ? { ...s, tokenAgeHours: age } : s;
+      });
+    } catch (err: any) {
+      console.warn(`[GMGN ADAPTER] Age enrichment failed: ${err.message}`);
+      return signals;
+    }
   }
 }

@@ -72,7 +72,7 @@ export class UniswapLPAdapter {
             feesToTvlRatio4h: fee4hUsd / tvlUsd,
             volumeToTvlRatio4h: volume4hUsd / tvlUsd,
             volumeToActiveTvlRatio4h: activeTvlUsd > 0 ? volume4hUsd / activeTvlUsd : 0,
-            organicVolumeScore4h: 50,
+            organicVolumeScore4h: Math.min(100, 40 + Math.round((volume4hUsd / tvlUsd) * 15)),
             tokenAgeMinutes: undefined,
             recommendedPriceRange: {
               minPrice: Number(p.priceUsd) * 0.95 || 0,
