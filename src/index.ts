@@ -3,6 +3,7 @@ import { isDryRun as isDryRunMode } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.js';
 import { AthenaHub } from './orchestrator/hub.js';
+import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine, SwarmConsensus } from './orchestrator/swarm-consensus.js';
 import { PositionManager } from './position/position-manager.js';
 import { AIService } from './services/ai-service.js';
@@ -190,197 +191,149 @@ if (discordToken && clientId) {
       try {
         const dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
 
-        if (hub.isAgentActive('meme-solana')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('meme-solana');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await solanaScreeningAgent.runScreeningPass();
-            for (const r of reports) {
-              if (r.passed && r.signal) {
-                dispatchedPayloads.push({
-                  channelName: 'call-meme-solana',
-                  rawReason: r.reason,
-                  payload: {
-                    domain: 'MEME_SOLANA',
-                    title: `${r.signal.name} (${r.signal.symbol})`,
-                    symbol: r.signal.symbol,
-                    contractAddress: r.signal.contractAddress,
-                    network: 'Solana',
-                    priceUsd: `$${r.signal.priceUsd}`,
-                    marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
-                    liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
-                    volume5m: '+620%',
-                    volume1h: '$1.2M',
-                    txRatio: 'Buy 78% / Sell 22%',
-                    top10Pct: '22.4%',
-                    devHoldingPct: `${r.signal.devHoldingPercentage}%`,
-                    sniperPct: `${r.signal.sniperRatioPercentage}%`,
-                    bundlerPct: '11.2%',
-                    dexPaidStatus: '✅ Paid',
-                    smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} SOL)`,
-                    confidenceScore: 92,
-                    aiThesis: r.reason || r.signal.aiThesis,
-                    gmgnUrl: r.signal.gmgnUrl,
-                    dexScreenerUrl: `https://dexscreener.com/solana/${r.signal.contractAddress}`,
-                    rugcheckUrl: `https://rugcheck.xyz/tokens/${r.signal.contractAddress}`,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const solanaDispatched = await dispatchDomain({
+          domain: 'meme-solana',
+          channelName: 'call-meme-solana',
+          isActive: () => hub.isAgentActive('meme-solana'),
+          runPass: async () => (await solanaScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('meme-solana'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'MEME_SOLANA',
+            title: `${signal.name} (${signal.symbol})`,
+            symbol: signal.symbol,
+            contractAddress: signal.contractAddress,
+            network: 'Solana',
+            priceUsd: `$${signal.priceUsd}`,
+            marketCap: `$${(signal.marketCapUsd / 1000).toFixed(1)}k`,
+            liquidity: `$${(signal.liquidityUsd / 1000).toFixed(1)}k`,
+            volume5m: '+620%',
+            volume1h: '$1.2M',
+            txRatio: 'Buy 78% / Sell 22%',
+            top10Pct: '22.4%',
+            devHoldingPct: `${signal.devHoldingPercentage}%`,
+            sniperPct: `${signal.sniperRatioPercentage}%`,
+            bundlerPct: '11.2%',
+            dexPaidStatus: '✅ Paid',
+            smartMoneyInfo: `🧠 **Smart Traders:** ${signal.smartMoneyCount} Smart Wallets Accumulating (+${signal.smartMoneyNetBuySolOrEth} SOL)`,
+            confidenceScore: 92,
+            aiThesis: reason || signal.aiThesis,
+            gmgnUrl: signal.gmgnUrl,
+            dexScreenerUrl: `https://dexscreener.com/solana/${signal.contractAddress}`,
+            rugcheckUrl: `https://rugcheck.xyz/tokens/${signal.contractAddress}`,
+          }),
+        });
+        dispatchedPayloads.push(...solanaDispatched);
 
-        if (hub.isAgentActive('meme-evm')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('meme-evm');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await evmScreeningAgent.runScreeningPass();
-            for (const r of reports) {
-              if (r.passed && r.signal) {
-                dispatchedPayloads.push({
-                  channelName: 'call-meme-evm',
-                  rawReason: r.reason,
-                  payload: {
-                    domain: 'MEME_EVM',
-                    title: `${r.signal.name || r.signal.symbol} (${r.signal.symbol})`,
-                    symbol: r.signal.symbol,
-                    contractAddress: r.signal.contractAddress,
-                    network: (r.signal.chain || 'base').toUpperCase(),
-                    priceUsd: `$${r.signal.priceUsd}`,
-                    marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
-                    liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
-                    volume5m: '+580%',
-                    volume1h: '$3.4M',
-                    txRatio: 'Buy 82% / Sell 18%',
-                    top10Pct: '18.5%',
-                    devHoldingPct: `${r.signal.devHoldingPercentage}%`,
-                    sniperPct: `${r.signal.sniperRatioPercentage}%`,
-                    bundlerPct: '8.4%',
-                    dexPaidStatus: '✅ Paid',
-                    smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} ETH)`,
-                    confidenceScore: 88,
-                    aiThesis: r.reason || r.signal.aiThesis,
-                    gmgnUrl: r.signal.gmgnUrl,
-                    dexScreenerUrl: `https://dexscreener.com/${r.signal.chain || 'base'}/${r.signal.contractAddress}`,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const evmDispatched = await dispatchDomain({
+          domain: 'meme-evm',
+          channelName: 'call-meme-evm',
+          isActive: () => hub.isAgentActive('meme-evm'),
+          runPass: async () => (await evmScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('meme-evm'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'MEME_EVM',
+            title: `${signal.name || signal.symbol} (${signal.symbol})`,
+            symbol: signal.symbol,
+            contractAddress: signal.contractAddress,
+            network: (signal.chain || 'base').toUpperCase(),
+            priceUsd: `$${signal.priceUsd}`,
+            marketCap: `$${(signal.marketCapUsd / 1000).toFixed(1)}k`,
+            liquidity: `$${(signal.liquidityUsd / 1000).toFixed(1)}k`,
+            volume5m: '+580%',
+            volume1h: '$3.4M',
+            txRatio: 'Buy 82% / Sell 18%',
+            top10Pct: '18.5%',
+            devHoldingPct: `${signal.devHoldingPercentage}%`,
+            sniperPct: `${signal.sniperRatioPercentage}%`,
+            bundlerPct: '8.4%',
+            dexPaidStatus: '✅ Paid',
+            smartMoneyInfo: `🧠 **Smart Traders:** ${signal.smartMoneyCount} Smart Wallets Accumulating (+${signal.smartMoneyNetBuySolOrEth} ETH)`,
+            confidenceScore: 88,
+            aiThesis: reason || signal.aiThesis,
+            gmgnUrl: signal.gmgnUrl,
+            dexScreenerUrl: `https://dexscreener.com/${signal.chain || 'base'}/${signal.contractAddress}`,
+          }),
+        });
+        dispatchedPayloads.push(...evmDispatched);
 
-        if (hub.isAgentActive('nft')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('nft');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await nftScreeningAgent.runScreeningPass();
-            for (const r of reports) {
-              if (r.confidenceScore >= 80) {
-                dispatchedPayloads.push({
-                  channelName: 'call-nft-sniping',
-                  rawReason: r.detectionReason,
-                  payload: {
-                    domain: 'NFT',
-                    title: `${r.collectionName} #${r.tokenId}`,
-                    symbol: r.collectionSlug.toUpperCase(),
-                    contractAddress: r.collectionSlug,
-                    network: r.chain.toUpperCase(),
-                    priceUsd: `${r.priceEth} ETH`,
-                    marketCap: `Floor: ${r.floorPriceEth} ETH (+${r.floorSurge4hPct.toFixed(1)}% 4h)`,
-                    confidenceScore: r.confidenceScore,
-                    aiThesis: r.detectionReason,
-                    dexScreenerUrl: r.openseaUrl,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const nftDispatched = await dispatchDomain({
+          domain: 'nft',
+          channelName: 'call-nft-sniping',
+          isActive: () => hub.isAgentActive('nft'),
+          runPass: async () => (await nftScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.detectionReason })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'NFT',
+            title: `${signal.collectionName} #${signal.tokenId}`,
+            symbol: signal.collectionSlug.toUpperCase(),
+            contractAddress: signal.collectionSlug,
+            network: signal.chain.toUpperCase(),
+            priceUsd: `${signal.priceEth} ETH`,
+            marketCap: `Floor: ${signal.floorPriceEth} ETH (+${signal.floorSurge4hPct.toFixed(1)}% 4h)`,
+            confidenceScore: signal.confidenceScore,
+            aiThesis: reason || signal.detectionReason,
+            dexScreenerUrl: signal.openseaUrl,
+          }),
+        });
+        dispatchedPayloads.push(...nftDispatched);
 
-        if (hub.isAgentActive('prediction')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('prediction');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await polymarketAgent.runScreeningPass();
-            for (const r of reports) {
-              if (r.confidenceScore >= 80) {
-                dispatchedPayloads.push({
-                  channelName: 'call-prediction-markets',
-                  rawReason: r.aiThesis,
-                  payload: {
-                    domain: 'PREDICTION',
-                    title: r.question,
-                    symbol: r.recommendedOutcome,
-                    network: 'Polygon (Polymarket)',
-                    confidenceScore: r.confidenceScore,
-                    aiThesis: r.aiThesis,
-                    dexScreenerUrl: r.polymarketUrl,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const predictionDispatched = await dispatchDomain({
+          domain: 'prediction',
+          channelName: 'call-prediction-markets',
+          isActive: () => hub.isAgentActive('prediction'),
+          runPass: async () => (await polymarketAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.aiThesis })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('prediction'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'PREDICTION',
+            title: signal.question,
+            symbol: signal.recommendedOutcome,
+            network: 'Polygon (Polymarket)',
+            confidenceScore: signal.confidenceScore,
+            aiThesis: reason || signal.aiThesis,
+            dexScreenerUrl: signal.polymarketUrl,
+          }),
+        });
+        dispatchedPayloads.push(...predictionDispatched);
 
-        if (hub.isAgentActive('perps')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('perps');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await perpsScreeningAgent.screenAllAssets();
-            for (const r of reports) {
-              if (r.confidence >= 80) {
-                dispatchedPayloads.push({
-                  channelName: 'call-perps-futures',
-                  rawReason: r.aiThesis || r.signalReasons.join(', '),
-                  payload: {
-                    domain: 'PERPS',
-                    title: `${r.direction} ${r.coin} (${r.suggestedLeverage}x)`,
-                    symbol: r.coin,
-                    contractAddress: r.coin,
-                    network: 'Hyperliquid Perps',
-                    priceUsd: `$${r.entryPriceUsd}`,
-                    marketCap: `Stop: -${r.stopLossPercent}% | TP: +${r.takeProfitPercent}%`,
-                    confidenceScore: r.confidence,
-                    aiThesis: r.aiThesis || r.signalReasons.join(' | '),
-                    dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${r.coin}`,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const perpsDispatched = await dispatchDomain({
+          domain: 'perps',
+          channelName: 'call-perps-futures',
+          isActive: () => hub.isAgentActive('perps'),
+          runPass: async () => (await perpsScreeningAgent.screenAllAssets()).map((r: any) => ({ passed: r.confidence >= 80, signal: r, reason: r.aiThesis || r.signalReasons.join(', ') })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('perps'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'PERPS',
+            title: `${signal.direction} ${signal.coin} (${signal.suggestedLeverage}x)`,
+            symbol: signal.coin,
+            contractAddress: signal.coin,
+            network: 'Hyperliquid Perps',
+            priceUsd: `$${signal.entryPriceUsd}`,
+            marketCap: `Stop: -${signal.stopLossPercent}% | TP: +${signal.takeProfitPercent}%`,
+            confidenceScore: signal.confidence,
+            aiThesis: reason || signal.signalReasons.join(' | '),
+            dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${signal.coin}`,
+          }),
+        });
+        dispatchedPayloads.push(...perpsDispatched);
 
-        if (hub.isAgentActive('ct-alpha')) {
-          const keyCheck = apiKeyGuard.checkDomainKeys('ct-alpha');
-          if (!keyCheck.ready) {
-            console.warn(keyCheck.statusMessage);
-          } else {
-            const reports = await ctAlphaAgent.runScreeningPass();
-            for (const r of reports) {
-              if (r.passed && r.signal) {
-                dispatchedPayloads.push({
-                  channelName: 'call-ct-alpha',
-                  rawReason: r.reason,
-                  payload: {
-                    domain: 'CT_ALPHA',
-                    title: r.signal.title,
-                    symbol: r.signal.symbolMentioned || 'ALPHA',
-                    contractAddress: r.signal.contractAddress || 'N/A',
-                    network: 'X (Twitter)',
-                    confidenceScore: r.signal.confidenceScore,
-                    aiThesis: r.reason || r.signal.actionableTakeaway,
-                    dexScreenerUrl: r.signal.tweetUrl,
-                  },
-                });
-              }
-            }
-          }
-        }
+        const ctAlphaDispatched = await dispatchDomain({
+          domain: 'ct-alpha',
+          channelName: 'call-ct-alpha',
+          isActive: () => hub.isAgentActive('ct-alpha'),
+          runPass: async () => (await ctAlphaAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          keyReady: () => apiKeyGuard.checkDomainKeys('ct-alpha'),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'CT_ALPHA',
+            title: signal.title,
+            symbol: signal.symbolMentioned || 'ALPHA',
+            contractAddress: signal.contractAddress || 'N/A',
+            network: 'X (Twitter)',
+            confidenceScore: signal.confidenceScore,
+            aiThesis: reason || signal.actionableTakeaway,
+            dexScreenerUrl: signal.tweetUrl,
+          }),
+        });
+        dispatchedPayloads.push(...ctAlphaDispatched);
 
         // Purge expired dedup entries
         const now = Date.now();
