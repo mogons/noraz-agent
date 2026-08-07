@@ -46,3 +46,15 @@ Thumbs.db
 docs/superpowers/
 .brain/
 
+# Loop Engineering (local development only — not for the public repo)
+STATE.md
+LOOP.md
+loop-budget.md
+loop-run-log.md
+loop-constraints.md
+docs/safety.md
+patterns/
+skills/loop-verifier/
+skills/loop-budget/
+.superpowers/
+
