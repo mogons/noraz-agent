@@ -19,6 +19,7 @@ import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
 import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
 import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
+import { EVMTradeAdapter } from './adapters/evm-adapter.js';
 import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
 import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
@@ -106,6 +107,7 @@ const uniswapAdapter = new UniswapLPAdapter();
 const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
 const solanaTradeAdapter = new SolanaTradeAdapter();
+const evmTradeAdapter = new EVMTradeAdapter();
 const solanaScreeningAgent = new SolanaScreeningAgent();
 const robinhoodScreeningAgent = new RobinhoodScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
@@ -461,19 +463,20 @@ if (discordToken && clientId) {
           stateStore.setDedupEntry(dedupKey, now);
 
           // AUTO-EXECUTE (simulated while DRY_RUN=true)
-          if (item.channelName === 'call-meme-solana' && item.payload.contractAddress) {
-            const autoExec = hub.isAutoExecuteEnabled('meme-solana');
+          if ((item.channelName === 'call-meme-solana' && item.payload.contractAddress) ||
+              (item.channelName === 'call-meme-robinhood' && item.payload.contractAddress)) {
+            const domain = item.channelName === 'call-meme-solana' ? 'meme-solana' : 'meme-robinhood';
+            const autoExec = hub.isAutoExecuteEnabled(domain);
             if (autoExec.enabled) {
               try {
-                const execRes = await solanaTradeAdapter.executeBuyToken({
-                  outputMint: item.payload.contractAddress,
-                  amountSol: autoExec.maxTradeAmount || 0.1,
-                  slippageBps: 150,
-                });
-                console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
-              } catch (err: any) {
-                console.error(`[AUTO-EXECUTE] ${item.payload.symbol} error: ${err.message}`);
-              }
+                if (domain === 'meme-solana') {
+                  const execRes = await solanaTradeAdapter.executeBuyToken({ outputMint: item.payload.contractAddress, amountSol: autoExec.maxTradeAmount || 0.1, slippageBps: 150 });
+                  console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
+                } else {
+                  const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 });
+                  console.log(`[AUTO-EXECUTE] meme-robinhood ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens})`);
+                }
+              } catch (err: any) { console.error(`[AUTO-EXECUTE] ${item.payload.symbol} error: ${err.message}`); }
             }
           }
 
