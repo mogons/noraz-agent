@@ -67,7 +67,7 @@ async function runWizard() {
 
   // 4. AI REASONING ENGINE
   console.log('\n🤖 STEP 4: AI REASONING ENGINE CREDENTIALS');
-  let aiKey = existingEnv.AI_API_KEY || '';
+  let aiKey = existingEnv.AI_API_KEY || existingEnv.OPENROUTER_API_KEY || existingEnv.OPENAI_API_KEY || '';
   let rawExistingKeys = existingEnv.AI_API_KEYS || existingEnv.AI_API_KEY || '';
   let existingKeyList = rawExistingKeys.split(',').map(k => k.trim()).filter(Boolean);
   let allKeys = [];
@@ -172,7 +172,7 @@ async function runWizard() {
   console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS & HIGH-VELOCITY NETWORK NODES');
   let solanaRpcUrl = existingEnv.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
   let solanaWssUrl = existingEnv.SOLANA_WSS_URL || 'wss://api.mainnet-beta.solana.com';
-  let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || 'https://mainnet.base.org';
+  let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || existingEnv.EVM_RPC_URL || 'https://mainnet.base.org';
   let evmEthRpcUrl = existingEnv.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com';
 
   const defaultSolRpc = solanaRpcUrl ? ` [Default: ${solanaRpcUrl}]` : '';
@@ -191,10 +191,11 @@ async function runWizard() {
   const inputEthRpc = await askQuestion(` 4. EVM_ETH_RPC_URL (Ethereum Mainnet RPC URL)${defaultEthRpc}: `);
   evmEthRpcUrl = inputEthRpc.trim() || evmEthRpcUrl;
 
-  // 7. BURNER WALLETS
-  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS FOR DIRECT EXECUTION');
+  // 7. BURNER WALLETS & PERPS KEYS
+  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS & EXCHANGE API KEYS');
   let solanaPrivateKey = existingEnv.SOLANA_PRIVATE_KEY || '';
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
+  let hyperliquidPrivateKey = existingEnv.HYPERLIQUID_PRIVATE_KEY || '';
 
   const defaultSolPk = solanaPrivateKey ? ` [Default: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Optional - Base58/JSON]';
   const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
@@ -204,6 +205,10 @@ async function runWizard() {
   const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
+  const defaultHlPk = hyperliquidPrivateKey ? ` [Default: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Optional - 0x...]';
+  const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Perps Trading Account Key)${defaultHlPk}: `);
+  hyperliquidPrivateKey = inputHlPk.trim() || hyperliquidPrivateKey;
+
   // 8. SIMULATION MODE
   console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCES');
   const dryRunChoice = await askQuestion(' 1. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
@@ -211,6 +216,8 @@ async function runWizard() {
 
   const simSolBalance = await askQuestion(' 2. Starting Simulation Balance for Solana (SOL) [Default 10.0]: ') || '10.0';
   const simEthBalance = await askQuestion(' 3. Starting Simulation Balance for EVM (ETH) [Default 1.0]: ') || '1.0';
+
+  const primaryAiKey = allKeys[0] || '';
 
   let envContent = `NODE_ENV=production
 DRY_RUN=${isDryRun}
@@ -233,8 +240,11 @@ TELEGRAM_CHAT_ID=${telegramChatId.trim()}
 AI_PROVIDER=${provider}
 AI_BASE_URL=${baseUrl}
 AI_API_KEYS=${combinedKeys}
-AI_API_KEY=${allKeys[0] || ''}
+AI_API_KEY=${primaryAiKey}
 AI_MODEL_NAME=${modelName}
+OPENROUTER_API_KEY=${primaryAiKey}
+OPENAI_API_KEY=${primaryAiKey}
+ANTHROPIC_API_KEY=${primaryAiKey}
 
 # Pro Market Data & Security Audit APIs
 GMGN_API_KEY=${gmgnApiKey.trim()}
@@ -248,11 +258,13 @@ POLYMARKET_PRIVATE_KEY=${polymarketPrivateKey.trim()}
 SOLANA_RPC_URL=${solanaRpcUrl.trim()}
 SOLANA_WSS_URL=${solanaWssUrl.trim()}
 EVM_BASE_RPC_URL=${evmBaseRpcUrl.trim()}
+EVM_RPC_URL=${evmBaseRpcUrl.trim()}
 EVM_ETH_RPC_URL=${evmEthRpcUrl.trim()}
 
-# Web3 Burner Wallets
+# Web3 Burner Wallets & Perps Account Keys
 SOLANA_PRIVATE_KEY=${solanaPrivateKey.trim()}
 EVM_PRIVATE_KEY=${evmPrivateKey.trim()}
+HYPERLIQUID_PRIVATE_KEY=${hyperliquidPrivateKey.trim()}
 
 # Security Audit Endpoints
 RUGCHECK_API_URL=https://api.rugcheck.xyz/v1
