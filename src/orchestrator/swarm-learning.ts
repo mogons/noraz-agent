@@ -143,3 +143,9 @@ export class SwarmLearningEngine {
     return Math.round((wins / closed.length) * 100);
   }
 }
+
+/**
+ * Process-wide singleton — wired into index.ts (recordSignalCall per posted call)
+ * and consumed by position tracking for outcome-driven weight recalibration.
+ */
+export const globalSwarmLearning = new SwarmLearningEngine();

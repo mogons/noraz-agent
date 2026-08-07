@@ -513,6 +513,23 @@ if (discordToken && clientId) {
           } else if (item.channelName === 'call-meme-robinhood' && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
           }
+
+          // 4. Feed the Swarm Learning Engine — every posted call is recorded at its
+          //    entry price so outcome tracking (TP/SL via wallet-tracker) can
+          //    recalibrate agent weights over time. (wired 2026-08-08)
+          try {
+            const { globalSwarmLearning } = await import('./orchestrator/swarm-learning.js');
+            const entryPrice = parseFloat(String(item.payload.priceUsd || '0').replace(/[^0-9.]/g, '')) || 0;
+            globalSwarmLearning.recordSignalCall(
+              item.channelName.replace('call-', ''),
+              item.payload.symbol || 'TOKEN',
+              item.payload.contractAddress || item.payload.symbol || 'N/A',
+              entryPrice,
+              Number(item.payload.confidenceScore) || 0
+            );
+          } catch (learnErr: any) {
+            console.warn(`[SWARM LEARNING] record failed: ${learnErr.message}`);
+          }
         }
 
         // Wallet Auto-Tracking: detect user's own positions + exit alerts

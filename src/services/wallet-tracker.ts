@@ -231,6 +231,15 @@ export class WalletTracker {
         if (res.triggerAlert) {
           alerts.push({ type: res.type, reason: res.reason || '', address: holding.address });
         }
+        // Feed current price into Swarm Learning — outcome tracking (TP/SL) that
+        // recalibrates agent weights based on real results. (wired 2026-08-08)
+        try {
+          const { globalSwarmLearning } = await import('../orchestrator/swarm-learning.js');
+          globalSwarmLearning.updateSignalPrice(holding.address, tok.priceUsd);
+        } catch (learnErr: any) {
+          // non-fatal — learning must never break position tracking
+          console.warn(`[SWARM LEARNING] price update failed for ${holding.address}: ${learnErr.message}`);
+        }
       }
     }
 

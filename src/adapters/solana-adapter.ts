@@ -276,7 +276,26 @@ export class SolanaTradeAdapter {
       const swapData = await swapRes.json() as Record<string, unknown>;
       const swapTransaction = swapData.swapTransaction as string;
 
-      // 3. Deserialize, sign, and send
+      // 3. MEV guard: simulate the transaction BEFORE broadcast — a failed/risky
+      //    swap is never sent on-chain. Priority fee is applied to reduce
+      //    front-running exposure. (wired 2026-08-08)
+      try {
+        const { globalMEVExecutionGuard } = await import('./mev-execution-guard.js');
+        const sim = await globalMEVExecutionGuard.simulateTransaction('solana', { serializedTransaction: swapTransaction });
+        if (!sim.success) {
+          throw new Error(`MEV Guard simulation failed: ${sim.errorMessage}`);
+        }
+        const priorityFee = globalMEVExecutionGuard.getDynamicPriorityFeeGwei('solana');
+        if (priorityFee > 0) {
+          console.log(`[MEV GUARD] Applying priority fee ${priorityFee} (anti-front-running).`);
+        }
+      } catch (guardErr: any) {
+        // Simulation failure is a hard block — never broadcast a tx that fails preflight.
+        console.error(`[SOLANA ADAPTER] MEV guard blocked swap: ${guardErr.message}`);
+        throw new Error(`Swap blocked by MEV guard: ${guardErr.message}`);
+      }
+
+      // 4. Deserialize, sign, and send
       const keypair = walletService.getSolanaKeypair();
       const txBuf = Buffer.from(swapTransaction, 'base64');
       const tx = Transaction.from(txBuf);
