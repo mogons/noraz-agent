@@ -1,7 +1,4 @@
-/**
- * Athena 2.0 - Resilient Multi-RPC Failover & Stale Price Manager (RPCFailoverManager)
- * Automatically monitors latency, switches RPC endpoints on error/delay, and guards against stale prices.
- */
+import { getEnvString } from '../config/config.js';
 
 export interface RPCEndpoint {
   url: string;
@@ -12,86 +9,91 @@ export interface RPCEndpoint {
   isHealthy: boolean;
 }
 
+interface RpcStatus {
+  url: string;
+  latencyMs: number;
+  healthy: boolean;
+}
+
 export class RPCFailoverManager {
-  private rpcPool: Map<string, RPCEndpoint[]> = new Map();
+  private endpoints: Record<string, string[]> = {
+    solana: [],
+    evm: [],
+  };
+  private status: Record<string, RpcStatus[]> = {};
 
   constructor() {
-    this.initializeDefaultRPCs();
+    const configured = (() => {
+      const raw = getEnvString('RPC_FAILOVER_URLS');
+      if (!raw) return {};
+      try { return JSON.parse(raw); } catch { return {}; }
+    })();
+    const solanaUrls = [
+      ...((configured as any).solana as string[] | undefined || []),
+      getEnvString('SOLANA_RPC_URL'),
+    ].filter((u): u is string => Boolean(u));
+    const evmUrls = [
+      ...((configured as any).evm as string[] | undefined || []),
+      getEnvString('EVM_RPC_URL'),
+      getEnvString('BASE_RPC_URL'),
+    ].filter((u): u is string => Boolean(u));
+
+    this.endpoints.solana = solanaUrls;
+    this.endpoints.evm = evmUrls;
+    for (const chain of ['solana', 'evm'] as const) {
+      this.status[chain] = this.endpoints[chain].map((url) => ({ url, latencyMs: Infinity, healthy: false }));
+    }
   }
 
-  private initializeDefaultRPCs() {
-    const solanaRPCs = [
-      process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
-      'https://solana-mainnet.g.alchemy.com/v2/demo',
-      'https://rpc.ankr.com/solana',
-    ];
-
-    const evmRPCs = [
-      process.env.EVM_RPC_URL || 'https://mainnet.base.org',
-      'https://base-mainnet.g.alchemy.com/v2/demo',
-      'https://developer-access-mainnet.base.org',
-    ];
-
-    this.rpcPool.set(
-      'solana',
-      solanaRPCs.map((url) => ({
-        url,
-        chain: 'solana',
-        latencyMs: 0,
-        errorCount: 0,
-        lastCheckedAt: Date.now(),
-        isHealthy: true,
-      }))
-    );
-
-    this.rpcPool.set(
-      'evm',
-      evmRPCs.map((url) => ({
-        url,
-        chain: 'evm',
-        latencyMs: 0,
-        errorCount: 0,
-        lastCheckedAt: Date.now(),
-        isHealthy: true,
-      }))
-    );
+  public getRpcUrls(chain: 'solana' | 'evm'): string[] {
+    return this.endpoints[chain];
   }
 
-  /**
-   * Get best healthy RPC URL for specified chain
-   */
+  public async probeLatencies(): Promise<void> {
+    for (const chain of ['solana', 'evm'] as const) {
+      await Promise.all(this.status[chain].map(async (s) => {
+        const start = Date.now();
+        try {
+          const res = await fetch(s.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          s.latencyMs = Date.now() - start;
+          s.healthy = res.ok;
+        } catch {
+          s.latencyMs = Infinity;
+          s.healthy = false;
+        }
+      }));
+    }
+  }
+
   public getActiveRPC(chain: 'solana' | 'evm'): string {
-    const pool = this.rpcPool.get(chain) || [];
-    const healthy = pool.filter((p) => p.isHealthy).sort((a, b) => a.latencyMs - b.latencyMs);
-
-    if (healthy.length > 0) {
-      return healthy[0].url;
-    }
-    // Fallback to first configured if all marked unhealthy
-    return pool[0]?.url || '';
+    const healthy = this.status[chain]
+      .filter((s) => s.healthy)
+      .sort((a, b) => a.latencyMs - b.latencyMs);
+    return healthy[0]?.url ?? this.endpoints[chain][0] ?? '';
   }
 
-  /**
-   * Report RPC execution failure to increment error counter & auto-failover
-   */
   public reportRPCFailure(chain: 'solana' | 'evm', url: string): void {
-    const pool = this.rpcPool.get(chain) || [];
-    const endpoint = pool.find((p) => p.url === url);
-    if (endpoint) {
-      endpoint.errorCount++;
-      if (endpoint.errorCount >= 3) {
-        endpoint.isHealthy = false;
-        console.warn(`⚠️ RPC Failover: Endpoint [${url}] marked UNHEALTHY after ${endpoint.errorCount} consecutive errors.`);
-      }
-    }
+    const entry = this.status[chain].find((s) => s.url === url);
+    if (entry) entry.healthy = false;
   }
 
-  /**
-   * Check if price update timestamp is stale (> 30 seconds old)
-   */
   public isPriceFresh(timestampMs: number, maxAgeSeconds = 30): boolean {
     const ageSeconds = (Date.now() - timestampMs) / 1000;
     return ageSeconds <= maxAgeSeconds;
+  }
+
+  public getRpcPool(chain: 'solana' | 'evm'): RPCEndpoint[] {
+    return this.endpoints[chain].map((url) => {
+      const s = this.status[chain].find((x) => x.url === url);
+      return {
+        url,
+        chain,
+        latencyMs: s?.latencyMs ?? 0,
+        errorCount: s && !s.healthy ? 1 : 0,
+        lastCheckedAt: Date.now(),
+        isHealthy: s?.healthy ?? false,
+      };
+    });
   }
 }
 

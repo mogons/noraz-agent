@@ -5,6 +5,7 @@ import { mainnet, base, arbitrum, optimism, polygon, bsc } from 'viem/chains';
 
 import { StateStore } from './state-store.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
+import { globalRPCFailoverManager } from './rpc-failover.js';
 
 export interface WalletConfig {
   solanaPrivateKey?: string;
@@ -54,7 +55,7 @@ export class WalletService {
       console.log('[WALLET SERVICE] EVM private key loaded from environment.');
     }
 
-    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+    const rpcUrl = globalRPCFailoverManager.getActiveRPC('solana') || process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
     this.solanaConnection = new Connection(rpcUrl, 'confirmed');
   }
 
@@ -163,6 +164,7 @@ export class WalletService {
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      globalRPCFailoverManager.reportRPCFailure('solana', this.solanaConnection.rpcEndpoint);
       console.warn(`[WALLET] Solana balance query failed: ${message}`);
       return null;
     }
