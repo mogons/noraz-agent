@@ -34,6 +34,7 @@ import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
 import { ApiKeyGuardService } from './services/api-key-guard.js';
+import { globalRiskEngineV2 } from './orchestrator/risk-engine-v2.js';
 import { WalletTracker } from './services/wallet-tracker.js';
 
 dotenv.config();
@@ -423,6 +424,21 @@ if (discordToken && clientId) {
             const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
             if (autoExec.enabled) {
               try {
+                // ── RISK GATE (RiskEngineV2 / RiskManager) ──
+                // Never execute (even simulated) when risk limits are hit: global
+                // drawdown cap, per-trade size cap, or kill-switch active. This wires
+                // the previously-dead risk engine into the actual execution path.
+                const riskCheck = hub.getRiskManager().isTradeAllowed(autoExec.maxTradeAmount || 0.1);
+                if (!riskCheck.allowed) {
+                  console.warn(`[AUTO-EXECUTE] ${autoExecDomain} ${item.payload.symbol}: BLOCKED by risk gate — ${riskCheck.reason}`);
+                  await notifyControlRoom(client, `risk:${autoExecDomain}`, `🚫 **RISK GATE BLOCKED** auto-execute ${autoExecDomain} ${item.payload.symbol}: ${riskCheck.reason}`);
+                  break;
+                }
+                if (globalRiskEngineV2.checkKillSwitchStatus()) {
+                  console.warn(`[AUTO-EXECUTE] ${autoExecDomain} ${item.payload.symbol}: BLOCKED — emergency kill-switch active.`);
+                  await notifyControlRoom(client, 'risk:killswitch', `🚨 **KILL-SWITCH ACTIVE** — auto-execute ${autoExecDomain} ${item.payload.symbol} blocked.`);
+                  break;
+                }
                 if (autoExecDomain === 'meme-solana' && item.payload.contractAddress) {
                   const execRes = await solanaTradeAdapter.executeBuyToken({ outputMint: item.payload.contractAddress, amountSol: autoExec.maxTradeAmount || 0.1, slippageBps: 150 });
                   console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
