@@ -26,8 +26,20 @@ Iterative improvement of the Athena crypto-trading system: audit → critique �
 ## WAITING FOR HUMAN Protocol
 Decisions needing user (new API keys, feature direction, risk tradeoffs) → write to STATE.md `WAITING FOR HUMAN` section → SKIP to next non-blocked task → continue. Only stop entirely when ALL tasks blocked OR token budget reached.
 
+## Stall / No-Progress Detection
+- If a task has >3 failed attempts without measurable progress (no new commits, no test passing) → ESCALATE to STATE.md `WAITING FOR HUMAN` with a description of attempts made, then move on.
+- Never retry the same failing action more than 3 times in one session.
+
+## Human Escalation Path
+Escalate (write to STATE.md `WAITING FOR HUMAN`) when:
+1. Decision required (new API key, auth model, feature direction, live-trading tradeoffs)
+2. Task blocked >3 attempts without progress
+3. Denylist path encountered (see docs/safety.md)
+4. Token budget reached (see loop-budget.md)
+Notification: STATE.md section; no Discord ping needed (user reads STATE.md on return).
+
 ## Token Budget
-See loop-budget.md. Cap: 3 sessions per agent per work night (~9 total), recorded in run log.
+See loop-budget.md. Cap: 3 sessions per agent per work night (~9 total), recorded in run log. Runtime guard: skills/loop-budget.
 
 ## Denylist Paths
 - auth/secrets/private keys
