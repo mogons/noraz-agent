@@ -18,6 +18,7 @@ import { SkillLoader } from './services/skill-loader.js';
 import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
 import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
+import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
 import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
 import { EVMScreeningAgent } from './agents/meme-evm/evm-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
@@ -104,6 +105,7 @@ const meteoraAdapter = new MeteoraDLMMAdapter();
 const uniswapAdapter = new UniswapLPAdapter();
 const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
+const solanaTradeAdapter = new SolanaTradeAdapter();
 const solanaScreeningAgent = new SolanaScreeningAgent();
 const evmScreeningAgent = new EVMScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
@@ -484,6 +486,23 @@ if (discordToken && clientId) {
           }
           recentSignals.set(dedupKey, now);
           stateStore.setDedupEntry(dedupKey, now);
+
+          // AUTO-EXECUTE (simulated while DRY_RUN=true)
+          if (item.channelName === 'call-meme-solana' && item.payload.contractAddress) {
+            const autoExec = hub.isAutoExecuteEnabled('meme-solana');
+            if (autoExec.enabled) {
+              try {
+                const execRes = await solanaTradeAdapter.executeBuyToken({
+                  outputMint: item.payload.contractAddress,
+                  amountSol: autoExec.maxTradeAmount || 0.1,
+                  slippageBps: 150,
+                });
+                console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
+              } catch (err: any) {
+                console.error(`[AUTO-EXECUTE] ${item.payload.symbol} error: ${err.message}`);
+              }
+            }
+          }
 
           // 1. Post to Discord Channel
           const targetChannel = client.channels.cache.find(

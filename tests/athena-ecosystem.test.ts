@@ -531,6 +531,17 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(res.ready).toBe(true);
     expect(process.env.OPENSEA_API_KEY).toBe('test_opensea_key_123');
   });
+
+  it('27. Auto-execute: hub state reflects enablement', async () => {
+    const { AthenaHub } = await import('../src/orchestrator/hub.js');
+    const hub = new AthenaHub();
+    hub.setAutoExecute('meme-solana', true, 0.1);
+    const st = hub.isAutoExecuteEnabled('meme-solana');
+    expect(st.enabled).toBe(true);
+    expect(st.maxTradeAmount).toBe(0.1);
+    hub.setAutoExecute('meme-solana', false);
+    expect(hub.isAutoExecuteEnabled('meme-solana').enabled).toBe(false);
+  });
 });
 
 
