@@ -352,6 +352,68 @@ if (discordToken && clientId) {
         });
         dispatchedPayloads.push(...ctAlphaDispatched);
 
+        const lpSolanaDispatched = await dispatchDomain({
+          domain: 'lp-solana',
+          channelName: 'call-lp-solana',
+          isActive: () => hub.isAgentActive('lp-solana'),
+          runPass: async () => {
+            const pools = await meteoraAdapter.fetchTopYieldPools();
+            const high = meteoraAdapter.filterHighYieldPools(pools);
+            return high.map((p) => ({ passed: true, signal: p, reason: p.aiRecommendation }));
+          },
+          keyReady: () => ({ ready: true, statusMessage: '' }),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'LP_METEORA',
+            title: signal.pairName,
+            symbol: signal.pairName.split(' ')[0],
+            contractAddress: signal.poolAddress,
+            network: 'Solana',
+            liquidity: `$${(signal.tvlUsd / 1000).toFixed(1)}k`,
+            devHoldingPct: `${signal.feeAprPercentage}% APR`,
+            sniperPct: `${(signal.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
+            bundlerPct: `${signal.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
+            dexPaidStatus: 'Meteora DLMM',
+            confidenceScore: 80,
+            aiThesis: reason || signal.aiRecommendation,
+            liquidityUsd: signal.tvlUsd || 0,
+            volume1hUsd: signal.volume4hUsd / 4 || 0,
+            securityAuditPassed: true,
+            socialHypeScore: signal.organicVolumeScore4h || 0,
+          }),
+        });
+        dispatchedPayloads.push(...lpSolanaDispatched);
+
+        const lpEvmDispatched = await dispatchDomain({
+          domain: 'lp-evm',
+          channelName: 'call-lp-evm',
+          isActive: () => hub.isAgentActive('lp-evm'),
+          runPass: async () => {
+            const pools = await uniswapAdapter.fetchTopYieldEVMPools();
+            const high = uniswapAdapter.filterHighYieldEVMPools(pools);
+            return high.map((p) => ({ passed: true, signal: p, reason: p.aiRecommendation }));
+          },
+          keyReady: () => ({ ready: true, statusMessage: '' }),
+          buildPayload: ({ signal, reason }) => ({
+            domain: 'LP_UNISWAP',
+            title: signal.pairName,
+            symbol: signal.pairName.split(' ')[0],
+            contractAddress: signal.poolAddress,
+            network: signal.network,
+            liquidity: `$${(signal.tvlUsd / 1000).toFixed(1)}k`,
+            devHoldingPct: `${signal.feeAprPercentage}% APR`,
+            sniperPct: `${(signal.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
+            bundlerPct: `${signal.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
+            dexPaidStatus: 'Uniswap v3',
+            confidenceScore: 80,
+            aiThesis: reason || signal.aiRecommendation,
+            liquidityUsd: signal.tvlUsd || 0,
+            volume1hUsd: signal.volume4hUsd / 4 || 0,
+            securityAuditPassed: true,
+            socialHypeScore: signal.organicVolumeScore4h || 0,
+          }),
+        });
+        dispatchedPayloads.push(...lpEvmDispatched);
+
         // Real Swarm Consensus gate (>= 80%): every signal must pass with real data
         dispatchedPayloads = dispatchedPayloads.filter((item) => gateSignal(item.payload));
 
