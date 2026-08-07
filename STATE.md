@@ -102,3 +102,13 @@
 | 8 | LLM tool hardening (write_strategy sandbox, set_api_key allowlist) | P0 | YES - tradeoff | WAITING |
 | 9 | Risk engine wiring to auto-execute | P0 | YES - when live? | WAITING |
 | 10 | CronScheduler singleton + cron parsing | P1 | No | ⏳ |
+
+### FASE 3 PROGRESS
+| Fix | Status |
+|---|---|
+| 1 Hyperliquid indices | ✅ DONE a6bcce8 (SOL=5 HYPE=159 live-verified; GOLD/XYZ100/OIL ghosts removed) |
+| 2 OpenSea fail-open | ⏳ next |
+| 3 Prompt injection sanitize | ⏳ |
+| 4 Dead code | ⏳ |
+| 5 De-hardcode constants | ⏳ |
+| 6 Robinhood in wallet-service | ⏳ |
