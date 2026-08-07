@@ -217,15 +217,4 @@ export class RiskManager {
       maxCorrelatedPositions: this.limits.maxCorrelatedPositions,
     };
   }
-
-  public getRiskStatus() {
-    return {
-      paused: this.tradingPaused,
-      dailyDrawdown: `${this.currentDailyDrawdownPercent}%`,
-      maxDrawdownLimit: `${this.limits.maxPortfolioDrawdownPercent}%`,
-      maxTradeSizeUsd: `$${this.limits.maxTradeAmountUsd}`,
-      maxSectorExposure: `${this.limits.maxSectorExposurePercent}%`,
-      maxCorrelatedPositions: this.limits.maxCorrelatedPositions,
-    };
-  }
 }

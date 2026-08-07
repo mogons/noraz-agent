@@ -56,11 +56,6 @@ export class MEVExecutionGuard {
     if (chain === 'solana') return Number(process.env.SOLANA_PRIORITY_FEE_MICRO || 0);
     return Number(process.env.EVM_PRIORITY_FEE_GWEI || 0);
   }
-
-  public getPrivateRoutingEndpoint(chain: 'solana' | 'evm'): string {
-    if (chain === 'solana') return process.env.JITO_BLOCK_ENGINE_URL || '';
-    return process.env.FLASHBOTS_RPC_URL || '';
-  }
 }
 
 export const globalMEVExecutionGuard = new MEVExecutionGuard();

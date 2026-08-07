@@ -471,18 +471,4 @@ export class PerpsScreeningAgent implements ScreeningAgent<HyperliquidPerpsSigna
       },
     };
   }
-
-  public startScreening(intervalMs: number = 5 * 60 * 1000): void {
-    this.isRunning = true;
-    console.log(`[PERPS AGENT] Continuous screening started (interval: ${intervalMs / 1000}s)`);
-  }
-
-  public stopScreening(): void {
-    this.isRunning = false;
-    console.log('[PERPS AGENT] Screening stopped.');
-  }
-
-  public getStatus(): { running: boolean } {
-    return { running: this.isRunning };
-  }
 }

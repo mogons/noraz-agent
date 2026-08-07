@@ -203,10 +203,6 @@ export class StateStore {
     this.scheduleSave();
   }
 
-  public getPosition(id: string): OpenPosition | undefined {
-    return this.state.openPositions[id];
-  }
-
   public removePosition(id: string): boolean {
     const existed = id in this.state.openPositions;
     delete this.state.openPositions[id];
@@ -225,10 +221,6 @@ export class StateStore {
   public setLpPosition(pos: ActiveLPPosition): void {
     this.state.activeLpPositions[pos.id] = pos;
     this.scheduleSave();
-  }
-
-  public getLpPosition(id: string): ActiveLPPosition | undefined {
-    return this.state.activeLpPositions[id];
   }
 
   public removeLpPosition(id: string): boolean {
@@ -251,10 +243,6 @@ export class StateStore {
     this.scheduleSave();
   }
 
-  public getNftPosition(id: string): ActiveNFTPosition | undefined {
-    return this.state.activeNftPositions[id];
-  }
-
   public removeNftPosition(id: string): boolean {
     const existed = id in this.state.activeNftPositions;
     delete this.state.activeNftPositions[id];
@@ -275,10 +263,6 @@ export class StateStore {
     this.scheduleSave();
   }
 
-  public getAlert(id: string): PriceAlert | undefined {
-    return this.state.priceAlerts[id];
-  }
-
   public removeAlert(id: string): boolean {
     const existed = id in this.state.priceAlerts;
     delete this.state.priceAlerts[id];
@@ -297,10 +281,6 @@ export class StateStore {
   public setJournalEntry(entry: TradeJournalEntry): void {
     this.state.tradeJournalEntries[entry.id] = entry;
     this.scheduleSave();
-  }
-
-  public getJournalEntry(id: string): TradeJournalEntry | undefined {
-    return this.state.tradeJournalEntries[id];
   }
 
   public getAllJournalEntries(): TradeJournalEntry[] {
@@ -342,10 +322,6 @@ export class StateStore {
     this.scheduleSave();
   }
 
-  public getAgentState(domain: string): boolean | undefined {
-    return this.state.agentStates[domain];
-  }
-
   public getAllAgentStates(): Record<string, boolean> {
     return { ...this.state.agentStates };
   }
@@ -365,27 +341,9 @@ export class StateStore {
     this.scheduleSave();
   }
 
-  public getRecentSignals(count: number = 50): SignalLedgerEntry[] {
-    return this.state.signalLedger.slice(-count);
-  }
-
-  public getSignalsByDomain(domain: string, count: number = 50): SignalLedgerEntry[] {
-    return this.state.signalLedger
-      .filter(s => s.domain === domain)
-      .slice(-count);
-  }
-
-  public getSignalById(id: string): SignalLedgerEntry | undefined {
-    return this.state.signalLedger.find(s => s.id === id);
-  }
-
   // ==========================================
   // PERSISTENT SIGNAL DEDUP
   // ==========================================
-
-  public getDedupEntry(key: string): number | undefined {
-    return this.state.dedupEntries[key];
-  }
 
   public setDedupEntry(key: string, timestamp: number): void {
     this.state.dedupEntries[key] = timestamp;

@@ -4,6 +4,7 @@ import { base } from 'viem/chains';
 import { PositionManager } from '../position/position-manager.js';
 import { StateStore } from '../services/state-store.js';
 import { WalletService } from '../services/wallet-service.js';
+import { TradeJournalService } from '../services/trade-journal-service.js';
 import { GMGNAdapter } from '../adapters/gmgn-adapter.js';
 import { SolanaTradeAdapter } from '../adapters/solana-adapter.js';
 
@@ -19,6 +20,7 @@ export interface WalletTrackerDeps {
   gmgn?: GMGNAdapter;
   solanaConnection?: Connection;
   walletService?: WalletService;
+  tradeJournal?: TradeJournalService;
   evmBalanceReader?: EvmBalanceReader;
 }
 
@@ -73,6 +75,7 @@ export class WalletTracker {
   private gmgn?: GMGNAdapter;
   private connection: Connection;
   private walletService?: WalletService;
+  private tradeJournal?: TradeJournalService;
   private evmBalanceReader: EvmBalanceReader;
 
   constructor(deps: WalletTrackerDeps) {
@@ -82,6 +85,7 @@ export class WalletTracker {
     // SolanaTradeAdapter.getActiveConnection() has RPC failover — use it by default.
     this.connection = deps.solanaConnection ?? new SolanaTradeAdapter().getActiveConnection();
     this.walletService = deps.walletService;
+    this.tradeJournal = deps.tradeJournal;
     this.evmBalanceReader = deps.evmBalanceReader ?? this.defaultEvmBalanceReader;
   }
 
@@ -257,6 +261,13 @@ export class WalletTracker {
         const scanOk = isEvm ? evmScan.scannedOk.has(pos.contractAddress.toLowerCase()) : solanaScan.ok;
         if (!scanOk) continue;
         this.positionManager.removePosition(pos.id);
+        // Close any OPEN journal entry for this contract — exit PnL audit trail.
+        try {
+          const closed = this.tradeJournal?.closeByContractAddressOrId(pos.contractAddress, pos.currentPriceUsd, 'CLOSED_MANUAL', 'wallet auto-close: no longer held');
+          if (closed) console.log(`[WALLET TRACKER] Closed ${closed} journal entry(ies) for ${pos.symbol} (${pos.id})`);
+        } catch (journalErr: any) {
+          console.warn(`[WALLET TRACKER] Journal close failed for ${pos.symbol}: ${journalErr.message}`);
+        }
         console.log(`[WALLET TRACKER] Auto-closed position ${pos.symbol} (${pos.id}) — no longer held`);
       }
     }

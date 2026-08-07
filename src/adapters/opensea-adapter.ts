@@ -90,10 +90,6 @@ export class OpenSeaAdapter {
     this.isDryRun = isDryRunMode();
   }
 
-  public isApiKeyConfigured(): boolean {
-    return Boolean(this.apiKey);
-  }
-
   public parseChain(input: string | number): { id: number; name: string; slug: string } {
     const key = String(input).toLowerCase().trim();
     if (CHAIN_MAP[key]) return CHAIN_MAP[key];

@@ -23,74 +23,14 @@ export interface ConsensusResult {
   reason: string;
 }
 
-export interface SwarmConsensus {
-  evaluateSignal(signalPayload: any): Promise<{
-    passed: boolean;
-    totalScore: number;
-    breakdown: {
-      quantScore: number;
-      catalystScore: number;
-      securityScore: number;
-      aiSentiment: string;
-    };
-  }>;
-}
-
-export interface AgentReputation {
-  domain: string;
-  winRatePercent: number;
-  totalCalls: number;
-  reputationWeight: number; // 0.5 - 1.5
-}
-
 export class SwarmConsensusEngine {
   private stateStore: StateStore | null = null;
-  private agentReputations: Map<string, AgentReputation> = new Map();
 
   // Optional pluggable strategy provider (set by StrategyEngine wiring in index.ts)
   private static strategyProvider: ((domain: string) => { evaluate?: (ctx: any) => any } | null) | null = null;
 
   public static setStrategyProvider(fn: ((domain: string) => { evaluate?: (ctx: any) => any } | null) | null): void {
     SwarmConsensusEngine.strategyProvider = fn;
-  }
-
-  constructor() {
-    this.initializeAgentReputations();
-  }
-
-  private initializeAgentReputations() {
-    const domains = ['MEME_SOLANA', 'MEME_EVM', 'PERPS', 'NFT', 'LP_METEORA', 'LP_UNISWAP', 'PREDICTION'];
-    domains.forEach((domain) => {
-      this.agentReputations.set(domain, {
-        domain,
-        winRatePercent: 65, // default baseline 65%
-        totalCalls: 10,
-        reputationWeight: 1.0,
-      });
-    });
-  }
-
-  /**
-   * Update agent reputation based on historical trading outcomes
-   */
-  public updateAgentReputation(domain: string, isWin: boolean): void {
-    const rep = this.agentReputations.get(domain);
-    if (!rep) return;
-
-    const currentWins = (rep.winRatePercent / 100) * rep.totalCalls;
-    const newTotalCalls = rep.totalCalls + 1;
-    const newWins = currentWins + (isWin ? 1 : 0);
-    const newWinRate = (newWins / newTotalCalls) * 100;
-
-    // Reputation weight scales from 0.7 (low accuracy) to 1.3 (high accuracy)
-    const newWeight = Math.min(1.3, Math.max(0.7, newWinRate / 65));
-
-    this.agentReputations.set(domain, {
-      domain,
-      winRatePercent: newWinRate,
-      totalCalls: newTotalCalls,
-      reputationWeight: newWeight,
-    });
   }
 
   /**
@@ -131,9 +71,9 @@ export class SwarmConsensusEngine {
       }
     }
 
-    // Fetch Agent Reputation Weight
-    const rep = this.agentReputations.get(candidate.domain) || { reputationWeight: 1.0 };
-    const reputationMultiplier = rep.reputationWeight;
+    // Agent reputation is always neutral (1.0) until wired to real trade outcomes;
+    // evaluateSignal must never fail-open from a stale/nonexistent reputation entry.
+    const reputationMultiplier = 1.0;
 
     // Agent-computed confidence path (new): swarm acts as pure gate
     let quantScore = 0;

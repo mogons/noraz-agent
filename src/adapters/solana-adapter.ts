@@ -64,15 +64,6 @@ export class SolanaTradeAdapter {
     return this.connection;
   }
 
-  /** Failover to next RPC node in fallback array if primary experiences latency/downtime */
-  public rotateRpcConnection(): Connection {
-    this.currentRpcIndex = (this.currentRpcIndex + 1) % this.fallbackRpcUrls.length;
-    const nextUrl = this.fallbackRpcUrls[this.currentRpcIndex];
-    console.warn(`[SOLANA ADAPTER FAILOVER] Rotating RPC connection to fallback #${this.currentRpcIndex + 1}: ${nextUrl}`);
-    this.connection = new Connection(nextUrl, 'confirmed');
-    return this.connection;
-  }
-
   public async executeBuyToken(request: SolanaTradeRequest): Promise<SolanaTradeResult> {
     console.log(`[SOLANA ADAPTER] Initiating Buy Order for token: ${request.outputMint} (Amount: ${request.amountSol} SOL)`);
 

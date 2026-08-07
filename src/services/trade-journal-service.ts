@@ -95,6 +95,27 @@ export class TradeJournalService {
     return all.sort((a, b) => new Date(b.entryTimestamp).getTime() - new Date(a.entryTimestamp).getTime());
   }
 
+  /**
+   * Close every OPEN journal entry matching a contract address / id (e.g. when the
+   * wallet-tracker auto-closes a position that is no longer held). Returns the
+   * number of entries closed.
+   */
+  public closeByContractAddressOrId(
+    contractAddressOrId: string,
+    exitPriceUsdOrEth: number,
+    status: 'CLOSED_TP' | 'CLOSED_SL' | 'CLOSED_MANUAL' | 'OUT_OF_RANGE',
+    exitReason?: string
+  ): number {
+    let closed = 0;
+    for (const entry of this.entries.values()) {
+      if (entry.status === 'OPEN' && entry.contractAddressOrId.toLowerCase() === contractAddressOrId.toLowerCase()) {
+        this.closeTrade(entry.id, exitPriceUsdOrEth, status, exitReason);
+        closed++;
+      }
+    }
+    return closed;
+  }
+
   public getSummaryStats(): JournalSummaryStats {
     const trades = Array.from(this.entries.values());
     const closed = trades.filter(t => t.status !== 'OPEN' && t.realizedPnlUsd !== undefined);

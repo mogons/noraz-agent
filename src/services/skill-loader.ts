@@ -77,15 +77,4 @@ export class SkillLoader {
 
     return { name, description, body };
   }
-
-  public getCombinedSystemInstructions(): string {
-    const skills = this.loadAllSkills();
-    if (skills.length === 0) return '';
-
-    let combined = '\n=== LOADED ATHENA SKILLS & OPERATIONAL RULES ===\n';
-    for (const skill of skills) {
-      combined += `\n--- SKILL: ${skill.name} ---\n${skill.content}\n`;
-    }
-    return combined;
-  }
 }

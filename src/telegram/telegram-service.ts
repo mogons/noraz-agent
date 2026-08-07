@@ -24,11 +24,6 @@ export interface TelegramConfig {
   chatId?: string;
 }
 
-export interface TelegramTopic {
-  name: string;
-  threadId: number;
-}
-
 export class TelegramService {
   private botToken?: string;
   private chatId?: string;

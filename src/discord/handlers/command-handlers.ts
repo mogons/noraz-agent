@@ -53,11 +53,6 @@ export async function handleChatInput(
   hub: AthenaHub
 ): Promise<void> {
   const commandName = interaction.commandName;
-async function handleChatInput(
-  interaction: ChatInputCommandInteraction,
-  hub: AthenaHub
-): Promise<void> {
-  const commandName = interaction.commandName;
 
   if (commandName === 'wallet') {
     const subcommand = interaction.options.getSubcommand();
@@ -593,7 +588,4 @@ async function handleChatInput(
 
     await interaction.reply({ embeds: [embed], components: [actionRow] });
   }
-}
-
-
 }

@@ -1,9 +1,9 @@
 import http from 'http';
 import { AthenaHub } from '../orchestrator/hub.js';
 import { globalHealthWatcher } from '../services/health-watcher.js';
-import { globalAnalyticsService } from '../services/analytics-service.js';
 import { globalMarketRegimeFilter } from '../services/market-regime.js';
 import { globalRiskEngineV2 } from '../orchestrator/risk-engine-v2.js';
+import { tradeJournalService } from '../discord/handlers/command-handlers.js';
 
 export class AthenaRESTServer {
   private server: http.Server | null = null;
@@ -33,7 +33,7 @@ export class AthenaRESTServer {
           })
         );
       } else if (req.url === '/api/analytics') {
-        const summary = globalAnalyticsService.getSummary();
+        const summary = tradeJournalService.getSummaryStats();
         res.statusCode = 200;
         res.end(JSON.stringify(summary));
       } else {
@@ -45,11 +45,5 @@ export class AthenaRESTServer {
     this.server.listen(this.port, () => {
       console.log(`📡 ATHENA 2.0 REST API Server listening on port ${this.port}`);
     });
-  }
-
-  public stop(): void {
-    if (this.server) {
-      this.server.close();
-    }
   }
 }

@@ -1,4 +1,5 @@
 import { RiskManager } from './risk-manager.js';
+import { globalRiskEngineV2 } from './risk-engine-v2.js';
 import { AGENT_DOMAINS, getAgentDomain, normalizeDomainKey as registryNormalizeDomain } from './agent-registry.js';
 import type { AgentDomainId } from './agent-registry.js';
 import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
@@ -103,14 +104,6 @@ export class AthenaHub {
     this.channelStates.set(channelId, status);
     this.setAgentActive(domain, active);
     return status;
-  }
-
-  public getChannelStatus(channelId: string): ChannelStatus | undefined {
-    return this.channelStates.get(channelId);
-  }
-
-  public getAllActiveChannels(): ChannelStatus[] {
-    return Array.from(this.channelStates.values()).filter(c => c.active);
   }
 
   public getActiveDomains(): string[] {
@@ -275,7 +268,6 @@ export class AthenaHub {
     }
 
     // 2. Trigger Global Circuit Breaker Kill Switch
-    const { globalRiskEngineV2 } = require('./risk-engine-v2.js');
     globalRiskEngineV2.activateKillSwitch(reason);
 
     return {

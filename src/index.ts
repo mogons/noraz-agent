@@ -4,7 +4,7 @@ import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js
 import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.js';
 import { AthenaHub } from './orchestrator/hub.js';
 import { dispatchDomain, buildLPPayload } from './orchestrator/dispatch.js';
-import { SwarmConsensusEngine, SwarmConsensus } from './orchestrator/swarm-consensus.js';
+import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
 import { PositionManager } from './position/position-manager.js';
 import { AIService } from './services/ai-service.js';
@@ -128,7 +128,7 @@ const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
 
 // Wallet auto-tracker: mirrors user's on-chain holdings into PositionManager lifecycle + exit alerts
-const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new GMGNAdapter(), walletService });
+const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new GMGNAdapter(), walletService, tradeJournal: tradeJournalService });
 
 const aiService = new AIService();
 const skillLoader = new SkillLoader();

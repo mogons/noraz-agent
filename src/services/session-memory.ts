@@ -12,18 +12,9 @@ export interface AuditMemoryRecord {
   details: string;
 }
 
-export interface UserQueryRecord {
-  id: string;
-  userId: string;
-  query: string;
-  responseSummary: string;
-  timestampIso: string;
-}
-
 export class SessionMemoryService {
   private dbPath: string;
   private auditMemories: AuditMemoryRecord[] = [];
-  private userQueries: UserQueryRecord[] = [];
 
   constructor(dbPath?: string) {
     this.dbPath = dbPath || path.join(process.cwd(), 'database', 'session_memory.json');
@@ -46,8 +37,7 @@ export class SessionMemoryService {
       const raw = fs.readFileSync(this.dbPath, 'utf-8');
       const parsed = JSON.parse(raw);
       this.auditMemories = parsed.auditMemories || [];
-      this.userQueries = parsed.userQueries || [];
-      console.log(`[SESSION MEMORY] Loaded ${this.auditMemories.length} past token audits and ${this.userQueries.length} query records.`);
+      console.log(`[SESSION MEMORY] Loaded ${this.auditMemories.length} past token audits.`);
     } catch (err: any) {
       console.warn(`[SESSION MEMORY WARNING] Failed loading memory store: ${err.message}`);
     }
@@ -57,7 +47,7 @@ export class SessionMemoryService {
     try {
       fs.writeFileSync(
         this.dbPath,
-        JSON.stringify({ auditMemories: this.auditMemories, userQueries: this.userQueries }, null, 2),
+        JSON.stringify({ auditMemories: this.auditMemories, userQueries: [] }, null, 2),
         'utf-8'
       );
     } catch (err: any) {
@@ -88,24 +78,6 @@ export class SessionMemoryService {
     return record;
   }
 
-  public recordUserQuery(userId: string, query: string, responseSummary: string): UserQueryRecord {
-    const record: UserQueryRecord = {
-      id: `QUERY_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      userId,
-      query,
-      responseSummary,
-      timestampIso: new Date().toISOString(),
-    };
-
-    this.userQueries.unshift(record);
-    if (this.userQueries.length > 500) {
-      this.userQueries = this.userQueries.slice(0, 500);
-    }
-
-    this.saveMemory();
-    return record;
-  }
-
   /**
    * Fast zero-LLM-token keyword search over past audits
    */
@@ -128,30 +100,20 @@ export class SessionMemoryService {
   }
 
   /**
-   * Build a compact memory-context string (last N audits + recent user queries) to inject
-   * into the AI system prompt. Keeps token cost small (~200-400 tokens) while giving the
-   * LLM lightweight cross-chat memory. Zero-cost if no records exist.
+   * Build a compact memory-context string (last N audits) to inject into the AI
+   * system prompt. Keeps token cost small (~200-400 tokens) while giving the LLM
+   * lightweight cross-chat memory. Zero-cost if no records exist.
    */
-  public buildMemoryContextLine(maxAudits: number = 4, maxQueries: number = 3): string {
+  public buildMemoryContextLine(maxAudits: number = 4): string {
     const audits = this.auditMemories.slice(0, maxAudits);
-    const queries = this.userQueries.slice(0, maxQueries);
 
-    if (audits.length === 0 && queries.length === 0) return '';
+    if (audits.length === 0) return '';
 
     const lines: string[] = ['\nMEMORI SINGKAT (dari sesi sebelumnya):'];
-    if (audits.length > 0) {
-      lines.push('- Audit terakhir:');
-      for (const a of audits) {
-        const d = a.timestampIso ? a.timestampIso.slice(0, 16) : '';
-        lines.push(`  • ${a.symbol} (${a.chain}): ${a.verdict} [${a.score}/100] @${d}`);
-      }
-    }
-    if (queries.length > 0) {
-      lines.push('- Pertanyaan user terakhir:');
-      for (const q of queries) {
-        const short = q.query.length > 60 ? q.query.slice(0, 60) + '…' : q.query;
-        lines.push(`  • "${short}"`);
-      }
+    lines.push('- Audit terakhir:');
+    for (const a of audits) {
+      const d = a.timestampIso ? a.timestampIso.slice(0, 16) : '';
+      lines.push(`  • ${a.symbol} (${a.chain}): ${a.verdict} [${a.score}/100] @${d}`);
     }
     return lines.join('\n');
   }

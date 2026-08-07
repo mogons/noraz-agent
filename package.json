@@ -36,25 +36,13 @@
     "node": ">=22.12"
   },
   "dependencies": {
-    "@jup-ag/api": "^6.0.30",
-    "@meteora-ag/dlmm": "^1.4.0",
-    "@opensea/sdk": "^11.7.2",
-    "@opensea/stream-js": "^0.3.0",
     "@solana/web3.js": "^1.98.0",
-    "@uniswap/sdk-core": "^5.8.0",
-    "@uniswap/v3-sdk": "^3.22.0",
-    "ccxt": "^4.4.60",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
-    "ethers": "^6.13.5",
-    "pino": "^9.6.0",
-    "ssh2": "^1.17.0",
-    "viem": "^2.23.0",
-    "zod": "^3.24.1"
+    "viem": "^2.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
-    "pino-pretty": "^13.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.0.4"

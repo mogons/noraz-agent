@@ -77,16 +77,4 @@ export class ApiKeyGuardService {
       return false;
     }
   }
-
-  public getAllRequirementStatuses(): Array<{ domain: string; name: string; ready: boolean; missingKeys: string[] }> {
-    return this.requirements.map(r => {
-      const res = this.checkDomainKeys(r.domain);
-      return {
-        domain: r.domain,
-        name: r.name,
-        ready: res.ready,
-        missingKeys: res.missingKeys,
-      };
-    });
-  }
 }

@@ -241,47 +241,6 @@ export class WalletService {
     });
   }
 
-  /** Get Polymarket USDC balance (real on Polygon; simulated only when DRY_RUN) */
-  public async getPolymarketBalance(): Promise<BalanceResult | null> {
-    const isDryRun = isDryRunMode();
-    const simPoly = parseFloat(process.env.SIMULATION_BALANCE_POLYMARKET || '500.0');
-    if (isDryRun) {
-      return { balance: simPoly, symbol: 'USDC', chain: 'Polygon (Polymarket)', simulated: true };
-    }
-    let address: string;
-    try {
-      address = this.getEvmAddress();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[WALLET] Polymarket balance unavailable (no EVM wallet): ${message}`);
-      return null;
-    }
-    try {
-      const rpc = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
-      const res = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0', id: 1, method: 'eth_call',
-          params: [{
-            to: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-            data: `0x70a08231000000000000000000000000${address.replace(/^0x/, '').toLowerCase()}`,
-          }, 'latest'],
-        }),
-      });
-      if (!res.ok) return null;
-      const data = (await res.json()) as { result?: string };
-      const raw = data?.result;
-      if (!raw || raw === '0x') return null;
-      const balance = parseInt(raw, 16) / 1e6;
-      return { balance, symbol: 'USDC', chain: 'Polygon (Polymarket)', simulated: false };
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[WALLET] Polymarket balance query failed: ${message}`);
-      return null;
-    }
-  }
-
   /** Get Hyperliquid Perps USDC balance (real via info API; simulated only when DRY_RUN) */
   public async getHyperliquidBalance(): Promise<BalanceResult | null> {
     const isDryRun = isDryRunMode();

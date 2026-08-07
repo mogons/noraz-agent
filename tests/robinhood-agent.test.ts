@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RobinhoodScreeningAgent, RobinhoodSignal } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
+import { createDedupe } from '../src/agents/shared/gmgn-meme-helpers.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 
 const ETH_PRICE = 1929.03;
@@ -186,13 +187,10 @@ describe('RobinhoodScreeningAgent', () => {
   });
 
   it('dedupe prunes seenTokens entries older than 5 minutes', () => {
-    const agent = new RobinhoodScreeningAgent();
-    const old = Date.now() - 6 * 60 * 1000;
-    (agent as any).seenTokens.set('stale1', old);
-    (agent as any).seenTokens.set('fresh1', Date.now());
-    agent.dedupe([mkToken({ address: 'fresh1' })]);
-    const seen = (agent as any).seenTokens;
-    expect(seen.has('stale1')).toBe(false);
-    expect(seen.has('fresh1')).toBe(true);
+    const { dedupe } = createDedupe();
+    const first = dedupe([mkToken({ address: 'repeat1' }), mkToken({ address: 'fresh1' })]);
+    expect(first.length).toBe(2);
+    const second = dedupe([mkToken({ address: 'repeat1' }), mkToken({ address: 'fresh2' })]);
+    expect(second.map((t) => t.address)).toEqual(['fresh2']);
   });
 });

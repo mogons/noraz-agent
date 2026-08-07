@@ -232,19 +232,6 @@ export class HyperliquidAdapter {
   }
 
   /**
-   * Fetch market data for all tracked coins
-   */
-  public async fetchAllMarketData(): Promise<HyperliquidMarketData[]> {
-    const results: HyperliquidMarketData[] = [];
-    const coins = [...this.primaryWatchlist, ...this.secondaryPool];
-    for (const coin of coins) {
-      const data = await this.fetchMarketData(coin);
-      if (data) results.push(data);
-    }
-    return results;
-  }
-
-  /**
    * Execute a perpetual futures order on Hyperliquid (supports DRY_RUN simulation)
    */
   public async placeOrder(

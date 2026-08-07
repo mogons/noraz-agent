@@ -1,14 +1,5 @@
 import { getEnvString } from '../config/config.js';
 
-export interface RPCEndpoint {
-  url: string;
-  chain: 'solana' | 'evm' | 'polygon';
-  latencyMs: number;
-  errorCount: number;
-  lastCheckedAt: number;
-  isHealthy: boolean;
-}
-
 interface RpcStatus {
   url: string;
   latencyMs: number;
@@ -75,25 +66,6 @@ export class RPCFailoverManager {
   public reportRPCFailure(chain: 'solana' | 'evm', url: string): void {
     const entry = this.status[chain].find((s) => s.url === url);
     if (entry) entry.healthy = false;
-  }
-
-  public isPriceFresh(timestampMs: number, maxAgeSeconds = 30): boolean {
-    const ageSeconds = (Date.now() - timestampMs) / 1000;
-    return ageSeconds <= maxAgeSeconds;
-  }
-
-  public getRpcPool(chain: 'solana' | 'evm'): RPCEndpoint[] {
-    return this.endpoints[chain].map((url) => {
-      const s = this.status[chain].find((x) => x.url === url);
-      return {
-        url,
-        chain,
-        latencyMs: s?.latencyMs ?? 0,
-        errorCount: s && !s.healthy ? 1 : 0,
-        lastCheckedAt: Date.now(),
-        isHealthy: s?.healthy ?? false,
-      };
-    });
   }
 }
 

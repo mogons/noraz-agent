@@ -76,14 +76,6 @@ export class GMGNAdapter {
     this.apiKey = apiKey || process.env.GMGN_API_KEY;
   }
 
-  public isApiKeyConfigured(): boolean {
-    return Boolean(this.apiKey);
-  }
-
-  public getGMGNWebUrl(chain: SolChain, contractAddress: string): string {
-    return `https://gmgn.ai/${chain}/token/${contractAddress}`;
-  }
-
   private async gmgnRequest<T>(
     method: 'GET' | 'POST',
     subPath: string,
@@ -274,18 +266,6 @@ export class GMGNAdapter {
       trigger_mc: Number(e.trigger_mc || 0),
       data: this.normalizeToken(e.data || {}, chain),
     })).filter((e) => e.token_address);
-  }
-
-  public async fetchHotSearches(chain: SolChain = 'sol', opts: { interval?: RankInterval; limit?: number } = {}): Promise<GMGNRawToken[]> {
-    const res = await this.gmgnRequest<any>('POST', '/v1/market/hot_searches', {}, {
-      params: [{ chain, interval: opts.interval || '1h', limit: opts.limit || 20 }],
-    });
-    if (!res) return [];
-    const data = res?.data;
-    if (!Array.isArray(data)) return [];
-    const tokens = data[0]?.tokens;
-    if (!Array.isArray(tokens)) return [];
-    return tokens.map((t: any) => this.normalizeToken(t, chain));
   }
 
   /**
