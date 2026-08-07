@@ -66,18 +66,21 @@ async function runWizard() {
   }
 
   // 4. AI REASONING ENGINE
-  console.log('\n🤖 STEP 4: AI REASONING ENGINE CREDENTIALS');
+  console.log('\n🤖 STEP 4: AI REASONING ENGINE CREDENTIALS (MANDATORY)');
+  let existingProvider = existingEnv.AI_PROVIDER || '';
+  let existingBaseUrl = existingEnv.AI_BASE_URL || '';
+  let existingModelName = existingEnv.AI_MODEL_NAME || '';
   let aiKey = existingEnv.AI_API_KEY || existingEnv.OPENROUTER_API_KEY || existingEnv.OPENAI_API_KEY || '';
   let rawExistingKeys = existingEnv.AI_API_KEYS || existingEnv.AI_API_KEY || '';
   let existingKeyList = rawExistingKeys.split(',').map(k => k.trim()).filter(Boolean);
   let allKeys = [];
 
-  if (existingKeyList.length > 1) {
-    console.log(` ℹ️  Found ${existingKeyList.length} stacked API keys in existing config:`);
+  if (existingKeyList.length > 0) {
+    console.log(` ℹ️  Found ${existingKeyList.length} API key(s) in existing config:`);
     existingKeyList.forEach((k, idx) => {
       console.log(`   - Key #${idx + 1}: ${k.slice(0, 14)}...`);
     });
-    const keepKeys = await askQuestion(' Keep existing stacked API keys? (Y/n) [Default Y]: ') || 'y';
+    const keepKeys = await askQuestion(' Keep existing API key(s)? (Y/n) [Default Y]: ') || 'y';
     if (keepKeys.toLowerCase() !== 'n') {
       allKeys = existingKeyList;
       aiKey = existingKeyList[0];
@@ -85,11 +88,11 @@ async function runWizard() {
   }
 
   if (allKeys.length === 0) {
-    const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : '';
-    const inputAiKey = await askQuestion(` 1. Enter Primary AI API KEY (OpenRouter / OpenAI / Anthropic)${defaultAiKeyMsg}: `);
+    const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : ' [Mandatory - OpenCode / Z.ai / OpenRouter]';
+    const inputAiKey = await askQuestion(` 1. Enter Primary AI API KEY (OpenCode Go / Z.ai / OpenRouter / OpenAI)${defaultAiKeyMsg}: `);
     aiKey = inputAiKey.trim() || aiKey;
 
-    const stackChoice = await askQuestion(' 2. Add Failover Backup API Keys (Round-Robin Stacking)? (y/N): ');
+    const stackChoice = await askQuestion(' 2. Add Failover Backup API Key (e.g. Z.ai CodingPlan GLM 4.7 backup)? (y/N) [Default N]: ');
     let allKeysList = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
     if (allKeysList.length === 0 && aiKey) allKeysList.push(aiKey);
 
@@ -97,7 +100,7 @@ async function runWizard() {
       const backupCountStr = await askQuestion('   How many backup API keys to add? (1-5) [Default 1]: ') || '1';
       const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
       for (let i = 1; i <= backupCount; i++) {
-        const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i}: `);
+        const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i} (e.g., Z.ai / OpenRouter key): `);
         if (bKey.trim()) allKeysList.push(bKey.trim());
       }
     }
@@ -105,39 +108,94 @@ async function runWizard() {
   }
   const combinedKeys = allKeys.join(',');
 
-  console.log('\n Select AI Provider:');
-  console.log(' [1] OpenRouter (Default - Access to free & open models)');
-  console.log(' [2] OpenCode Go (DeepSeek V4 Pro, GLM 5.2 - opencode.ai/go)');
-  console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM-5.2 - z.ai)');
-  console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet)');
-  console.log(' [5] OpenAI (GPT-4o)');
-  console.log(' [6] Custom OpenAI-Compatible Endpoint');
-  const providerChoice = await askQuestion(' Choice (1/2/3/4/5/6) [Default 1]: ');
+  // Auto-detect provider if existingProvider not set
+  let detectedProvider = existingProvider;
+  let detectedBaseUrl = existingBaseUrl;
+  let detectedModelName = existingModelName;
 
-  let provider = 'openrouter';
-  let baseUrl = 'https://openrouter.ai/api/v1';
-  let modelName = 'openrouter/auto';
+  if (!detectedProvider) {
+    const lowerKey = aiKey.toLowerCase();
+    if (lowerKey.includes('opencode') || existingBaseUrl.includes('opencode')) {
+      detectedProvider = 'opencode';
+      detectedBaseUrl = 'https://opencode.ai/zen/go/v1';
+      detectedModelName = 'deepseek-v4-pro';
+    } else if (lowerKey.includes('zai') || lowerKey.includes('glm') || existingBaseUrl.includes('z.ai')) {
+      detectedProvider = 'zai';
+      detectedBaseUrl = 'https://api.z.ai/api/coding/paas/v4';
+      detectedModelName = 'glm-4.7';
+    } else {
+      detectedProvider = 'opencode';
+      detectedBaseUrl = 'https://opencode.ai/zen/go/v1';
+      detectedModelName = 'deepseek-v4-pro';
+    }
+  }
 
-  if (providerChoice === '2') {
-    provider = 'opencode';
-    baseUrl = await askQuestion(' Enter OpenCode AI_BASE_URL [Default https://opencode.ai/zen/go/v1]: ') || 'https://opencode.ai/zen/go/v1';
-    modelName = await askQuestion(' Enter OpenCode AI_MODEL_NAME [Default deepseek-v4-pro]: ') || 'deepseek-v4-pro';
-  } else if (providerChoice === '3') {
-    provider = 'zai';
-    baseUrl = await askQuestion(' Enter Z.ai AI_BASE_URL [Default https://api.z.ai/api/coding/paas/v4]: ') || 'https://api.z.ai/api/coding/paas/v4';
-    modelName = await askQuestion(' Enter Z.ai AI_MODEL_NAME [Default glm-4.7]: ') || 'glm-4.7';
-  } else if (providerChoice === '4') {
-    provider = 'anthropic';
-    baseUrl = 'https://api.anthropic.com/v1';
-    modelName = 'claude-3-5-sonnet-20241022';
-  } else if (providerChoice === '5') {
-    provider = 'openai';
-    baseUrl = 'https://api.openai.com/v1';
-    modelName = 'gpt-4o';
-  } else if (providerChoice === '6') {
-    provider = 'custom';
-    baseUrl = await askQuestion(' Enter AI_BASE_URL: ') || 'https://api.9router.com/v1';
-    modelName = await askQuestion(' Enter AI_MODEL_NAME: ') || 'glm-4';
+  console.log('\n Select AI Provider & Model Configuration:');
+  if (existingProvider) {
+    console.log(` [1] Keep Existing Config (${existingProvider} | ${existingModelName || 'default'} | ${existingBaseUrl || 'default'})`);
+    console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
+    console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai)');
+    console.log(' [4] OpenRouter (openrouter.ai/api/v1)');
+    console.log(' [5] Anthropic Claude (Claude 3.5 Sonnet)');
+    console.log(' [6] OpenAI (GPT-4o)');
+    console.log(' [7] Custom OpenAI-Compatible Endpoint');
+  } else {
+    console.log(` [1] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go) ${detectedProvider === 'opencode' ? '⭐ (Auto-Detected)' : ''}`);
+    console.log(` [2] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai) ${detectedProvider === 'zai' ? '⭐ (Auto-Detected)' : ''}`);
+    console.log(` [3] OpenRouter (Access to free & open models) ${detectedProvider === 'openrouter' ? '⭐ (Default)' : ''}`);
+    console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet)');
+    console.log(' [5] OpenAI (GPT-4o)');
+    console.log(' [6] Custom OpenAI-Compatible Endpoint');
+  }
+
+  const defaultChoiceStr = existingProvider ? '1' : (detectedProvider === 'opencode' ? '1' : (detectedProvider === 'zai' ? '2' : '3'));
+  const providerChoice = await askQuestion(` Choice [Default ${defaultChoiceStr}]: `) || defaultChoiceStr;
+
+  let provider = detectedProvider || 'opencode';
+  let baseUrl = detectedBaseUrl || 'https://opencode.ai/zen/go/v1';
+  let modelName = detectedModelName || 'deepseek-v4-pro';
+
+  if (existingProvider && providerChoice === '1') {
+    provider = existingProvider;
+    baseUrl = existingBaseUrl || (existingProvider === 'opencode' ? 'https://opencode.ai/zen/go/v1' : (existingProvider === 'zai' ? 'https://api.z.ai/api/coding/paas/v4' : 'https://openrouter.ai/api/v1'));
+    modelName = existingModelName || (existingProvider === 'opencode' ? 'deepseek-v4-pro' : (existingProvider === 'zai' ? 'glm-4.7' : 'openrouter/auto'));
+  } else {
+    const isOpencodeChoice = (!existingProvider && providerChoice === '1') || (existingProvider && providerChoice === '2');
+    const isZaiChoice = (!existingProvider && providerChoice === '2') || (existingProvider && providerChoice === '3');
+    const isOpenRouterChoice = (!existingProvider && providerChoice === '3') || (existingProvider && providerChoice === '4');
+    const isAnthropicChoice = (!existingProvider && providerChoice === '4') || (existingProvider && providerChoice === '5');
+    const isOpenAiChoice = (!existingProvider && providerChoice === '5') || (existingProvider && providerChoice === '6');
+    const isCustomChoice = (!existingProvider && providerChoice === '6') || (existingProvider && providerChoice === '7');
+
+    if (isOpencodeChoice) {
+      provider = 'opencode';
+      const defaultUrl = existingBaseUrl || 'https://opencode.ai/zen/go/v1';
+      const defaultModel = existingModelName || 'deepseek-v4-pro';
+      baseUrl = await askQuestion(` Enter OpenCode AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
+      modelName = await askQuestion(` Enter OpenCode AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
+    } else if (isZaiChoice) {
+      provider = 'zai';
+      const defaultUrl = existingBaseUrl || 'https://api.z.ai/api/coding/paas/v4';
+      const defaultModel = existingModelName || 'glm-4.7';
+      baseUrl = await askQuestion(` Enter Z.ai AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
+      modelName = await askQuestion(` Enter Z.ai AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
+    } else if (isOpenRouterChoice) {
+      provider = 'openrouter';
+      baseUrl = 'https://openrouter.ai/api/v1';
+      modelName = await askQuestion(` Enter OpenRouter AI_MODEL_NAME [Default ${existingModelName || 'openrouter/auto'}]: `) || existingModelName || 'openrouter/auto';
+    } else if (isAnthropicChoice) {
+      provider = 'anthropic';
+      baseUrl = 'https://api.anthropic.com/v1';
+      modelName = 'claude-3-5-sonnet-20241022';
+    } else if (isOpenAiChoice) {
+      provider = 'openai';
+      baseUrl = 'https://api.openai.com/v1';
+      modelName = 'gpt-4o';
+    } else if (isCustomChoice) {
+      provider = 'custom';
+      baseUrl = await askQuestion(` Enter AI_BASE_URL [Default ${existingBaseUrl || 'https://api.9router.com/v1'}]: `) || existingBaseUrl || 'https://api.9router.com/v1';
+      modelName = await askQuestion(` Enter AI_MODEL_NAME [Default ${existingModelName || 'glm-4'}]: `) || existingModelName || 'glm-4';
+    }
   }
 
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
