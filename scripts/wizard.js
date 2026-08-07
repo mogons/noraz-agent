@@ -205,6 +205,7 @@ async function runWizard() {
   let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
   let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
+  let uniswapApiKey = existingEnv.UNISWAP_API_KEY || '';
 
   const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Solana/LP Agents]';
   const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
@@ -225,6 +226,10 @@ async function runWizard() {
   const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Polymarket Agent]';
   const inputPoly = await askQuestion(` 5. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
   polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
+
+  const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/Robinhood Entry via Uniswap API]';
+  const inputUniswap = await askQuestion(` 6. UNISWAP_API_KEY (Uniswap Trade API — EVM/Robinhood swap entry)${defaultUniswap}: `);
+  uniswapApiKey = inputUniswap.trim() || uniswapApiKey;
 
   // 6. WEB3 RPC ENDPOINTS
   console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS & HIGH-VELOCITY NETWORK NODES');
@@ -337,6 +342,7 @@ TWEX_API_KEY=${twexApiKey.trim()}
 TWITTER_BEARER_TOKEN=${twexApiKey.trim()}
 GOPLUS_API_KEY=${goplusApiKey.trim()}
 POLYMARKET_PRIVATE_KEY=${polymarketPrivateKey.trim()}
+UNISWAP_API_KEY=${uniswapApiKey.trim()}
 
 # Web3 RPC Endpoints & High-Velocity Network Nodes
 SOLANA_RPC_URL=${solanaRpcUrl.trim()}
