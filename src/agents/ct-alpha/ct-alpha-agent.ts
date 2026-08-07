@@ -1,5 +1,4 @@
-import { TwitterService, TweetItem } from '../../services/twitter-service.js';
-import { AIService } from '../../services/ai-service.js';
+import { TwitterService } from '../../services/twitter-service.js';
 
 export interface CTAlphaSignal {
   id: string;
@@ -20,11 +19,9 @@ export interface CTAlphaSignal {
 
 export class CTAlphaAgent {
   private twitterService: TwitterService;
-  private aiService: AIService;
 
-  constructor(twitterService?: TwitterService, aiService?: AIService) {
+  constructor(twitterService?: TwitterService) {
     this.twitterService = twitterService || new TwitterService();
-    this.aiService = aiService || new AIService();
   }
 
   /**
