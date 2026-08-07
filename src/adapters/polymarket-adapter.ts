@@ -1,13 +1,14 @@
 import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface PolymarketOutcome {
-  name: string; // e.g. "Yes", "No"
-  price: number; // Probability / Price in USD (0.00 - 1.00)
+  name: string;
+  price: number;
 }
 
 export interface PolymarketMarketData {
   id: string;
   conditionId: string;
+  clobTokenId?: string;
   question: string;
   category: 'Crypto' | 'Macro' | 'Politics' | 'Tech' | 'Trending';
   slug: string;
@@ -15,8 +16,8 @@ export interface PolymarketMarketData {
   outcomes: PolymarketOutcome[];
   volume24hUsd: number;
   liquidityUsd: number;
-  bestBidYes: number;
-  bestAskYes: number;
+  bestBidYes: number | null;
+  bestAskYes: number | null;
   url: string;
 }
 
@@ -38,123 +39,94 @@ export class PolymarketAdapter {
     this.isDryRun = isDryRunMode();
   }
 
-  /**
-   * Fetch active markets from Polymarket across categories (Crypto, Macro, Politics, Tech, Trending)
-   */
   public async fetchTopMarkets(category: 'Crypto' | 'Macro' | 'Politics' | 'Tech' | 'Trending' = 'Crypto'): Promise<PolymarketMarketData[]> {
     try {
-      console.log(`[POLYMARKET ADAPTER] Fetching live top markets for category: ${category} via Gamma API...`);
       const response = await fetch(`${this.gammaApiUrl}?limit=20&active=true&closed=false`);
-      if (response.ok) {
-        const events: any[] = (await response.json()) as any[];
-        if (Array.isArray(events) && events.length > 0) {
-          const markets: PolymarketMarketData[] = [];
-          for (const ev of events) {
-            if (!ev.markets || !Array.isArray(ev.markets) || ev.markets.length === 0) continue;
-            const m = ev.markets[0];
-            let outcomesList: PolymarketOutcome[] = [
-              { name: 'Yes', price: 0.5 },
-              { name: 'No', price: 0.5 },
-            ];
-            try {
-              if (m.outcomePrices) {
-                const prices = JSON.parse(m.outcomePrices);
-                outcomesList = [
-                  { name: 'Yes', price: parseFloat(prices[0] || '0.5') },
-                  { name: 'No', price: parseFloat(prices[1] || '0.5') },
-                ];
-              }
-            } catch {
-              // fallback
-            }
+      if (!response.ok) return [];
+      const events: any[] = (await response.json()) as any[];
+      if (!Array.isArray(events) || events.length === 0) return [];
 
-            markets.push({
-              id: String(m.id || ev.id),
-              conditionId: String(m.conditionId || `0x${ev.id}`),
-              question: ev.title || m.question || 'Polymarket Event',
-              category: (ev.category || category) as any,
-              slug: ev.slug || 'polymarket-event',
-              endDate: m.endDate || ev.endDate || new Date().toISOString(),
-              outcomes: outcomesList,
-              volume24hUsd: parseFloat(ev.volume24hr || m.volume24hr || '100000'),
-              liquidityUsd: parseFloat(ev.liquidity || m.liquidity || '50000'),
-              bestBidYes: Math.max(0.01, outcomesList[0].price - 0.01),
-              bestAskYes: Math.min(0.99, outcomesList[0].price + 0.01),
-              url: `https://polymarket.com/event/${ev.slug || m.slug || ev.id}`,
-            });
+      const markets: PolymarketMarketData[] = [];
+      for (const ev of events) {
+        if (!ev.markets || !Array.isArray(ev.markets) || ev.markets.length === 0) continue;
+        const m = ev.markets[0];
+        let outcomesList: PolymarketOutcome[] = [];
+        try {
+          if (m.outcomePrices) {
+            const prices = JSON.parse(m.outcomePrices);
+            outcomesList = [
+              { name: 'Yes', price: parseFloat(prices[0] || '0') },
+              { name: 'No', price: parseFloat(prices[1] || '0') },
+            ];
           }
-          if (markets.length > 0) {
-            return markets.filter(m => category === 'Trending' || m.category === category || category === 'Crypto');
+        } catch {
+          outcomesList = [];
+        }
+        if (outcomesList.length < 2 || !(outcomesList[0].price > 0)) continue;
+
+        let bestBidYes: number | null = null;
+        let bestAskYes: number | null = null;
+        const clobTokenId = Array.isArray(m.clobTokenIds) ? String(m.clobTokenIds[0] || '') : '';
+        if (clobTokenId) {
+          try {
+            const bookRes = await fetch(`${this.clobApiUrl}/books?token_id=${clobTokenId}`);
+            if (bookRes.ok) {
+              const book = (await bookRes.json()) as { bids?: Array<{ price: string | number }>; asks?: Array<{ price: string | number }> };
+              const bidPrices = (book.bids || []).map((b) => Number(b.price)).filter((n) => n > 0);
+              const askPrices = (book.asks || []).map((a) => Number(a.price)).filter((n) => n > 0);
+              if (bidPrices.length) bestBidYes = Math.max(...bidPrices);
+              if (askPrices.length) bestAskYes = Math.min(...askPrices);
+            }
+          } catch {
+            // leave bid/ask null — do not fabricate
           }
         }
+
+        const volume24hUsd = parseFloat(String(ev.volume24hr ?? m.volume24hr ?? '0')) || 0;
+        const liquidityUsd = parseFloat(String(ev.liquidity ?? m.liquidity ?? '0')) || 0;
+
+        markets.push({
+          id: String(m.id || ev.id),
+          conditionId: String(m.conditionId || ''),
+          clobTokenId,
+          question: ev.title || m.question || '',
+          category: (ev.category || category) as any,
+          slug: ev.slug || 'polymarket-event',
+          endDate: m.endDate || ev.endDate || new Date().toISOString(),
+          outcomes: outcomesList,
+          volume24hUsd,
+          liquidityUsd,
+          bestBidYes,
+          bestAskYes,
+          url: `https://polymarket.com/event/${ev.slug || m.slug || ev.id}`,
+        });
       }
-    } catch (err: any) {
-      console.error('[POLYMARKET GAMMA API FETCH ERROR]', err.message);
+      return markets.filter((m) => category === 'Trending' || m.category === category || category === 'Crypto');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[POLYMARKET GAMMA API FETCH ERROR] ${message}`);
+      return [];
     }
-
-    const fallbackMarkets: PolymarketMarketData[] = [
-      {
-        id: 'poly_btc_70k_aug',
-        conditionId: '0x1234567890abcdef1234567890abcdef12345678',
-        question: 'Will Bitcoin reach $70,000 in August 2026?',
-        category: 'Crypto',
-        slug: 'will-bitcoin-reach-70k-in-august-2026',
-        endDate: '2026-08-31T23:59:59Z',
-        outcomes: [
-          { name: 'Yes', price: 0.68 },
-          { name: 'No', price: 0.32 },
-        ],
-        volume24hUsd: 1850000,
-        liquidityUsd: 420000,
-        bestBidYes: 0.67,
-        bestAskYes: 0.69,
-        url: 'https://polymarket.com/event/will-bitcoin-reach-70k-in-august-2026',
-      },
-      {
-        id: 'poly_fed_rate_cut_sep',
-        conditionId: '0x7890abcdef1234567890abcdef1234567890abcd',
-        question: 'Will the US Fed cut interest rates by 25+ bps in September?',
-        category: 'Macro',
-        slug: 'fed-cut-rates-september-2026',
-        endDate: '2026-09-18T23:59:59Z',
-        outcomes: [
-          { name: 'Yes', price: 0.94 },
-          { name: 'No', price: 0.06 },
-        ],
-        volume24hUsd: 3200000,
-        liquidityUsd: 1100000,
-        bestBidYes: 0.93,
-        bestAskYes: 0.95,
-        url: 'https://polymarket.com/event/fed-cut-rates-september-2026',
-      },
-    ];
-
-    return fallbackMarkets.filter(m => category === 'Trending' || m.category === category);
   }
 
-  /**
-   * Execute a bet on Polymarket (supports DRY_RUN simulation)
-   */
   public async placeBet(
     marketId: string,
     outcomeName: 'Yes' | 'No',
     amountUsdc: number
   ): Promise<PolymarketOrderResult> {
-    console.log(`[POLYMARKET] ${this.isDryRun ? '[DRY_RUN]' : '[LIVE]'} Placing ${outcomeName} bet on market: ${marketId} | Amount: $${amountUsdc} USDC`);
-
     if (this.isDryRun) {
       return {
         success: true,
         orderId: `DRY_RUN_POLY_${Date.now()}_${outcomeName}`,
-        filledPrice: outcomeName === 'Yes' ? 0.68 : 0.32,
+        filledPrice: 0.5,
         filledAmountUsdc: amountUsdc,
         outcome: outcomeName,
+        error: 'DRY_RUN — live Polymarket execution not enabled.',
       };
     }
-
     return {
       success: false,
-      error: 'Live Polymarket execution not yet connected. Set DRY_RUN=false and configure POLYMARKET_PRIVATE_KEY.',
+      error: 'Live Polymarket execution not yet connected. Configure POLYMARKET_PRIVATE_KEY and DRY_RUN=false.',
     };
   }
 }

@@ -30,41 +30,37 @@ export class PolymarketAgent {
     const yesOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'yes') || market.outcomes[0];
     const noOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'no') || market.outcomes[1];
 
-    const yesOddsPct = yesOutcome ? yesOutcome.price * 100 : 50;
-    const noOddsPct = noOutcome ? noOutcome.price * 100 : 50;
+    const yesOdds = yesOutcome ? yesOutcome.price : 0;
+    const noOdds = noOutcome ? noOutcome.price : 0;
+    if (!(yesOdds > 0)) return null; // fail-closed: no real odds
+
+    const yesOddsPct = yesOdds * 100;
+    const noOddsPct = noOdds * 100;
 
     let signalType: 'ODDS_ARBITRAGE' | 'WHALE_INFLOW' | 'HIGH_PROBABILITY_YIELD' = 'ODDS_ARBITRAGE';
-    let recommendedOutcome: 'Yes' | 'No' = 'Yes';
-    let confidenceScore = 70;
-    let expectedEvPct = 15.0;
+    const recommendedOutcome: 'Yes' | 'No' = yesOddsPct >= noOddsPct ? 'Yes' : 'No';
 
-    // 1. High-Probability Resolution Yield (Odds >= 92% near end date)
-    if (yesOddsPct >= 92) {
+    const spread = market.bestBidYes !== null && market.bestAskYes !== null
+      ? Math.abs(market.bestAskYes - market.bestBidYes)
+      : null;
+    const isLiquid = market.volume24hUsd >= 100000;
+
+    // Confidence computed from REAL data only (no hardcoded constants)
+    const confidenceScore = Math.min(100, Math.round(
+      (yesOdds >= 0.92 || noOdds >= 0.92 ? 40 : yesOdds >= 0.8 || noOdds >= 0.8 ? 30 : 15) +
+      (isLiquid ? 30 : 10) +
+      (spread !== null && spread <= 0.05 ? 30 : 10)
+    ));
+    const expectedEvPct = Math.max(0, Math.round((100 - Math.max(yesOddsPct, noOddsPct)) * 0.8));
+
+    if (yesOdds >= 0.92 || noOdds >= 0.92) {
       signalType = 'HIGH_PROBABILITY_YIELD';
-      recommendedOutcome = 'Yes';
-      confidenceScore = 94;
-      expectedEvPct = (100 - yesOddsPct) * 0.8;
-    } else if (noOddsPct >= 92) {
-      signalType = 'HIGH_PROBABILITY_YIELD';
-      recommendedOutcome = 'No';
-      confidenceScore = 94;
-      expectedEvPct = (100 - noOddsPct) * 0.8;
-    } 
-    // 2. Whale Inflow & Volume Surge (> $1M 24h volume)
-    else if (market.volume24hUsd >= 1000000) {
+    } else if (market.volume24hUsd >= 1000000) {
       signalType = 'WHALE_INFLOW';
-      recommendedOutcome = yesOddsPct >= 50 ? 'Yes' : 'No';
-      confidenceScore = 85;
-      expectedEvPct = 22.5;
-    }
-    // 3. Implied Odds Arbitrage
-    else if (market.category === 'Crypto' && (yesOddsPct >= 65 || noOddsPct >= 65)) {
+    } else if (market.category === 'Crypto' && (yesOddsPct >= 65 || noOddsPct >= 65)) {
       signalType = 'ODDS_ARBITRAGE';
-      recommendedOutcome = yesOddsPct >= 65 ? 'Yes' : 'No';
-      confidenceScore = 82;
-      expectedEvPct = 18.0;
     } else {
-      return null; // Reject low-confidence markets
+      return null;
     }
 
     const currentOddsPct = recommendedOutcome === 'Yes' ? yesOddsPct : noOddsPct;
