@@ -13,9 +13,24 @@ export class AthenaHub {
   private agentStates: Map<string, boolean> = new Map();
   private autoExecuteStates: Map<string, { enabled: boolean; maxTradeAmount: number }> = new Map();
 
+  private stateStore?: any;
+
   constructor() {
     this.riskManager = new RiskManager();
     this.initializeAgentStatesDefaultPaused();
+  }
+
+  public attachStateStore(store: any): void {
+    this.stateStore = store;
+    const savedStates = store.getAllAgentStates ? store.getAllAgentStates() : {};
+    const domains = ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'];
+    for (const d of domains) {
+      const savedState = savedStates[d];
+      // Default strictly to false (PAUSED) unless explicitly enabled in state
+      const isActive = savedState !== undefined ? Boolean(savedState) : false;
+      this.agentStates.set(d, isActive);
+    }
+    console.log(`[HUB] Sub-Agent persistent states synchronized. Active domains: [${this.getActiveDomains().join(', ') || 'NONE (ALL PAUSED)'}]`);
   }
 
   private initializeAgentStatesDefaultPaused(): void {
@@ -43,6 +58,9 @@ export class AthenaHub {
   public setAgentActive(domain: string, active: boolean): void {
     const norm = this.normalizeDomainKey(domain);
     this.agentStates.set(norm, active);
+    if (this.stateStore && typeof this.stateStore.setAgentState === 'function') {
+      this.stateStore.setAgentState(norm, active);
+    }
     console.log(`[HUB] Sub-Agent "${norm.toUpperCase()}" status updated to: ${active ? '🟢 ACTIVE' : '🔴 PAUSED'}`);
   }
 

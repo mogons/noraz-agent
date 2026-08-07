@@ -92,6 +92,7 @@ const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 const priceFeedService = new PriceFeedService();
 
 // Attach StateStore to all persistent services
+hub.attachStateStore(stateStore);
 priceAlertService.attachStateStore(stateStore);
 tradeJournalService.attachStateStore(stateStore);
 walletService.attachStateStore(stateStore);

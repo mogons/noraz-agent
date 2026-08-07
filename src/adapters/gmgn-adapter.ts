@@ -11,6 +11,7 @@ export interface GMGNTokenSignal {
   smartMoneyCount: number;
   sniperRatioPercentage: number;
   devHoldingPercentage: number;
+  tokenAgeHours?: number;
   gmgnUrl: string;
   aiThesis: string;
 }
