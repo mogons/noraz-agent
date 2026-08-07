@@ -45,6 +45,12 @@ const EVM_LP_QUERIES: Array<{ q: string; dexIds: string[] }> = [
 export class UniswapLPAdapter {
   public async fetchTopYieldEVMPools(minTvlUsd: number = 5000): Promise<UniswapPoolSignal[]> {
     try {
+      // Live ETH price for native-fee conversion (fail-closed: 0 → filter will reject)
+      let ethPriceUsd = 0;
+      try {
+        const { PriceFeedService } = await import('../services/price-feed-service.js');
+        ethPriceUsd = (await new PriceFeedService().getPrice('ETH')) || 0;
+      } catch { /* price fetch is best-effort */ }
       const pools: UniswapPoolSignal[] = [];
       for (const chainId of ['base', 'ethereum']) {
         for (const query of EVM_LP_QUERIES) {
@@ -74,7 +80,7 @@ export class UniswapLPAdapter {
             activeTvlUsd,
             volume4hUsd,
             fee4hUsd,
-            fees24hEth: (fee4hUsd * 6) / 3000,
+            fees24hEth: ethPriceUsd > 0 ? (fee4hUsd * 6) / ethPriceUsd : 0,
             feeAprPercentage: Number(((fee4hUsd / tvlUsd) * 6 * 365 * 100).toFixed(1)) || 0,
             feesToTvlRatio4h: fee4hUsd / tvlUsd,
             volumeToTvlRatio4h: volume4hUsd / tvlUsd,

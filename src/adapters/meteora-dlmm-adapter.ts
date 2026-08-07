@@ -50,6 +50,12 @@ export class MeteoraDLMMAdapter {
     // Meteora DLMM REST API is currently unavailable (404 on all routes).
     // Fall back to real DexScreener pairs filtered by Meteora DEX — honest mapping, fail-closed.
     try {
+      // Live SOL price for native-fee conversion (fail-closed: 0 → filter will reject)
+      let solPriceUsd = 0;
+      try {
+        const { PriceFeedService } = await import('../services/price-feed-service.js');
+        solPriceUsd = (await new PriceFeedService().getPrice('SOL')) || 0;
+      } catch { /* price fetch is best-effort */ }
       const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=meteora');
       if (!res.ok) throw new Error(`DexScreener HTTP ${res.status}`);
       const data = (await res.json()) as { pairs?: DexScreenerPair[] };
@@ -79,7 +85,7 @@ export class MeteoraDLMMAdapter {
           activeTvlUsd,
           volume4hUsd,
           fee4hUsd,
-          fees24hSol: (fee4hUsd * 6) / 200,
+          fees24hSol: solPriceUsd > 0 ? (fee4hUsd * 6) / solPriceUsd : 0,
           feeAprPercentage: Number(((fee4hUsd / tvlUsd) * 6 * 365 * 100).toFixed(1)) || 0,
           feesToTvlRatio4h: fee4hUsd / tvlUsd,
           volumeToTvlRatio4h,
