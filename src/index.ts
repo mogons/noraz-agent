@@ -10,6 +10,8 @@ import { AIService } from './services/ai-service.js';
 import { slashCommands } from './discord/commands/index.js';
 import { handleInteraction } from './discord/handlers/interaction-handler.js';
 import { handleControlRoomMessage } from './discord/handlers/message-handler.js';
+import { globalHealthWatcher } from './services/health-watcher.js';
+import { globalMarketRegimeFilter } from './services/market-regime.js';
 import { bootstrapDiscordChannels } from './discord/setup/channel-bootstrap.js';
 import { SkillLoader } from './services/skill-loader.js';
 import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
@@ -204,6 +206,18 @@ if (discordToken && clientId) {
           prevPortfolioEquityUsd = currentEquityUsd;
         } catch (equityErr: any) {
           console.warn(`[RISK] Portfolio equity unavailable this pass: ${equityErr.message}`);
+        }
+
+        // Real market regime from live BTC/ETH 24h changes (fail-soft when unavailable)
+        try {
+          const btcChange = await priceFeedService.get24hChange('BTC');
+          const ethChange = await priceFeedService.get24hChange('ETH');
+          if (btcChange !== null && ethChange !== null) {
+            const volIdx = Math.min(100, Math.round(Math.max(Math.abs(btcChange), Math.abs(ethChange)) * 15));
+            globalMarketRegimeFilter.updateMarketRegime(btcChange, ethChange, volIdx);
+          }
+        } catch (regimeErr: any) {
+          console.warn(`[MARKET REGIME] Update failed: ${regimeErr.message}`);
         }
 
         let dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
@@ -440,6 +454,11 @@ if (discordToken && clientId) {
 
         // Real Swarm Consensus gate (>= 80%): every signal must pass with real data
         dispatchedPayloads = dispatchedPayloads.filter((item) => gateSignal(item.payload));
+
+        // Register real heartbeats for every active agent that ran this pass
+        for (const domain of hub.getActiveDomains()) {
+          globalHealthWatcher.recordHeartbeat(domain);
+        }
 
         // Purge expired dedup entries
         const now = Date.now();

@@ -19,7 +19,7 @@ export class HealthWatcherService {
   }
 
   private initializeAgents() {
-    const subAgents = ['MEME_SOLANA', 'MEME_EVM', 'PERPS', 'NFT', 'PREDICTION'];
+    const subAgents = ['meme-solana', 'meme-evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm'];
     subAgents.forEach((domain) => {
       this.agentMap.set(domain, {
         domain,
@@ -34,8 +34,9 @@ export class HealthWatcherService {
    * Sub-agents register a heartbeat ping
    */
   public recordHeartbeat(domain: string, isError = false): void {
-    const current = this.agentMap.get(domain) || {
-      domain,
+    const key = domain.toLowerCase();
+    const current = this.agentMap.get(key) || {
+      domain: key,
       lastPingAt: Date.now(),
       status: 'HEALTHY',
       errorCount: 0,
@@ -52,7 +53,7 @@ export class HealthWatcherService {
       current.status = 'HEALTHY';
     }
 
-    this.agentMap.set(domain, current);
+    this.agentMap.set(key, current);
   }
 
   /**

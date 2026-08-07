@@ -16,11 +16,11 @@ export interface MarketRegimeStatus {
 
 export class MarketRegimeFilter {
   private currentRegime: MarketRegimeStatus = {
-    regime: 'TRENDING_BULL',
-    btc24hChangePercent: 2.5,
-    eth24hChangePercent: 3.1,
-    volatilityIndex: 45,
-    recommendedAction: 'Normal trading active across all agents.',
+    regime: 'SIDEWAYS_CHOP',
+    btc24hChangePercent: 0,
+    eth24hChangePercent: 0,
+    volatilityIndex: 0,
+    recommendedAction: 'Awaiting live market data.',
   };
 
   /**
