@@ -16,18 +16,18 @@ import {
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../../config/config.js';
-import { PriceFeedService } from '../../services/price-feed-service.js';
+import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
 import { TradeJournalService } from '../../services/trade-journal-service.js';
-import { WalletService } from '../../services/wallet-service.js';
+import { globalWalletService } from '../../services/wallet-service.js';
 import { RelayAdapter } from '../../adapters/relay-adapter.js';
 import { runTokenAudit } from '../../services/token-audit-service.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 
-export const priceFeedService = new PriceFeedService();
+export const priceFeedService = globalPriceFeedService;
 export const priceAlertService = new PriceAlertService();
 export const tradeJournalService = new TradeJournalService();
-export const walletService = new WalletService();
+export const walletService = globalWalletService;
 
 export async function buildDashboardOptions(): Promise<import('../embeds/dashboard-embed.js').DashboardEmbedOptions> {
   let solBalance: string | null = null;

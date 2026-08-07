@@ -1,6 +1,6 @@
 import { AthenaHub } from '../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
-import { WalletService } from '../services/wallet-service.js';
+import { WalletService, globalWalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
 
 /**
@@ -337,6 +337,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           const toolRegistry = new ToolRegistry();
           toolRegistry.attachOrchestrator(hub);
           toolRegistry.attachAIService(aiService);
+          toolRegistry.attachWalletService(globalWalletService);
 
           const activeDomains = hub.getActiveDomains();
           const activeAgentsLine = activeDomains.length > 0

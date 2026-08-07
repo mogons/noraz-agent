@@ -2,7 +2,7 @@ import { StateStore, SignalLedgerEntry } from '../services/state-store.js';
 
 export interface SignalCandidate {
   symbol: string;
-  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION';
+  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION' | 'CT_ALPHA';
   contractAddress?: string;
   liquidityUsd: number;
   volume1hUsd: number;

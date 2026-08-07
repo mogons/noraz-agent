@@ -1,4 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import type { CallCardPayload as CallSignalPayload } from '../../agents/shared/agent-contract.js';
 
 /**
  * Sanitize attacker-controlled token/tweet fields before rendering into Discord
@@ -22,35 +23,6 @@ export function sanitizeEmbedField(value: string | undefined | null, maxLen = 20
 export function encodeSymbolForUrl(symbol: string | undefined | null): string {
   const clean = sanitizeEmbedField(symbol, 32);
   return encodeURIComponent(clean);
-}
-
-export interface CallSignalPayload {
-  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION' | 'CT_ALPHA';
-  title: string;
-  symbol: string;
-  contractAddress?: string;
-  network: string;
-  tokenAge?: string;
-  priceUsd?: string;
-  marketCap?: string;
-  liquidity?: string;
-  volume5m?: string;
-  volume1h?: string;
-  txRatio?: string;
-  feeApr?: string;
-  lpStrategy?: string;
-  top10Pct?: string;
-  devHoldingPct?: string;
-  sniperPct?: string;
-  bundlerPct?: string;
-  dexPaidStatus?: string;
-  smartMoneyInfo?: string;
-  confidenceScore?: number;
-  securityScore?: string;
-  aiThesis: string;
-  dexScreenerUrl?: string;
-  gmgnUrl?: string;
-  rugcheckUrl?: string;
 }
 
 export function buildCallEmbed(payload: CallSignalPayload) {

@@ -70,3 +70,6 @@ export class PriceFeedService {
     }
   }
 }
+
+/** Process-wide singleton: the cache is global state — every consumer must share ONE instance. */
+export const globalPriceFeedService = new PriceFeedService();

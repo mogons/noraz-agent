@@ -4,7 +4,7 @@ dotenv.config();
 import { AthenaHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
-import { WalletService } from '../services/wallet-service.js';
+import { globalWalletService } from '../services/wallet-service.js';
 
 import { StateStore } from '../services/state-store.js';
 
@@ -12,7 +12,7 @@ const stateStore = new StateStore();
 const hub = new AthenaHub();
 const swarmEngine = new SwarmConsensusEngine();
 const aiService = new AIService();
-const walletService = new WalletService();
+const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
 
 // ANSI Color Helpers
@@ -223,6 +223,7 @@ export async function launchTUI(): Promise<void> {
             const toolRegistry = new ToolRegistry();
             toolRegistry.attachOrchestrator(hub);
             toolRegistry.attachAIService(aiService);
+            toolRegistry.attachWalletService(globalWalletService);
             const activeDomains = hub.getActiveDomains();
             const activeAgentsLine = activeDomains.length > 0
               ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`

@@ -41,6 +41,17 @@ export class AthenaHub {
     this.initializeAgentStatesDefaultPaused();
   }
 
+  /** Late wiring seam for composition roots (index.ts): share singleton agents with on-demand passes. */
+  public attachAgentFactories(factories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>): void {
+    this.agentFactories = { ...this.agentFactories, ...factories };
+  }
+
+  /** Late wiring seam for LP adapters (composition root). */
+  public attachAdapters(deps: { meteoraAdapter?: MeteoraDLMMAdapter; uniswapAdapter?: UniswapLPAdapter }): void {
+    this.meteoraAdapter = deps.meteoraAdapter ?? this.meteoraAdapter;
+    this.uniswapAdapter = deps.uniswapAdapter ?? this.uniswapAdapter;
+  }
+
   public attachStateStore(store: any): void {
     this.stateStore = store;
     const savedStates = store.getAllAgentStates ? store.getAllAgentStates() : {};
@@ -201,7 +212,7 @@ export class AthenaHub {
   }
 
   /** LP domains are adapter-flow based: wrap passing pools into contract-shaped reports. */
-  private async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
+  public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
     if (id === 'lp-solana') {
       const { MeteoraDLMMAdapter } = await import('../adapters/meteora-dlmm-adapter.js');
       const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();

@@ -1,5 +1,6 @@
 import type { AthenaHub } from './hub.js';
 import type { AIService } from '../services/ai-service.js';
+import { StrategyEngine } from './strategy-engine.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -40,6 +41,8 @@ export interface AthenaToolDefinition {
 export class ToolRegistry {
   private orchestrator?: AthenaHub;
   private aiService?: AIService;
+  private strategyEngine = new StrategyEngine();
+  private walletService?: import('../services/wallet-service.js').WalletService;
 
   public attachOrchestrator(orchestrator: AthenaHub) {
     this.orchestrator = orchestrator;
@@ -47,6 +50,11 @@ export class ToolRegistry {
 
   public attachAIService(aiService: AIService) {
     this.aiService = aiService;
+  }
+
+  /** Stateful WalletService carries runtime-set keys — must be the SAME instance consumers use. */
+  public attachWalletService(walletService: import('../services/wallet-service.js').WalletService) {
+    this.walletService = walletService;
   }
 
   /**
@@ -539,8 +547,7 @@ export class ToolRegistry {
         }
 
         case 'get_portfolio': {
-          const { WalletService } = await import('../services/wallet-service.js');
-          const ws = new WalletService();
+          const ws = this.walletService ?? (await import('../services/wallet-service.js')).globalWalletService;
           const sol = await ws.getSolanaBalance();
           const eth = await ws.getEvmBalance(1);
           const drawdown = this.orchestrator?.getRiskManager().getRiskState().currentDrawdownPct ?? null;
@@ -556,35 +563,25 @@ export class ToolRegistry {
         }
 
         case 'list_strategies': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          const list = engine.listStrategies();
+          const list = this.strategyEngine.listStrategies();
           return { success: true, message: `Ditemukan ${list.length} strategi.`, data: list };
         }
 
         case 'read_strategy': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          const res = engine.readStrategy(String(args.name || ''));
+          const res = this.strategyEngine.readStrategy(String(args.name || ''));
           return res;
         }
 
         case 'activate_strategy': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          return engine.setActiveStrategy(String(args.domain || ''), String(args.strategyId || ''));
+          return this.strategyEngine.setActiveStrategy(String(args.domain || ''), String(args.strategyId || ''));
         }
 
         case 'rollback_strategy': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          return engine.rollbackStrategy(String(args.name || ''));
+          return this.strategyEngine.rollbackStrategy(String(args.name || ''));
         }
 
         case 'write_strategy_file': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          return engine.writeStrategy(String(args.name || ''), String(args.code || ''));
+          return this.strategyEngine.writeStrategy(String(args.name || ''), String(args.code || ''));
         }
 
         case 'write_indicator_file': {

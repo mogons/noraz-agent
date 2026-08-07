@@ -48,8 +48,8 @@ export class UniswapLPAdapter {
       // Live ETH price for native-fee conversion (fail-closed: 0 → filter will reject)
       let ethPriceUsd = 0;
       try {
-        const { PriceFeedService } = await import('../services/price-feed-service.js');
-        ethPriceUsd = (await new PriceFeedService().getPrice('ETH')) || 0;
+        const { globalPriceFeedService } = await import('../services/price-feed-service.js');
+        ethPriceUsd = (await globalPriceFeedService.getPrice('ETH')) || 0;
       } catch { /* price fetch is best-effort */ }
       const pools: UniswapPoolSignal[] = [];
       for (const chainId of ['base', 'ethereum']) {

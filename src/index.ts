@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { isDryRun as isDryRunMode } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
-import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.js';
+import { buildCallEmbed } from './discord/embeds/call-embed.js';
+import type { CallCardPayload as CallSignalPayload } from './agents/shared/agent-contract.js';
 import { AthenaHub } from './orchestrator/hub.js';
 import { dispatchDomain, buildLPPayload } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
@@ -29,8 +30,7 @@ import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
 import { PerpsScreeningAgent } from './agents/perps/perps-screening-agent.js';
 import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
-import { priceAlertService, tradeJournalService, walletService } from './discord/handlers/interaction-handler.js';
-import { PriceFeedService } from './services/price-feed-service.js';
+import { priceAlertService, tradeJournalService, walletService, priceFeedService } from './discord/handlers/interaction-handler.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
 import { ApiKeyGuardService } from './services/api-key-guard.js';
@@ -142,7 +142,18 @@ const solanaScreeningAgent = new SolanaScreeningAgent();
 const robinhoodScreeningAgent = new RobinhoodScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
 const polymarketAgent = new PolymarketAgent(polymarketAdapter);
-const priceFeedService = new PriceFeedService();
+
+// Wire shared adapters + singleton agent instances into the Hub so on-demand
+// passes (Discord/TUI) use the SAME instances as the 5-min loop.
+hub.attachAdapters({ meteoraAdapter, uniswapAdapter });
+hub.attachAgentFactories({
+  'meme-solana': () => solanaScreeningAgent,
+  'meme-robinhood': () => robinhoodScreeningAgent,
+  nft: () => nftScreeningAgent,
+  prediction: () => polymarketAgent,
+  perps: () => perpsScreeningAgent,
+  'ct-alpha': () => ctAlphaAgent,
+});
 
 // Attach StateStore to all persistent services
 hub.attachStateStore(stateStore);
@@ -351,18 +362,7 @@ if (discordToken && clientId) {
           domain: 'lp-solana',
           channelName: 'call-lp-solana',
           isActive: () => hub.isAgentActive('lp-solana'),
-          runPass: () => withScreeningTimeout(
-            meteoraAdapter.fetchTopYieldPools().then((pools) =>
-              meteoraAdapter.filterHighYieldPools(pools).map((p) => ({
-                passed: true,
-                signal: p,
-                reason: p.aiRecommendation,
-                confidence: 80,
-                payload: buildLPPayload(p, 'lp-solana'),
-              }))
-            ),
-            'lp-solana'
-          ),
+          runPass: () => withScreeningTimeout(hub.runLPPass('lp-solana'), 'lp-solana'),
           keyReady: () => ({ ready: true, statusMessage: '' }),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
@@ -372,18 +372,7 @@ if (discordToken && clientId) {
           domain: 'lp-evm',
           channelName: 'call-lp-evm',
           isActive: () => hub.isAgentActive('lp-evm'),
-          runPass: () => withScreeningTimeout(
-            uniswapAdapter.fetchTopYieldEVMPools().then((pools) =>
-              uniswapAdapter.filterHighYieldEVMPools(pools).map((p) => ({
-                passed: true,
-                signal: p,
-                reason: p.aiRecommendation,
-                confidence: 80,
-                payload: buildLPPayload(p, 'lp-evm'),
-              }))
-            ),
-            'lp-evm'
-          ),
+          runPass: () => withScreeningTimeout(hub.runLPPass('lp-evm'), 'lp-evm'),
           keyReady: () => ({ ready: true, statusMessage: '' }),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });

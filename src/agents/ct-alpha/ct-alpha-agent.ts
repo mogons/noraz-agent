@@ -27,6 +27,16 @@ export interface CTAlphaSignal {
   authorVerified?: boolean;
 }
 
+export interface CTAlphaConfig {
+  passThreshold: number; // 80 — swarm consensus gate (>= 80% posted)
+  maxResults: number;    // 10
+}
+
+const DEFAULT_CONFIG: CTAlphaConfig = {
+  passThreshold: 80,
+  maxResults: 10,
+};
+
 /**
  * CT-Alpha Screening Agent (X/Twitter Smart CT & AI narratives)
  *
@@ -43,11 +53,12 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
   readonly domain = 'ct-alpha';
   private twitterService: TwitterService;
   private strategyEngine: StrategyEngine;
-  private readonly passThreshold = 80; // swarm consensus gate (>= 80% posted)
+  private config: CTAlphaConfig;
 
-  constructor(twitterService?: TwitterService) {
+  constructor(twitterService?: TwitterService, config?: Partial<CTAlphaConfig>) {
     this.twitterService = twitterService || new TwitterService();
     this.strategyEngine = new StrategyEngine();
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
@@ -56,7 +67,7 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
    */
   public async evaluateTweetsForAlpha(query: string = 'AI agent crypto alpha'): Promise<CTAlphaSignal[]> {
     console.log(`[CT ALPHA AGENT] Scanning Smart CT & AI narratives for query: "${query}"...`);
-    const tweets = await this.twitterService.searchTweets(query, 10);
+    const tweets = await this.twitterService.searchTweets(query, this.config.maxResults);
 
     const signals: CTAlphaSignal[] = [];
 
@@ -145,8 +156,8 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
       }
 
       // Fail-closed: the 80 gate must hold on the FINAL blended confidence
-      if (confidence < this.passThreshold) {
-        console.log(`[CT ALPHA AGENT] ⚪ @${s.authorUsername}: ${confidence}% < ${this.passThreshold}% setelah strategi.`);
+      if (confidence < this.config.passThreshold) {
+        console.log(`[CT ALPHA AGENT] ⚪ @${s.authorUsername}: ${confidence}% < ${this.config.passThreshold}% setelah strategi.`);
         continue;
       }
 

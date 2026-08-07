@@ -10,6 +10,7 @@ import {
   priceAlertService,
   tradeJournalService,
   walletService,
+  priceFeedService,
   handleChatInput,
 } from './command-handlers.js';
 import {
@@ -18,7 +19,7 @@ import {
   handleButtonPress,
 } from './interaction-buttons.js';
 
-export { priceAlertService, tradeJournalService, walletService };
+export { priceAlertService, tradeJournalService, walletService, priceFeedService };
 export type { PriceAlertService } from '../../services/price-alert-service.js';
 export type { TradeJournalService } from '../../services/trade-journal-service.js';
 export type { WalletService } from '../../services/wallet-service.js';

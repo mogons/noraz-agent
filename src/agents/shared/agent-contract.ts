@@ -1,5 +1,7 @@
+export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_UNISWAP' | 'PREDICTION' | 'CT_ALPHA';
+
 export interface CallCardPayload {
-  domain: string;
+  domain: CallDomain;
   title: string;
   symbol: string;
   contractAddress?: string;
@@ -12,6 +14,8 @@ export interface CallCardPayload {
   volume1h?: string;
   volume24h?: string;
   txRatio?: string;
+  feeApr?: string;
+  lpStrategy?: string;
   top10Pct?: string;
   devHoldingPct?: string;
   sniperPct?: string;

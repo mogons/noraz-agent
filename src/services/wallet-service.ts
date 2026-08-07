@@ -375,3 +375,6 @@ export class WalletService {
     return bytes.reverse();
   }
 }
+
+/** Process-wide singleton: WalletService is stateful (runtime-set keys) — share ONE instance. */
+export const globalWalletService = new WalletService();

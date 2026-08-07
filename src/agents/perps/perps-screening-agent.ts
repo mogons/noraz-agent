@@ -47,7 +47,6 @@ export class PerpsScreeningAgent implements ScreeningAgent<HyperliquidPerpsSigna
   private technicals: TechnicalIndicatorsService;
   private strategyEngine: StrategyEngine;
   private config: PerpsScreeningConfig;
-  private isRunning = false;
 
   constructor(adapter: HyperliquidAdapter, config?: Partial<PerpsScreeningConfig>) {
     this.adapter = adapter;

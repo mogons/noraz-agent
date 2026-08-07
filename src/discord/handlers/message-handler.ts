@@ -71,6 +71,7 @@ export async function handleControlRoomMessage(
   const toolRegistry = new ToolRegistry();
   toolRegistry.attachOrchestrator(hub);
   toolRegistry.attachAIService(aiService);
+  toolRegistry.attachWalletService(walletService);
 
   const lowerQuery = userQuery.toLowerCase();
 

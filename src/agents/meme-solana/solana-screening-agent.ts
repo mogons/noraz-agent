@@ -1,6 +1,6 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { RugCheckService, RugCheckResult } from '../../services/security-service.js';
-import { PriceFeedService } from '../../services/price-feed-service.js';
+import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis } from '../shared/gmgn-meme-helpers.js';
@@ -46,7 +46,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   readonly domain = 'meme-solana';
   private gmgn: GMGNAdapter;
   private rugCheck: RugCheckService;
-  private priceFeed: PriceFeedService;
+  private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: SolanaScreeningConfig;
   private dedupeTokens = createDedupe();
@@ -54,7 +54,6 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   constructor(config?: Partial<SolanaScreeningConfig>) {
     this.gmgn = new GMGNAdapter();
     this.rugCheck = new RugCheckService();
-    this.priceFeed = new PriceFeedService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }

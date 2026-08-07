@@ -1,6 +1,6 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { GoPlusSecurityService, GoPlusTokenSecurity } from '../../services/goplus-security-service.js';
-import { PriceFeedService } from '../../services/price-feed-service.js';
+import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis } from '../shared/gmgn-meme-helpers.js';
@@ -46,7 +46,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
   readonly domain = 'meme-robinhood';
   private gmgn: GMGNAdapter;
   private goplus: GoPlusSecurityService;
-  private priceFeed: PriceFeedService;
+  private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: RobinhoodScreeningConfig;
   private dedupeTokens = createDedupe();
@@ -54,7 +54,6 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
   constructor(config?: Partial<RobinhoodScreeningConfig>) {
     this.gmgn = new GMGNAdapter();
     this.goplus = new GoPlusSecurityService();
-    this.priceFeed = new PriceFeedService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
