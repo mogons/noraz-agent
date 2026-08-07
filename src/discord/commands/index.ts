@@ -111,6 +111,10 @@ export const slashCommands = [
               { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
             )
         )
+    )
+    .addSubcommand(sub =>
+      sub.setName('status')
+        .setDescription('View real-time status of all 8 sub-agents (active / paused)')
     ),
 
   new SlashCommandBuilder()

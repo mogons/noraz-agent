@@ -248,15 +248,18 @@ async function handleChatInput(
       if (match) {
         targetAgent = match.agent;
       } else if (channelName.includes('control-room') || !channelName.startsWith('call-')) {
-        // Control room / general channel — operate on ALL agents
-        if (subcommand === 'start') {
+        // Control room / general channel — operate on ALL agents (or show status)
+        if (subcommand === 'status') {
+          // Fall through — handled by the shared status block below
+        } else if (subcommand === 'start') {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, true));
           await interaction.editReply('⚡ **Global Master Screening Activated!** All 8 Sub-Agent domains are now active.');
+          return;
         } else {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, false));
           await interaction.editReply('⏸️ **Global Master Screening Paused!** All 8 Sub-Agent domains are now paused.');
+          return;
         }
-        return;
       } else {
         await interaction.editReply({
           content: '⚠️ Please specify an agent domain (e.g. `/screening start agent:meme-solana`) or run this command inside a dedicated `#call-*` channel!',
@@ -277,11 +280,39 @@ async function handleChatInput(
     }
 
     if (subcommand === 'start') {
-      hub.toggleChannelScreening(interaction.channelId, targetAgent, true);
+      hub.toggleChannelScreening(interaction.channelId, targetAgent!, true);
       await interaction.editReply(`⚡ **Screening Activated** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     } else if (subcommand === 'stop') {
-      hub.toggleChannelScreening(interaction.channelId, targetAgent, false);
+      hub.toggleChannelScreening(interaction.channelId, targetAgent!, false);
       await interaction.editReply(`⏸️ **Screening Stopped** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
+    } else if (subcommand === 'status') {
+      const ALL_AGENTS: Array<{ id: string; label: string; emoji: string }> = [
+        { id: 'meme-solana',  label: 'Solana Meme Agent',          emoji: '🚀' },
+        { id: 'meme-evm',     label: 'EVM Meme Agent',             emoji: '🔷' },
+        { id: 'lp-solana',    label: 'Solana LP Agent',            emoji: '💧' },
+        { id: 'lp-evm',       label: 'EVM LP Agent',               emoji: '🔷' },
+        { id: 'perps',        label: 'Perpetuals Agent',           emoji: '📈' },
+        { id: 'nft',          label: 'NFT Sniping Agent',          emoji: '🖼️' },
+        { id: 'prediction',   label: 'Polymarket Prediction Agent', emoji: '🎯' },
+        { id: 'ct-alpha',     label: 'Smart CT & AI Alpha Agent',  emoji: '💡' },
+      ];
+
+      const activeCount = ALL_AGENTS.filter(a => hub.isAgentActive(a.id)).length;
+      const statusLines = ALL_AGENTS.map(a => {
+        const isActive = hub.isAgentActive(a.id);
+        return `${a.emoji} **${a.label}**  →  ${isActive ? '🟢 ACTIVE' : '🔴 PAUSED'}`;
+      }).join('\n');
+
+      const overallLine = activeCount === 8
+        ? '🟢 **All 8 Sub-Agents ACTIVE** — 24/7 Screening Running!'
+        : activeCount === 0
+        ? '🔴 **All Sub-Agents PAUSED** — No screening running.'
+        : `🟡 **${activeCount}/8 Sub-Agents Active** — Partial screening running.`;
+
+      await interaction.editReply(
+        `## 📡 Athena Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
+        `> 💡 Use \`/screening start\` or \`/screening stop\` in a dedicated channel to toggle individual agents.`
+      );
     }
   } else if (commandName === 'cancel') {
     await interaction.reply({
