@@ -1,4 +1,7 @@
 import { TwitterService } from '../../services/twitter-service.js';
+import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
+import type { StrategyContext } from '../../orchestrator/strategy-types.js';
+import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 
 export interface CTAlphaSignal {
   id: string;
@@ -15,17 +18,41 @@ export interface CTAlphaSignal {
   contractAddress?: string;
   confidenceScore: number; // 0 - 100
   postedAt: string;
+  /**
+   * Author verification as reported by the source API. TwitterService does not
+   * expose verification yet, so this stays undefined for live fetches — the
+   * security proxy then falls back to engagement (see deriveSecurityPassed).
+   * Never assumed true.
+   */
+  authorVerified?: boolean;
 }
 
-export class CTAlphaAgent {
+/**
+ * CT-Alpha Screening Agent (X/Twitter Smart CT & AI narratives)
+ *
+ * Implements the shared ScreeningAgent contract (mirrors perps/meme pattern):
+ * fetch (fail-closed []) → freshness/engagement pre-filter (fail-closed) →
+ * deterministic confidence → optional strategy extension layer (0.7/0.3 blend,
+ * SKIP vetoes) → agent-built CallCardPayload with real fields / 'N/A' →
+ * AgentReport[] (swarm gate still applies downstream).
+ *
+ * There is no on-chain audit for a tweet (no contract, no chain) — the
+ * security proxy is author trust + engagement (deriveSecurityPassed).
+ */
+export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
+  readonly domain = 'ct-alpha';
   private twitterService: TwitterService;
+  private strategyEngine: StrategyEngine;
+  private readonly passThreshold = 80; // swarm consensus gate (>= 80% posted)
 
   constructor(twitterService?: TwitterService) {
     this.twitterService = twitterService || new TwitterService();
+    this.strategyEngine = new StrategyEngine();
   }
 
   /**
-   * Evaluates tweets for high-value Alpha, AI agent trends, and yield opportunities
+   * Evaluates tweets for high-value Alpha, AI agent trends, and yield opportunities.
+   * Fail-closed gates kept as-is: freshness <= 1h, engagement >= 50 likes / 10 retweets.
    */
   public async evaluateTweetsForAlpha(query: string = 'AI agent crypto alpha'): Promise<CTAlphaSignal[]> {
     console.log(`[CT ALPHA AGENT] Scanning Smart CT & AI narratives for query: "${query}"...`);
@@ -83,14 +110,112 @@ export class CTAlphaAgent {
     return signals;
   }
 
-  public async runScreeningPass(): Promise<Array<{ passed: boolean; signal: CTAlphaSignal; reason: string }>> {
+  /**
+   * Contract wrapper: evaluate tweets, apply the strategy extension layer per
+   * signal (0.7/0.3 confidence blend, SKIP vetoes, getActiveStrategy('ct-alpha')),
+   * re-apply the 80 gate on the FINAL blended confidence (fail-closed), then
+   * enrich each survivor with a call-card payload built from real fields.
+   */
+  public async runScreeningPass(): Promise<AgentReport<CTAlphaSignal>[]> {
     console.log('[CT ALPHA AGENT] Running Smart CT & AI narrative surveillance pass...');
     const signals = await this.evaluateTweetsForAlpha('AI agent crypto alpha');
 
-    return signals.map(s => ({
-      passed: s.confidenceScore >= 80,
-      signal: s,
-      reason: `🎯 SMART CT ALPHA (${s.category}): ${s.actionableTakeaway} (Score: ${s.confidenceScore}%)`,
-    }));
+    const reports: AgentReport<CTAlphaSignal>[] = [];
+
+    for (const s of signals) {
+      let confidence = s.confidenceScore;
+
+      // Strategy extension layer (optional): adjust confidence
+      try {
+        const strat = this.strategyEngine.getActiveStrategy('ct-alpha');
+        if (strat?.evaluate) {
+          const ev = strat.evaluate(this.buildStrategyCtx(s));
+          if (ev?.recommendedAction === 'SKIP') {
+            console.log(`[CT ALPHA AGENT] ⛔ @${s.authorUsername}: strategi menolak (${ev.reason})`);
+            continue;
+          }
+          if (ev && typeof ev.confidence === 'number') {
+            confidence = Math.round(confidence * 0.7 + Math.max(0, Math.min(100, ev.confidence)) * 0.3);
+            s.confidenceScore = confidence;
+          }
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[CT ALPHA AGENT] Strategi gagal: ${message}`);
+      }
+
+      // Fail-closed: the 80 gate must hold on the FINAL blended confidence
+      if (confidence < this.passThreshold) {
+        console.log(`[CT ALPHA AGENT] ⚪ @${s.authorUsername}: ${confidence}% < ${this.passThreshold}% setelah strategi.`);
+        continue;
+      }
+
+      const thesis = `🎯 SMART CT ALPHA (${s.category}): ${s.actionableTakeaway} (Score: ${confidence}%)`;
+      reports.push({ passed: true, signal: s, reason: thesis, confidence, payload: this.buildPayload(s, thesis) });
+      console.log(`[CT ALPHA AGENT] 🎯 ${s.category} @${s.authorUsername} ${confidence}%`);
+    }
+
+    console.log(`[CT ALPHA AGENT] Pass selesai. ${reports.length} sinyal lolos.`);
+    return reports;
+  }
+
+  /**
+   * Build call-card payload from real tweet fields (or 'N/A').
+   * liquidityUsd/volume1hUsd are required by the contract but tweets carry no
+   * on-chain data — 0 is the honest absence, never a fabricated number.
+   */
+  public buildPayload(signal: CTAlphaSignal, thesis: string): CallCardPayload {
+    return {
+      domain: 'CT_ALPHA',
+      title: signal.title,
+      symbol: signal.symbolMentioned || 'ALPHA',
+      contractAddress: signal.contractAddress || 'N/A',
+      network: 'X (Twitter)',
+      aiThesis: thesis || signal.actionableTakeaway,
+      confidenceScore: signal.confidenceScore,
+      dexScreenerUrl: signal.tweetUrl,
+      securityAuditPassed: this.deriveSecurityPassed(signal),
+      socialHypeScore: signal.confidenceScore,
+      liquidityUsd: 0, // no on-chain liquidity for a tweet
+      volume1hUsd: 0,  // no on-chain volume for a tweet
+    };
+  }
+
+  /**
+   * CT-alpha has no on-chain audit (no contract, no chain — nothing to RugCheck
+   * or GoPlus). The security proxy is author trust + engagement: an
+   * author-verified account passes outright; otherwise engagement must clear
+   * the high bar of >= 100 likes AND >= 20 retweets. Never hardcoded true.
+   */
+  public deriveSecurityPassed(signal: CTAlphaSignal): boolean {
+    return signal.authorVerified === true || (signal.likes >= 100 && signal.retweets >= 20);
+  }
+
+  /** Map signal -> strategy ctx (flat + snake_case ct-alpha block) */
+  private buildStrategyCtx(signal: CTAlphaSignal): StrategyContext {
+    const ageMs = signal.postedAt ? Date.now() - new Date(signal.postedAt).getTime() : NaN;
+    return {
+      domain: 'CT_ALPHA',
+      symbol: signal.symbolMentioned || 'ALPHA',
+      contractAddress: signal.contractAddress || 'N/A',
+      priceUsd: 0,       // tweets carry no price data
+      liquidityUsd: 0,   // tweets carry no liquidity data
+      volume24hUsd: 0,   // tweets carry no volume data
+      volume1hUsd: 0,    // tweets carry no volume data
+      smartMoneyCount: 0, // no wallet-count data; kept for StrategyContext parity
+      securityAuditPassed: this.deriveSecurityPassed(signal),
+      socialHypeScore: signal.confidenceScore,
+      ct: {
+        category: signal.category,
+        author_username: signal.authorUsername,
+        author_verified: signal.authorVerified ?? undefined,
+        likes: signal.likes,
+        retweets: signal.retweets,
+        tweet_age_ms: Number.isFinite(ageMs) ? ageMs : null,
+        tweet_url: signal.tweetUrl,
+        symbol_mentioned: signal.symbolMentioned ?? null,
+        contract_address: signal.contractAddress ?? null,
+      },
+    };
   }
 }
