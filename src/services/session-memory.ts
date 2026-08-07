@@ -126,4 +126,33 @@ export class SessionMemoryService {
   public getRecentAudits(limit: number = 5): AuditMemoryRecord[] {
     return this.auditMemories.slice(0, limit);
   }
+
+  /**
+   * Build a compact memory-context string (last N audits + recent user queries) to inject
+   * into the AI system prompt. Keeps token cost small (~200-400 tokens) while giving the
+   * LLM lightweight cross-chat memory. Zero-cost if no records exist.
+   */
+  public buildMemoryContextLine(maxAudits: number = 4, maxQueries: number = 3): string {
+    const audits = this.auditMemories.slice(0, maxAudits);
+    const queries = this.userQueries.slice(0, maxQueries);
+
+    if (audits.length === 0 && queries.length === 0) return '';
+
+    const lines: string[] = ['\nMEMORI SINGKAT (dari sesi sebelumnya):'];
+    if (audits.length > 0) {
+      lines.push('- Audit terakhir:');
+      for (const a of audits) {
+        const d = a.timestampIso ? a.timestampIso.slice(0, 16) : '';
+        lines.push(`  • ${a.symbol} (${a.chain}): ${a.verdict} [${a.score}/100] @${d}`);
+      }
+    }
+    if (queries.length > 0) {
+      lines.push('- Pertanyaan user terakhir:');
+      for (const q of queries) {
+        const short = q.query.length > 60 ? q.query.slice(0, 60) + '…' : q.query;
+        lines.push(`  • "${short}"`);
+      }
+    }
+    return lines.join('\n');
+  }
 }

@@ -319,6 +319,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
           const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
           const { runAgent } = await import('../orchestrator/agent-runner.js');
+          const { SessionMemoryService } = await import('../services/session-memory.js');
           const toolRegistry = new ToolRegistry();
           toolRegistry.attachOrchestrator(hub);
           toolRegistry.attachAIService(aiService);
@@ -327,7 +328,8 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           const activeAgentsLine = activeDomains.length > 0
             ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
             : 'Active Sub-Agents saat ini: NONE (semua paused)';
-          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}`;
+          const memoryContext = new SessionMemoryService().buildMemoryContextLine();
+          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
 
           const agentResult = await runAgent(
             { aiService, toolRegistry, systemPrompt },

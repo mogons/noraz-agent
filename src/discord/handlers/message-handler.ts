@@ -351,6 +351,8 @@ export async function handleControlRoomMessage(
   // Shared Athena system prompt (persona + architecture) + live operating params
   const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../../services/athena-system-prompt.js');
   const { getAgentDomain } = await import('../../orchestrator/agent-registry.js');
+  const { SessionMemoryService } = await import('../../services/session-memory.js');
+  const memoryContext = new SessionMemoryService().buildMemoryContextLine();
   const activeDomains = hub.getActiveDomains();
   const activeAgentsLine = activeDomains.length > 0
     ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
@@ -365,7 +367,7 @@ ${activeAgentsLine}
   • Polymarket Balance: $${simPoly} USDC (Polygon L2)
   • Hyperliquid Perps Balance: $${simHl} USDC
 - Global Portfolio Drawdown Limit: 50.0%
-- Current Portfolio Drawdown: 0.0%`;
+- Current Portfolio Drawdown: 0.0%${memoryContext}`;
 
   try {
     // Athena is a real agent: LLM picks tools via function-calling (AgentRunner loop)

@@ -218,6 +218,7 @@ export async function launchTUI(): Promise<void> {
             const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
             const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
             const { runAgent } = await import('../orchestrator/agent-runner.js');
+            const { SessionMemoryService } = await import('../services/session-memory.js');
             const toolRegistry = new ToolRegistry();
             toolRegistry.attachOrchestrator(hub);
             toolRegistry.attachAIService(aiService);
@@ -225,12 +226,13 @@ export async function launchTUI(): Promise<void> {
             const activeAgentsLine = activeDomains.length > 0
               ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
               : 'Active Sub-Agents saat ini: NONE (semua paused)';
+            const memoryContext = new SessionMemoryService().buildMemoryContextLine();
             const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
 - Execution Mode: DRY_RUN Active (Safe Simulation).
 - Global Portfolio Drawdown Limit: 50.0%.
-- Current Portfolio Drawdown: 0.0%.`;
+- Current Portfolio Drawdown: 0.0%.${memoryContext}`;
 
             const agentResult = await runAgent(
               { aiService, toolRegistry, systemPrompt },
