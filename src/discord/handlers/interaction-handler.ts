@@ -15,7 +15,6 @@ import {
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../../config/config.js';
-import { SwarmConsensus } from '../../orchestrator/swarm-consensus.js';
 import { AIService } from '../../services/ai-service.js';
 import { PriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
@@ -32,12 +31,11 @@ export const walletService = new WalletService();
 export async function handleInteraction(
   interaction: Interaction,
   hub: AthenaHub,
-  swarm: SwarmConsensus,
   aiService: AIService
 ): Promise<void> {
   try {
     if (interaction.isChatInputCommand()) {
-      await handleChatInput(interaction, hub, swarm);
+      await handleChatInput(interaction, hub);
     } else if (interaction.isModalSubmit()) {
       await handleModalSubmit(interaction);
     } else if (interaction.isButton()) {
@@ -56,8 +54,7 @@ export async function handleInteraction(
 
 async function handleChatInput(
   interaction: ChatInputCommandInteraction,
-  hub: AthenaHub,
-  swarm: SwarmConsensus
+  hub: AthenaHub
 ): Promise<void> {
   const commandName = interaction.commandName;
 

@@ -126,16 +126,46 @@ export async function launchTUI(): Promise<void> {
         const ca = await prompt('Enter Token Contract Address (CA): ');
         if (ca.trim()) {
           console.log(`${C.yellow}Executing 3-Layer Swarm Consensus Audit (Quant + Catalyst + Security)...${C.reset}`);
+          const isSol = !ca.trim().startsWith('0x');
+          let liquidityUsd = 0;
+          let volume1hUsd = 0;
+          let securityPassed = false;
+          let socialHypeScore = 0;
+          try {
+            if (isSol) {
+              const { RugCheckService } = await import('../services/security-service.js');
+              const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
+              const rug = new RugCheckService();
+              const audit = await rug.auditSolanaToken(ca.trim());
+              securityPassed = audit ? audit.isSafeForRunner : false;
+              const gmgn = new GMGNAdapter();
+              const sigs = await gmgn.fetchTrendingSignals('sol');
+              const tok = sigs.find((s) => s.contractAddress.toLowerCase() === ca.trim().toLowerCase());
+              if (tok) {
+                liquidityUsd = tok.liquidityUsd || 0;
+                volume1hUsd = (tok.volume24hUsd || 0) / 24;
+                socialHypeScore = Math.min(98, 40 + (tok.smartMoneyCount >= 2 ? 20 : 0) + (tok.liquidityUsd >= 25000 ? 15 : 0) + (tok.volume24hUsd >= 100000 ? 15 : 0));
+              }
+            } else {
+              const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
+              const goplus = new GoPlusSecurityService();
+              const audit = await goplus.auditToken('base', ca.trim());
+              securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
+            }
+          } catch (err: any) {
+            console.log(`${C.red}⚠️ Real audit data unavailable: ${err?.message}${C.reset}`);
+          }
           const res = swarmEngine.evaluateSignal({
             symbol: 'CUSTOM',
             domain: 'MEME_SOLANA',
             contractAddress: ca.trim(),
-            liquidityUsd: 18000,
-            volume1hUsd: 65000,
-            securityAuditPassed: true,
-            socialHypeScore: 88,
+            liquidityUsd,
+            volume1hUsd,
+            securityAuditPassed: securityPassed,
+            socialHypeScore,
           });
           console.log(`\n${C.green}Athena Swarm Verdict:${C.reset}`);
+          console.log(`• Real Liquidity: $${liquidityUsd} | Real 1h Vol: $${volume1hUsd} | Security: ${securityPassed ? 'PASS' : 'UNAVAILABLE/FAIL'}`);
           console.log(`• Confidence Score: ${C.bright}${res.confidenceScore}%${C.reset} (${res.passed ? C.green + 'APPROVED (>=80%)' : C.red + 'REJECTED'}${C.reset})`);
           console.log(`• Audit Reasoning: ${res.reason}`);
         }
