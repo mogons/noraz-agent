@@ -232,22 +232,37 @@ async function runWizard() {
   let solanaWssUrl = existingEnv.SOLANA_WSS_URL || 'wss://api.mainnet-beta.solana.com';
   let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || existingEnv.EVM_RPC_URL || 'https://mainnet.base.org';
   let evmEthRpcUrl = existingEnv.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com';
+  let evmRobinhoodRpcUrl = existingEnv.EVM_ROBINHOOD_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
-  const defaultSolRpc = solanaRpcUrl ? ` [Default: ${solanaRpcUrl}]` : '';
-  const inputSolRpc = await askQuestion(` 1. SOLANA_RPC_URL (Helius / QuickNode / Alchemy)${defaultSolRpc}: `);
-  solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
+  console.log(' 💡 Opsi Cepat Solana RPC: Kamu bisa langsung memasukkan HELIUS API KEY saja!');
+  const heliusInput = await askQuestion(' 1. Punya Helius API Key? Masukkan Key di sini (atau tekan ENTER untuk diisi manual/default): ');
+  
+  if (heliusInput.trim()) {
+    const key = heliusInput.trim();
+    solanaRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${key}`;
+    solanaWssUrl = `wss://mainnet.helius-rpc.com/?api-key=${key}`;
+    console.log(`    ✅ Auto-Configured Helius RPC & WSS URLs dengan API Key kamu!`);
+  } else {
+    const defaultSolRpc = solanaRpcUrl ? ` [SUDAH TERISI: ${solanaRpcUrl.slice(0, 35)}...]` : ' [Default: Public Solana RPC]';
+    const inputSolRpc = await askQuestion(`    a. SOLANA_RPC_URL (HTTP)${defaultSolRpc}: `);
+    solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
 
-  const defaultSolWss = solanaWssUrl ? ` [Default: ${solanaWssUrl}]` : '';
-  const inputSolWss = await askQuestion(` 2. SOLANA_WSS_URL (Solana WebSocket RPC)${defaultSolWss}: `);
-  solanaWssUrl = inputSolWss.trim() || solanaWssUrl;
+    const defaultSolWss = solanaWssUrl ? ` [SUDAH TERISI: ${solanaWssUrl.slice(0, 35)}...]` : ' [Default: Public Solana WSS]';
+    const inputSolWss = await askQuestion(`    b. SOLANA_WSS_URL (WebSocket)${defaultSolWss}: `);
+    solanaWssUrl = inputSolWss.trim() || solanaWssUrl;
+  }
 
-  const defaultBaseRpc = evmBaseRpcUrl ? ` [Default: ${evmBaseRpcUrl}]` : '';
-  const inputBaseRpc = await askQuestion(` 3. EVM_BASE_RPC_URL (Base L2 RPC URL)${defaultBaseRpc}: `);
+  const defaultBaseRpc = evmBaseRpcUrl ? ` [SUDAH TERISI: ${evmBaseRpcUrl}]` : ' [Default: https://mainnet.base.org]';
+  const inputBaseRpc = await askQuestion(` 2. EVM_BASE_RPC_URL (Base L2 RPC)${defaultBaseRpc}: `);
   evmBaseRpcUrl = inputBaseRpc.trim() || evmBaseRpcUrl;
 
-  const defaultEthRpc = evmEthRpcUrl ? ` [Default: ${evmEthRpcUrl}]` : '';
-  const inputEthRpc = await askQuestion(` 4. EVM_ETH_RPC_URL (Ethereum Mainnet RPC URL)${defaultEthRpc}: `);
+  const defaultEthRpc = evmEthRpcUrl ? ` [SUDAH TERISI: ${evmEthRpcUrl}]` : ' [Default: https://eth.llamarpc.com]';
+  const inputEthRpc = await askQuestion(` 3. EVM_ETH_RPC_URL (Ethereum Mainnet RPC)${defaultEthRpc}: `);
   evmEthRpcUrl = inputEthRpc.trim() || evmEthRpcUrl;
+
+  const defaultRhRpc = evmRobinhoodRpcUrl ? ` [SUDAH TERISI: ${evmRobinhoodRpcUrl}]` : ' [Default: https://arb1.arbitrum.io/rpc]';
+  const inputRhRpc = await askQuestion(` 4. EVM_ROBINHOOD_RPC_URL (Robinhood L2 / Arbitrum RPC)${defaultRhRpc}: `);
+  evmRobinhoodRpcUrl = inputRhRpc.trim() || evmRobinhoodRpcUrl;
 
   // 7. BURNER WALLETS & PERPS KEYS
   console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS & EXCHANGE API KEYS');
@@ -255,15 +270,15 @@ async function runWizard() {
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
   let hyperliquidPrivateKey = existingEnv.HYPERLIQUID_PRIVATE_KEY || '';
 
-  const defaultSolPk = solanaPrivateKey ? ` [Default: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain Solana Execution]';
+  const defaultSolPk = solanaPrivateKey ? ` [SUDAH TERISI: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain Solana Execution]';
   const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
   solanaPrivateKey = inputSolPk.trim() || solanaPrivateKey;
 
-  const defaultEvmPk = evmPrivateKey ? ` [Default: ${evmPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain EVM Execution]';
+  const defaultEvmPk = evmPrivateKey ? ` [SUDAH TERISI: ${evmPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain EVM Execution]';
   const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  const defaultHlPk = hyperliquidPrivateKey ? ` [Default: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Perps Agent]';
+  const defaultHlPk = hyperliquidPrivateKey ? ` [SUDAH TERISI: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Perps Agent]';
   const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Perps Trading Account Key)${defaultHlPk}: `);
   hyperliquidPrivateKey = inputHlPk.trim() || hyperliquidPrivateKey;
 
@@ -318,6 +333,8 @@ SOLANA_WSS_URL=${solanaWssUrl.trim()}
 EVM_BASE_RPC_URL=${evmBaseRpcUrl.trim()}
 EVM_RPC_URL=${evmBaseRpcUrl.trim()}
 EVM_ETH_RPC_URL=${evmEthRpcUrl.trim()}
+EVM_ROBINHOOD_RPC_URL=${evmRobinhoodRpcUrl.trim()}
+
 
 # Web3 Burner Wallets & Perps Account Keys
 SOLANA_PRIVATE_KEY=${solanaPrivateKey.trim()}
