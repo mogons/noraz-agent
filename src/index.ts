@@ -3,7 +3,7 @@ import { isDryRun as isDryRunMode } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.js';
 import { AthenaHub } from './orchestrator/hub.js';
-import { dispatchDomain } from './orchestrator/dispatch.js';
+import { dispatchDomain, buildLPPayload } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine, SwarmConsensus } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
 import { PositionManager } from './position/position-manager.js';
@@ -81,6 +81,30 @@ function gateSignal(payload: any): boolean {
 // Rate-limited Discord notification to #athena-control-room (never spam)
 const controlRoomNotifyCooldown = new Map<string, number>();
 const CONTROL_ROOM_NOTIFY_MS = 10 * 60 * 1000; // max 1 notif per key per 10 minutes
+
+// Per-agent screening timeout: a stuck pass logs and resolves to [] (fail-closed),
+// so one hung agent can never stall the whole sub-agent loop.
+const SCREENING_TIMEOUT_MS = Math.max(1000, Number(process.env.SCREENING_TIMEOUT_MS) || 60000);
+function withScreeningTimeout<T>(promise: Promise<T>, domain: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      console.warn(`[SCREENING TIMEOUT] ${domain.toUpperCase()} pass exceeded ${SCREENING_TIMEOUT_MS}ms — discarded, no signals emitted (fail-closed).`);
+      resolve([] as unknown as T);
+    }, SCREENING_TIMEOUT_MS);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
+// Perps call-card titles are formatted `${direction} ${coin} (${leverage}x)`; extract
+// direction/leverage for the auto-execute simulation log (fallbacks if title deviates).
+function parsePerpsSimulation(title: string | undefined): { direction: string; leverage: string } {
+  const m = String(title || '').match(/^(LONG|SHORT)\s+\S+\s+\(([\d.]+)x\)/);
+  return { direction: m ? m[1] : 'LONG', leverage: m ? m[2] : '10' };
+}
+
 async function notifyControlRoom(client: any, key: string, content: string): Promise<void> {
   const now = Date.now();
   const last = controlRoomNotifyCooldown.get(key);
@@ -266,7 +290,7 @@ if (discordToken && clientId) {
           domain: 'meme-solana',
           channelName: 'call-meme-solana',
           isActive: () => hub.isAgentActive('meme-solana'),
-          runPass: () => solanaScreeningAgent.runScreeningPass(),
+          runPass: () => withScreeningTimeout(solanaScreeningAgent.runScreeningPass(), 'meme-solana'),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-solana'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
@@ -276,7 +300,7 @@ if (discordToken && clientId) {
           domain: 'meme-robinhood',
           channelName: 'call-meme-robinhood',
           isActive: () => hub.isAgentActive('meme-robinhood'),
-          runPass: () => robinhoodScreeningAgent.runScreeningPass(),
+          runPass: () => withScreeningTimeout(robinhoodScreeningAgent.runScreeningPass(), 'meme-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-robinhood'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
@@ -286,25 +310,9 @@ if (discordToken && clientId) {
           domain: 'nft',
           channelName: 'call-nft-sniping',
           isActive: () => hub.isAgentActive('nft'),
-          runPass: async () => (await nftScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.detectionReason })),
+          runPass: () => withScreeningTimeout(nftScreeningAgent.runScreeningPass(), 'nft'),
           keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'NFT',
-            title: `${signal.collectionName} #${signal.tokenId}`,
-            symbol: signal.collectionSlug.toUpperCase(),
-            contractAddress: signal.collectionSlug,
-            network: signal.chain.toUpperCase(),
-            priceUsd: `${signal.priceEth} ETH`,
-            marketCap: `Floor: ${signal.floorPriceEth} ETH (+${signal.floorSurge4hPct.toFixed(1)}% 4h)`,
-            confidenceScore: signal.confidenceScore,
-            aiThesis: reason || signal.detectionReason,
-            dexScreenerUrl: signal.openseaUrl,
-            liquidityUsd: (signal.floorPriceEth || 0) * 3000,
-            volume1hUsd: (signal.salesVelocity1h || 0) * (signal.priceEth || 0) * 3000,
-            securityAuditPassed: true,
-            socialHypeScore: signal.confidenceScore || 0,
-          }),
         });
         dispatchedPayloads.push(...nftDispatched);
 
@@ -312,22 +320,9 @@ if (discordToken && clientId) {
           domain: 'prediction',
           channelName: 'call-prediction-markets',
           isActive: () => hub.isAgentActive('prediction'),
-          runPass: async () => (await polymarketAgent.runScreeningPass()).map((r: any) => ({ passed: r.confidenceScore >= 80, signal: r, reason: r.aiThesis })),
+          runPass: () => withScreeningTimeout(polymarketAgent.runScreeningPass(), 'prediction'),
           keyReady: () => apiKeyGuard.checkDomainKeys('prediction'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'PREDICTION',
-            title: signal.question,
-            symbol: signal.recommendedOutcome,
-            network: 'Polygon (Polymarket)',
-            confidenceScore: signal.confidenceScore,
-            aiThesis: reason || signal.aiThesis,
-            dexScreenerUrl: signal.polymarketUrl,
-            liquidityUsd: signal.liquidityUsd || 0,
-            volume1hUsd: (signal.volume24hUsd || 0) / 24,
-            securityAuditPassed: true,
-            socialHypeScore: signal.confidenceScore || 0,
-          }),
         });
         dispatchedPayloads.push(...predictionDispatched);
 
@@ -335,25 +330,9 @@ if (discordToken && clientId) {
           domain: 'perps',
           channelName: 'call-perps-futures',
           isActive: () => hub.isAgentActive('perps'),
-          runPass: async () => (await perpsScreeningAgent.screenAllAssets()).map((r: any) => ({ passed: r.confidence >= 80, signal: r, reason: r.aiThesis || r.signalReasons.join(', ') })),
+          runPass: () => withScreeningTimeout(perpsScreeningAgent.runScreeningPass(), 'perps'),
           keyReady: () => apiKeyGuard.checkDomainKeys('perps'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'PERPS',
-            title: `${signal.direction} ${signal.coin} (${signal.suggestedLeverage}x)`,
-            symbol: signal.coin,
-            contractAddress: signal.coin,
-            network: 'Hyperliquid Perps',
-            priceUsd: `$${signal.entryPriceUsd}`,
-            marketCap: `Stop: -${signal.stopLossPercent}% | TP: +${signal.takeProfitPercent}%`,
-            confidenceScore: signal.confidence,
-            aiThesis: reason || signal.signalReasons.join(' | '),
-            dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${signal.coin}`,
-            liquidityUsd: signal.marketData?.openInterestUsd || 0,
-            volume1hUsd: signal.marketData?.volume1hUsd || 0,
-            securityAuditPassed: true,
-            socialHypeScore: signal.confidence || 0,
-          }),
         });
         dispatchedPayloads.push(...perpsDispatched);
 
@@ -361,23 +340,9 @@ if (discordToken && clientId) {
           domain: 'ct-alpha',
           channelName: 'call-ct-alpha',
           isActive: () => hub.isAgentActive('ct-alpha'),
-          runPass: async () => (await ctAlphaAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          runPass: () => withScreeningTimeout(ctAlphaAgent.runScreeningPass(), 'ct-alpha'),
           keyReady: () => apiKeyGuard.checkDomainKeys('ct-alpha'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'CT_ALPHA',
-            title: signal.title,
-            symbol: signal.symbolMentioned || 'ALPHA',
-            contractAddress: signal.contractAddress || 'N/A',
-            network: 'X (Twitter)',
-            confidenceScore: signal.confidenceScore,
-            aiThesis: reason || signal.actionableTakeaway,
-            dexScreenerUrl: signal.tweetUrl,
-            liquidityUsd: 0,
-            volume1hUsd: 0,
-            securityAuditPassed: true,
-            socialHypeScore: signal.confidenceScore || 0,
-          }),
         });
         dispatchedPayloads.push(...ctAlphaDispatched);
 
@@ -385,30 +350,20 @@ if (discordToken && clientId) {
           domain: 'lp-solana',
           channelName: 'call-lp-solana',
           isActive: () => hub.isAgentActive('lp-solana'),
-          runPass: async () => {
-            const pools = await meteoraAdapter.fetchTopYieldPools();
-            const high = meteoraAdapter.filterHighYieldPools(pools);
-            return high.map((p) => ({ passed: true, signal: p, reason: p.aiRecommendation }));
-          },
+          runPass: () => withScreeningTimeout(
+            meteoraAdapter.fetchTopYieldPools().then((pools) =>
+              meteoraAdapter.filterHighYieldPools(pools).map((p) => ({
+                passed: true,
+                signal: p,
+                reason: p.aiRecommendation,
+                confidence: 80,
+                payload: buildLPPayload(p, 'lp-solana'),
+              }))
+            ),
+            'lp-solana'
+          ),
           keyReady: () => ({ ready: true, statusMessage: '' }),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'LP_METEORA',
-            title: signal.pairName,
-            symbol: signal.pairName.split(' ')[0],
-            contractAddress: signal.poolAddress,
-            network: 'Solana',
-            liquidity: `$${(signal.tvlUsd / 1000).toFixed(1)}k`,
-            devHoldingPct: `${signal.feeAprPercentage}% APR`,
-            sniperPct: `${(signal.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
-            bundlerPct: `${signal.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
-            dexPaidStatus: 'Meteora DLMM',
-            confidenceScore: 80,
-            aiThesis: reason || signal.aiRecommendation,
-            liquidityUsd: signal.tvlUsd || 0,
-            volume1hUsd: signal.volume4hUsd / 4 || 0,
-            securityAuditPassed: true,
-            socialHypeScore: signal.organicVolumeScore4h || 0,
-          }),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpSolanaDispatched);
 
@@ -416,30 +371,20 @@ if (discordToken && clientId) {
           domain: 'lp-evm',
           channelName: 'call-lp-evm',
           isActive: () => hub.isAgentActive('lp-evm'),
-          runPass: async () => {
-            const pools = await uniswapAdapter.fetchTopYieldEVMPools();
-            const high = uniswapAdapter.filterHighYieldEVMPools(pools);
-            return high.map((p) => ({ passed: true, signal: p, reason: p.aiRecommendation }));
-          },
+          runPass: () => withScreeningTimeout(
+            uniswapAdapter.fetchTopYieldEVMPools().then((pools) =>
+              uniswapAdapter.filterHighYieldEVMPools(pools).map((p) => ({
+                passed: true,
+                signal: p,
+                reason: p.aiRecommendation,
+                confidence: 80,
+                payload: buildLPPayload(p, 'lp-evm'),
+              }))
+            ),
+            'lp-evm'
+          ),
           keyReady: () => ({ ready: true, statusMessage: '' }),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'LP_UNISWAP',
-            title: signal.pairName,
-            symbol: signal.pairName.split(' ')[0],
-            contractAddress: signal.poolAddress,
-            network: signal.network,
-            liquidity: `$${(signal.tvlUsd / 1000).toFixed(1)}k`,
-            devHoldingPct: `${signal.feeAprPercentage}% APR`,
-            sniperPct: `${(signal.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
-            bundlerPct: `${signal.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
-            dexPaidStatus: 'Uniswap v3',
-            confidenceScore: 80,
-            aiThesis: reason || signal.aiRecommendation,
-            liquidityUsd: signal.tvlUsd || 0,
-            volume1hUsd: signal.volume4hUsd / 4 || 0,
-            securityAuditPassed: true,
-            socialHypeScore: signal.organicVolumeScore4h || 0,
-          }),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpEvmDispatched);
 
@@ -468,18 +413,31 @@ if (discordToken && clientId) {
           stateStore.setDedupEntry(dedupKey, now);
 
           // AUTO-EXECUTE (simulated while DRY_RUN=true)
-          if ((item.channelName === 'call-meme-solana' && item.payload.contractAddress) ||
-              (item.channelName === 'call-meme-robinhood' && item.payload.contractAddress)) {
-            const domain = item.channelName === 'call-meme-solana' ? 'meme-solana' : 'meme-robinhood';
-            const autoExec = hub.isAutoExecuteEnabled(domain);
+          const autoExecDomain: string | undefined =
+            item.channelName === 'call-meme-solana' ? 'meme-solana' :
+            item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
+            item.channelName === 'call-perps-futures' ? 'perps' :
+            item.channelName === 'call-prediction-markets' ? 'prediction' :
+            undefined;
+          if (autoExecDomain) {
+            const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
             if (autoExec.enabled) {
               try {
-                if (domain === 'meme-solana') {
+                if (autoExecDomain === 'meme-solana' && item.payload.contractAddress) {
                   const execRes = await solanaTradeAdapter.executeBuyToken({ outputMint: item.payload.contractAddress, amountSol: autoExec.maxTradeAmount || 0.1, slippageBps: 150 });
                   console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
-                } else {
+                } else if (autoExecDomain === 'meme-robinhood' && item.payload.contractAddress) {
                   const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 });
                   console.log(`[AUTO-EXECUTE] meme-robinhood ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens})`);
+                } else if (autoExecDomain === 'perps' && isDryRun) {
+                  // Simulation-only: HyperliquidAdapter.placeOrder exists (DRY_RUN-capable) but
+                  // dispatch keeps a log-only simulation until live perps execution is enabled.
+                  const sim = parsePerpsSimulation(item.payload.title);
+                  console.log(`[AUTO-EXECUTE] perps ${item.payload.symbol}: SIMULATED ${sim.direction} ${autoExec.maxTradeAmount || 0.1} @ ${sim.leverage}x`);
+                } else if (autoExecDomain === 'prediction' && isDryRun) {
+                  // Simulation-only: PolymarketAdapter.placeBet exists (DRY_RUN-capable) but
+                  // dispatch keeps a log-only simulation of the standard 50 USDC bet.
+                  console.log(`[AUTO-EXECUTE] prediction ${item.payload.symbol}: SIMULATED ${item.payload.symbol} 50 USDC`);
                 }
               } catch (err: any) { console.error(`[AUTO-EXECUTE] ${item.payload.symbol} error: ${err.message}`); }
             }

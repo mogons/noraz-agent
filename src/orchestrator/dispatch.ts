@@ -1,3 +1,7 @@
+import type { CallCardPayload } from '../agents/shared/agent-contract.js';
+import type { MeteoraPoolSignal } from '../adapters/meteora-dlmm-adapter.js';
+import type { UniswapPoolSignal } from '../adapters/uniswap-lp-adapter.js';
+
 export interface DispatchedSignal {
   channelName: string;
   payload: any;
@@ -8,6 +12,8 @@ export interface NormalizedReport {
   passed: boolean;
   signal: any;
   reason: string;
+  confidence?: number;
+  payload?: CallCardPayload;
 }
 
 export interface DispatchDomainOptions {
@@ -41,9 +47,38 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
         rawReason: r.reason || '',
         payload: opts.buildPayload
           ? opts.buildPayload({ signal: r.signal, reason: r.reason || '' })
-          : (r as any).payload || {},
+          : r.payload || {},
       });
     }
   }
   return out;
+}
+
+/**
+ * LP pool signals (Meteora Solana / Uniswap EVM) share a common yield-shape;
+ * this single helper builds the call-card payload for both domains so hub.ts
+ * and index.ts never duplicate the mapping.
+ */
+export type LPPoolSignal = MeteoraPoolSignal | UniswapPoolSignal;
+
+export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-evm'): CallCardPayload {
+  const isSolana = domain === 'lp-solana';
+  return {
+    domain: isSolana ? 'LP_METEORA' : 'LP_UNISWAP',
+    title: pool.pairName,
+    symbol: pool.pairName.split(' ')[0],
+    contractAddress: pool.poolAddress,
+    network: isSolana ? 'Solana' : (pool as UniswapPoolSignal).network,
+    liquidity: `$${(pool.tvlUsd / 1000).toFixed(1)}k`,
+    devHoldingPct: `${pool.feeAprPercentage}% APR`,
+    sniperPct: `${(pool.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
+    bundlerPct: `${pool.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
+    dexPaidStatus: isSolana ? 'Meteora DLMM' : 'Uniswap v3',
+    confidenceScore: 80,
+    aiThesis: pool.aiRecommendation,
+    liquidityUsd: pool.tvlUsd || 0,
+    volume1hUsd: pool.volume4hUsd / 4 || 0,
+    securityAuditPassed: true,
+    socialHypeScore: pool.organicVolumeScore4h || 0,
+  };
 }

@@ -1,5 +1,10 @@
 import { RiskManager } from './risk-manager.js';
-import { AGENT_DOMAINS, normalizeDomainKey as registryNormalizeDomain } from './agent-registry.js';
+import { AGENT_DOMAINS, getAgentDomain, normalizeDomainKey as registryNormalizeDomain } from './agent-registry.js';
+import type { AgentDomainId } from './agent-registry.js';
+import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
+import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
+import type { UniswapLPAdapter } from '../adapters/uniswap-lp-adapter.js';
+import { buildLPPayload } from './dispatch.js';
 
 export interface ChannelStatus {
   channelId: string;
@@ -8,16 +13,30 @@ export interface ChannelStatus {
   minLiquidityUsd: number;
 }
 
+export interface AthenaHubOptions {
+  /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
+  agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
+  meteoraAdapter?: MeteoraDLMMAdapter;
+  uniswapAdapter?: UniswapLPAdapter;
+}
+
 export class AthenaHub {
   private riskManager: RiskManager;
   private channelStates: Map<string, ChannelStatus> = new Map();
   private agentStates: Map<string, boolean> = new Map();
   private autoExecuteStates: Map<string, { enabled: boolean; maxTradeAmount: number }> = new Map();
 
+  private agentFactories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
+  private meteoraAdapter?: MeteoraDLMMAdapter;
+  private uniswapAdapter?: UniswapLPAdapter;
+
   private stateStore?: any;
 
-  constructor() {
+  constructor(options: AthenaHubOptions = {}) {
     this.riskManager = new RiskManager();
+    this.agentFactories = options.agentFactories ?? {};
+    this.meteoraAdapter = options.meteoraAdapter;
+    this.uniswapAdapter = options.uniswapAdapter;
     this.initializeAgentStatesDefaultPaused();
   }
 
@@ -126,42 +145,92 @@ export class AthenaHub {
     return { agentId: key, active: true };
   }
 
-  public async triggerAgentPass(domain: string): Promise<any[]> {
+  public async triggerAgentPass(domain: string): Promise<AgentReport[]> {
     const key = domain.toLowerCase().trim();
     console.log(`[HUB] Triggering on-demand screening pass for: ${key.toUpperCase()}`);
 
+    // Registry-driven resolution: canonical id, aliases, and channel names all resolve.
+    const info = getAgentDomain(key);
+    if (!info) {
+      console.warn(`[HUB] Unknown screening domain "${key}" — no agent registered.`);
+      return [];
+    }
+
     try {
-      if (key.includes('solana') || key.includes('meme-solana')) {
-        const { SolanaScreeningAgent } = await import('../agents/meme-solana/solana-screening-agent.js');
-        const agent = new SolanaScreeningAgent();
+      // Explicit factory (test DI / custom wiring) wins over default flows.
+      const factory = this.agentFactories[info.id];
+      if (factory) {
+        const agent = await factory();
         return await agent.runScreeningPass();
       }
-      if (key.includes('evm') || key.includes('meme-evm') || key.includes('robinhood') || key.includes('base')) {
-        const { RobinhoodScreeningAgent } = await import('../agents/meme-robinhood/robinhood-screening-agent.js');
-        const agent = new RobinhoodScreeningAgent();
-        return await agent.runScreeningPass();
+      if (info.category === 'LP') {
+        return await this.runLPPass(info.id);
       }
-      if (key.includes('nft')) {
-        const { NFTScreeningAgent } = await import('../agents/nft/nft-screening-agent.js');
-        const agent = new NFTScreeningAgent();
-        return await agent.runScreeningPass();
-      }
-      if (key.includes('prediction') || key.includes('poly')) {
-        const { PolymarketAgent } = await import('../agents/prediction/polymarket-agent.js');
-        const agent = new PolymarketAgent();
-        return await agent.runScreeningPass();
-      }
-      if (key.includes('perp') || key.includes('hyperliquid')) {
-        const { PerpsScreeningAgent } = await import('../agents/perps/perps-screening-agent.js');
-        const { HyperliquidAdapter } = await import('../adapters/hyperliquid-adapter.js');
-        const agent = new PerpsScreeningAgent(new HyperliquidAdapter());
-        return await agent.screenAllAssets();
-      }
+      const agent = await this.resolveAgent(info.id);
+      return await agent.runScreeningPass();
     } catch (err: any) {
       console.error(`[HUB SCREENING PASS ERROR] Failed for ${key}:`, err.message);
     }
 
     return [];
+  }
+
+  private async resolveAgent(id: AgentDomainId): Promise<ScreeningAgent> {
+    switch (id) {
+      case 'meme-solana': {
+        const { SolanaScreeningAgent } = await import('../agents/meme-solana/solana-screening-agent.js');
+        return new SolanaScreeningAgent();
+      }
+      case 'meme-robinhood': {
+        const { RobinhoodScreeningAgent } = await import('../agents/meme-robinhood/robinhood-screening-agent.js');
+        return new RobinhoodScreeningAgent();
+      }
+      case 'nft': {
+        const { NFTScreeningAgent } = await import('../agents/nft/nft-screening-agent.js');
+        return new NFTScreeningAgent();
+      }
+      case 'prediction': {
+        const { PolymarketAgent } = await import('../agents/prediction/polymarket-agent.js');
+        return new PolymarketAgent();
+      }
+      case 'ct-alpha': {
+        const { CTAlphaAgent } = await import('../agents/ct-alpha/ct-alpha-agent.js');
+        return new CTAlphaAgent();
+      }
+      case 'perps': {
+        const { PerpsScreeningAgent } = await import('../agents/perps/perps-screening-agent.js');
+        const { HyperliquidAdapter } = await import('../adapters/hyperliquid-adapter.js');
+        return new PerpsScreeningAgent(new HyperliquidAdapter());
+      }
+      default:
+        throw new Error(`No agent factory registered for domain "${id}"`);
+    }
+  }
+
+  /** LP domains are adapter-flow based: wrap passing pools into contract-shaped reports. */
+  private async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
+    if (id === 'lp-solana') {
+      const { MeteoraDLMMAdapter } = await import('../adapters/meteora-dlmm-adapter.js');
+      const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
+      const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
+      return high.map((p) => ({
+        passed: true,
+        signal: p,
+        reason: p.aiRecommendation,
+        confidence: 80,
+        payload: buildLPPayload(p, 'lp-solana'),
+      }));
+    }
+    const { UniswapLPAdapter } = await import('../adapters/uniswap-lp-adapter.js');
+    const adapter = this.uniswapAdapter ?? new UniswapLPAdapter();
+    const high = adapter.filterHighYieldEVMPools(await adapter.fetchTopYieldEVMPools());
+    return high.map((p) => ({
+      passed: true,
+      signal: p,
+      reason: p.aiRecommendation,
+      confidence: 80,
+      payload: buildLPPayload(p, 'lp-evm'),
+    }));
   }
 
   public getAgentStatuses(): Record<string, { active: boolean; autoExecute: boolean; maxTradeAmount: number }> {

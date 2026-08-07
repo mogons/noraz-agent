@@ -45,7 +45,6 @@ export interface AgentReputation {
 
 export class SwarmConsensusEngine {
   private stateStore: StateStore | null = null;
-  private recentSignalHashes: Map<string, number> = new Map(); // Hash -> Timestamp (Deduplication)
   private agentReputations: Map<string, AgentReputation> = new Map();
 
   // Optional pluggable strategy provider (set by StrategyEngine wiring in index.ts)
@@ -132,20 +131,6 @@ export class SwarmConsensusEngine {
       }
     }
 
-    // Deduplication Check (Prevent duplicate calls within 2-hour window)
-    const signalHash = `${candidate.domain}_${candidate.contractAddress || candidate.symbol}`.toUpperCase();
-    const lastTime = this.recentSignalHashes.get(signalHash);
-    const now = Date.now();
-
-    if (lastTime && now - lastTime < 2 * 60 * 60 * 1000) {
-      return {
-        passed: false,
-        confidenceScore: 0,
-        breakdown: { quantScore: 0, catalystScore: 0, securityScore: 0, reputationMultiplier: 1.0 },
-        reason: `⚠️ Duplicate signal ignored for ${candidate.symbol} (${candidate.domain}) within 2h window.`,
-      };
-    }
-
     // Fetch Agent Reputation Weight
     const rep = this.agentReputations.get(candidate.domain) || { reputationWeight: 1.0 };
     const reputationMultiplier = rep.reputationWeight;
@@ -204,10 +189,6 @@ export class SwarmConsensusEngine {
     }
 
     const passed = confidenceScore >= 80 && candidate.securityAuditPassed;
-
-    if (passed) {
-      this.recentSignalHashes.set(signalHash, now);
-    }
 
     const result: ConsensusResult = {
       passed,
