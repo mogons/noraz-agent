@@ -97,6 +97,49 @@ describe('RobinhoodScreeningAgent', () => {
     expect(reports.length).toBe(0);
   });
 
+  it('runScreeningPass returns [] when GoPlus audit is unavailable (fail-closed)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const mkWire = (t: GMGNRawToken) => ({
+      address: t.address, symbol: t.symbol, name: t.name,
+      price: t.priceUsd, market_cap: t.marketCapUsd, volume: t.volume24hUsd, liquidity: t.liquidityUsd,
+      buys: t.buys, sells: t.sells, swaps: t.swaps, holder_count: t.holderCount,
+      top_10_holder_rate: t.top10HolderRate, dev_team_hold_rate: t.devTeamHoldRate,
+      creator_token_status: t.creatorTokenStatus, smart_degen_count: t.smartDegenCount,
+      renowned_count: t.renownedCount, bundler_rate: t.bundlerRate,
+      rat_trader_amount_rate: t.ratTraderAmountRate, rug_ratio: t.rugRatio,
+      is_wash_trading: t.isWashTrading ? 1 : 0, cto_flag: t.ctoFlag ? 1 : 0,
+      renounced_mint: t.renouncedMint ? 1 : 0, renounced_freeze_account: t.renouncedFreeze ? 1 : 0,
+      creation_timestamp: t.creationTimestamp, open_timestamp: t.openTimestamp,
+      price_change_percent1m: t.priceChange1m, price_change_percent5m: t.priceChange5m,
+      price_change_percent1h: t.priceChange1h, visiting_count: t.visitingCount,
+      square_mentions: t.squareMentions, twitter_rename_count: t.twitterRenameCount,
+      twitter_del_post_token_count: t.twitterDelPostCount,
+      twitter_create_token_count: t.twitterCreateTokenCount,
+      total_fee: t.totalFeeNative, dexscr_boost_fee: t.dexscrBoostFee, dexscr_ad: t.dexscrAd,
+    });
+    const healthy = mkToken(); // passes preFilter: 6h old, $300k vol, $50k liq, 1 ETH fee
+    const signalResponse = {
+      code: 0,
+      data: [{ token_address: healthy.address, signal_type: 1, trigger_at: 0, trigger_mc: 0, data: mkWire(healthy) }],
+    };
+    const emptyTrenches = { code: 0, data: { new_creation: [], pump: [], near_completion: [], completed: [] } };
+    const priceResponse = { ethereum: { usd: ETH_PRICE, usd_24h_change: 1.5 } };
+    const goplusNullish = { code: 1, result: {} }; // no security data for the token
+
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('openapi.gmgn.ai/v1/market/token_signal')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => signalResponse };
+      if (url.includes('openapi.gmgn.ai/v1/trenches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => emptyTrenches };
+      if (url.includes('coingecko')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => priceResponse };
+      if (url.includes('gopluslabs')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => goplusNullish };
+      throw new Error(`unexpected fetch: ${url}`);
+    }));
+
+    const agent = new RobinhoodScreeningAgent();
+    expect(agent.preFilter(healthy, ETH_PRICE).ok).toBe(true); // sanity: audit branch is exercised
+    const reports = await agent.runScreeningPass();
+    expect(reports.length).toBe(0);
+  });
+
   it('toStrategyGmgn contract maps GMGN fields for the default strategy (native_price_usd = ETH)', async () => {
     const agent = new RobinhoodScreeningAgent();
     const token = mkToken(); // healthy CTO token (totalFeeNative 1 ETH)

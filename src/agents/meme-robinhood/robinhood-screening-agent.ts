@@ -181,7 +181,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       aiThesis: thesis,
       gmgnUrl: `https://gmgn.ai/robinhood/token/${t.address}`,
       dexScreenerUrl: `https://dexscreener.com/robinhood/${t.address}`,
-      rugcheckUrl: `https://gopluslabs.io/token-security/5318008/`,
+      rugcheckUrl: `https://gopluslabs.io/token-security/5318008/${t.address}`,
       securityAuditPassed: true, // set after GoPlus passes (see runScreeningPass)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
