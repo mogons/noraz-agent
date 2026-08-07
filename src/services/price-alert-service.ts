@@ -139,6 +139,10 @@ export class PriceAlertService {
     for (const alert of activeAlerts) {
       try {
         const currentPrice = await priceFeedService.getPrice(alert.symbol);
+        if (currentPrice === null) {
+          console.warn(`[PRICE ALERT] No price data for ${alert.symbol} — skipping check.`);
+          continue;
+        }
         let isTriggered = false;
 
         if (alert.direction === 'ABOVE' && currentPrice >= alert.targetPriceUsd) {

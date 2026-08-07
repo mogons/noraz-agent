@@ -1,56 +1,54 @@
 export class PriceFeedService {
-  private cache: Record<string, number> = {
-    BTC: 63867.0,
-    ETH: 1871.0,
-    SOL: 74.12,
-    HYPE: 55.3,
-  };
+  private cache: Record<string, number> = {};
   private lastFetchTime = 0;
-  private cacheDurationMs = 5 * 60 * 1000; // 5-minute cache
+  private cacheDurationMs = 60 * 1000;
 
   private symbolToGeckoId: Record<string, string> = {
     BTC: 'bitcoin',
     ETH: 'ethereum',
     SOL: 'solana',
     HYPE: 'hyperliquid',
+    BONK: 'bonk',
+    PEPE: 'pepe',
+    WIF: 'dogwifcoin',
+    DOGE: 'dogecoin',
+    AVAX: 'avalanche-2',
+    SUI: 'sui',
+    LINK: 'chainlink',
   };
 
-  public async getPrice(symbol: string): Promise<number> {
+  public async getPrice(symbol: string): Promise<number | null> {
     const cleanSymbol = symbol.toUpperCase().trim();
-
-    // Trigger update if cache expired
+    const geckoId = this.symbolToGeckoId[cleanSymbol];
+    if (!geckoId) {
+      console.warn(`[PRICE SERVICE] Unsupported symbol "${symbol}" — returning null.`);
+      return null;
+    }
     if (Date.now() - this.lastFetchTime > this.cacheDurationMs) {
       await this.refreshPrices();
     }
-
-    return this.cache[cleanSymbol] || this.cache['SOL']; // Return SOL price as fallback if symbol unknown
+    return this.cache[cleanSymbol] ?? null;
   }
 
   private async refreshPrices(): Promise<void> {
     try {
-      console.log('[PRICE SERVICE] Fetching real-time crypto prices from CoinGecko...');
       const ids = Object.values(this.symbolToGeckoId).join(',');
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`;
-
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`CoinGecko HTTP error: ${response.status}`);
       }
-
-      const data = (await response.json()) as any;
-
-      // Update cache
+      const data = (await response.json()) as Record<string, { usd?: number }>;
       for (const [symbol, geckoId] of Object.entries(this.symbolToGeckoId)) {
-        if (data[geckoId] && typeof data[geckoId].usd === 'number') {
-          this.cache[symbol] = data[geckoId].usd;
+        const price = data[geckoId]?.usd;
+        if (typeof price === 'number' && price > 0) {
+          this.cache[symbol] = price;
         }
       }
-
       this.lastFetchTime = Date.now();
-      console.log('[PRICE SERVICE] Real-time prices synchronized successfully:', JSON.stringify(this.cache));
-    } catch (err: any) {
-      console.warn('[PRICE SERVICE ERROR] Failed to fetch real-time prices. Using local fallback cache:', err.message);
-      // We don't crash, we just keep using the fallback cache values
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[PRICE SERVICE ERROR] Failed to fetch prices: ${message}`);
     }
   }
 }

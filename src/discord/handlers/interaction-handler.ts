@@ -379,6 +379,10 @@ async function handleChatInput(
     const amount = interaction.options.getNumber('amount', true);
     const symbol = interaction.options.getString('symbol', true).toUpperCase();
     const tokenPrice = await priceFeedService.getPrice(symbol);
+    if (tokenPrice === null) {
+      await interaction.reply({ content: `⚠️ Tidak ada data harga real-time untuk **${symbol}**.` });
+      return;
+    }
     const estUsd = amount * tokenPrice;
     await interaction.reply({
       content: `🧮 **Token Value Converter:**\n• **${amount} ${symbol}** ≈ **$${estUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD** (Rate: \`$${tokenPrice.toLocaleString()} USD\` per ${symbol})`,
