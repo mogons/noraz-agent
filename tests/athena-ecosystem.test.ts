@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { SwarmConsensusEngine } from '../src/orchestrator/swarm-consensus.js';
 import { SolanaScreeningAgent } from '../src/agents/meme-solana/solana-screening-agent.js';
-import { EVMScreeningAgent } from '../src/agents/meme-evm/evm-screening-agent.js';
+import { RobinhoodScreeningAgent } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
+import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 import { PerpsScreeningAgent } from '../src/agents/perps/perps-screening-agent.js';
 import { HyperliquidAdapter } from '../src/adapters/hyperliquid-adapter.js';
 import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
@@ -48,8 +49,8 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(det.confidence).toBeGreaterThanOrEqual(80);
   });
 
-  it('3. EVM Meme Agent: evaluates EVM signals with real GoPlus security audit', async () => {
-    const agent = new EVMScreeningAgent();
+  it('3. Robinhood Meme Agent: evaluates healthy Robinhood Chain token (CTO confidence >= 80)', async () => {
+    const agent = new RobinhoodScreeningAgent();
     // Stub GoPlus to return a clean audit; agent is fail-closed without real audit data.
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
@@ -58,48 +59,37 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       }),
     }));
 
-    const report = await agent.evaluateEVMToken(
-      {
-        chain: 'base',
-        symbol: 'BASEMEME',
-        name: 'Base Meme',
-        contractAddress: '0x1234567890123456789012345678901234567890',
-        priceUsd: 0.001,
-        marketCapUsd: 500000,
-        volume24hUsd: 120000,
-        liquidityUsd: 40000,
-        smartMoneyNetBuySolOrEth: 2.5,
-        devHoldingPercentage: 2.0,
-        smartMoneyCount: 4,
-        sniperRatioPercentage: 5,
-        gmgnUrl: 'https://gmgn.ai/base/token/0x123',
-        aiThesis: 'Test thesis',
-        tokenAgeHours: 6,
-      },
-      'base'
-    );
+    const token: GMGNRawToken = {
+      chain: 'robinhood', address: '0x1234567890123456789012345678901234567890',
+      symbol: 'RHMEME', name: 'Robinhood Meme',
+      priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, liquidityUsd: 50000,
+      buys: 800, sells: 200, swaps: 1000, holderCount: 500,
+      top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
+      smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,
+      rugRatio: 0.01, isWashTrading: false, ctoFlag: true, renouncedMint: true, renouncedFreeze: true,
+      creationTimestamp: Date.now()/1000 - 6*3600, openTimestamp: Date.now()/1000 - 6*3600,
+      priceChange1m: 2, priceChange5m: 5, priceChange1h: 120,
+      visitingCount: 300, squareMentions: 10,
+      twitterRenameCount: 0, twitterDelPostCount: 0, twitterCreateTokenCount: 1,
+      buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, totalFeeNative: 1, source: 'gmgn',
+    };
 
+    // 1 ETH @ live price gate: preFilter passes the healthy token (fail-closed gates all clear)
+    const pre = agent.preFilter(token, 1929.03);
+    expect(pre.ok).toBe(true);
+    const det = agent.detectSignal(token);
     vi.unstubAllGlobals();
-    expect(report).not.toBeNull();
-    expect(report!.confidenceScore).toBeGreaterThanOrEqual(80);
-    expect(report!.chain).toBe('base');
-    expect(report!.auditAvailable).toBe(true);
+    expect(det.type).toBe('CTO');
+    expect(det.confidence).toBeGreaterThanOrEqual(80);
   });
 
-  it('3b. EVM Meme Agent: fail-closed when GoPlus audit unavailable', async () => {
-    const agent = new EVMScreeningAgent();
+  it('3b. Robinhood Meme Agent: fail-closed without audit — zero reports', async () => {
+    const agent = new RobinhoodScreeningAgent();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
-    const report = await agent.evaluateEVMToken(
-      {
-        chain: 'base', symbol: 'X', name: 'X', contractAddress: '0xabc',
-        priceUsd: 1, marketCapUsd: 1, volume24hUsd: 1, liquidityUsd: 1,
-        smartMoneyNetBuySolOrEth: 0, devHoldingPercentage: 0, smartMoneyCount: 0,
-        sniperRatioPercentage: 0, gmgnUrl: '', aiThesis: '',
-      },
-      'base'
-    );
+    const reports = await agent.runScreeningPass();
     vi.unstubAllGlobals();
-    expect(report).toBeNull();
+    expect(Array.isArray(reports)).toBe(true);
+    expect(reports.length).toBe(0);
   });
 
   it('4. Perpetual Futures Agent: Should evaluate Hyperliquid leverage setups', async () => {

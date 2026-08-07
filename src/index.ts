@@ -20,7 +20,7 @@ import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
 import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
 import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
-import { EVMScreeningAgent } from './agents/meme-evm/evm-screening-agent.js';
+import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
 import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
@@ -107,7 +107,7 @@ const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
 const solanaTradeAdapter = new SolanaTradeAdapter();
 const solanaScreeningAgent = new SolanaScreeningAgent();
-const evmScreeningAgent = new EVMScreeningAgent();
+const robinhoodScreeningAgent = new RobinhoodScreeningAgent();
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
 const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 const priceFeedService = new PriceFeedService();
@@ -265,42 +265,15 @@ if (discordToken && clientId) {
         });
         dispatchedPayloads.push(...solanaDispatched);
 
-        const evmDispatched = await dispatchDomain({
+        const robinhoodDispatched = await dispatchDomain({
           domain: 'meme-robinhood',
           channelName: 'call-meme-robinhood',
           isActive: () => hub.isAgentActive('meme-robinhood'),
-          runPass: async () => (await evmScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
+          runPass: () => robinhoodScreeningAgent.runScreeningPass(),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-robinhood'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-          buildPayload: ({ signal, reason }) => ({
-            domain: 'MEME_EVM',
-            title: `${signal.name || signal.symbol} (${signal.symbol})`,
-            symbol: signal.symbol,
-            contractAddress: signal.contractAddress,
-            network: (signal.chain || 'base').toUpperCase(),
-            priceUsd: `$${signal.priceUsd}`,
-            marketCap: `$${(signal.marketCapUsd / 1000).toFixed(1)}k`,
-            liquidity: `$${(signal.liquidityUsd / 1000).toFixed(1)}k`,
-            volume5m: '+580%',
-            volume1h: '$3.4M',
-            txRatio: 'Buy 82% / Sell 18%',
-            top10Pct: '18.5%',
-            devHoldingPct: `${signal.devHoldingPercentage}%`,
-            sniperPct: `${signal.sniperRatioPercentage}%`,
-            bundlerPct: '8.4%',
-            dexPaidStatus: '✅ Paid',
-            smartMoneyInfo: `🧠 **Smart Traders:** ${signal.smartMoneyCount} Smart Wallets Accumulating (+${signal.smartMoneyNetBuySolOrEth} ETH)`,
-            confidenceScore: 88,
-            aiThesis: reason || signal.aiThesis,
-            gmgnUrl: signal.gmgnUrl,
-            dexScreenerUrl: `https://dexscreener.com/${signal.chain || 'base'}/${signal.contractAddress}`,
-            liquidityUsd: signal.liquidityUsd || 0,
-            volume1hUsd: (signal.volume24hUsd || 0) / 24,
-            securityAuditPassed: true,
-            socialHypeScore: Math.min(98, 40 + (signal.smartMoneyCount >= 2 ? 20 : 0) + (signal.liquidityUsd >= 25000 ? 15 : 0) + (signal.volume24hUsd >= 100000 ? 15 : 0)),
-          }),
         });
-        dispatchedPayloads.push(...evmDispatched);
+        dispatchedPayloads.push(...robinhoodDispatched);
 
         const nftDispatched = await dispatchDomain({
           domain: 'nft',

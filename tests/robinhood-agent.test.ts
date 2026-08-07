@@ -107,7 +107,39 @@ describe('RobinhoodScreeningAgent', () => {
     expect(gmgnCtx.total_fee).toBe(1);
     expect(gmgnCtx.native_price_usd).toBe(ETH_PRICE);
     expect(gmgnCtx.chain).toBe('robinhood');
-    // full .mjs eval lands with Task 3 (strategies/meme-robinhood-default.mjs)
+  });
+
+  it('end-to-end: default .mjs strategy evaluates healthy CTO token (BUY >= 80, fail-closed on null fee)', async () => {
+    const agent = new RobinhoodScreeningAgent();
+    const token = mkToken(); // healthy CTO token (totalFeeNative 1 ETH)
+    const gmgnCtx = { ...agent.toStrategyGmgn(token), native_price_usd: ETH_PRICE };
+
+    const { createRequire } = await import('module');
+    const path = (await import('path')).default;
+    const requireEsm = createRequire(import.meta.url);
+    const stratPath = path.resolve(process.cwd(), 'strategies', 'meme-robinhood-default.mjs');
+    const strat = requireEsm(stratPath).default;
+
+    const ctx = {
+      domain: 'MEME_EVM',
+      symbol: token.symbol,
+      contractAddress: token.address,
+      priceUsd: token.priceUsd,
+      liquidityUsd: token.liquidityUsd,
+      volume24hUsd: token.volume24hUsd,
+      volume1hUsd: token.volume24hUsd / 24,
+      smartMoneyCount: token.smartDegenCount,
+      securityAuditPassed: true,
+      socialHypeScore: 88,
+      gmgn: gmgnCtx,
+    };
+
+    const ev = strat.evaluate(ctx);
+    expect(ev.recommendedAction).not.toBe('SKIP');
+    expect(ev.confidence).toBeGreaterThanOrEqual(80);
+
+    const failClosed = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    expect(failClosed.recommendedAction).toBe('SKIP');
   });
 
   it('dedupe prunes seenTokens entries older than 5 minutes', () => {

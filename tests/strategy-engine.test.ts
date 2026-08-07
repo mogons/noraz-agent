@@ -76,6 +76,16 @@ describe('StrategyEngine', () => {
     expect(swarmStyle?.id).toBe('meme-solana-default');
   });
 
+  it('falls back to meme-robinhood-default strategy without explicit activation', () => {
+    const engine = new StrategyEngine();
+    // No active map set — the shipped meme-robinhood-default must be active out-of-the-box
+    const active = engine.getActiveStrategy('meme-robinhood');
+    expect(active?.id).toBe('meme-robinhood-default');
+    // Domain normalization: uppercase/underscore (swarm style) also resolves
+    const swarmStyle = engine.getActiveStrategy('MEME_ROBINHOOD');
+    expect(swarmStyle?.id).toBe('meme-robinhood-default');
+  });
+
   it('returns null when no strategy exists for the domain', () => {
     const engine = new StrategyEngine();
     expect(engine.getActiveStrategy('nft')).toBeNull();
