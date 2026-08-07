@@ -115,7 +115,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<HyperliquidPerpsSigna
     try {
       const strat = this.strategyEngine.getActiveStrategy('perps');
       if (strat?.evaluate) {
-        const ev = strat.evaluate(this.buildStrategyCtx(signal));
+        const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(signal));
         if (ev?.recommendedAction === 'SKIP') {
           console.log(`[PERPS AGENT] ⛔ ${signal.coin}: strategi menolak (${ev.reason})`);
           return null;

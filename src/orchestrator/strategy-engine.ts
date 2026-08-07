@@ -224,4 +224,29 @@ export class StrategyEngine {
     const mod = requireEsm(filePath);
     return mod.default || mod;
   }
+
+  /**
+   * Execute a strategy/indicator evaluate/calculate call with a SANITIZED env.
+   * Strategy .mjs files are user/LLM-authored and run in-process; a malicious
+   * strategy could otherwise read private keys via process.env. We snapshot the
+   * real env, clear sensitive keys for the duration of the call, then restore.
+   */
+  public runStrategySafely<T extends { evaluate?: (ctx: any) => any; calculate?: (candles: any[]) => any[] }>(
+    strategy: T,
+    kind: 'evaluate' | 'calculate',
+    arg: any
+  ): any {
+    const fn = kind === 'evaluate' ? strategy?.evaluate : strategy?.calculate;
+    if (typeof fn !== 'function') return undefined;
+    const snapshot = { ...process.env };
+    const sensitiveKeys = Object.keys(process.env).filter((k) =>
+      /KEY|TOKEN|SECRET|PRIVATE|PASSWORD|API/i.test(k) || k.startsWith('SOLANA_') || k.startsWith('EVM_') || k.startsWith('AI_')
+    );
+    for (const k of sensitiveKeys) delete process.env[k];
+    try {
+      return fn.call(strategy, arg);
+    } finally {
+      process.env = snapshot; // restore full env
+    }
+  }
 }

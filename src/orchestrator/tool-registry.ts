@@ -7,6 +7,26 @@ const PROJECT_ROOT = path.resolve(process.cwd());
 const BLOCKED_PATH_PARTS = ['.env', '.pem', '.key', 'node_modules', path.join('dist'), '.git', 'private'];
 const MAX_READ_FILE_BYTES = 30 * 1024; // 30 KB
 
+/**
+ * Keys that an LLM/chat user must NEVER be able to set via set_api_key —
+ * they control live-trading mode, wallet funds, or infra. Prompt-injection
+ * from token metadata/tweets could otherwise flip DRY_RUN=false or swap keys.
+ */
+const PROTECTED_ENV_KEYS = [
+  'DRY_RUN',
+  'SOLANA_PRIVATE_KEY', 'EVM_PRIVATE_KEY', 'HYPERLIQUID_PRIVATE_KEY', 'POLYMARKET_PRIVATE_KEY',
+  'SOLANA_RPC_URL', 'SOLANA_WSS_URL', 'EVM_RPC_URL', 'EVM_BASE_RPC_URL', 'EVM_ETH_RPC_URL',
+  'EVM_ROBINHOOD_RPC_URL', 'EVM_ARB_RPC_URL', 'EVM_OP_RPC_URL', 'EVM_POLYGON_RPC_URL', 'EVM_BSC_RPC_URL',
+  'AI_BASE_URL', 'AI_PROVIDER',
+];
+
+/** Keys settable via set_api_key (API credentials only — never mode/private/infra). */
+const SETTABLE_ENV_KEYS = [
+  'AI_API_KEY', 'AI_API_KEYS', 'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
+  'GMGN_API_KEY', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'TWITTER_BEARER_TOKEN', 'GOPLUS_API_KEY',
+  'UNISWAP_API_KEY', 'JUPITER_API_KEY', 'RUGCHECK_API_URL',
+];
+
 export interface AthenaToolDefinition {
   name: string;
   description: string;
@@ -410,8 +430,23 @@ export class ToolRegistry {
         case 'set_api_key': {
           const { ApiKeyGuardService } = await import('../services/api-key-guard.js');
           const guard = new ApiKeyGuardService();
-          const keyName = String(args.keyName || '');
-          const keyValue = String(args.keyValue || '');
+          const keyName = String(args.keyName || '').toUpperCase().trim();
+          const keyValue = String(args.keyValue || '').trim();
+
+          // Allowlist enforcement: never allow LLM/chat to set live-mode, wallet, RPC,
+          // or AI provider keys (prompt-injection could flip DRY_RUN or exfiltrate via AI_BASE_URL).
+          if (PROTECTED_ENV_KEYS.includes(keyName)) {
+            return {
+              success: false,
+              message: `⛔ ${keyName} tidak bisa diubah via chat (protected key). Edit .env langsung di VPS.`,
+            };
+          }
+          if (!SETTABLE_ENV_KEYS.includes(keyName)) {
+            return {
+              success: false,
+              message: `⛔ ${keyName} tidak ada di allowlist key yang bisa di-set via chat.`,
+            };
+          }
 
           const success = guard.setApiKeyRuntimeAndEnv(keyName, keyValue);
           return {

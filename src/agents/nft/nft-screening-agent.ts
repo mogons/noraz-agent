@@ -145,7 +145,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
         try {
           const strat = this.strategyEngine.getActiveStrategy('nft');
           if (strat?.evaluate) {
-            const ev = strat.evaluate(this.buildStrategyCtx(report));
+            const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
             if (ev?.recommendedAction === 'SKIP') {
               console.log(`[NFT AGENT] ⛔ ${report.collectionSlug}: strategi menolak (${ev.reason})`);
               continue;

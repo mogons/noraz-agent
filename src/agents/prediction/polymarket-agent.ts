@@ -147,7 +147,7 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
         try {
           const strat = this.strategyEngine.getActiveStrategy('prediction');
           if (strat?.evaluate) {
-            const ev = strat.evaluate(this.buildStrategyCtx(report));
+            const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
             if (ev?.recommendedAction === 'SKIP') {
               console.log(`[POLYMARKET AGENT] ⛔ ${report.marketId}: strategi menolak (${ev.reason})`);
               continue;

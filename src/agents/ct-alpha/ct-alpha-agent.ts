@@ -129,7 +129,7 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
       try {
         const strat = this.strategyEngine.getActiveStrategy('ct-alpha');
         if (strat?.evaluate) {
-          const ev = strat.evaluate(this.buildStrategyCtx(s));
+          const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(s));
           if (ev?.recommendedAction === 'SKIP') {
             console.log(`[CT ALPHA AGENT] ⛔ @${s.authorUsername}: strategi menolak (${ev.reason})`);
             continue;

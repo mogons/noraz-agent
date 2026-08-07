@@ -166,18 +166,31 @@ export class SwarmConsensusEngine {
       try {
         const strat = SwarmConsensusEngine.strategyProvider(candidate.domain);
         if (strat?.evaluate) {
-          const ev = strat.evaluate({
-            domain: candidate.domain,
-            symbol: candidate.symbol,
-            contractAddress: candidate.contractAddress,
-            priceUsd: 0,
-            liquidityUsd: candidate.liquidityUsd,
-            volume24hUsd: candidate.volume1hUsd * 24,
-            volume1hUsd: candidate.volume1hUsd,
-            smartMoneyCount: 0,
-            securityAuditPassed: candidate.securityAuditPassed,
-            socialHypeScore: candidate.socialHypeScore,
-          });
+          // Sanitize env for the call — strategy .mjs files run in-process and must
+          // never read private keys / API secrets (prompt-injection hardening).
+          const snapshot = { ...process.env };
+          const sensitiveKeys = Object.keys(process.env).filter((k) =>
+            /KEY|TOKEN|SECRET|PRIVATE|PASSWORD|API/i.test(k) ||
+            k.startsWith('SOLANA_') || k.startsWith('EVM_') || k.startsWith('AI_')
+          );
+          for (const k of sensitiveKeys) delete process.env[k];
+          let ev: any = null;
+          try {
+            ev = strat.evaluate({
+              domain: candidate.domain,
+              symbol: candidate.symbol,
+              contractAddress: candidate.contractAddress,
+              priceUsd: 0,
+              liquidityUsd: candidate.liquidityUsd,
+              volume24hUsd: candidate.volume1hUsd * 24,
+              volume1hUsd: candidate.volume1hUsd,
+              smartMoneyCount: 0,
+              securityAuditPassed: candidate.securityAuditPassed,
+              socialHypeScore: candidate.socialHypeScore,
+            });
+          } finally {
+            process.env = snapshot;
+          }
           if (ev && typeof ev.confidence === 'number') {
             confidenceScore = Math.round(confidenceScore * 0.5 + Math.max(0, Math.min(100, ev.confidence)) * 0.5);
             if (ev.reason) strategyReason = ev.reason;
