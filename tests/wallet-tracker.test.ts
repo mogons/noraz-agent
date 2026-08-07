@@ -32,6 +32,7 @@ afterAll(() => {
 
 const SOL_OWNER = '11111111111111111111111111111111';
 const EVM_OWNER = '0x1111111111111111111111111111111111111111';
+const EVM_ADDR = '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 function makeWalletService(overrides: Partial<WalletService> = {}): WalletService {
   return {
@@ -62,7 +63,7 @@ function makeTracker(opts: {
   walletService?: WalletService;
   solanaConnection?: Connection;
   stateStore?: StateStore;
-  evmBalanceReader?: (chain: string, token: string, owner: string) => Promise<bigint>;
+  evmBalanceReader?: (chain: string, token: string, owner: string) => Promise<bigint | null>;
 }): WalletTracker {
   return new WalletTracker(opts);
 }
@@ -165,14 +166,14 @@ describe('WalletTracker.scanEvmHoldings', () => {
     expect(await tracker.scanEvmHoldings()).toEqual([{ address: 'TOK1' }]);
   });
 
-  it('fails closed to [] when the balance reader throws', async () => {
+  it('fails closed to [] when the balance reader reports a failed read (null)', async () => {
     const store = newStore();
     store.setTrackedToken({ chain: 'robinhood', address: 'TOK1', symbol: 'ONE', addedAt: 1 });
     const tracker = makeTracker({
       positionManager: new PositionManager(),
       stateStore: store,
       walletService: makeWalletService(),
-      evmBalanceReader: async () => { throw new Error('RPC down'); },
+      evmBalanceReader: async () => null,
     });
     expect(await tracker.scanEvmHoldings()).toEqual([]);
   });
@@ -294,6 +295,56 @@ describe('WalletTracker.syncPositions', () => {
     });
     await tracker.syncPositions();
     expect(pm.getActivePositions()).toHaveLength(1);
+  });
+
+  it('does NOT auto-close an EVM position when its balance read fails (null)', async () => {
+    const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: EVM_ADDR, symbol: 'EVMTK', addedAt: 1 });
+    pm.addPosition({
+      id: EVM_ADDR,
+      symbol: 'EVMTK',
+      contractAddress: EVM_ADDR,
+      entryPriceUsd: 1.0,
+      currentPriceUsd: 1.0,
+      amount: 100,
+      highWaterMarkUsd: 1.0,
+    });
+    const tracker = makeTracker({
+      positionManager: pm,
+      stateStore: store,
+      gmgn: makeGmgn(null),
+      walletService: makeWalletService(),
+      solanaConnection: makeConnection([]),
+      evmBalanceReader: async () => null,
+    });
+    await tracker.syncPositions();
+    expect(pm.getActivePositions()).toHaveLength(1);
+  });
+
+  it('auto-closes an EVM position only when a successful scan shows zero balance', async () => {
+    const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: EVM_ADDR, symbol: 'EVMTK', addedAt: 1 });
+    pm.addPosition({
+      id: EVM_ADDR,
+      symbol: 'EVMTK',
+      contractAddress: EVM_ADDR,
+      entryPriceUsd: 1.0,
+      currentPriceUsd: 1.0,
+      amount: 100,
+      highWaterMarkUsd: 1.0,
+    });
+    const tracker = makeTracker({
+      positionManager: pm,
+      stateStore: store,
+      gmgn: makeGmgn(null),
+      walletService: makeWalletService(),
+      solanaConnection: makeConnection([]),
+      evmBalanceReader: async () => 0n,
+    });
+    await tracker.syncPositions();
+    expect(pm.getActivePositions()).toHaveLength(0);
   });
 
   it('dedupes holdings by address across chains', async () => {

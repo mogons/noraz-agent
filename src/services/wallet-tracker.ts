@@ -11,7 +11,7 @@ import { SolanaTradeAdapter } from '../adapters/solana-adapter.js';
  * DI seam for EVM balance reads (defaults to a viem public client). Injected in
  * tests to avoid mocking viem; callers can also swap in a custom RPC strategy.
  */
-export type EvmBalanceReader = (chain: string, token: string, owner: string) => Promise<bigint>;
+export type EvmBalanceReader = (chain: string, token: string, owner: string) => Promise<bigint | null>;
 
 export interface WalletTrackerDeps {
   positionManager: PositionManager;
@@ -85,15 +85,19 @@ export class WalletTracker {
   }
 
   private defaultEvmBalanceReader: EvmBalanceReader = async (_chain, token, owner) => {
-    // Robinhood L2 is Base-compatible; use the robinhood RPC first, base as fallback.
-    const rpc = process.env.EVM_ROBINHOOD_RPC_URL || process.env.EVM_BASE_RPC_URL || undefined;
-    const publicClient = createPublicClient({ chain: base, transport: http(rpc) });
-    return publicClient.readContract({
-      address: token as `0x${string}`,
-      abi: ERC20_BALANCE_ABI,
-      functionName: 'balanceOf',
-      args: [owner as `0x${string}`],
-    });
+    try {
+      // Robinhood L2 is Base-compatible; use the robinhood RPC first, base as fallback.
+      const rpc = process.env.EVM_ROBINHOOD_RPC_URL || process.env.EVM_BASE_RPC_URL || undefined;
+      const publicClient = createPublicClient({ chain: base, transport: http(rpc) });
+      return await publicClient.readContract({
+        address: token as `0x${string}`,
+        abi: ERC20_BALANCE_ABI,
+        functionName: 'balanceOf',
+        args: [owner as `0x${string}`],
+      });
+    } catch {
+      return null;
+    }
   };
 
   /** Scan Solana wallet for SPL token balances (raw base-unit amounts). Fail-closed []. */
@@ -137,28 +141,33 @@ export class WalletTracker {
     return (await this.scanEvmHoldingsSafe()).holdings;
   }
 
-  private async scanEvmHoldingsSafe(): Promise<{ holdings: Array<{ address: string }>; ok: boolean }> {
+  private async scanEvmHoldingsSafe(): Promise<{
+    holdings: Array<{ address: string }>;
+    ok: boolean;
+    scannedOk: Set<string>;
+  }> {
     if (!this.stateStore || !this.walletService || !this.walletService.hasWallet('evm')) {
-      return { holdings: [], ok: false };
+      return { holdings: [], ok: false, scannedOk: new Set() };
     }
     try {
       const owner = this.walletService.getEvmAddress();
       const tracked = this.stateStore.getTrackedTokens().filter((t) => t.chain === 'robinhood');
       const holdings: Array<{ address: string }> = [];
+      const scannedOk = new Set<string>();
       for (const tok of tracked) {
-        try {
-          const balance = await this.evmBalanceReader(tok.chain, tok.address, owner);
-          if (balance > 0n) holdings.push({ address: tok.address });
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[WALLET TRACKER] EVM balance read failed for ${tok.symbol} (${tok.address}): ${message}`);
+        const balance = await this.evmBalanceReader(tok.chain, tok.address, owner);
+        if (balance === null) {
+          console.warn(`[WALLET TRACKER] EVM balance read failed for ${tok.symbol} (${tok.address}) — excluded from scan`);
+          continue;
         }
+        scannedOk.add(tok.address.toLowerCase());
+        if (balance > 0n) holdings.push({ address: tok.address });
       }
-      return { holdings, ok: true };
+      return { holdings, ok: true, scannedOk };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn(`[WALLET TRACKER] EVM holdings scan failed: ${message}`);
-      return { holdings: [], ok: false };
+      return { holdings: [], ok: false, scannedOk: new Set() };
     }
   }
 
@@ -226,11 +235,14 @@ export class WalletTracker {
 
     // Auto-close positions no longer held — but only when the owning chain's scan ran
     // successfully (fail-closed scans report ok: false, so they never trigger mass closes).
+    // EVM closes are additionally gated per token: only positions whose contract address was
+    // actually read successfully (scannedOk) may be closed, so a single failed balanceOf read
+    // can never look like a "not held" and trigger a wrongful auto-close.
     if (this.gmgn) {
       for (const pos of active) {
         if (heldAddresses.has(pos.contractAddress.toLowerCase())) continue;
         const isEvm = pos.contractAddress.toLowerCase().startsWith('0x');
-        const scanOk = isEvm ? evmScan.ok : solanaScan.ok;
+        const scanOk = isEvm ? evmScan.scannedOk.has(pos.contractAddress.toLowerCase()) : solanaScan.ok;
         if (!scanOk) continue;
         this.positionManager.removePosition(pos.id);
         console.log(`[WALLET TRACKER] Auto-closed position ${pos.symbol} (${pos.id}) — no longer held`);
