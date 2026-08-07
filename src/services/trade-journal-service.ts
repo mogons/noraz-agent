@@ -37,76 +37,23 @@ export class TradeJournalService {
   private stateStore: StateStore | null = null;
 
   constructor() {
-    // Sample entries only seeded if no persistent state is loaded
-    this.seedSampleEntries();
+    // Journal starts empty — only real trades are recorded.
   }
 
   /**
    * Attach persistent StateStore. Loads existing journal entries from disk.
-   * If persistent entries exist, clears sample seeds and uses real data.
    */
   public attachStateStore(store: StateStore): void {
     this.stateStore = store;
 
     const persisted = store.getAllJournalEntries();
     if (persisted.length > 0) {
-      // Replace sample data with real persisted data
       this.entries.clear();
       for (const entry of persisted) {
         this.entries.set(entry.id, entry);
       }
       console.log(`[TRADE JOURNAL] Restored ${persisted.length} journal entries from persistent state.`);
-    } else {
-      // Persist the sample entries for first-time setup
-      for (const entry of this.entries.values()) {
-        store.setJournalEntry(entry);
-      }
     }
-  }
-
-  private seedSampleEntries(): void {
-    const sample1: TradeJournalEntry = {
-      id: 'trade_sol_001',
-      domain: 'MEME_SOLANA',
-      symbol: 'ATHENA',
-      contractAddressOrId: 'So11111111111111111111111111111111111111112',
-      chain: 'solana',
-      entryTimestamp: new Date(Date.now() - 86400000).toISOString(),
-      exitTimestamp: new Date(Date.now() - 43200000).toISOString(),
-      entryPriceUsdOrEth: 0.0042,
-      exitPriceUsdOrEth: 0.00924,
-      positionSizeUsd: 250,
-      realizedPnlUsd: 300,
-      realizedPnlPct: 120.0,
-      swarmScore: 92,
-      strategyUsed: 'Volume Spike + Smart Money Accumulation',
-      aiThesisSummary: 'Volume surged +580% with 4 Smart Money buyers.',
-      status: 'CLOSED_TP',
-      exitReason: '🟢 TP1 Milestone (+120%) Triggered',
-    };
-
-    const sample2: TradeJournalEntry = {
-      id: 'trade_nft_002',
-      domain: 'NFT_SNIPING',
-      symbol: 'PUDGY',
-      contractAddressOrId: 'pudgypenguins_6842',
-      chain: 'ethereum',
-      entryTimestamp: new Date(Date.now() - 172800000).toISOString(),
-      exitTimestamp: new Date(Date.now() - 86400000).toISOString(),
-      entryPriceUsdOrEth: 9.85,
-      exitPriceUsdOrEth: 13.50,
-      positionSizeUsd: 28000,
-      realizedPnlUsd: 10395,
-      realizedPnlPct: 37.1,
-      swarmScore: 100,
-      strategyUsed: 'NFT Floor Surge + Verified Whale Sweep',
-      aiThesisSummary: 'Floor price surged +37.5% with verified whale sweep (0x7a2B49...).',
-      status: 'CLOSED_TP',
-      exitReason: '🟢 TP1 Milestone (+37.1%) Triggered',
-    };
-
-    this.entries.set(sample1.id, sample1);
-    this.entries.set(sample2.id, sample2);
   }
 
   public recordTradeEntry(entry: TradeJournalEntry): TradeJournalEntry {

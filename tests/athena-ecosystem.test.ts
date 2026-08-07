@@ -219,19 +219,38 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(hype.sentimentScore).toBeGreaterThanOrEqual(0);
   });
 
-  it('10. Trade Journal Service: Should record trades, calculate Win Rate, and export CSV', async () => {
+  it('10. Trade Journal Service: starts empty and records real trades', async () => {
     const { TradeJournalService } = await import('../src/services/trade-journal-service.js');
     const journal = new TradeJournalService();
     const stats = journal.getSummaryStats();
+    expect(stats.totalTrades).toBe(0);
+    expect(stats.totalRealizedPnlUsd).toBe(0);
 
-    expect(stats.totalTrades).toBeGreaterThanOrEqual(2);
-    expect(stats.winRatePct).toBe(100);
-    expect(stats.totalRealizedPnlUsd).toBeGreaterThan(0);
+    journal.recordTradeEntry({
+      id: 'real_trade_1',
+      domain: 'MEME_SOLANA',
+      symbol: 'REALTOKEN',
+      contractAddressOrId: '0xabc',
+      chain: 'solana',
+      entryTimestamp: new Date().toISOString(),
+      entryPriceUsdOrEth: 0.01,
+      positionSizeUsd: 100,
+      realizedPnlUsd: 25,
+      realizedPnlPct: 25,
+      swarmScore: 85,
+      strategyUsed: 'Real Volume Spike',
+      aiThesisSummary: 'Real audit',
+      status: 'CLOSED_TP',
+      exitReason: 'TP hit',
+    });
+
+    const updated = journal.getSummaryStats();
+    expect(updated.totalTrades).toBe(1);
+    expect(updated.winRatePct).toBe(100);
 
     const csv = journal.exportCsv();
     expect(csv).toContain('ID,Domain,Symbol,Chain,Status');
-    expect(csv).toContain('ATHENA');
-    expect(csv).toContain('PUDGY');
+    expect(csv).toContain('REALTOKEN');
   });
 
   it('11. DB Service: Should perform atomic file save and load for persistent state', async () => {
