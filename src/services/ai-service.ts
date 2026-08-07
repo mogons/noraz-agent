@@ -3,6 +3,14 @@ export interface AIProviderConfig {
   apiKeys: string[]; // Stacked list of primary & backup API keys
   baseUrl?: string;
   modelName: string;
+  keyConfigs: AIKeyConfig[]; // Per-key provider/baseUrl/model (slot 1 = primary, slot N = AI_KEY_N_*)
+}
+
+export interface AIKeyConfig {
+  apiKey: string;
+  provider: AIProviderConfig['provider'];
+  baseUrl: string;
+  modelName: string;
 }
 
 export interface AIMessage {
@@ -40,9 +48,36 @@ export class AIService {
     this.config = this.resolveConfig(customConfig);
   }
 
+  private static PROVIDER_DEFAULTS: Record<string, { baseUrl: string; modelName: string }> = {
+    anthropic: { baseUrl: 'https://api.anthropic.com/v1', modelName: 'claude-3-5-sonnet-20241022' },
+    openai: { baseUrl: 'https://api.openai.com/v1', modelName: 'gpt-4o' },
+    opencode: { baseUrl: 'https://opencode.ai/zen/go/v1', modelName: 'deepseek-v4-pro' },
+    codingplan: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' },
+    zai: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' },
+    deepseek: { baseUrl: 'https://api.deepseek.com/v1', modelName: 'deepseek-chat' },
+    openrouter: { baseUrl: 'https://openrouter.ai/api/v1', modelName: 'openrouter/auto' },
+    custom: { baseUrl: 'https://openrouter.ai/api/v1', modelName: 'deepseek/deepseek-chat' },
+  };
+
+  private applyDefaults(provider: AIProviderConfig['provider'], baseUrl?: string, modelName?: string): { provider: AIProviderConfig['provider']; baseUrl: string; modelName: string } {
+    const d = AIService.PROVIDER_DEFAULTS[provider] || AIService.PROVIDER_DEFAULTS.custom;
+    return { provider, baseUrl: baseUrl || d.baseUrl, modelName: modelName || d.modelName };
+  }
+
+  private buildKeyConfigs(apiKeys: string[], primary: { provider: AIProviderConfig['provider']; baseUrl: string; modelName: string }): AIKeyConfig[] {
+    return apiKeys.map((apiKey, idx) => {
+      if (idx === 0) return { apiKey, ...primary };
+      const slot = idx + 1;
+      const slotProvider = (process.env[`AI_KEY_${slot}_PROVIDER`] || primary.provider) as AIProviderConfig['provider'];
+      const slotBaseUrl = process.env[`AI_KEY_${slot}_BASE_URL`] || primary.baseUrl;
+      const slotModel = process.env[`AI_KEY_${slot}_MODEL_NAME`] || primary.modelName;
+      return { apiKey, ...this.applyDefaults(slotProvider, slotBaseUrl, slotModel) };
+    });
+  }
+
   private resolveConfig(customConfig?: Partial<AIProviderConfig>): AIProviderConfig {
     const provider = (customConfig?.provider || process.env.AI_PROVIDER || 'openrouter') as AIProviderConfig['provider'];
-    
+
     // Support comma-separated API keys for backup stacking: e.g. "key1,key2,key3"
     const rawKeys = customConfig?.apiKeys
       ? customConfig.apiKeys.join(',')
@@ -50,53 +85,38 @@ export class AIService {
 
     const apiKeys = rawKeys.split(',').map(k => k.trim()).filter(Boolean);
 
-    let baseUrl = customConfig?.baseUrl || process.env.AI_BASE_URL;
-    let modelName = customConfig?.modelName || process.env.AI_MODEL_NAME;
+    const primary = this.applyDefaults(
+      provider,
+      customConfig?.baseUrl || process.env.AI_BASE_URL,
+      customConfig?.modelName || process.env.AI_MODEL_NAME,
+    );
 
-    switch (provider) {
-      case 'anthropic':
-        baseUrl = baseUrl || 'https://api.anthropic.com/v1';
-        modelName = modelName || 'claude-3-5-sonnet-20241022';
-        break;
-      case 'openai':
-        baseUrl = baseUrl || 'https://api.openai.com/v1';
-        modelName = modelName || 'gpt-4o';
-        break;
-      case 'opencode':
-        baseUrl = baseUrl || 'https://opencode.ai/zen/go/v1';
-        modelName = modelName || 'deepseek-v4-pro';
-        break;
-      case 'codingplan':
-      case 'zai':
-        baseUrl = baseUrl || 'https://api.z.ai/api/coding/paas/v4';
-        modelName = modelName || 'glm-4.7';
-        break;
-      case 'deepseek':
-        baseUrl = baseUrl || 'https://api.deepseek.com/v1';
-        modelName = modelName || 'deepseek-chat';
-        break;
-      case 'openrouter':
-        baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
-        modelName = modelName || 'openrouter/auto';
-        break;
-      case 'custom':
-      default:
-        baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
-        modelName = modelName || 'deepseek/deepseek-chat';
-        break;
-    }
-
-    return { provider, apiKeys, baseUrl, modelName };
+    return { ...primary, apiKeys, keyConfigs: this.buildKeyConfigs(apiKeys, primary) };
   }
 
   public updateConfig(newConfig: Partial<AIProviderConfig>): void {
     this.config = { ...this.config, ...newConfig };
+    const primary = this.applyDefaults(
+      newConfig.provider || this.config.provider,
+      newConfig.baseUrl || this.config.baseUrl,
+      newConfig.modelName || this.config.modelName,
+    );
+    this.config.apiKeys = newConfig.apiKeys || this.config.apiKeys;
+    this.config.provider = primary.provider;
+    this.config.baseUrl = primary.baseUrl;
+    this.config.modelName = primary.modelName;
+    this.config.keyConfigs = this.buildKeyConfigs(this.config.apiKeys, primary);
     this.activeKeyIndex = 0;
   }
 
   public updateProviderConfig(provider: string, modelName: string): void {
-    this.config.provider = provider as any;
-    this.config.modelName = modelName;
+    const primary = this.applyDefaults(provider as AIProviderConfig['provider'], this.config.keyConfigs[0]?.baseUrl, modelName);
+    this.config.provider = primary.provider;
+    this.config.baseUrl = primary.baseUrl;
+    this.config.modelName = primary.modelName;
+    if (this.config.keyConfigs[0]) {
+      this.config.keyConfigs[0] = { apiKey: this.config.keyConfigs[0].apiKey, ...primary };
+    }
     console.log(`[AI SERVICE] Updated active provider to: ${provider} | Model: ${modelName}`);
   }
 
@@ -122,18 +142,18 @@ export class AIService {
 
     // Try active key, and loop round-robin through backups if rate-limited/failed
     let lastError: Error | null = null;
-    const totalKeys = this.config.apiKeys.length;
+    const totalKeys = this.config.keyConfigs.length;
 
     for (let attempts = 0; attempts < totalKeys; attempts++) {
       const currentIndex = (this.activeKeyIndex + attempts) % totalKeys;
-      const activeKey = this.config.apiKeys[currentIndex];
+      const key = this.config.keyConfigs[currentIndex];
 
       try {
         let result: string;
-        if (this.config.provider === 'anthropic') {
-          result = await this.callAnthropic(finalMessages, maxTokens, activeKey);
+        if (key.provider === 'anthropic') {
+          result = await this.callAnthropic(finalMessages, maxTokens, key);
         } else {
-          result = await this.callOpenAICompatible(finalMessages, maxTokens, activeKey);
+          result = await this.callOpenAICompatible(finalMessages, maxTokens, key);
         }
 
         // Successfully generated using currentIndex - update active key index for future calls!
@@ -167,17 +187,17 @@ export class AIService {
     }
 
     let lastError: Error | null = null;
-    const totalKeys = this.config.apiKeys.length;
+    const totalKeys = this.config.keyConfigs.length;
 
     for (let attempts = 0; attempts < totalKeys; attempts++) {
       const currentIndex = (this.activeKeyIndex + attempts) % totalKeys;
-      const activeKey = this.config.apiKeys[currentIndex];
+      const key = this.config.keyConfigs[currentIndex];
 
       try {
-        if (this.config.provider === 'anthropic') {
-          return await this.callAnthropicWithTools(messages, tools, maxTokens, activeKey);
+        if (key.provider === 'anthropic') {
+          return await this.callAnthropicWithTools(messages, tools, maxTokens, key);
         }
-        return await this.callOpenAIWithTools(messages, tools, maxTokens, activeKey);
+        return await this.callOpenAIWithTools(messages, tools, maxTokens, key);
       } catch (err: any) {
         lastError = err;
         console.warn(`[AI FAILOVER WARNING] generateWithTools key #${currentIndex + 1}/${totalKeys} failed: ${err.message}.`);
@@ -188,31 +208,31 @@ export class AIService {
     return { content: '', toolCalls: [] };
   }
 
-  private async callOpenAIWithTools(messages: any[], tools: LLMToolDefinition[], maxTokens: number, apiKey: string): Promise<LLMResponse> {
-    const endpoint = `${this.config.baseUrl?.replace(/\/$/, '')}/chat/completions`;
+  private async callOpenAIWithTools(messages: any[], tools: LLMToolDefinition[], maxTokens: number, key: AIKeyConfig): Promise<LLMResponse> {
+    const endpoint = `${key.baseUrl?.replace(/\/$/, '')}/chat/completions`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${key.apiKey}`,
     };
 
-    if (this.config.baseUrl?.includes('openrouter.ai')) {
+    if (key.baseUrl?.includes('openrouter.ai')) {
       headers['HTTP-Referer'] = 'https://athena-crypto.local';
       headers['X-Title'] = 'Athena Crypto Agent';
     }
 
     const candidateModels = [
-      this.config.modelName,
+      key.modelName,
       'openrouter/auto',
       'meta-llama/llama-3.3-70b-instruct',
       'deepseek/deepseek-chat',
     ];
 
-    const modelsToTry = this.config.baseUrl?.includes('openrouter.ai')
+    const modelsToTry = key.baseUrl?.includes('openrouter.ai')
       ? Array.from(new Set(candidateModels))
-      : [this.config.modelName];
+      : [key.modelName];
 
-    const effectiveMaxTokens = this.config.baseUrl?.includes('openrouter.ai')
+    const effectiveMaxTokens = key.baseUrl?.includes('openrouter.ai')
       ? Math.min(maxTokens || 1500, 2000)
       : (maxTokens || 2000);
 
@@ -270,8 +290,8 @@ export class AIService {
     throw lastError || new Error('All AI models failed for tool-calling.');
   }
 
-  private async callAnthropicWithTools(messages: any[], tools: LLMToolDefinition[], maxTokens: number, apiKey: string): Promise<LLMResponse> {
-    const endpoint = `${this.config.baseUrl?.replace(/\/$/, '')}/messages`;
+  private async callAnthropicWithTools(messages: any[], tools: LLMToolDefinition[], maxTokens: number, key: AIKeyConfig): Promise<LLMResponse> {
+    const endpoint = `${key.baseUrl?.replace(/\/$/, '')}/messages`;
 
     const systemMessage = messages.find((m: any) => m.role === 'system')?.content;
     const bodyMessages: any[] = [];
@@ -298,11 +318,11 @@ export class AIService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': key.apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: this.config.modelName,
+        model: key.modelName,
         system: systemMessage,
         messages: bodyMessages,
         max_tokens: maxTokens,
@@ -337,33 +357,33 @@ export class AIService {
     return { content: content.trim(), toolCalls };
   }
 
-  private async callOpenAICompatible(messages: AIMessage[], maxTokens: number, apiKey: string): Promise<string> {
-    const endpoint = `${this.config.baseUrl?.replace(/\/$/, '')}/chat/completions`;
+  private async callOpenAICompatible(messages: AIMessage[], maxTokens: number, key: AIKeyConfig): Promise<string> {
+    const endpoint = `${key.baseUrl?.replace(/\/$/, '')}/chat/completions`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${key.apiKey}`,
     };
 
-    if (this.config.baseUrl?.includes('openrouter.ai')) {
+    if (key.baseUrl?.includes('openrouter.ai')) {
       headers['HTTP-Referer'] = 'https://athena-crypto.local';
       headers['X-Title'] = 'Athena Crypto Agent';
     }
 
     const candidateModels = [
-      this.config.modelName,
+      key.modelName,
       'nvidia/nemotron-3-ultra-550b-a55b:free',
       'openrouter/auto',
       'meta-llama/llama-3.3-70b-instruct',
       'deepseek/deepseek-r1',
     ];
 
-    const modelsToTry = this.config.baseUrl?.includes('openrouter.ai')
+    const modelsToTry = key.baseUrl?.includes('openrouter.ai')
       ? Array.from(new Set(candidateModels))
-      : [this.config.modelName];
+      : [key.modelName];
 
     // Cap max_tokens on OpenRouter to 1500; allow paid providers (OpenCode, CodingPlan, DeepSeek, OpenAI) full token capacity
-    const effectiveMaxTokens = this.config.baseUrl?.includes('openrouter.ai')
+    const effectiveMaxTokens = key.baseUrl?.includes('openrouter.ai')
       ? Math.min(maxTokens || 1500, 2000)
       : (maxTokens || 2000);
 
@@ -404,8 +424,8 @@ export class AIService {
     throw lastError || new Error('All AI models failed to return a response.');
   }
 
-  private async callAnthropic(messages: AIMessage[], maxTokens: number, apiKey: string): Promise<string> {
-    const endpoint = `${this.config.baseUrl?.replace(/\/$/, '')}/messages`;
+  private async callAnthropic(messages: AIMessage[], maxTokens: number, key: AIKeyConfig): Promise<string> {
+    const endpoint = `${key.baseUrl?.replace(/\/$/, '')}/messages`;
 
     const systemMessage = messages.find(m => m.role === 'system')?.content;
     const userMessages = messages.filter(m => m.role !== 'system');
@@ -414,11 +434,11 @@ export class AIService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': key.apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: this.config.modelName,
+        model: key.modelName,
         system: systemMessage,
         messages: userMessages,
         max_tokens: maxTokens,

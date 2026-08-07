@@ -11,6 +11,97 @@ const rl = readline.createInterface({
 
 const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
 
+const PROVIDER_PRESETS = {
+  opencode: { baseUrl: 'https://opencode.ai/zen/go/v1', modelName: 'deepseek-v4-pro' },
+  zai: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' },
+  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', modelName: 'openrouter/auto' },
+  anthropic: { baseUrl: 'https://api.anthropic.com/v1', modelName: 'claude-3-5-sonnet-20241022' },
+  openai: { baseUrl: 'https://api.openai.com/v1', modelName: 'gpt-4o' },
+};
+
+const PROVIDER_DOMAINS = {
+  opencode: 'opencode.ai',
+  zai: 'z.ai',
+  openrouter: 'openrouter.ai',
+  anthropic: 'anthropic.com',
+  openai: 'openai.com',
+};
+
+async function askCustomConfig(presetKey, existingBaseUrl, existingModelName, existingProviderKey) {
+  if (presetKey === 'custom') {
+    const baseUrl = await askQuestion(` Enter AI_BASE_URL [Default ${existingBaseUrl || 'https://api.9router.com/v1'}]: `) || existingBaseUrl || 'https://api.9router.com/v1';
+    const modelName = await askQuestion(` Enter AI_MODEL_NAME [Default ${existingModelName || 'glm-4'}]: `) || existingModelName || 'glm-4';
+    return { provider: 'custom', baseUrl, modelName };
+  }
+  const preset = PROVIDER_PRESETS[presetKey];
+  const domain = PROVIDER_DOMAINS[presetKey];
+  const defaultUrl = (existingBaseUrl && domain && existingBaseUrl.includes(domain)) ? existingBaseUrl : preset.baseUrl;
+  const defaultModel = (existingProviderKey === presetKey && existingModelName) ? existingModelName : preset.modelName;
+  const baseUrl = await askQuestion(` Enter ${presetKey} AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
+  const modelName = await askQuestion(` Enter ${presetKey} AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
+  return { provider: presetKey, baseUrl, modelName };
+}
+
+// Menu provider untuk PRIMARY key — default = Keep Existing / Auto-Detected
+async function askPrimaryProviderConfig(existingProvider, existingBaseUrl, existingModelName, detectedProvider) {
+  console.log('\n Select AI Provider & Model Configuration untuk PRIMARY Key:');
+  if (existingProvider) {
+    console.log(` [1] Keep Existing Config (${existingProvider} | ${existingModelName || 'default'} | ${existingBaseUrl || 'default'})`);
+    console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
+    console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai)');
+    console.log(' [4] OpenRouter (openrouter.ai/api/v1)');
+    console.log(' [5] Anthropic Claude (Claude 3.5 Sonnet)');
+    console.log(' [6] OpenAI (GPT-4o)');
+    console.log(' [7] Custom OpenAI-Compatible Endpoint');
+  } else {
+    console.log(` [1] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go) ${detectedProvider === 'opencode' ? '⭐ (Auto-Detected)' : ''}`);
+    console.log(` [2] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai) ${detectedProvider === 'zai' ? '⭐ (Auto-Detected)' : ''}`);
+    console.log(` [3] OpenRouter (Access to free & open models) ${detectedProvider === 'openrouter' ? '⭐ (Default)' : ''}`);
+    console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet)');
+    console.log(' [5] OpenAI (GPT-4o)');
+    console.log(' [6] Custom OpenAI-Compatible Endpoint');
+  }
+  const defaultChoiceStr = existingProvider ? '1' : (detectedProvider === 'opencode' ? '1' : (detectedProvider === 'zai' ? '2' : '3'));
+  const providerChoice = await askQuestion(` Choice [Default ${defaultChoiceStr}]: `) || defaultChoiceStr;
+
+  if (existingProvider && providerChoice === '1') {
+    return {
+      provider: existingProvider,
+      baseUrl: existingBaseUrl || (PROVIDER_PRESETS[existingProvider]?.baseUrl || 'https://openrouter.ai/api/v1'),
+      modelName: existingModelName || (PROVIDER_PRESETS[existingProvider]?.modelName || 'openrouter/auto'),
+    };
+  }
+  const presetKeys = existingProvider
+    ? ['keep', 'opencode', 'zai', 'openrouter', 'anthropic', 'openai', 'custom']
+    : ['opencode', 'zai', 'openrouter', 'anthropic', 'openai', 'custom'];
+  const presetKey = presetKeys[providerChoice - 1] || 'custom';
+  if (presetKey === 'keep') {
+    return {
+      provider: existingProvider,
+      baseUrl: existingBaseUrl || 'https://openrouter.ai/api/v1',
+      modelName: existingModelName || 'openrouter/auto',
+    };
+  }
+  return await askCustomConfig(presetKey, existingBaseUrl, existingModelName, existingProvider);
+}
+
+// Menu provider untuk BACKUP key — default = "Sama dengan Key #1"
+async function askBackupProviderConfig(label, primaryCfg) {
+  console.log(`\n Select AI Provider & Model Configuration untuk ${label}:`);
+  console.log(` [1] Sama dengan Key #1 (${primaryCfg.provider} | ${primaryCfg.modelName}) [Default]`);
+  console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
+  console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai)');
+  console.log(' [4] OpenRouter (openrouter.ai/api/v1)');
+  console.log(' [5] Anthropic Claude (Claude 3.5 Sonnet)');
+  console.log(' [6] OpenAI (GPT-4o)');
+  console.log(' [7] Custom OpenAI-Compatible Endpoint');
+  const choice = (await askQuestion(' Choice [Default 1]: ')) || '1';
+  if (choice === '1') return { ...primaryCfg };
+  const presetKeys = ['opencode', 'zai', 'openrouter', 'anthropic', 'openai', 'custom'];
+  const presetKey = presetKeys[choice - 2] || 'custom';
+  return await askCustomConfig(presetKey, primaryCfg.baseUrl, primaryCfg.modelName, primaryCfg.provider);
+}
+
 async function runWizard() {
   console.log('\n======================================================');
   console.log('🏛️ ATHENA MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD');
@@ -87,118 +178,58 @@ async function runWizard() {
     }
   }
 
+  let provider = existingProvider || 'opencode';
+  let baseUrl = existingBaseUrl || 'https://opencode.ai/zen/go/v1';
+  let modelName = existingModelName || 'deepseek-v4-pro';
+  const backupCfgEntries = [];
+
   if (allKeys.length === 0) {
     const defaultAiKeyMsg = aiKey ? ` [Default: ${aiKey.slice(0, 12)}...]` : ' [Mandatory - OpenCode / Z.ai / OpenRouter]';
-    const inputAiKey = await askQuestion(` 1. Enter Primary AI API KEY (OpenCode Go / Z.ai / OpenRouter / OpenAI)${defaultAiKeyMsg}: `);
+    const inputAiKey = await askQuestion(` 1. Enter PRIMARY AI API KEY (OpenCode Go / Z.ai / OpenRouter / OpenAI)${defaultAiKeyMsg}: `);
     aiKey = inputAiKey.trim() || aiKey;
 
-    const stackChoice = await askQuestion(' 2. Add Failover Backup API Key (e.g. Z.ai CodingPlan GLM 4.7 backup)? (y/N) [Default N]: ');
+    // Auto-detect provider untuk primary (logika lama dipertahankan)
+    let detectedProvider = existingProvider;
+    if (!detectedProvider) {
+      const lowerKey = aiKey.toLowerCase();
+      if (lowerKey.includes('opencode') || existingBaseUrl.includes('opencode')) {
+        detectedProvider = 'opencode';
+      } else if (lowerKey.includes('zai') || lowerKey.includes('glm') || existingBaseUrl.includes('z.ai')) {
+        detectedProvider = 'zai';
+      } else {
+        detectedProvider = 'opencode';
+      }
+    }
+
+    const primaryCfg = await askPrimaryProviderConfig(existingProvider, existingBaseUrl, existingModelName, detectedProvider);
+    provider = primaryCfg.provider;
+    baseUrl = primaryCfg.baseUrl;
+    modelName = primaryCfg.modelName;
+
+    const stackChoice = await askQuestion(' 2. Add Failover Backup API Key (misal Z.ai GLM 4.7 backup, provider boleh beda)? (y/N) [Default N]: ');
     let allKeysList = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
     if (allKeysList.length === 0 && aiKey) allKeysList.push(aiKey);
 
     if (stackChoice.toLowerCase() === 'y') {
-      const backupCountStr = await askQuestion('   How many backup API keys to add? (1-5) [Default 1]: ') || '1';
+      const backupCountStr = await askQuestion('   Berapa jumlah backup API key? (1-5) [Default 1]: ') || '1';
       const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
       for (let i = 1; i <= backupCount; i++) {
-        const bKey = await askQuestion(`   ➡️ Enter Backup API Key #${i} (e.g., Z.ai / OpenRouter key): `);
-        if (bKey.trim()) allKeysList.push(bKey.trim());
+        const bKey = await askQuestion(`   ➡️ Enter BACKUP API KEY #${i} (misal Z.ai / OpenRouter key): `);
+        if (!bKey.trim()) { console.log('   ⚠️  Backup key kosong, dilewati.'); continue; }
+        allKeysList.push(bKey.trim());
+        const bCfg = await askBackupProviderConfig(`BACKUP Key #${i}`, primaryCfg);
+        backupCfgEntries.push({ slot: i + 1, cfg: bCfg });
       }
     }
     allKeys = allKeysList;
+  } else {
+    // Keep existing keys — primary provider tetap bisa diganti; AI_KEY_N_* lama dipertahankan oleh merge-write
+    const primaryCfg = await askPrimaryProviderConfig(existingProvider, existingBaseUrl, existingModelName, existingProvider);
+    provider = primaryCfg.provider;
+    baseUrl = primaryCfg.baseUrl;
+    modelName = primaryCfg.modelName;
   }
   const combinedKeys = allKeys.join(',');
-
-  // Auto-detect provider if existingProvider not set
-  let detectedProvider = existingProvider;
-  let detectedBaseUrl = existingBaseUrl;
-  let detectedModelName = existingModelName;
-
-  if (!detectedProvider) {
-    const lowerKey = aiKey.toLowerCase();
-    if (lowerKey.includes('opencode') || existingBaseUrl.includes('opencode')) {
-      detectedProvider = 'opencode';
-      detectedBaseUrl = 'https://opencode.ai/zen/go/v1';
-      detectedModelName = 'deepseek-v4-pro';
-    } else if (lowerKey.includes('zai') || lowerKey.includes('glm') || existingBaseUrl.includes('z.ai')) {
-      detectedProvider = 'zai';
-      detectedBaseUrl = 'https://api.z.ai/api/coding/paas/v4';
-      detectedModelName = 'glm-4.7';
-    } else {
-      detectedProvider = 'opencode';
-      detectedBaseUrl = 'https://opencode.ai/zen/go/v1';
-      detectedModelName = 'deepseek-v4-pro';
-    }
-  }
-
-  console.log('\n Select AI Provider & Model Configuration:');
-  if (existingProvider) {
-    console.log(` [1] Keep Existing Config (${existingProvider} | ${existingModelName || 'default'} | ${existingBaseUrl || 'default'})`);
-    console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
-    console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai)');
-    console.log(' [4] OpenRouter (openrouter.ai/api/v1)');
-    console.log(' [5] Anthropic Claude (Claude 3.5 Sonnet)');
-    console.log(' [6] OpenAI (GPT-4o)');
-    console.log(' [7] Custom OpenAI-Compatible Endpoint');
-  } else {
-    console.log(` [1] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go) ${detectedProvider === 'opencode' ? '⭐ (Auto-Detected)' : ''}`);
-    console.log(` [2] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai) ${detectedProvider === 'zai' ? '⭐ (Auto-Detected)' : ''}`);
-    console.log(` [3] OpenRouter (Access to free & open models) ${detectedProvider === 'openrouter' ? '⭐ (Default)' : ''}`);
-    console.log(' [4] Anthropic Claude (Claude 3.5 Sonnet)');
-    console.log(' [5] OpenAI (GPT-4o)');
-    console.log(' [6] Custom OpenAI-Compatible Endpoint');
-  }
-
-  // IMPORTANT: when an AI provider already exists, default choice = 1 (keep existing),
-  // so running the wizard to update OTHER keys never clobbers the AI config.
-  const defaultChoiceStr = existingProvider ? '1' : (detectedProvider === 'opencode' ? '1' : (detectedProvider === 'zai' ? '2' : '3'));
-  const providerChoice = await askQuestion(` Choice [Default ${defaultChoiceStr}]: `) || defaultChoiceStr;
-
-  let provider = detectedProvider || 'opencode';
-  let baseUrl = detectedBaseUrl || 'https://opencode.ai/zen/go/v1';
-  let modelName = detectedModelName || 'deepseek-v4-pro';
-
-  if (existingProvider && providerChoice === '1') {
-    provider = existingProvider;
-    baseUrl = existingBaseUrl || (existingProvider === 'opencode' ? 'https://opencode.ai/zen/go/v1' : (existingProvider === 'zai' ? 'https://api.z.ai/api/coding/paas/v4' : 'https://openrouter.ai/api/v1'));
-    modelName = existingModelName || (existingProvider === 'opencode' ? 'deepseek-v4-pro' : (existingProvider === 'zai' ? 'glm-4.7' : 'openrouter/auto'));
-  } else {
-    const isOpencodeChoice = (!existingProvider && providerChoice === '1') || (existingProvider && providerChoice === '2');
-    const isZaiChoice = (!existingProvider && providerChoice === '2') || (existingProvider && providerChoice === '3');
-    const isOpenRouterChoice = (!existingProvider && providerChoice === '3') || (existingProvider && providerChoice === '4');
-    const isAnthropicChoice = (!existingProvider && providerChoice === '4') || (existingProvider && providerChoice === '5');
-    const isOpenAiChoice = (!existingProvider && providerChoice === '5') || (existingProvider && providerChoice === '6');
-    const isCustomChoice = (!existingProvider && providerChoice === '6') || (existingProvider && providerChoice === '7');
-
-    if (isOpencodeChoice) {
-      provider = 'opencode';
-      const defaultUrl = (existingBaseUrl && existingBaseUrl.includes('opencode.ai')) ? existingBaseUrl : 'https://opencode.ai/zen/go/v1';
-      const defaultModel = (existingProvider === 'opencode' && existingModelName) ? existingModelName : 'deepseek-v4-pro';
-      baseUrl = await askQuestion(` Enter OpenCode AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
-      modelName = await askQuestion(` Enter OpenCode AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
-    } else if (isZaiChoice) {
-      provider = 'zai';
-      const defaultUrl = (existingBaseUrl && existingBaseUrl.includes('z.ai')) ? existingBaseUrl : 'https://api.z.ai/api/coding/paas/v4';
-      const defaultModel = (existingProvider === 'zai' && existingModelName) ? existingModelName : 'glm-4.7';
-      baseUrl = await askQuestion(` Enter Z.ai AI_BASE_URL [Default ${defaultUrl}]: `) || defaultUrl;
-      modelName = await askQuestion(` Enter Z.ai AI_MODEL_NAME [Default ${defaultModel}]: `) || defaultModel;
-    } else if (isOpenRouterChoice) {
-      provider = 'openrouter';
-      baseUrl = 'https://openrouter.ai/api/v1';
-      modelName = await askQuestion(` Enter OpenRouter AI_MODEL_NAME [Default ${(existingProvider === 'openrouter' && existingModelName) || 'openrouter/auto'}]: `) || existingModelName || 'openrouter/auto';
-    } else if (isAnthropicChoice) {
-      provider = 'anthropic';
-      baseUrl = 'https://api.anthropic.com/v1';
-      modelName = 'claude-3-5-sonnet-20241022';
-    } else if (isOpenAiChoice) {
-      provider = 'openai';
-      baseUrl = 'https://api.openai.com/v1';
-      modelName = 'gpt-4o';
-    } else if (isCustomChoice) {
-      provider = 'custom';
-      baseUrl = await askQuestion(` Enter AI_BASE_URL [Default ${existingBaseUrl || 'https://api.9router.com/v1'}]: `) || existingBaseUrl || 'https://api.9router.com/v1';
-      modelName = await askQuestion(` Enter AI_MODEL_NAME [Default ${existingModelName || 'glm-4'}]: `) || existingModelName || 'glm-4';
-    }
-  }
 
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
   console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS (MANDATORY FOR AGENTS)');
@@ -355,6 +386,13 @@ async function runWizard() {
     HYPERLIQUID_PRIVATE_KEY: hyperliquidPrivateKey.trim(),
     RUGCHECK_API_URL: 'https://api.rugcheck.xyz/v1',
   };
+
+  // Per-key backup config: AI_KEY_N_PROVIDER / AI_KEY_N_BASE_URL / AI_KEY_N_MODEL_NAME (slot = posisi di AI_API_KEYS)
+  for (const { slot, cfg } of backupCfgEntries) {
+    updates[`AI_KEY_${slot}_PROVIDER`] = cfg.provider;
+    updates[`AI_KEY_${slot}_BASE_URL`] = cfg.baseUrl;
+    updates[`AI_KEY_${slot}_MODEL_NAME`] = cfg.modelName;
+  }
 
   let mergedLines = [];
   if (fs.existsSync(envPath)) {

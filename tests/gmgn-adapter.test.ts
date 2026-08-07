@@ -61,6 +61,48 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(evts[0].data.symbol).toBe('SIG');
   });
 
+  it('parses /v1/token/info response (token under data, price/stat nested)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: {
+        address: 'tok123', symbol: 'WATCH', name: 'Watch Token',
+        liquidity: '40000', holder_count: 5233, visiting_count: 300,
+        circulating_supply: '100000000', creation_timestamp: 1786000000,
+        price: { price: '0.0012', price_1h: '0.001', volume_24h: '250000', buys_24h: 800, sells_24h: 200, swaps_24h: 1000 },
+        dev: { creator_token_status: 'creator_close', cto_flag: 1, dexscr_boost_fee: 0, dexscr_ad: 0, twitter_del_post_token_count: 0, twitter_create_token_count: 1 },
+        stat: { top_10_holder_rate: '0.1', dev_team_hold_rate: '0.02', top_bundler_trader_percentage: '0.05', top_rat_trader_percentage: '0.01' },
+        wallet_tags_stat: { smart_wallets: 7, renowned_wallets: 2 },
+      } }),
+    }));
+    const adapter = new GMGNAdapter();
+    const t = await adapter.fetchTokenInfo('sol', 'tok123');
+    expect(t).not.toBeNull();
+    expect(t!.address).toBe('tok123');
+    expect(t!.symbol).toBe('WATCH');
+    expect(t!.priceUsd).toBeCloseTo(0.0012, 8);
+    expect(t!.volume24hUsd).toBeCloseTo(250000, 3);
+    expect(t!.smartDegenCount).toBe(7);
+    expect(t!.renownedCount).toBe(2);
+    expect(t!.marketCapUsd).toBeCloseTo(120000, 3);
+    expect(t!.ctoFlag).toBe(true);
+    expect(t!.creatorTokenStatus).toBe('creator_close');
+    expect(t!.priceChange1h).toBeCloseTo(20, 5);
+    expect(t!.source).toBe('gmgn');
+  });
+
+  it('fetchTokenInfo returns null on non-ok or empty data (fail-closed)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, headers: { get: () => null } })
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: null }) });
+    vi.stubGlobal('fetch', fn);
+    const adapter = new GMGNAdapter();
+    expect(await adapter.fetchTokenInfo('sol', 'tok123')).toBeNull();
+    expect(await adapter.fetchTokenInfo('sol', 'tok123')).toBeNull();
+  });
+
   it('handles 429 with reset wait and does not spam', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     const fn = vi.fn()
