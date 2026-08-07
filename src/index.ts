@@ -215,6 +215,12 @@ if (discordToken && clientId) {
     setInterval(async () => {
       console.log('[SUB-AGENTS LOOP] Checking active sub-agent domains...');
       try {
+        // Register heartbeats AT THE START of each pass so agents are marked alive while the
+        // loop is running (loop interval 5m > watcher timeout, so end-of-pass heartbeats alone
+        // would always trip the UNRESPONSIVE threshold between passes).
+        for (const domain of hub.getActiveDomains()) {
+          globalHealthWatcher.recordHeartbeat(domain);
+        }
         // Real portfolio equity -> drawdown (fail-soft: skip if data unavailable)
         try {
           let currentEquityUsd = 0;

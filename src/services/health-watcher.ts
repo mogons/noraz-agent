@@ -61,7 +61,7 @@ export class HealthWatcherService {
    */
   public auditSystemHealth(): { allHealthy: boolean; report: AgentHeartbeat[] } {
     const now = Date.now();
-    const maxTimeoutMs = 3 * 60 * 1000; // 3 minutes
+    const maxTimeoutMs = 6 * 60 * 1000; // 6 minutes (above the 5-minute screening loop interval)
     let allHealthy = true;
     const report: AgentHeartbeat[] = [];
 
