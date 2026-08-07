@@ -68,6 +68,7 @@ function gateSignal(payload: any): boolean {
     volume1hUsd: Number(payload.volume1hUsd) || 0,
     securityAuditPassed: Boolean(payload.securityAuditPassed),
     socialHypeScore: Number(payload.socialHypeScore) || 0,
+    confidence: Number(payload.confidenceScore) || undefined,
   });
   if (!res.passed) {
     console.warn(`[SWARM GATE] ${payload.domain} ${payload.symbol} rejected (confidence ${res.confidenceScore}%) — not posting.`);

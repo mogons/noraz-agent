@@ -8,6 +8,7 @@ export interface SignalCandidate {
   volume1hUsd: number;
   securityAuditPassed: boolean;
   socialHypeScore: number; // 0 - 100
+  confidence?: number; // agent-computed confidence (0-100); when present, swarm acts as pure gate
 }
 
 export interface ConsensusResult {
@@ -149,22 +150,24 @@ export class SwarmConsensusEngine {
     const rep = this.agentReputations.get(candidate.domain) || { reputationWeight: 1.0 };
     const reputationMultiplier = rep.reputationWeight;
 
-    // Layer 1: Quant & Liquidity Score
+    // Agent-computed confidence path (new): swarm acts as pure gate
     let quantScore = 0;
-    if (candidate.liquidityUsd >= 25000) quantScore += 50;
-    if (candidate.volume1hUsd >= 10000) quantScore += 50;
+    let catalystScore = 0;
+    let securityScore = 0;
+    let baseConfidence = 0;
+    let isFastLane = false;
+    if (typeof candidate.confidence === 'number' && candidate.confidence > 0) {
+      baseConfidence = candidate.confidence;
+    } else {
+      // Legacy path: recompute from quant/catalyst/security
+      if (candidate.liquidityUsd >= 25000) quantScore += 50;
+      if (candidate.volume1hUsd >= 10000) quantScore += 50;
+      catalystScore = candidate.socialHypeScore;
+      securityScore = candidate.securityAuditPassed ? 100 : 0;
+      isFastLane = quantScore >= 90 && candidate.securityAuditPassed;
+      baseConfidence = quantScore * 0.35 + catalystScore * 0.35 + securityScore * 0.30;
+    }
 
-    // Layer 2: Catalyst & Sentiment Score
-    const catalystScore = candidate.socialHypeScore;
-
-    // Layer 3: Security & Risk Audit Score
-    const securityScore = candidate.securityAuditPassed ? 100 : 0;
-
-    // Fast-Lane Execution Check (Quant >= 90% and Security 100% Clean)
-    const isFastLane = quantScore >= 90 && candidate.securityAuditPassed;
-
-    // Calculate Weighted Confidence Score with Agent Reputation
-    const baseConfidence = quantScore * 0.35 + catalystScore * 0.35 + securityScore * 0.30;
     let confidenceScore = isFastLane
       ? Math.max(88, Math.min(100, Math.round(baseConfidence * reputationMultiplier)))
       : Math.min(100, Math.round(baseConfidence * reputationMultiplier));
