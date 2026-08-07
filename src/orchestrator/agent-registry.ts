@@ -1,6 +1,6 @@
 export type AgentDomainId =
   | 'meme-solana'
-  | 'meme-evm'
+  | 'meme-robinhood'
   | 'perps'
   | 'nft'
   | 'prediction'
@@ -31,11 +31,11 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     category: 'MEME',
   },
   {
-    id: 'meme-evm',
-    displayName: 'MEME-EVM',
-    name: 'EVM DEX Meme Screening',
-    channel: 'call-meme-evm',
-    aliases: ['evm', 'evm-meme', 'base'],
+    id: 'meme-robinhood',
+    displayName: 'MEME-ROBINHOOD',
+    name: 'Robinhood Chain Meme Screening',
+    channel: 'call-meme-robinhood',
+    aliases: ['robinhood', 'evm', 'evm-meme', 'base', 'meme-evm'],
     requiredKeys: ['AI_API_KEY'],
     category: 'MEME',
   },

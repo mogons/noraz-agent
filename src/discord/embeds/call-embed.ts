@@ -323,8 +323,8 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         .setLabel('🛒 Buy (0.5 ETH)')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId('pause_channel_meme-evm')
-        .setLabel('⏸️ Pause EVM Screening')
+        .setCustomId('pause_channel_meme-robinhood')
+        .setLabel('⏸️ Pause Robinhood Screening')
         .setStyle(ButtonStyle.Secondary)
     );
   }

@@ -49,7 +49,7 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
         name: '🤖 24/7 Specialist Sub-Agents Status (PAUSED by Default)',
         value:
           `• 🐣 **Solana Meme Agent:** ${getStatusBadge('meme-solana')}\n` +
-          `• 🔷 **EVM Meme Agent:** ${getStatusBadge('meme-evm')}\n` +
+          `• 🔷 **Robinhood Meme Agent:** ${getStatusBadge('meme-robinhood')}\n` +
           `• 📈 **Perpetual Futures Agent:** ${getStatusBadge('perps')}\n` +
           `• 💧 **Trade+LP Velocity Engine:** ${getStatusBadge('lp-solana')}\n` +
           `• 🖼️ **NFT Sniping Agent:** ${getStatusBadge('nft')}\n` +

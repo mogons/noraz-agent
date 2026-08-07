@@ -83,7 +83,7 @@ export const slashCommands = [
             .setRequired(false)
             .addChoices(
               { name: 'Solana Meme Agent', value: 'meme-solana' },
-              { name: 'EVM Meme Agent', value: 'meme-evm' },
+              { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
               { name: 'Solana LP Agent', value: 'lp-solana' },
               { name: 'EVM LP Agent (Robinhood)', value: 'lp-evm' },
               { name: 'Perpetuals Agent', value: 'perps' },
@@ -102,7 +102,7 @@ export const slashCommands = [
             .setRequired(false)
             .addChoices(
               { name: 'Solana Meme Agent', value: 'meme-solana' },
-              { name: 'EVM Meme Agent', value: 'meme-evm' },
+              { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
               { name: 'Solana LP Agent', value: 'lp-solana' },
               { name: 'EVM LP Agent (Robinhood)', value: 'lp-evm' },
               { name: 'Perpetuals Agent', value: 'perps' },

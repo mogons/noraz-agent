@@ -266,11 +266,11 @@ if (discordToken && clientId) {
         dispatchedPayloads.push(...solanaDispatched);
 
         const evmDispatched = await dispatchDomain({
-          domain: 'meme-evm',
-          channelName: 'call-meme-evm',
-          isActive: () => hub.isAgentActive('meme-evm'),
+          domain: 'meme-robinhood',
+          channelName: 'call-meme-robinhood',
+          isActive: () => hub.isAgentActive('meme-robinhood'),
           runPass: async () => (await evmScreeningAgent.runScreeningPass()).map((r: any) => ({ passed: !!r.passed, signal: r.signal, reason: r.reason })),
-          keyReady: () => apiKeyGuard.checkDomainKeys('meme-evm'),
+          keyReady: () => apiKeyGuard.checkDomainKeys('meme-robinhood'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
           buildPayload: ({ signal, reason }) => ({
             domain: 'MEME_EVM',

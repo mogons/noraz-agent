@@ -136,7 +136,7 @@ export class AthenaHub {
         const agent = new SolanaScreeningAgent();
         return await agent.runScreeningPass();
       }
-      if (key.includes('evm') || key.includes('meme-evm')) {
+      if (key.includes('evm') || key.includes('meme-evm') || key.includes('robinhood') || key.includes('base')) {
         const { EVMScreeningAgent } = await import('../agents/meme-evm/evm-screening-agent.js');
         const agent = new EVMScreeningAgent();
         return await agent.runScreeningPass();
