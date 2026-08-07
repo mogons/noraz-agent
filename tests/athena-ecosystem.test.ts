@@ -407,6 +407,32 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(hub.isAgentActive('meme-solana')).toBe(true);
     expect(hub.isAgentActive('solana-meme')).toBe(true);
   });
+
+  it('25. ApiKeyGuard: Should halt sub-agents with missing required API keys', async () => {
+    const { ApiKeyGuardService } = await import('../src/services/api-key-guard.js');
+    const guard = new ApiKeyGuardService();
+
+    delete process.env.OPENSEA_API_KEY;
+    const res = guard.checkDomainKeys('nft');
+    expect(res.ready).toBe(false);
+    expect(res.missingKeys).toContain('OPENSEA_API_KEY');
+    expect(res.statusMessage).toContain('HALTED');
+  });
+
+  it('26. ApiKeyGuard & ToolRegistry: Should set API key at runtime and unblock sub-agent', async () => {
+    const { ApiKeyGuardService } = await import('../src/services/api-key-guard.js');
+    const { ToolRegistry } = await import('../src/orchestrator/tool-registry.js');
+
+    const guard = new ApiKeyGuardService();
+    const registry = new ToolRegistry();
+
+    const toolRes = await registry.executeToolCall('set_api_key', { keyName: 'OPENSEA_API_KEY', keyValue: 'test_opensea_key_123' });
+    expect(toolRes.success).toBe(true);
+
+    const res = guard.checkDomainKeys('nft');
+    expect(res.ready).toBe(true);
+    expect(process.env.OPENSEA_API_KEY).toBe('test_opensea_key_123');
+  });
 });
 
 

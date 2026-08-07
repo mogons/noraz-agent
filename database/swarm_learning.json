@@ -1,6 +1,30 @@
 {
   "outcomes": [
     {
+      "id": "CALL_1786068899005_ghpw",
+      "agentId": "solana-meme",
+      "symbol": "BONK",
+      "contractAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      "initialPriceUsd": 0.00001,
+      "maxPriceReachedUsd": 0.000025,
+      "lowestPriceReachedUsd": 0.00001,
+      "result": "TAKE_PROFIT_2X",
+      "confidenceScore": 88,
+      "timestampIso": "2026-08-07T02:14:59.005Z"
+    },
+    {
+      "id": "CALL_1786068876442_400g",
+      "agentId": "solana-meme",
+      "symbol": "BONK",
+      "contractAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      "initialPriceUsd": 0.00001,
+      "maxPriceReachedUsd": 0.000025,
+      "lowestPriceReachedUsd": 0.00001,
+      "result": "TAKE_PROFIT_2X",
+      "confidenceScore": 88,
+      "timestampIso": "2026-08-07T02:14:36.442Z"
+    },
+    {
       "id": "CALL_1786068605757_ej8f",
       "agentId": "solana-meme",
       "symbol": "BONK",
@@ -38,8 +62,8 @@
     }
   ],
   "weights": {
-    "smartMoneyWeight": 0.38,
-    "liquidityWeight": 0.28,
+    "smartMoneyWeight": 0.4,
+    "liquidityWeight": 0.30000000000000004,
     "devHoldingWeight": 0.2,
     "twitterWeight": 0.2
   }

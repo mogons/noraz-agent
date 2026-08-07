@@ -27,10 +27,12 @@ import { priceAlertService, tradeJournalService, walletService } from './discord
 import { PriceFeedService } from './services/price-feed-service.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
+import { ApiKeyGuardService } from './services/api-key-guard.js';
 
 dotenv.config();
 
 const telegramService = new TelegramService();
+const apiKeyGuard = new ApiKeyGuardService();
 const ctAlphaAgent = new CTAlphaAgent();
 const perpsScreeningAgent = new PerpsScreeningAgent(new HyperliquidAdapter());
 
@@ -183,163 +185,193 @@ if (discordToken && clientId) {
         const dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
 
         if (hub.isAgentActive('meme-solana')) {
-          const reports = await solanaScreeningAgent.runScreeningPass();
-          for (const r of reports) {
-            if (r.passed && r.signal) {
-              dispatchedPayloads.push({
-                channelName: 'call-meme-solana',
-                rawReason: r.reason,
-                payload: {
-                  domain: 'MEME_SOLANA',
-                  title: `${r.signal.name} (${r.signal.symbol})`,
-                  symbol: r.signal.symbol,
-                  contractAddress: r.signal.contractAddress,
-                  network: 'Solana',
-                  priceUsd: `$${r.signal.priceUsd}`,
-                  marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
-                  liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
-                  volume5m: '+620%',
-                  volume1h: '$1.2M',
-                  txRatio: 'Buy 78% / Sell 22%',
-                  top10Pct: '22.4%',
-                  devHoldingPct: `${r.signal.devHoldingPercentage}%`,
-                  sniperPct: `${r.signal.sniperRatioPercentage}%`,
-                  bundlerPct: '11.2%',
-                  dexPaidStatus: '✅ Paid',
-                  smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} SOL)`,
-                  confidenceScore: 92,
-                  aiThesis: r.reason || r.signal.aiThesis,
-                  gmgnUrl: r.signal.gmgnUrl,
-                  dexScreenerUrl: `https://dexscreener.com/solana/${r.signal.contractAddress}`,
-                  rugcheckUrl: `https://rugcheck.xyz/tokens/${r.signal.contractAddress}`,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('meme-solana');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await solanaScreeningAgent.runScreeningPass();
+            for (const r of reports) {
+              if (r.passed && r.signal) {
+                dispatchedPayloads.push({
+                  channelName: 'call-meme-solana',
+                  rawReason: r.reason,
+                  payload: {
+                    domain: 'MEME_SOLANA',
+                    title: `${r.signal.name} (${r.signal.symbol})`,
+                    symbol: r.signal.symbol,
+                    contractAddress: r.signal.contractAddress,
+                    network: 'Solana',
+                    priceUsd: `$${r.signal.priceUsd}`,
+                    marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
+                    liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
+                    volume5m: '+620%',
+                    volume1h: '$1.2M',
+                    txRatio: 'Buy 78% / Sell 22%',
+                    top10Pct: '22.4%',
+                    devHoldingPct: `${r.signal.devHoldingPercentage}%`,
+                    sniperPct: `${r.signal.sniperRatioPercentage}%`,
+                    bundlerPct: '11.2%',
+                    dexPaidStatus: '✅ Paid',
+                    smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} SOL)`,
+                    confidenceScore: 92,
+                    aiThesis: r.reason || r.signal.aiThesis,
+                    gmgnUrl: r.signal.gmgnUrl,
+                    dexScreenerUrl: `https://dexscreener.com/solana/${r.signal.contractAddress}`,
+                    rugcheckUrl: `https://rugcheck.xyz/tokens/${r.signal.contractAddress}`,
+                  },
+                });
+              }
             }
           }
         }
 
         if (hub.isAgentActive('meme-evm')) {
-          const reports = await evmScreeningAgent.runScreeningPass();
-          for (const r of reports) {
-            if (r.passed && r.signal) {
-              dispatchedPayloads.push({
-                channelName: 'call-meme-evm',
-                rawReason: r.reason,
-                payload: {
-                  domain: 'MEME_EVM',
-                  title: `${r.signal.name || r.signal.symbol} (${r.signal.symbol})`,
-                  symbol: r.signal.symbol,
-                  contractAddress: r.signal.contractAddress,
-                  network: (r.signal.chain || 'base').toUpperCase(),
-                  priceUsd: `$${r.signal.priceUsd}`,
-                  marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
-                  liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
-                  volume5m: '+580%',
-                  volume1h: '$3.4M',
-                  txRatio: 'Buy 82% / Sell 18%',
-                  top10Pct: '18.5%',
-                  devHoldingPct: `${r.signal.devHoldingPercentage}%`,
-                  sniperPct: `${r.signal.sniperRatioPercentage}%`,
-                  bundlerPct: '8.4%',
-                  dexPaidStatus: '✅ Paid',
-                  smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} ETH)`,
-                  confidenceScore: 88,
-                  aiThesis: r.reason || r.signal.aiThesis,
-                  gmgnUrl: r.signal.gmgnUrl,
-                  dexScreenerUrl: `https://dexscreener.com/${r.signal.chain || 'base'}/${r.signal.contractAddress}`,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('meme-evm');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await evmScreeningAgent.runScreeningPass();
+            for (const r of reports) {
+              if (r.passed && r.signal) {
+                dispatchedPayloads.push({
+                  channelName: 'call-meme-evm',
+                  rawReason: r.reason,
+                  payload: {
+                    domain: 'MEME_EVM',
+                    title: `${r.signal.name || r.signal.symbol} (${r.signal.symbol})`,
+                    symbol: r.signal.symbol,
+                    contractAddress: r.signal.contractAddress,
+                    network: (r.signal.chain || 'base').toUpperCase(),
+                    priceUsd: `$${r.signal.priceUsd}`,
+                    marketCap: `$${(r.signal.marketCapUsd / 1000).toFixed(1)}k`,
+                    liquidity: `$${(r.signal.liquidityUsd / 1000).toFixed(1)}k`,
+                    volume5m: '+580%',
+                    volume1h: '$3.4M',
+                    txRatio: 'Buy 82% / Sell 18%',
+                    top10Pct: '18.5%',
+                    devHoldingPct: `${r.signal.devHoldingPercentage}%`,
+                    sniperPct: `${r.signal.sniperRatioPercentage}%`,
+                    bundlerPct: '8.4%',
+                    dexPaidStatus: '✅ Paid',
+                    smartMoneyInfo: `🧠 **Smart Traders:** ${r.signal.smartMoneyCount} Smart Wallets Accumulating (+${r.signal.smartMoneyNetBuySolOrEth} ETH)`,
+                    confidenceScore: 88,
+                    aiThesis: r.reason || r.signal.aiThesis,
+                    gmgnUrl: r.signal.gmgnUrl,
+                    dexScreenerUrl: `https://dexscreener.com/${r.signal.chain || 'base'}/${r.signal.contractAddress}`,
+                  },
+                });
+              }
             }
           }
         }
 
         if (hub.isAgentActive('nft')) {
-          const reports = await nftScreeningAgent.runScreeningPass();
-          for (const r of reports) {
-            if (r.confidenceScore >= 80) {
-              dispatchedPayloads.push({
-                channelName: 'call-nft-sniping',
-                rawReason: r.detectionReason,
-                payload: {
-                  domain: 'NFT',
-                  title: `${r.collectionName} #${r.tokenId}`,
-                  symbol: r.collectionSlug.toUpperCase(),
-                  contractAddress: r.collectionSlug,
-                  network: r.chain.toUpperCase(),
-                  priceUsd: `${r.priceEth} ETH`,
-                  marketCap: `Floor: ${r.floorPriceEth} ETH (+${r.floorSurge4hPct.toFixed(1)}% 4h)`,
-                  confidenceScore: r.confidenceScore,
-                  aiThesis: r.detectionReason,
-                  dexScreenerUrl: r.openseaUrl,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('nft');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await nftScreeningAgent.runScreeningPass();
+            for (const r of reports) {
+              if (r.confidenceScore >= 80) {
+                dispatchedPayloads.push({
+                  channelName: 'call-nft-sniping',
+                  rawReason: r.detectionReason,
+                  payload: {
+                    domain: 'NFT',
+                    title: `${r.collectionName} #${r.tokenId}`,
+                    symbol: r.collectionSlug.toUpperCase(),
+                    contractAddress: r.collectionSlug,
+                    network: r.chain.toUpperCase(),
+                    priceUsd: `${r.priceEth} ETH`,
+                    marketCap: `Floor: ${r.floorPriceEth} ETH (+${r.floorSurge4hPct.toFixed(1)}% 4h)`,
+                    confidenceScore: r.confidenceScore,
+                    aiThesis: r.detectionReason,
+                    dexScreenerUrl: r.openseaUrl,
+                  },
+                });
+              }
             }
           }
         }
 
         if (hub.isAgentActive('prediction')) {
-          const reports = await polymarketAgent.runScreeningPass();
-          for (const r of reports) {
-            if (r.confidenceScore >= 80) {
-              dispatchedPayloads.push({
-                channelName: 'call-prediction-markets',
-                rawReason: r.aiThesis,
-                payload: {
-                  domain: 'PREDICTION',
-                  title: r.question,
-                  symbol: r.recommendedOutcome,
-                  network: 'Polygon (Polymarket)',
-                  confidenceScore: r.confidenceScore,
-                  aiThesis: r.aiThesis,
-                  dexScreenerUrl: r.polymarketUrl,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('prediction');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await polymarketAgent.runScreeningPass();
+            for (const r of reports) {
+              if (r.confidenceScore >= 80) {
+                dispatchedPayloads.push({
+                  channelName: 'call-prediction-markets',
+                  rawReason: r.aiThesis,
+                  payload: {
+                    domain: 'PREDICTION',
+                    title: r.question,
+                    symbol: r.recommendedOutcome,
+                    network: 'Polygon (Polymarket)',
+                    confidenceScore: r.confidenceScore,
+                    aiThesis: r.aiThesis,
+                    dexScreenerUrl: r.polymarketUrl,
+                  },
+                });
+              }
             }
           }
         }
 
         if (hub.isAgentActive('perps')) {
-          const reports = await perpsScreeningAgent.screenAllAssets();
-          for (const r of reports) {
-            if (r.confidence >= 80) {
-              dispatchedPayloads.push({
-                channelName: 'call-perps-futures',
-                rawReason: r.aiThesis || r.signalReasons.join(', '),
-                payload: {
-                  domain: 'PERPS',
-                  title: `${r.direction} ${r.coin} (${r.suggestedLeverage}x)`,
-                  symbol: r.coin,
-                  contractAddress: r.coin,
-                  network: 'Hyperliquid Perps',
-                  priceUsd: `$${r.entryPriceUsd}`,
-                  marketCap: `Stop: -${r.stopLossPercent}% | TP: +${r.takeProfitPercent}%`,
-                  confidenceScore: r.confidence,
-                  aiThesis: r.aiThesis || r.signalReasons.join(' | '),
-                  dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${r.coin}`,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('perps');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await perpsScreeningAgent.screenAllAssets();
+            for (const r of reports) {
+              if (r.confidence >= 80) {
+                dispatchedPayloads.push({
+                  channelName: 'call-perps-futures',
+                  rawReason: r.aiThesis || r.signalReasons.join(', '),
+                  payload: {
+                    domain: 'PERPS',
+                    title: `${r.direction} ${r.coin} (${r.suggestedLeverage}x)`,
+                    symbol: r.coin,
+                    contractAddress: r.coin,
+                    network: 'Hyperliquid Perps',
+                    priceUsd: `$${r.entryPriceUsd}`,
+                    marketCap: `Stop: -${r.stopLossPercent}% | TP: +${r.takeProfitPercent}%`,
+                    confidenceScore: r.confidence,
+                    aiThesis: r.aiThesis || r.signalReasons.join(' | '),
+                    dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${r.coin}`,
+                  },
+                });
+              }
             }
           }
         }
 
         if (hub.isAgentActive('ct-alpha')) {
-          const reports = await ctAlphaAgent.runScreeningPass();
-          for (const r of reports) {
-            if (r.passed && r.signal) {
-              dispatchedPayloads.push({
-                channelName: 'call-ct-alpha',
-                rawReason: r.reason,
-                payload: {
-                  domain: 'MEME_SOLANA',
-                  title: r.signal.title,
-                  symbol: r.signal.symbolMentioned || 'ALPHA',
-                  contractAddress: r.signal.contractAddress || 'N/A',
-                  network: 'X (Twitter)',
-                  confidenceScore: r.signal.confidenceScore,
-                  aiThesis: r.reason || r.signal.actionableTakeaway,
-                  dexScreenerUrl: r.signal.tweetUrl,
-                },
-              });
+          const keyCheck = apiKeyGuard.checkDomainKeys('ct-alpha');
+          if (!keyCheck.ready) {
+            console.warn(keyCheck.statusMessage);
+          } else {
+            const reports = await ctAlphaAgent.runScreeningPass();
+            for (const r of reports) {
+              if (r.passed && r.signal) {
+                dispatchedPayloads.push({
+                  channelName: 'call-ct-alpha',
+                  rawReason: r.reason,
+                  payload: {
+                    domain: 'MEME_SOLANA',
+                    title: r.signal.title,
+                    symbol: r.signal.symbolMentioned || 'ALPHA',
+                    contractAddress: r.signal.contractAddress || 'N/A',
+                    network: 'X (Twitter)',
+                    confidenceScore: r.signal.confidenceScore,
+                    aiThesis: r.reason || r.signal.actionableTakeaway,
+                    dexScreenerUrl: r.signal.tweetUrl,
+                  },
+                });
+              }
             }
           }
         }

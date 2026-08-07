@@ -148,6 +148,24 @@ export class ToolRegistry {
           required: ['query'],
         },
       },
+      {
+        name: 'set_api_key',
+        description: 'Set and persist an API key or environment variable at runtime (e.g. GMGN_API_KEY, OPENSEA_API_KEY, TWEX_API_KEY).',
+        parameters: {
+          type: 'object',
+          properties: {
+            keyName: {
+              type: 'string',
+              description: 'API key environment variable name (e.g. GMGN_API_KEY, OPENSEA_API_KEY, TWEX_API_KEY, POLYMARKET_API_KEY).',
+            },
+            keyValue: {
+              type: 'string',
+              description: 'API key secret token value.',
+            },
+          },
+          required: ['keyName', 'keyValue'],
+        },
+      },
     ];
   }
 
@@ -157,13 +175,10 @@ export class ToolRegistry {
   public async executeToolCall(toolName: string, args: Record<string, any>): Promise<{ success: boolean; message: string; data?: any }> {
     console.log(`[TOOL REGISTRY] Executing Tool Call: ${toolName} with args:`, args);
 
-    if (!this.orchestrator) {
-      return { success: false, message: 'Orchestrator not attached to ToolRegistry.' };
-    }
-
     try {
       switch (toolName) {
         case 'pause_sub_agent': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const agentId = String(args.agentId || '').toLowerCase().trim();
           const result = this.orchestrator.pauseAgent(agentId);
           return {
@@ -174,6 +189,7 @@ export class ToolRegistry {
         }
 
         case 'resume_sub_agent': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const agentId = String(args.agentId || '').toLowerCase().trim();
           const result = this.orchestrator.resumeAgent(agentId);
           return {
@@ -184,6 +200,7 @@ export class ToolRegistry {
         }
 
         case 'trigger_screening_pass': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const agentId = String(args.agentId || '').toLowerCase().trim();
           const signals = await this.orchestrator.triggerAgentPass(agentId);
           return {
@@ -194,6 +211,7 @@ export class ToolRegistry {
         }
 
         case 'set_risk_limit': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const maxDrawdownPct = args.maxDrawdownPct !== undefined ? Number(args.maxDrawdownPct) : undefined;
           const maxPositionSizeUsd = args.maxPositionSizeUsd !== undefined ? Number(args.maxPositionSizeUsd) : undefined;
 
@@ -206,6 +224,7 @@ export class ToolRegistry {
         }
 
         case 'get_agent_statuses': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const statuses = this.orchestrator.getAgentStatuses();
           return {
             success: true,
@@ -256,6 +275,21 @@ export class ToolRegistry {
             success: true,
             message: `Found ${results.length} memory records matching query: "${query}".`,
             data: results,
+          };
+        }
+
+        case 'set_api_key': {
+          const { ApiKeyGuardService } = await import('../services/api-key-guard.js');
+          const guard = new ApiKeyGuardService();
+          const keyName = String(args.keyName || '');
+          const keyValue = String(args.keyValue || '');
+
+          const success = guard.setApiKeyRuntimeAndEnv(keyName, keyValue);
+          return {
+            success,
+            message: success
+              ? `🔑 Successfully set & saved ${keyName} to .env and active runtime!`
+              : `❌ Failed setting API key ${keyName}.`,
           };
         }
 

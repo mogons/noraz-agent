@@ -162,6 +162,18 @@ export async function handleControlRoomMessage(
     return;
   }
 
+  // 0h. Natural Language API Key Setup intent
+  if (lowerQuery.includes('set_api_key') || lowerQuery.includes('set key') || lowerQuery.includes('pasang key') || lowerQuery.includes('setup api key') || lowerQuery.includes('set api key') || lowerQuery.includes('_api_key=')) {
+    const match = userQuery.match(/([A-Z0-9_]+_API_KEY|[A-Z0-9_]+_KEY|[A-Z0-9_]+_URL|[A-Z0-9_]+_TOKEN)\s*[:=]\s*([^\s]+)/i);
+    if (match) {
+      const keyName = match[1].toUpperCase();
+      const keyValue = match[2];
+      const result = await toolRegistry.executeToolCall('set_api_key', { keyName, keyValue });
+      await message.reply(`${result.message}\nSub-agent API key status re-evaluated.`);
+      return;
+    }
+  }
+
   // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "kabari kalau BTC 70k")
   const parsedAlert = priceAlertService.parseNaturalLanguageAlert(userQuery, message.author.id, message.channelId);
   if (parsedAlert) {
