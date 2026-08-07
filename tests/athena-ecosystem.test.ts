@@ -394,6 +394,19 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     engine.updateSignalPrice(call.id, 0.000025); // 2.5x gain -> TAKE_PROFIT_2X
     expect(engine.getWeights().smartMoneyWeight).toBeGreaterThan(initialWeight);
   });
+
+  it('24. Sub-Agent Domain Normalization: Should correctly synchronize pause/resume across aliases', async () => {
+    const { AthenaHub } = await import('../src/orchestrator/hub.js');
+    const hub = new AthenaHub();
+
+    hub.setAgentActive('solana-meme', false);
+    expect(hub.isAgentActive('meme-solana')).toBe(false);
+    expect(hub.isAgentActive('solana')).toBe(false);
+
+    hub.setAgentActive('solana', true);
+    expect(hub.isAgentActive('meme-solana')).toBe(true);
+    expect(hub.isAgentActive('solana-meme')).toBe(true);
+  });
 });
 
 

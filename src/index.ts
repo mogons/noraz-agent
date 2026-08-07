@@ -19,7 +19,9 @@ import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agen
 import { EVMScreeningAgent } from './agents/meme-evm/evm-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
+import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
+import { PerpsScreeningAgent } from './agents/perps/perps-screening-agent.js';
 import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
 import { priceAlertService, tradeJournalService, walletService } from './discord/handlers/interaction-handler.js';
 import { PriceFeedService } from './services/price-feed-service.js';
@@ -30,6 +32,7 @@ dotenv.config();
 
 const telegramService = new TelegramService();
 const ctAlphaAgent = new CTAlphaAgent();
+const perpsScreeningAgent = new PerpsScreeningAgent(new HyperliquidAdapter());
 
 console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
@@ -289,6 +292,30 @@ if (discordToken && clientId) {
                   confidenceScore: r.confidenceScore,
                   aiThesis: r.aiThesis,
                   dexScreenerUrl: r.polymarketUrl,
+                },
+              });
+            }
+          }
+        }
+
+        if (hub.isAgentActive('perps')) {
+          const reports = await perpsScreeningAgent.screenAllAssets();
+          for (const r of reports) {
+            if (r.confidence >= 80) {
+              dispatchedPayloads.push({
+                channelName: 'call-perps-futures',
+                rawReason: r.aiThesis || r.signalReasons.join(', '),
+                payload: {
+                  domain: 'PERPS',
+                  title: `${r.direction} ${r.coin} (${r.suggestedLeverage}x)`,
+                  symbol: r.coin,
+                  contractAddress: r.coin,
+                  network: 'Hyperliquid Perps',
+                  priceUsd: `$${r.entryPriceUsd}`,
+                  marketCap: `Stop: -${r.stopLossPercent}% | TP: +${r.takeProfitPercent}%`,
+                  confidenceScore: r.confidence,
+                  aiThesis: r.aiThesis || r.signalReasons.join(' | '),
+                  dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${r.coin}`,
                 },
               });
             }

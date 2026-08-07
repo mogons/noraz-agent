@@ -96,8 +96,6 @@ export class PerpsScreeningAgent {
    */
   private async fetchCandles(coin: string, interval: '1h' | '4h', count: number = 250): Promise<Candle[]> {
     try {
-      /*
-      // PRODUCTION: Call Hyperliquid candle API
       const response = await fetch('https://api.hyperliquid.xyz/info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,29 +104,17 @@ export class PerpsScreeningAgent {
           req: { coin, interval, startTime: Date.now() - (count * (interval === '1h' ? 3600000 : 14400000)), endTime: Date.now() },
         }),
       });
-      const rawCandles = await response.json();
-      return rawCandles.map((c: any) => ({ openTime: c.t, open: +c.o, high: +c.h, low: +c.l, close: +c.c, volume: +c.v }));
-      */
 
-      // Simulated candle data for development (replaced by live API in production)
-      const basePrice = coin === 'BTC' ? 63867 : coin === 'ETH' ? 1871 : coin === 'SOL' ? 74.12 : 55.3;
-      const candles: Candle[] = [];
-      const intervalMs = interval === '1h' ? 3600000 : 14400000;
-      const now = Date.now();
-
-      for (let i = count - 1; i >= 0; i--) {
-        const noise = (Math.random() - 0.45) * basePrice * 0.008; // Slight bullish bias
-        const close = basePrice + noise * (count - i) / count;
-        candles.push({
-          openTime: now - (i * intervalMs),
-          open: close - noise * 0.3,
-          high: close + Math.abs(noise) * 0.5,
-          low: close - Math.abs(noise) * 0.5,
-          close,
-          volume: 1000000 + Math.random() * 5000000,
-        });
+      if (!response.ok) {
+        return [];
       }
-      return candles;
+
+      const rawCandles: any = await response.json();
+      if (!Array.isArray(rawCandles)) {
+        return [];
+      }
+
+      return rawCandles.map((c: any) => ({ openTime: c.t, open: +c.o, high: +c.h, low: +c.l, close: +c.c, volume: +c.v }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[PERPS AGENT] Failed to fetch ${interval} candles for ${coin}:`, message);

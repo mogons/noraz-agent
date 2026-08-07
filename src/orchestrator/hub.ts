@@ -27,22 +27,39 @@ export class AthenaHub {
     }
   }
 
+  public normalizeDomainKey(domain: string): string {
+    const d = domain.toLowerCase().trim();
+    if (d === 'solana' || d === 'solana-meme' || d === 'meme-solana') return 'meme-solana';
+    if (d === 'evm' || d === 'evm-meme' || d === 'meme-evm' || d === 'base') return 'meme-evm';
+    if (d === 'perps' || d === 'perpetual' || d === 'hyperliquid') return 'perps';
+    if (d === 'nft' || d === 'opensea') return 'nft';
+    if (d === 'prediction' || d === 'polymarket' || d === 'poly') return 'prediction';
+    if (d === 'ct-alpha' || d === 'twitter' || d === 'ct') return 'ct-alpha';
+    if (d === 'lp-solana' || d === 'meteora') return 'lp-solana';
+    if (d === 'lp-evm' || d === 'uniswap') return 'lp-evm';
+    return d;
+  }
+
   public setAgentActive(domain: string, active: boolean): void {
-    this.agentStates.set(domain.toLowerCase(), active);
-    console.log(`[HUB] Sub-Agent "${domain.toUpperCase()}" status updated to: ${active ? '🟢 ACTIVE' : '🔴 PAUSED'}`);
+    const norm = this.normalizeDomainKey(domain);
+    this.agentStates.set(norm, active);
+    console.log(`[HUB] Sub-Agent "${norm.toUpperCase()}" status updated to: ${active ? '🟢 ACTIVE' : '🔴 PAUSED'}`);
   }
 
   public isAgentActive(domain: string): boolean {
-    return this.agentStates.get(domain.toLowerCase()) ?? false;
+    const norm = this.normalizeDomainKey(domain);
+    return this.agentStates.get(norm) ?? false;
   }
 
   public setAutoExecute(domain: string, enabled: boolean, maxTradeAmount: number = 0.1): void {
-    this.autoExecuteStates.set(domain.toLowerCase(), { enabled, maxTradeAmount });
-    console.log(`[HUB] Auto-Execution for "${domain.toUpperCase()}" set to: ${enabled ? '⚡ ENABLED' : '🔒 DISABLED'} (Max Size: ${maxTradeAmount})`);
+    const norm = this.normalizeDomainKey(domain);
+    this.autoExecuteStates.set(norm, { enabled, maxTradeAmount });
+    console.log(`[HUB] Auto-Execution for "${norm.toUpperCase()}" set to: ${enabled ? '⚡ ENABLED' : '🔒 DISABLED'} (Max Size: ${maxTradeAmount})`);
   }
 
   public isAutoExecuteEnabled(domain: string): { enabled: boolean; maxTradeAmount: number } {
-    return this.autoExecuteStates.get(domain.toLowerCase()) ?? { enabled: false, maxTradeAmount: 0.1 };
+    const norm = this.normalizeDomainKey(domain);
+    return this.autoExecuteStates.get(norm) ?? { enabled: false, maxTradeAmount: 0.1 };
   }
 
   public setAllAgentsActive(active: boolean): void {
