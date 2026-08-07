@@ -1,0 +1,115 @@
+export type AgentDomainId =
+  | 'meme-solana'
+  | 'meme-evm'
+  | 'perps'
+  | 'nft'
+  | 'prediction'
+  | 'ct-alpha'
+  | 'lp-solana'
+  | 'lp-evm';
+
+export type AgentCategory = 'MEME' | 'LP' | 'PERPS' | 'NFT' | 'PREDICTION' | 'CT_ALPHA';
+
+export interface AgentDomainInfo {
+  id: AgentDomainId;
+  displayName: string;
+  name: string;
+  channel: string;
+  aliases: string[];
+  requiredKeys: string[];
+  category: AgentCategory;
+}
+
+export const AGENT_DOMAINS: AgentDomainInfo[] = [
+  {
+    id: 'meme-solana',
+    displayName: 'MEME-SOLANA',
+    name: 'Solana DEX Meme Screening',
+    channel: 'call-meme-solana',
+    aliases: ['solana', 'solana-meme'],
+    requiredKeys: ['GMGN_API_KEY', 'AI_API_KEY'],
+    category: 'MEME',
+  },
+  {
+    id: 'meme-evm',
+    displayName: 'MEME-EVM',
+    name: 'EVM DEX Meme Screening',
+    channel: 'call-meme-evm',
+    aliases: ['evm', 'evm-meme', 'base'],
+    requiredKeys: ['GOPLUS_API_KEY', 'AI_API_KEY'],
+    category: 'MEME',
+  },
+  {
+    id: 'perps',
+    displayName: 'PERPS-FUTURES',
+    name: 'Perpetual Futures Screening (Hyperliquid)',
+    channel: 'call-perps-futures',
+    aliases: ['perpetual', 'hyperliquid', 'perps-futures', 'futures'],
+    requiredKeys: ['EVM_PRIVATE_KEY', 'AI_API_KEY'],
+    category: 'PERPS',
+  },
+  {
+    id: 'nft',
+    displayName: 'NFT-SNIPING',
+    name: 'EVM NFT Floor & Rarity Sniping (OpenSea)',
+    channel: 'call-nft-sniping',
+    aliases: ['opensea', 'nft-sniper'],
+    requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
+    category: 'NFT',
+  },
+  {
+    id: 'prediction',
+    displayName: 'PREDICTION-MARKETS',
+    name: 'Polymarket Prediction Market Arbitrage',
+    channel: 'call-prediction-markets',
+    aliases: ['polymarket', 'poly', 'prediction-market'],
+    requiredKeys: ['POLYMARKET_API_KEY', 'AI_API_KEY'],
+    category: 'PREDICTION',
+  },
+  {
+    id: 'ct-alpha',
+    displayName: 'CT-ALPHA',
+    name: 'Smart CT & AI Narrative Intelligence',
+    channel: 'call-ct-alpha',
+    aliases: ['twitter', 'ct', 'ctalpha'],
+    requiredKeys: ['TWEX_API_KEY', 'AI_API_KEY'],
+    category: 'CT_ALPHA',
+  },
+  {
+    id: 'lp-solana',
+    displayName: 'LP-SOLANA',
+    name: 'Solana Concentrated Liquidity Velocity (Meteora)',
+    channel: 'call-lp-solana',
+    aliases: ['meteora', 'solana-lp'],
+    requiredKeys: ['GMGN_API_KEY'],
+    category: 'LP',
+  },
+  {
+    id: 'lp-evm',
+    displayName: 'LP-EVM',
+    name: 'EVM Concentrated Liquidity Velocity (Uniswap)',
+    channel: 'call-lp-evm',
+    aliases: ['uniswap', 'evm-lp'],
+    requiredKeys: ['GOPLUS_API_KEY'],
+    category: 'LP',
+  },
+];
+
+function canonicalize(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
+    .replace(/^call-/, '')
+    .replace(/-token$/, '');
+}
+
+export function getAgentDomain(idOrAlias: string): AgentDomainInfo | undefined {
+  const key = canonicalize(idOrAlias);
+  return AGENT_DOMAINS.find(
+    (d) => d.id === key || d.aliases.some((a) => a === key) || d.channel === idOrAlias.toLowerCase()
+  );
+}
+
+export function normalizeDomainKey(idOrAlias: string): string {
+  return getAgentDomain(idOrAlias)?.id ?? canonicalize(idOrAlias);
+}
