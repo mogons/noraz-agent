@@ -455,6 +455,30 @@ if (discordToken && clientId) {
                   // dispatch keeps a log-only simulation of the standard 50 USDC bet.
                   console.log(`[AUTO-EXECUTE] prediction ${item.payload.symbol}: SIMULATED ${item.payload.symbol} 50 USDC`);
                 }
+
+                // Record every auto-executed signal into the trade journal (real data).
+                // Simulated while DRY_RUN=true — journal keeps an OPEN entry for audit/tracking.
+                try {
+                  const entryPrice = parseFloat(String(item.payload.priceUsd || '0').replace(/[^0-9.]/g, '')) || 0;
+                  const journalDomain = (item.payload.domain || 'MEME_SOLANA') as any;
+                  tradeJournalService.recordTradeEntry({
+                    id: `TRADE_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                    domain: journalDomain,
+                    symbol: item.payload.symbol || 'TOKEN',
+                    contractAddressOrId: item.payload.contractAddress || item.payload.symbol || 'N/A',
+                    chain: autoExecDomain === 'meme-solana' ? 'solana' : autoExecDomain === 'meme-robinhood' ? 'robinhood' : autoExecDomain === 'perps' ? 'hyperliquid' : 'polymarket',
+                    entryTimestamp: new Date().toISOString(),
+                    entryPriceUsdOrEth: entryPrice,
+                    positionSizeUsd: (autoExec.maxTradeAmount || 0.1) * (entryPrice || 1),
+                    swarmScore: Number(item.payload.confidenceScore) || 0,
+                    strategyUsed: 'auto-execute',
+                    aiThesisSummary: (item.rawReason || item.payload.aiThesis || '').slice(0, 200),
+                    status: 'OPEN',
+                  });
+                  console.log(`[TRADE JOURNAL] Auto-execute recorded: ${item.payload.symbol} (${autoExecDomain}) OPEN entry.`);
+                } catch (journalErr: any) {
+                  console.warn(`[TRADE JOURNAL] Failed to record ${item.payload.symbol}: ${journalErr.message}`);
+                }
               } catch (err: any) { console.error(`[AUTO-EXECUTE] ${item.payload.symbol} error: ${err.message}`); }
             }
           }
