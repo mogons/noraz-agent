@@ -15,7 +15,7 @@ async function runWizard() {
   console.log('\n======================================================');
   console.log('🏛️ ATHENA MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD');
   console.log('======================================================\n');
-  console.log('💡 Note: Press ENTER to skip any optional API key or accept default values.\n');
+  console.log('💡 Note: API keys are MANDATORY for respective sub-agents to run cleanly. Press ENTER to keep existing configured values.\n');
 
   let existingEnv = {};
   if (fs.existsSync(envPath)) {
@@ -141,30 +141,30 @@ async function runWizard() {
   }
 
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
-  console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS');
+  console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS (MANDATORY FOR AGENTS)');
   let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
   let openseaApiKey = existingEnv.OPENSEA_API_KEY || '';
   let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
   let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
 
-  const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Optional]';
+  const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Solana/LP Agents]';
   const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
   gmgnApiKey = inputGmgn.trim() || gmgnApiKey;
 
-  const defaultOpensea = openseaApiKey ? ` [Default: ${openseaApiKey.slice(0, 8)}...]` : ' [Optional]';
+  const defaultOpensea = openseaApiKey ? ` [Default: ${openseaApiKey.slice(0, 8)}...]` : ' [Mandatory for NFT Agent]';
   const inputOpensea = await askQuestion(` 2. OPENSEA_API_KEY (OpenSea REST API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
-  const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Optional]';
+  const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Mandatory for CT Alpha Agent]';
   const inputTwex = await askQuestion(` 3. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment & CT Alpha)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
 
-  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Optional]';
+  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/LP Agents]';
   const inputGoplus = await askQuestion(` 4. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
   goplusApiKey = inputGoplus.trim() || goplusApiKey;
 
-  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Optional]';
+  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Polymarket Agent]';
   const inputPoly = await askQuestion(` 5. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
   polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
 
@@ -197,15 +197,15 @@ async function runWizard() {
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
   let hyperliquidPrivateKey = existingEnv.HYPERLIQUID_PRIVATE_KEY || '';
 
-  const defaultSolPk = solanaPrivateKey ? ` [Default: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Optional - Base58/JSON]';
+  const defaultSolPk = solanaPrivateKey ? ` [Default: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain Solana Execution]';
   const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
   solanaPrivateKey = inputSolPk.trim() || solanaPrivateKey;
 
-  const defaultEvmPk = evmPrivateKey ? ` [Default: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional - 0x...]';
+  const defaultEvmPk = evmPrivateKey ? ` [Default: ${evmPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain EVM Execution]';
   const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  const defaultHlPk = hyperliquidPrivateKey ? ` [Default: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Optional - 0x...]';
+  const defaultHlPk = hyperliquidPrivateKey ? ` [Default: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Perps Agent]';
   const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Perps Trading Account Key)${defaultHlPk}: `);
   hyperliquidPrivateKey = inputHlPk.trim() || hyperliquidPrivateKey;
 
