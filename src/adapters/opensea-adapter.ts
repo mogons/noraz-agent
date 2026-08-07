@@ -1,4 +1,5 @@
 import type { WalletService } from '../services/wallet-service.js';
+import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface OpenSeaWhaleInfo {
   address: string;
@@ -86,7 +87,7 @@ export class OpenSeaAdapter {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.OPENSEA_API_KEY;
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   public isApiKeyConfigured(): boolean {

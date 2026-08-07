@@ -4,6 +4,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, base, arbitrum, optimism, polygon, bsc } from 'viem/chains';
 
 import { StateStore } from './state-store.js';
+import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface WalletConfig {
   solanaPrivateKey?: string;
@@ -145,7 +146,7 @@ export class WalletService {
 
   /** Get Solana SOL balance */
   public async getSolanaBalance(): Promise<BalanceResult> {
-    const isDryRun = process.env.DRY_RUN !== 'false';
+    const isDryRun = isDryRunMode();
     const simSol = parseFloat(process.env.SIMULATION_BALANCE_SOL || '10.0');
     if (isDryRun) {
       return { balance: simSol, symbol: 'SOL', chain: 'Solana' };
@@ -165,7 +166,7 @@ export class WalletService {
 
   /** Send native SOL to a recipient */
   public async sendSol(recipientAddress: string, amountSol: number): Promise<{ txHash: string; explorerUrl: string }> {
-    const isDryRun = process.env.DRY_RUN !== 'false';
+    const isDryRun = isDryRunMode();
     const keypair = this.getSolanaKeypair();
     const recipient = new PublicKey(recipientAddress);
     const lamports = Math.round(amountSol * LAMPORTS_PER_SOL);
@@ -254,7 +255,7 @@ export class WalletService {
     const symbol = nativeSymbols[chainId] || 'ETH';
     const chainName = chainConfig?.chain.name || `Chain #${chainId}`;
 
-    const isDryRun = process.env.DRY_RUN !== 'false';
+    const isDryRun = isDryRunMode();
     const simEth = parseFloat(process.env.SIMULATION_BALANCE_ETH || '1.0');
     if (isDryRun) {
       return { balance: simEth, symbol, chain: chainName };
@@ -277,7 +278,7 @@ export class WalletService {
 
   /** Send native ETH/BNB/MATIC to a recipient */
   public async sendEvm(chainId: number, recipientAddress: string, amount: number): Promise<{ txHash: string; explorerUrl: string }> {
-    const isDryRun = process.env.DRY_RUN !== 'false';
+    const isDryRun = isDryRunMode();
     const chainConfig = EVM_CHAINS[chainId];
     if (!chainConfig) throw new Error(`Unsupported EVM chain ID: ${chainId}`);
 

@@ -14,6 +14,7 @@ import {
   ButtonStyle,
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
+import { isDryRun as isDryRunMode } from '../../config/config.js';
 import { SwarmConsensus } from '../../orchestrator/swarm-consensus.js';
 import { AIService } from '../../services/ai-service.js';
 import { PriceFeedService } from '../../services/price-feed-service.js';
@@ -120,7 +121,7 @@ async function handleChatInput(
         ephemeral: true,
       });
     } else if (subcommand === 'balance') {
-      const isDryRun = process.env.DRY_RUN !== 'false';
+      const isDryRun = isDryRunMode();
       const hasSol = walletService.hasWallet('solana');
       const hasEvm = walletService.hasWallet('evm');
 
@@ -159,7 +160,7 @@ async function handleChatInput(
       const recipient = interaction.options.getString('to', true).trim();
       const amount = interaction.options.getNumber('amount', true);
       const selectedChain = interaction.options.getString('chain') || (recipient.startsWith('0x') ? 'base' : 'solana');
-      const isDryRun = process.env.DRY_RUN !== 'false';
+      const isDryRun = isDryRunMode();
 
       await interaction.deferReply({ ephemeral: true });
 

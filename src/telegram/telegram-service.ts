@@ -1,4 +1,5 @@
 import { AthenaHub } from '../orchestrator/hub.js';
+import { isDryRun as isDryRunMode } from '../config/config.js';
 import { WalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
 
@@ -157,8 +158,8 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
   }
 
   public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
-    const isDryRun = process.env.DRY_RUN !== 'false';
     const activeDomains = hub ? hub.getActiveDomains() : [];
+    const isDryRun = isDryRunMode();
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
@@ -263,7 +264,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         ['meme-solana', 'meme-evm', 'lp-solana', 'lp-evm', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
         await this.sendMessage('⏸️ **GLOBAL MASTER SCREENING PAUSED!** All 8 Sub-Agents are paused on Telegram.', 'Markdown', undefined, threadId);
       } else if (data === 'balances') {
-        const isDryRun = process.env.DRY_RUN !== 'false';
+        const isDryRun = isDryRunMode();
         const hasSol = walletService.hasWallet('solana');
         const hasEvm = walletService.hasWallet('evm');
         let solAddr = hasSol ? `\`${walletService.getSolanaAddress()}\`` : 'Not Configured';
@@ -301,7 +302,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           await this.sendMessage('⚠️ Invalid amount specified.', 'Markdown', undefined, threadId);
           return;
         }
-        const isDryRun = process.env.DRY_RUN !== 'false';
+        const isDryRun = isDryRunMode();
         try {
           if (!recipient.startsWith('0x')) {
             const { txHash, explorerUrl } = await walletService.sendSol(recipient, amount);

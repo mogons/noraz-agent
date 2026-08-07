@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { isDryRun as isDryRunMode } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.js';
 import { AthenaHub } from './orchestrator/hub.js';
@@ -40,7 +41,7 @@ console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
 console.log('----------------------------------------------------');
 
-const isDryRun = process.env.DRY_RUN !== 'false';
+const isDryRun = isDryRunMode();
 console.log(`[CONFIG] DRY_RUN Mode: ${isDryRun ? 'ENABLED (Safe Mode)' : 'DISABLED (LIVE TRADING)'}`);
 
 // Initialize persistent StateStore (survives bot restarts)

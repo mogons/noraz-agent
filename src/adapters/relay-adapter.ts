@@ -1,3 +1,5 @@
+import { isDryRun as isDryRunMode } from '../config/config.js';
+
 export interface RelayQuoteRequest {
   originChain: string | number;
   destinationChain: string | number;
@@ -154,7 +156,7 @@ export class RelayAdapter {
   };
 
   constructor() {
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   public parseChain(input: string | number): { id: number; name: string } {

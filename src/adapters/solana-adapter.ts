@@ -1,5 +1,6 @@
 import { Connection, PublicKey, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import type { WalletService } from '../services/wallet-service.js';
+import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface SolanaTradeRequest {
   outputMint: string;
@@ -48,7 +49,7 @@ export class SolanaTradeAdapter {
     ].filter(Boolean);
 
     this.connection = new Connection(this.fallbackRpcUrls[0], 'confirmed');
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   /** Get active connection with automatic failover fallback on connection errors */

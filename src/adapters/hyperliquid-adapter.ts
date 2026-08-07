@@ -8,6 +8,7 @@
  * API Docs: https://hyperliquid.gitbook.io/hyperliquid-docs
  */
 
+import { isDryRun as isDryRunMode } from '../config/config.js';
 export interface HyperliquidMarketData {
   coin: string;           // e.g. "BTC", "ETH", "SOL", "HYPE"
   assetIndex: number;     // Hyperliquid numeric asset index
@@ -78,7 +79,7 @@ export class HyperliquidAdapter {
   ];
 
   constructor() {
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   // In-memory OI snapshots for computing OI change % over time

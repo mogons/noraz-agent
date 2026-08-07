@@ -1,3 +1,5 @@
+import { isDryRun as isDryRunMode } from '../config/config.js';
+
 export interface PolymarketOutcome {
   name: string; // e.g. "Yes", "No"
   price: number; // Probability / Price in USD (0.00 - 1.00)
@@ -33,7 +35,7 @@ export class PolymarketAdapter {
   private isDryRun: boolean;
 
   constructor() {
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   /**

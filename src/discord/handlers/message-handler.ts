@@ -2,6 +2,7 @@ import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.j
 import { AIService } from '../../services/ai-service.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
+import { isDryRun as isDryRunMode } from '../../config/config.js';
 
 const DISCORD_MAX_LENGTH = 1900;
 
@@ -354,7 +355,7 @@ export async function handleControlRoomMessage(
   const simEth = process.env.SIMULATION_BALANCE_ETH || '1.0';
   const simPoly = process.env.SIMULATION_BALANCE_POLYMARKET || '500.0';
   const simHl = process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
-  const isDryRun = process.env.DRY_RUN !== 'false';
+  const isDryRun = isDryRunMode();
 
   // Comprehensive System Prompt for Athena AI with Casual Interactive Tone & Architecture Self-Awareness
   const systemPrompt = `You are Athena, a chill, brilliant, and interactive AI crypto trading companion.

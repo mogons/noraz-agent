@@ -1,4 +1,5 @@
 import type { WalletService } from '../services/wallet-service.js';
+import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface EVMTradeRequest {
   chain: 'base' | 'ethereum' | 'bsc' | 'robinhood' | string;
@@ -45,7 +46,7 @@ export class EVMTradeAdapter {
   private isDryRun: boolean;
 
   constructor() {
-    this.isDryRun = process.env.DRY_RUN !== 'false';
+    this.isDryRun = isDryRunMode();
   }
 
   public parseChainId(chainInput: string | number): number {
