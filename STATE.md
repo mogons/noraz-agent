@@ -61,3 +61,44 @@
 - hub registry-driven, swarm dedup removed, thin dispatch x8, timeout, auto-execute perps+prediction
 - Tests: 236/236 green
 - loop-audit checkpoint #1: see below
+
+## FASE 2 AUDIT COMPLETE (3 parallel explore agents)
+
+### P0 CRITICAL
+1. RiskEngineV2/kill-switch DEAD CODE - not wired to execution (safety theater)
+2. LLM tools: write_strategy_file executes arbitrary code in-process (env access); set_api_key can set DRY_RUN=false
+3. ZERO auth: Discord/Telegram commands open to all; isControlRoomChannel defaults true when unset
+4. Hyperliquid assetMap 24/27 WRONG (live-verified) - perps scores DYDX with SOL candles
+5. OpenSea getSwapQuote fails OPEN (success:true with fabricated output)
+6. Prompt injection: token symbol/name raw into embeds/URLs/Telegram markdown
+7. Wallet keys plaintext in database/athena_state.json; tool args logged
+
+### P1
+- Trade journal recordTrade/closeTrade write-dead; analytics always empty
+- backtester.ts + db-service.ts DEAD files (imported nowhere)
+- CronScheduler: new instance per tool call (duplicate timers); cron syntax silently 1h
+- Fabricated constants: SOL=\ (meteora), ETH=\ (uniswap), ETH=\ (evm/opensea), activeTvl=tvl*0.3
+- Robinhood chain missing in wallet-service EVM_CHAINS (5318008)
+- DbService test 11 wipes production state (uses default path)
+- Swarm cross-agent veto dead (registerAgentIntent never called); LP domains hardcode confidence 80 + audit true
+- token-audit-service stale (old GMGN shape)
+
+### P2 (deferred)
+- whale flag permanently dead (PnL hardcoded 1.0 vs 5.0 threshold); floorSurge 100x inflated
+- RSI caps at 99.0099; EMA200 mislabeled under 200 candles
+- LLM keys logged in tool args; partial key hints in replies
+- dedup key collision for CA-less domains
+
+## FASE 3 IMPROVEMENT PLAN (kapten priority)
+| # | Fix | P | Needs user? | Status |
+|---|---|---|---|---|
+| 1 | Hyperliquid dynamic index resolution (meta.universe) | P0 | No | ⏳ next |
+| 2 | OpenSea fail-closed + whale/floor fixes | P0 | No | ⏳ |
+| 3 | Sanitize prompt-injection (embeds/URLs/telegram markdown) | P0 | No | ⏳ |
+| 4 | Kill dead code (backtester, db-service, recordTrade dead paths) | P1 | No | ⏳ |
+| 5 | De-hardcode constants (SOL/ETH prices via price-feed-service) | P1 | No | ⏳ |
+| 6 | Robinhood chain in wallet-service EVM_CHAINS | P1 | No | ⏳ |
+| 7 | Auth model (Discord allowlist) | P0 | YES - which users? | WAITING |
+| 8 | LLM tool hardening (write_strategy sandbox, set_api_key allowlist) | P0 | YES - tradeoff | WAITING |
+| 9 | Risk engine wiring to auto-execute | P0 | YES - when live? | WAITING |
+| 10 | CronScheduler singleton + cron parsing | P1 | No | ⏳ |
