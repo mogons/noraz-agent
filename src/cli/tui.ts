@@ -216,6 +216,11 @@ export async function launchTUI(): Promise<void> {
           if (chatMsg.toLowerCase() === 'exit') break;
           try {
             const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+            const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
+            const { runAgent } = await import('../orchestrator/agent-runner.js');
+            const toolRegistry = new ToolRegistry();
+            toolRegistry.attachOrchestrator(hub);
+            toolRegistry.attachAIService(aiService);
             const activeDomains = hub.getActiveDomains();
             const activeAgentsLine = activeDomains.length > 0
               ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
@@ -227,10 +232,13 @@ Current Operating Parameters:
 - Global Portfolio Drawdown Limit: 50.0%.
 - Current Portfolio Drawdown: 0.0%.`;
 
-            const aiRes = await aiService.generateCompletion([
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: chatMsg },
-            ]);
+            const agentResult = await runAgent(
+              { aiService, toolRegistry, systemPrompt },
+              chatMsg
+            );
+            const aiRes = agentResult.text || (agentResult.toolResults.length > 0
+              ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
+              : '[Tidak ada respons dari AI.]');
             console.log(`${C.cyan}Athena Oracle:${C.reset} ${aiRes}\n`);
           } catch (err: any) {
             console.log(`${C.cyan}Athena Oracle:${C.reset} Order acknowledged: "${chatMsg}". Operating in DRY_RUN safe simulation.\n`);

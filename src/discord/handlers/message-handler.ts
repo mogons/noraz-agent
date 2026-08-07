@@ -368,10 +368,19 @@ ${activeAgentsLine}
 - Current Portfolio Drawdown: 0.0%`;
 
   try {
-    const response = await aiService.generateCompletion([
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userQuery }
-    ], 1500);
+    // Athena is a real agent: LLM picks tools via function-calling (AgentRunner loop)
+    const { runAgent } = await import('../../orchestrator/agent-runner.js');
+    const agentResult = await runAgent(
+      { aiService, toolRegistry, systemPrompt },
+      userQuery
+    );
+
+    const response = agentResult.text || (
+      agentResult.toolResults.length > 0
+        ? `Saya menjalankan ${agentResult.toolResults.length} tool:\n` +
+          agentResult.toolResults.map((t) => `• \`${t.name}\`: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
+        : '[Tidak ada respons dari AI.]'
+    );
 
     const chunks = splitDiscordMessage(response);
     // First chunk as reply (preserves thread context), rest as follow-ups

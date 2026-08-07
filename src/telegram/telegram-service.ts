@@ -317,16 +317,25 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       } else if (!text.startsWith('/') && aiService) {
         try {
           const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+          const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
+          const { runAgent } = await import('../orchestrator/agent-runner.js');
+          const toolRegistry = new ToolRegistry();
+          toolRegistry.attachOrchestrator(hub);
+          toolRegistry.attachAIService(aiService);
+
           const activeDomains = hub.getActiveDomains();
           const activeAgentsLine = activeDomains.length > 0
             ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
             : 'Active Sub-Agents saat ini: NONE (semua paused)';
           const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}`;
 
-          const aiRes = await aiService.generateCompletion([
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text },
-          ]);
+          const agentResult = await runAgent(
+            { aiService, toolRegistry, systemPrompt },
+            text
+          );
+          const aiRes = agentResult.text || (agentResult.toolResults.length > 0
+            ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
+            : '[Tidak ada respons dari AI.]');
           await this.sendMessage(aiRes, 'Markdown', undefined, threadId);
         } catch (err: any) {
           // Failover catch

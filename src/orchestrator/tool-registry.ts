@@ -1,5 +1,11 @@
 import type { AthenaHub } from './hub.js';
 import type { AIService } from '../services/ai-service.js';
+import fs from 'fs';
+import path from 'path';
+
+const PROJECT_ROOT = path.resolve(process.cwd());
+const BLOCKED_PATH_PARTS = ['.env', '.pem', '.key', 'node_modules', path.join('dist'), '.git', 'private'];
+const MAX_READ_FILE_BYTES = 30 * 1024; // 30 KB
 
 export interface AthenaToolDefinition {
   name: string;
@@ -166,6 +172,117 @@ export class ToolRegistry {
           required: ['keyName', 'keyValue'],
         },
       },
+      {
+        name: 'start_all_agents',
+        description: 'Activate ALL background screening sub-agents at once.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'stop_all_agents',
+        description: 'Pause ALL background screening sub-agents at once.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'read_file',
+        description: 'Read a text file from the project (read-only). Path must be relative to project root. Secrets (.env, .pem, private keys) are blocked.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Relative file path e.g. src/index.ts or README.md' },
+          },
+          required: ['path'],
+        },
+      },
+      {
+        name: 'list_directory',
+        description: 'List directory entries (read-only). Path must be relative to project root.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Relative directory path e.g. src/agents or .' },
+          },
+          required: ['path'],
+        },
+      },
+      {
+        name: 'get_runtime_config',
+        description: 'Show runtime configuration: dry-run mode, active agents, configured API key names (set/unset only), AI provider/model, risk limits.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'get_system_health',
+        description: 'Show system health: per-agent heartbeat status (HEALTHY/DEGRADED/UNRESPONSIVE).',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'get_market_regime',
+        description: 'Show the current market regime (TRENDING_BULL/BEAR, SIDEWAYS_CHOP, EXTREME_VOLATILITY) with BTC/ETH 24h change and volatility index.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'get_portfolio',
+        description: 'Show portfolio state: SOL/ETH wallet balances, open position count, current drawdown.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'list_strategies',
+        description: 'List available strategy modules in strategies/ with their active flag.',
+        parameters: { type: 'object', properties: {} },
+      },
+      {
+        name: 'read_strategy',
+        description: 'Read a strategy module file content (read-only).',
+        parameters: {
+          type: 'object',
+          properties: { name: { type: 'string', description: 'Strategy file name without extension (e.g. momentum-v2).' } },
+          required: ['name'],
+        },
+      },
+      {
+        name: 'activate_strategy',
+        description: 'Set a strategy as active for a screening domain.',
+        parameters: {
+          type: 'object',
+          properties: {
+            strategyId: { type: 'string', description: 'Strategy id.' },
+            domain: { type: 'string', description: 'Screening domain (e.g. meme-solana, perps).' },
+          },
+          required: ['strategyId', 'domain'],
+        },
+      },
+      {
+        name: 'rollback_strategy',
+        description: 'Restore the previous backup of a strategy module (rollback last write).',
+        parameters: {
+          type: 'object',
+          properties: { name: { type: 'string', description: 'Strategy file name without extension.' } },
+          required: ['name'],
+        },
+      },
+      {
+        name: 'write_strategy_file',
+        description: 'Write or update a strategy module in the strategies/ sandbox (ESM .mjs). Code is validated (subprocess import + shape check) before activation; previous version is auto-backed up.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Strategy file name without extension (alphanumeric, dash, underscore only).' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an AthenaStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
+          },
+          required: ['name', 'code'],
+        },
+      },
+      {
+        name: 'write_indicator_file',
+        description: 'Write or update an indicator module in the indicators/ sandbox (ESM .mjs). Validated before activation; previous version auto-backed up.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Indicator file name without extension.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an AthenaIndicator: { id, name, version, calculate(candles) }.' },
+          },
+          required: ['name', 'code'],
+        },
+      },
     ];
   }
 
@@ -293,6 +410,141 @@ export class ToolRegistry {
           };
         }
 
+        case 'start_all_agents': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
+          this.orchestrator.setAllAgentsActive(true);
+          return { success: true, message: '⚡ ALL sub-agents are now ACTIVE and running 24/7.' };
+        }
+
+        case 'stop_all_agents': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
+          this.orchestrator.setAllAgentsActive(false);
+          return { success: true, message: '⏸️ ALL sub-agents are now PAUSED.' };
+        }
+
+        case 'read_file': {
+          const rel = this.resolveSafePath(String(args.path || ''));
+          if (!rel) return { success: false, message: 'Invalid or blocked path.' };
+          try {
+            const stat = fs.statSync(rel);
+            if (!stat.isFile()) return { success: false, message: 'Path is not a file.' };
+            if (stat.size > MAX_READ_FILE_BYTES) return { success: false, message: `File too large to read (${stat.size} bytes > 30KB).` };
+            const content = fs.readFileSync(rel, 'utf-8');
+            return { success: true, message: `Read ${rel}`, data: { path: rel, content } };
+          } catch (err: any) {
+            return { success: false, message: `Failed to read ${rel}: ${err.message}` };
+          }
+        }
+
+        case 'list_directory': {
+          const rel = this.resolveSafePath(String(args.path || '.'));
+          if (!rel) return { success: false, message: 'Invalid or blocked path.' };
+          try {
+            const entries = fs.readdirSync(rel, { withFileTypes: true }).map((e) => ({
+              name: e.name,
+              type: e.isDirectory() ? 'dir' : 'file',
+            }));
+            return { success: true, message: `Listed ${rel} (${entries.length} entries)`, data: { path: rel, entries } };
+          } catch (err: any) {
+            return { success: false, message: `Failed to list ${rel}: ${err.message}` };
+          }
+        }
+
+        case 'get_runtime_config': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
+          const dryRun = process.env.DRY_RUN !== 'false';
+          const active = this.orchestrator.getActiveDomains();
+          const keyNames = ['GMGN_API_KEY', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'POLYGON_RPC_URL', 'SOLANA_RPC_URL', 'BASE_RPC_URL'];
+          const keys = keyNames.map((k) => {
+            const v = process.env[k];
+            const set = Boolean(v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock'));
+            return { name: k, set };
+          });
+          const ai = this.aiService?.getConfig?.();
+          return {
+            success: true,
+            message: 'Runtime configuration.',
+            data: {
+              dryRun,
+              activeAgents: active,
+              apiKeys: keys,
+              aiProvider: ai?.provider || null,
+              aiModel: ai?.modelName || null,
+              risk: this.orchestrator.getRiskManager().getRiskState(),
+            },
+          };
+        }
+
+        case 'get_system_health': {
+          const { globalHealthWatcher } = await import('../services/health-watcher.js');
+          const health = globalHealthWatcher.auditSystemHealth();
+          return {
+            success: true,
+            message: health.allHealthy ? 'Semua agent HEALTHY.' : 'Ada agent yang tidak merespons.',
+            data: health.report,
+          };
+        }
+
+        case 'get_market_regime': {
+          const { globalMarketRegimeFilter } = await import('../services/market-regime.js');
+          return { success: true, message: 'Market regime.', data: globalMarketRegimeFilter.getRegime() };
+        }
+
+        case 'get_portfolio': {
+          const { WalletService } = await import('../services/wallet-service.js');
+          const ws = new WalletService();
+          const sol = await ws.getSolanaBalance();
+          const eth = await ws.getEvmBalance(1);
+          const drawdown = this.orchestrator?.getRiskManager().getRiskState().currentDrawdownPct ?? null;
+          return {
+            success: true,
+            message: 'Portfolio state.',
+            data: {
+              solana: sol ? { balance: sol.balance, symbol: sol.symbol, simulated: sol.simulated } : null,
+              evm: eth ? { balance: eth.balance, symbol: eth.symbol, simulated: eth.simulated } : null,
+              currentDrawdownPct: drawdown,
+            },
+          };
+        }
+
+        case 'list_strategies': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          const list = engine.listStrategies();
+          return { success: true, message: `Ditemukan ${list.length} strategi.`, data: list };
+        }
+
+        case 'read_strategy': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          const res = engine.readStrategy(String(args.name || ''));
+          return res;
+        }
+
+        case 'activate_strategy': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          return engine.setActiveStrategy(String(args.domain || ''), String(args.strategyId || ''));
+        }
+
+        case 'rollback_strategy': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          return engine.rollbackStrategy(String(args.name || ''));
+        }
+
+        case 'write_strategy_file': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          return engine.writeStrategy(String(args.name || ''), String(args.code || ''));
+        }
+
+        case 'write_indicator_file': {
+          const { StrategyEngine } = await import('./strategy-engine.js');
+          const engine = new StrategyEngine();
+          return engine.writeIndicator(String(args.name || ''), String(args.code || ''));
+        }
+
         default:
           return {
             success: false,
@@ -306,5 +558,21 @@ export class ToolRegistry {
         message: `Error executing ${toolName}: ${err.message}`,
       };
     }
+  }
+
+  /**
+   * Resolve a user-supplied relative path to a safe absolute path under PROJECT_ROOT.
+   * Rejects absolute paths, traversal (..), and blocked parts (.env, .pem, node_modules, dist, .git, private).
+   */
+  private resolveSafePath(relPath: string): string | null {
+    const cleaned = relPath.trim().replace(/\\/g, '/');
+    if (!cleaned || cleaned.startsWith('/') || /^[a-zA-Z]:/.test(cleaned)) return null;
+    const resolved = path.resolve(PROJECT_ROOT, cleaned);
+    if (!resolved.startsWith(PROJECT_ROOT + path.sep) && resolved !== PROJECT_ROOT) return null;
+    const lowered = resolved.toLowerCase();
+    for (const part of BLOCKED_PATH_PARTS) {
+      if (lowered.includes(part.toLowerCase())) return null;
+    }
+    return resolved;
   }
 }

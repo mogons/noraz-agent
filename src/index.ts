@@ -5,6 +5,7 @@ import { buildCallEmbed, CallSignalPayload } from './discord/embeds/call-embed.j
 import { AthenaHub } from './orchestrator/hub.js';
 import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine, SwarmConsensus } from './orchestrator/swarm-consensus.js';
+import { StrategyEngine } from './orchestrator/strategy-engine.js';
 import { PositionManager } from './position/position-manager.js';
 import { AIService } from './services/ai-service.js';
 import { slashCommands } from './discord/commands/index.js';
@@ -53,6 +54,10 @@ const stateStore = new StateStore();
 const hub = new AthenaHub();
 const swarmEngine = new SwarmConsensusEngine();
 swarmEngine.attachStateStore(stateStore);
+
+// Wire sandboxed StrategyEngine into Swarm Consensus (active strategy can adjust confidence)
+const strategyEngine = new StrategyEngine();
+SwarmConsensusEngine.setStrategyProvider((domain: string) => strategyEngine.getActiveStrategy(domain));
 
 function gateSignal(payload: any): boolean {
   const res = swarmEngine.evaluateSignal({

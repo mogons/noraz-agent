@@ -47,6 +47,13 @@ export class SwarmConsensusEngine {
   private recentSignalHashes: Map<string, number> = new Map(); // Hash -> Timestamp (Deduplication)
   private agentReputations: Map<string, AgentReputation> = new Map();
 
+  // Optional pluggable strategy provider (set by StrategyEngine wiring in index.ts)
+  private static strategyProvider: ((domain: string) => { evaluate?: (ctx: any) => any } | null) | null = null;
+
+  public static setStrategyProvider(fn: ((domain: string) => { evaluate?: (ctx: any) => any } | null) | null): void {
+    SwarmConsensusEngine.strategyProvider = fn;
+  }
+
   constructor() {
     this.initializeAgentReputations();
   }
@@ -158,9 +165,37 @@ export class SwarmConsensusEngine {
 
     // Calculate Weighted Confidence Score with Agent Reputation
     const baseConfidence = quantScore * 0.35 + catalystScore * 0.35 + securityScore * 0.30;
-    const confidenceScore = isFastLane
+    let confidenceScore = isFastLane
       ? Math.max(88, Math.min(100, Math.round(baseConfidence * reputationMultiplier)))
       : Math.min(100, Math.round(baseConfidence * reputationMultiplier));
+
+    // Optional active strategy override (StrategyEngine) — blend with its evaluate() confidence
+    let strategyReason: string | null = null;
+    if (SwarmConsensusEngine.strategyProvider) {
+      try {
+        const strat = SwarmConsensusEngine.strategyProvider(candidate.domain);
+        if (strat?.evaluate) {
+          const ev = strat.evaluate({
+            domain: candidate.domain,
+            symbol: candidate.symbol,
+            contractAddress: candidate.contractAddress,
+            priceUsd: 0,
+            liquidityUsd: candidate.liquidityUsd,
+            volume24hUsd: candidate.volume1hUsd * 24,
+            volume1hUsd: candidate.volume1hUsd,
+            smartMoneyCount: 0,
+            securityAuditPassed: candidate.securityAuditPassed,
+            socialHypeScore: candidate.socialHypeScore,
+          });
+          if (ev && typeof ev.confidence === 'number') {
+            confidenceScore = Math.round(confidenceScore * 0.5 + Math.max(0, Math.min(100, ev.confidence)) * 0.5);
+            if (ev.reason) strategyReason = ev.reason;
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[SWARM] Strategy evaluation failed for ${candidate.domain}: ${err.message}`);
+      }
+    }
 
     const passed = confidenceScore >= 80 && candidate.securityAuditPassed;
 
@@ -178,9 +213,11 @@ export class SwarmConsensusEngine {
         reputationMultiplier,
       },
       reason: passed
-        ? isFastLane 
-          ? `⚡ **FAST-LANE SWARM BYPASS PASSED** (${confidenceScore}% confidence, Sub-second High Conviction, Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
-          : `Signal passed Swarm Consensus with ${confidenceScore}% confidence (Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
+        ? strategyReason
+          ? `Signal passed Swarm Consensus (${confidenceScore}% confidence) + Strategi: ${strategyReason}`
+          : isFastLane 
+            ? `⚡ **FAST-LANE SWARM BYPASS PASSED** (${confidenceScore}% confidence, Sub-second High Conviction, Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
+            : `Signal passed Swarm Consensus with ${confidenceScore}% confidence (Reputation Wt: ${reputationMultiplier.toFixed(2)}x).`
         : `Signal rejected (${confidenceScore}% confidence below 80% threshold or security failed).`,
     };
 
