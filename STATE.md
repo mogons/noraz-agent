@@ -114,3 +114,5 @@
 | 6 Robinhood in wallet-service | ⏳ |
 
 | 2 OpenSea fail-open | ✅ DONE bc68e85 (fails closed, no fabricated output, whale/floor fixed) |
+
+| 3 Prompt injection sanitize | ✅ DONE 391f8db (sanitizeEmbedField/sanitizeTgField all domains) |
