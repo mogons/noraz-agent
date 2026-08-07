@@ -397,17 +397,18 @@ export class ToolRegistry {
         }
 
         case 'schedule_automation': {
-          const { CronSchedulerService } = await import('../services/cron-scheduler.js');
-          const scheduler = new CronSchedulerService();
+          // Use the process-wide singleton — a fresh instance per call would
+          // duplicate timers for the same task (same schedule firing N times).
+          const { globalCronScheduler } = await import('../services/cron-scheduler.js');
           if (this.orchestrator) {
-            scheduler.attachHub(this.orchestrator);
+            globalCronScheduler.attachHub(this.orchestrator);
           }
 
           const interval = String(args.interval || 'every 1 hour');
           const action = (args.action || 'screening') as any;
           const agentId = String(args.agentId || 'solana-meme');
 
-          const task = scheduler.addSchedule(interval, action, agentId);
+          const task = globalCronScheduler.addSchedule(interval, action, agentId);
           return {
             success: true,
             message: `Registered schedule: "${interval}" (${action} -> ${agentId}) [Task ID: ${task.id}].`,

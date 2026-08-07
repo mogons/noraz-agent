@@ -67,6 +67,22 @@ export class CronSchedulerService {
 
   public parseNaturalLanguageInterval(expression: string): number {
     const lower = expression.toLowerCase().trim();
+
+    // Cron-style "0 9 * * *" (minute hour day month weekday) — support hour/minute of day.
+    const cronMatch = lower.match(/^(\d{1,2})\s+(\d{1,2})\s+(\*|\d{1,2})\s+(\*|\d{1,2})\s+(\*|\d{1,2})$/);
+    if (cronMatch) {
+      const minute = parseInt(cronMatch[1], 10);
+      const hour = parseInt(cronMatch[2], 10);
+      if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+        // Daily at the given time: ms until next occurrence (24h cadence).
+        const now = new Date();
+        const next = new Date(now);
+        next.setHours(hour, minute, 0, 0);
+        if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+        return next.getTime() - now.getTime();
+      }
+    }
+
     if (lower.includes('min') || lower.includes('menit')) {
       const match = lower.match(/\d+/);
       const mins = match ? parseInt(match[0], 10) : 30;
@@ -143,3 +159,10 @@ export class CronSchedulerService {
     return Array.from(this.tasks.values());
   }
 }
+
+/**
+ * Process-wide singleton — prevents duplicate timers when tools/agents create
+ * CronSchedulerService instances per call (duplicate timers were firing
+ * the same task multiple times).
+ */
+export const globalCronScheduler = new CronSchedulerService();
