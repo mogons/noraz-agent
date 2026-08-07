@@ -206,6 +206,7 @@ async function runWizard() {
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
   let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
   let uniswapApiKey = existingEnv.UNISWAP_API_KEY || '';
+  let jupiterApiKey = existingEnv.JUPITER_API_KEY || '';
 
   const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Solana/LP Agents]';
   const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
@@ -230,6 +231,10 @@ async function runWizard() {
   const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/Robinhood Entry via Uniswap API]';
   const inputUniswap = await askQuestion(` 6. UNISWAP_API_KEY (Uniswap Trade API — EVM/Robinhood swap entry)${defaultUniswap}: `);
   uniswapApiKey = inputUniswap.trim() || uniswapApiKey;
+
+  const defaultJupiter = jupiterApiKey ? ` [Default: ${jupiterApiKey.slice(0, 8)}...]` : ' [Optional — higher rate limits for Solana Jupiter quotes]';
+  const inputJupiter = await askQuestion(` 7. JUPITER_API_KEY (Jupiter API — optional, Solana swap entry rate limits)${defaultJupiter}: `);
+  jupiterApiKey = inputJupiter.trim() || jupiterApiKey;
 
   // 6. WEB3 RPC ENDPOINTS
   console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS & HIGH-VELOCITY NETWORK NODES');
@@ -343,6 +348,7 @@ TWITTER_BEARER_TOKEN=${twexApiKey.trim()}
 GOPLUS_API_KEY=${goplusApiKey.trim()}
 POLYMARKET_PRIVATE_KEY=${polymarketPrivateKey.trim()}
 UNISWAP_API_KEY=${uniswapApiKey.trim()}
+JUPITER_API_KEY=${jupiterApiKey.trim()}
 
 # Web3 RPC Endpoints & High-Velocity Network Nodes
 SOLANA_RPC_URL=${solanaRpcUrl.trim()}

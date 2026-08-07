@@ -38,6 +38,7 @@ export class SolanaTradeAdapter {
   private fallbackRpcUrls: string[];
   private currentRpcIndex: number = 0;
   private isDryRun: boolean;
+  private jupiterApiKey?: string;
 
   constructor() {
     const primaryRpc = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
@@ -50,6 +51,12 @@ export class SolanaTradeAdapter {
 
     this.connection = new Connection(this.fallbackRpcUrls[0], 'confirmed');
     this.isDryRun = isDryRunMode();
+    this.jupiterApiKey = process.env.JUPITER_API_KEY || undefined;
+  }
+
+  /** Optional Jupiter API key header (higher rate limits); safe to omit. */
+  private jupiterHeaders(): Record<string, string> {
+    return this.jupiterApiKey ? { 'x-api-key': this.jupiterApiKey } : {};
   }
 
   /** Get active connection with automatic failover fallback on connection errors */
@@ -76,7 +83,7 @@ export class SolanaTradeAdapter {
       const timer = setTimeout(() => controller.abort(), 10_000);
       try {
         const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${request.outputMint}&amount=${Math.round(request.amountSol * 1e9)}&slippageBps=${request.slippageBps || 150}`;
-        const quoteRes = await fetch(quoteUrl, { signal: controller.signal });
+        const quoteRes = await fetch(quoteUrl, { signal: controller.signal, headers: this.jupiterHeaders() });
         clearTimeout(timer);
         if (!quoteRes.ok) {
           return { success: false, inputSol: request.amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: `Jupiter Quote Failed: ${await quoteRes.text()}` };
@@ -209,7 +216,7 @@ export class SolanaTradeAdapter {
       try {
         const lamports = Math.round(amountSol * 1e9);
         const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMintAddr}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippageBps || 150}`;
-        const quoteRes = await fetch(quoteUrl, { signal: controller.signal });
+        const quoteRes = await fetch(quoteUrl, { signal: controller.signal, headers: this.jupiterHeaders() });
         clearTimeout(timer);
         if (!quoteRes.ok) {
           return { success: false, inputSol: amountSol, outputTokens: 0, priceImpactPercentage: 0, simulated: true, error: `Jupiter Quote Failed: ${await quoteRes.text()}` };
@@ -237,7 +244,7 @@ export class SolanaTradeAdapter {
       // 1. Get Jupiter quote
       const lamports = Math.round(amountSol * 1e9);
       const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMintAddr}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippageBps || 150}`;
-      const quoteRes = await fetch(quoteUrl);
+      const quoteRes = await fetch(quoteUrl, { headers: this.jupiterHeaders() });
 
       if (!quoteRes.ok) {
         throw new Error(`Jupiter Quote Failed: ${await quoteRes.text()}`);
@@ -254,7 +261,7 @@ export class SolanaTradeAdapter {
       // 2. Get Jupiter swap transaction
       const swapRes = await fetch('https://quote-api.jup.ag/v6/swap', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.jupiterHeaders() },
         body: JSON.stringify({
           quoteResponse: quoteData,
           userPublicKey,
