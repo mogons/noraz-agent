@@ -164,13 +164,26 @@ export async function handleControlRoomMessage(
   }
 
   // 0h. Natural Language API Key Setup intent
-  if (lowerQuery.includes('set_api_key') || lowerQuery.includes('set key') || lowerQuery.includes('pasang key') || lowerQuery.includes('setup api key') || lowerQuery.includes('set api key') || lowerQuery.includes('_api_key=')) {
-    const match = userQuery.match(/([A-Z0-9_]+_API_KEY|[A-Z0-9_]+_KEY|[A-Z0-9_]+_URL|[A-Z0-9_]+_TOKEN)\s*[:=]\s*([^\s]+)/i);
+  if (lowerQuery.includes('set_api_key') || lowerQuery.includes('set key') || lowerQuery.includes('pasang key') || lowerQuery.includes('setup api key') || lowerQuery.includes('set api key') || lowerQuery.includes('_api_key=') || lowerQuery.includes('_provider=') || lowerQuery.includes('_model_name=') || lowerQuery.includes('_base_url=')) {
+    const match = userQuery.match(/([A-Z][A-Z0-9_]{2,})\s*[:=]\s*([^\s]+)/i);
     if (match) {
       const keyName = match[1].toUpperCase();
-      const keyValue = match[2];
-      const result = await toolRegistry.executeToolCall('set_api_key', { keyName, keyValue });
-      await message.reply(`${result.message}\nSub-agent API key status re-evaluated.`);
+      const keyValue = match[2].replace(/[`"'.,;]+$/, '');
+      // AI provider/model/base-url changes go through switch_ai_model (runtime + .env), others via set_api_key
+      if (keyName === 'AI_PROVIDER' || keyName === 'AI_MODEL_NAME' || keyName === 'AI_BASE_URL') {
+        const provider = keyName === 'AI_PROVIDER' ? keyValue : undefined;
+        const modelName = keyName === 'AI_MODEL_NAME' ? keyValue : undefined;
+        const baseUrl = keyName === 'AI_BASE_URL' ? keyValue : undefined;
+        const result = await toolRegistry.executeToolCall('switch_ai_model', {
+          provider: provider || '',
+          modelName: modelName || '',
+          baseUrl: baseUrl || '',
+        });
+        await message.reply(`${result.message}\n\n💡 **AI config aktif sekarang.** Kalau kamu set provider/model, pastikan \`AI_BASE_URL\` juga sudah benar (cek via "Athena, apa AI yang kamu pakai?").`);
+      } else {
+        const result = await toolRegistry.executeToolCall('set_api_key', { keyName, keyValue });
+        await message.reply(`${result.message}\nSub-agent API key status re-evaluated.`);
+      }
       return;
     }
   }

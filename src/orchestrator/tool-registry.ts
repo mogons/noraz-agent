@@ -351,16 +351,28 @@ export class ToolRegistry {
         }
 
         case 'switch_ai_model': {
-          if (this.aiService && args.provider && args.modelName) {
-            this.aiService.updateProviderConfig(args.provider, args.modelName);
+          if (this.aiService && (args.provider || args.modelName || args.baseUrl)) {
+            if (args.provider || args.modelName) {
+              this.aiService.updateProviderConfig(args.provider || '', args.modelName || '');
+            }
+            if (args.baseUrl) {
+              this.aiService.updateConfig({ baseUrl: args.baseUrl });
+            }
+            // Persist to .env so the change survives restarts
+            const { ApiKeyGuardService } = await import('../services/api-key-guard.js');
+            const guard = new ApiKeyGuardService();
+            const providerSaved = args.provider ? guard.setApiKeyRuntimeAndEnv('AI_PROVIDER', args.provider) : true;
+            const modelSaved = args.modelName ? guard.setApiKeyRuntimeAndEnv('AI_MODEL_NAME', args.modelName) : true;
+            const baseUrlSaved = args.baseUrl ? guard.setApiKeyRuntimeAndEnv('AI_BASE_URL', args.baseUrl) : true;
+            const persisted = providerSaved && modelSaved && baseUrlSaved;
             return {
               success: true,
-              message: `AI Model switched to provider: ${args.provider} | Model: ${args.modelName}`,
+              message: `AI config updated: ${args.provider ? `provider=${args.provider} ` : ''}${args.modelName ? `model=${args.modelName} ` : ''}${args.baseUrl ? `baseUrl=${args.baseUrl}` : ''} (${persisted ? 'persisted to .env' : 'FAILED to persist — check .env permissions'}).`,
             };
           }
           return {
             success: false,
-            message: 'Failed to switch AI model: Provider or modelName missing.',
+            message: 'Failed to switch AI model: Provider, modelName, or baseUrl missing.',
           };
         }
 
