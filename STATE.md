@@ -55,3 +55,9 @@
 | services (backtester/analytics/db) | ⏳ FASE 2 | | |
 | security | ⏳ FASE 2 | prompt injection symbol→embed | |
 | observability/DX | ⏳ FASE 2 | REST cuma 2 endpoint | |
+
+## FASE 1 COMPLETE (2026-08-08)
+- All 8 agents on shared contract (perps/nft/prediction/ct-alpha migrated)
+- hub registry-driven, swarm dedup removed, thin dispatch x8, timeout, auto-execute perps+prediction
+- Tests: 236/236 green
+- loop-audit checkpoint #1: see below
