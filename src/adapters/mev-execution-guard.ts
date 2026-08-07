@@ -1,7 +1,5 @@
-/**
- * Athena 2.0 - Pre-Flight Tx Simulation & MEV Protection (MEVExecutionGuard)
- * Provides private RPC routing (Flashbots / Jito Bundles), dynamic priority fees, and pre-flight simulation.
- */
+import { Connection, Transaction } from '@solana/web3.js';
+import { createPublicClient, http } from 'viem';
 
 export interface TransactionSimulationResult {
   success: boolean;
@@ -11,59 +9,57 @@ export interface TransactionSimulationResult {
 }
 
 export class MEVExecutionGuard {
-  /**
-   * Pre-flight simulation before submitting transaction on-chain
-   */
-  public async simulateTransaction(
-    chain: 'solana' | 'evm',
-    txPayload: any
-  ): Promise<TransactionSimulationResult> {
+  private solanaRpc: string;
+  private evmRpc: string;
+
+  constructor() {
+    this.solanaRpc = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+    this.evmRpc = process.env.EVM_RPC_URL || process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+  }
+
+  public async simulateTransaction(chain: 'solana' | 'evm', txPayload: any): Promise<TransactionSimulationResult> {
     try {
       if (chain === 'solana') {
-        // Mock / Dry-Run pre-flight check for Solana simulateTransaction
-        return {
-          success: true,
-          estimatedGasUnits: 5000,
-          simulatedSlippagePercent: 0.5,
-        };
-      } else {
-        // Mock / Dry-Run pre-flight check for EVM eth_call / eth_estimateGas
-        return {
-          success: true,
-          estimatedGasUnits: 180000,
-          simulatedSlippagePercent: 0.3,
-        };
+        if (!txPayload?.serializedTransaction) {
+          return { success: false, errorMessage: 'Missing serializedTransaction for Solana simulation.' };
+        }
+        const connection = new Connection(this.solanaRpc, 'confirmed');
+        const tx = Transaction.from(Buffer.from(txPayload.serializedTransaction, 'base64'));
+        const sim = await connection.simulateTransaction(tx);
+        if (sim.value.err) {
+          return { success: false, errorMessage: String(sim.value.err) };
+        }
+        return { success: true, estimatedGasUnits: sim.value.unitsConsumed ?? undefined, simulatedSlippagePercent: 0 };
       }
-    } catch (err: any) {
-      return {
-        success: false,
-        errorMessage: err?.message || 'Pre-flight transaction simulation failed.',
-      };
+
+      if (chain === 'evm') {
+        if (!txPayload?.from || !txPayload?.to || !txPayload?.data) {
+          return { success: false, errorMessage: 'Missing from/to/data for EVM simulation.' };
+        }
+        const client = createPublicClient({ transport: http(this.evmRpc) });
+        const gas = await client.estimateGas({
+          account: txPayload.from,
+          to: txPayload.to,
+          data: txPayload.data,
+          value: txPayload.value ? BigInt(txPayload.value) : undefined,
+        });
+        return { success: true, estimatedGasUnits: Number(gas), simulatedSlippagePercent: 0 };
+      }
+      return { success: false, errorMessage: 'Unknown chain.' };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, errorMessage: message };
     }
   }
 
-  /**
-   * Get dynamic priority fee estimate based on network congestion
-   */
   public getDynamicPriorityFeeGwei(chain: 'solana' | 'evm'): number {
-    if (chain === 'solana') {
-      // Solana priority fee in microLamports (e.g. 50,000)
-      return 50000;
-    }
-    // EVM priority fee in Gwei (e.g. 1.5 Gwei for Base L2)
-    return 1.5;
+    if (chain === 'solana') return Number(process.env.SOLANA_PRIORITY_FEE_MICRO || 0);
+    return Number(process.env.EVM_PRIORITY_FEE_GWEI || 0);
   }
 
-  /**
-   * Return private RPC endpoint for MEV / Sandwich attack protection
-   */
   public getPrivateRoutingEndpoint(chain: 'solana' | 'evm'): string {
-    if (chain === 'solana') {
-      // Jito Block Engine endpoint for private bundle submission
-      return process.env.JITO_BLOCK_ENGINE_URL || 'https://mainnet.block-engine.jito.labs';
-    }
-    // Flashbots Protect RPC for EVM
-    return process.env.FLASHBOTS_RPC_URL || 'https://rpc.flashbots.net';
+    if (chain === 'solana') return process.env.JITO_BLOCK_ENGINE_URL || '';
+    return process.env.FLASHBOTS_RPC_URL || '';
   }
 }
 
