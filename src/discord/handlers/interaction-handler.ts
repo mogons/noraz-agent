@@ -679,9 +679,18 @@ async function handleButtonPress(interaction: ButtonInteraction, hub: AthenaHub)
   } else if (customId.startsWith('execute_prediction_no_')) {
     const symbol = customId.replace('execute_prediction_no_', '');
     await interaction.reply({ content: `🛑 **Polymarket Order Triggered:** Placing **50 USDC NO Bet** on event: **${symbol}** (Polygon L2)... (DRY_RUN Simulated)`, ephemeral: true });
+  } else if (customId.startsWith('start_channel_')) {
+    const domain = customId.replace('start_channel_', '');
+    hub.toggleChannelScreening(interaction.channelId, domain, true);
+    await interaction.reply({ content: `⚡ **Channel Screening Activated** for domain: \`${domain}\` in <#${interaction.channelId}>! Sub-agent active.`, ephemeral: false });
   } else if (customId.startsWith('pause_channel_')) {
     const domain = customId.replace('pause_channel_', '');
     hub.toggleChannelScreening(interaction.channelId, domain, false);
-    await interaction.reply({ content: `⏸️ **Channel Screening Paused** for domain: \`${domain}\`.`, ephemeral: false });
+    await interaction.reply({ content: `⏸️ **Channel Screening Paused** for domain: \`${domain}\` in <#${interaction.channelId}>. Sub-agent paused.`, ephemeral: false });
+  } else if (customId.startsWith('trigger_pass_')) {
+    const domain = customId.replace('trigger_pass_', '');
+    await interaction.deferReply({ ephemeral: false });
+    const results = await hub.triggerAgentPass(domain);
+    await interaction.editReply(`🔎 **On-Demand Screening Pass Triggered** for domain \`${domain}\`! Audited ${results.length} candidate signals.`);
   }
 }

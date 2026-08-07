@@ -73,8 +73,12 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         .setURL(tweetUrl)
         .setStyle(ButtonStyle.Link),
       new ButtonBuilder()
+        .setCustomId('start_channel_ct-alpha')
+        .setLabel('⚡ Start CT Alpha')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
         .setCustomId('pause_channel_ct-alpha')
-        .setLabel('⏸️ Pause CT Alpha Screening')
+        .setLabel('⏸️ Pause CT Alpha')
         .setStyle(ButtonStyle.Secondary)
     );
 
