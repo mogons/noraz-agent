@@ -148,6 +148,8 @@ async function runWizard() {
     console.log(' [6] Custom OpenAI-Compatible Endpoint');
   }
 
+  // IMPORTANT: when an AI provider already exists, default choice = 1 (keep existing),
+  // so running the wizard to update OTHER keys never clobbers the AI config.
   const defaultChoiceStr = existingProvider ? '1' : (detectedProvider === 'opencode' ? '1' : (detectedProvider === 'zai' ? '2' : '3'));
   const providerChoice = await askQuestion(` Choice [Default ${defaultChoiceStr}]: `) || defaultChoiceStr;
 
@@ -311,64 +313,80 @@ async function runWizard() {
 
   const primaryAiKey = allKeys[0] || '';
 
-  let envContent = `NODE_ENV=production
-DRY_RUN=${isDryRun}
-LOG_LEVEL=info
+  // ── MERGE-BASED .env WRITE ─────────────────────────────────────────────
+  // Never clobber the whole file: keep every existing key, only update the
+  // values this wizard run collected. Unknown/extra keys survive untouched.
+  const updates = {
+    NODE_ENV: 'production',
+    DRY_RUN: isDryRun,
+    LOG_LEVEL: 'info',
+    SIMULATION_BALANCE_SOL: simSolBalance.trim(),
+    SIMULATION_BALANCE_ETH: simEthBalance.trim(),
+    SIMULATION_BALANCE_POLYMARKET: simPolyBalance.trim(),
+    SIMULATION_BALANCE_HYPERLIQUID: simHlBalance.trim(),
+    DISCORD_BOT_TOKEN: botToken.trim(),
+    DISCORD_CLIENT_ID: clientId.trim(),
+    TELEGRAM_BOT_TOKEN: telegramToken.trim(),
+    TELEGRAM_CHAT_ID: telegramChatId.trim(),
+    AI_PROVIDER: provider,
+    AI_BASE_URL: baseUrl,
+    AI_API_KEYS: combinedKeys,
+    AI_API_KEY: primaryAiKey,
+    AI_MODEL_NAME: modelName,
+    OPENROUTER_API_KEY: primaryAiKey,
+    OPENAI_API_KEY: primaryAiKey,
+    ANTHROPIC_API_KEY: primaryAiKey,
+    GMGN_API_KEY: gmgnApiKey.trim(),
+    OPENSEA_API_KEY: openseaApiKey.trim(),
+    TWEX_API_KEY: twexApiKey.trim(),
+    TWITTER_BEARER_TOKEN: twexApiKey.trim(),
+    GOPLUS_API_KEY: goplusApiKey.trim(),
+    POLYMARKET_PRIVATE_KEY: polymarketPrivateKey.trim(),
+    UNISWAP_API_KEY: uniswapApiKey.trim(),
+    JUPITER_API_KEY: jupiterApiKey.trim(),
+    SOLANA_RPC_URL: solanaRpcUrl.trim(),
+    SOLANA_WSS_URL: solanaWssUrl.trim(),
+    EVM_BASE_RPC_URL: evmBaseRpcUrl.trim(),
+    EVM_RPC_URL: evmBaseRpcUrl.trim(),
+    EVM_ETH_RPC_URL: evmEthRpcUrl.trim(),
+    EVM_ROBINHOOD_RPC_URL: evmRobinhoodRpcUrl.trim(),
+    SOLANA_PRIVATE_KEY: solanaPrivateKey.trim(),
+    EVM_PRIVATE_KEY: evmPrivateKey.trim(),
+    HYPERLIQUID_PRIVATE_KEY: hyperliquidPrivateKey.trim(),
+    RUGCHECK_API_URL: 'https://api.rugcheck.xyz/v1',
+  };
 
-# Simulated Starting Balance (Used in DRY_RUN / Demo mode)
-SIMULATION_BALANCE_SOL=${simSolBalance.trim()}
-SIMULATION_BALANCE_ETH=${simEthBalance.trim()}
-SIMULATION_BALANCE_POLYMARKET=${simPolyBalance.trim()}
-SIMULATION_BALANCE_HYPERLIQUID=${simHlBalance.trim()}
+  let mergedLines = [];
+  if (fs.existsSync(envPath)) {
+    const rawEnv = fs.readFileSync(envPath, 'utf8');
+    const seen = new Set();
+    for (const line of rawEnv.split('\n')) {
+      const match = line.match(/^([^#][^=]*)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        if (key in updates) {
+          mergedLines.push(`${key}=${updates[key]}`);
+          seen.add(key);
+        } else {
+          mergedLines.push(line); // preserve unknown keys verbatim
+        }
+      } else {
+        mergedLines.push(line); // preserve comments/blank lines
+      }
+    }
+    // Append any wizard keys that didn't exist yet
+    for (const [key, val] of Object.entries(updates)) {
+      if (!seen.has(key)) {
+        mergedLines.push(`${key}=${val}`);
+      }
+    }
+  } else {
+    for (const [key, val] of Object.entries(updates)) {
+      mergedLines.push(`${key}=${val}`);
+    }
+  }
 
-# Discord Credentials
-DISCORD_BOT_TOKEN=${botToken.trim()}
-DISCORD_CLIENT_ID=${clientId.trim()}
-DISCORD_GUILD_ID=
-
-# Telegram Credentials
-TELEGRAM_BOT_TOKEN=${telegramToken.trim()}
-TELEGRAM_CHAT_ID=${telegramChatId.trim()}
-
-# AI Provider Configuration & Stacked Backup Keys
-AI_PROVIDER=${provider}
-AI_BASE_URL=${baseUrl}
-AI_API_KEYS=${combinedKeys}
-AI_API_KEY=${primaryAiKey}
-AI_MODEL_NAME=${modelName}
-OPENROUTER_API_KEY=${primaryAiKey}
-OPENAI_API_KEY=${primaryAiKey}
-ANTHROPIC_API_KEY=${primaryAiKey}
-
-# Pro Market Data & Security Audit APIs
-GMGN_API_KEY=${gmgnApiKey.trim()}
-OPENSEA_API_KEY=${openseaApiKey.trim()}
-TWEX_API_KEY=${twexApiKey.trim()}
-TWITTER_BEARER_TOKEN=${twexApiKey.trim()}
-GOPLUS_API_KEY=${goplusApiKey.trim()}
-POLYMARKET_PRIVATE_KEY=${polymarketPrivateKey.trim()}
-UNISWAP_API_KEY=${uniswapApiKey.trim()}
-JUPITER_API_KEY=${jupiterApiKey.trim()}
-
-# Web3 RPC Endpoints & High-Velocity Network Nodes
-SOLANA_RPC_URL=${solanaRpcUrl.trim()}
-SOLANA_WSS_URL=${solanaWssUrl.trim()}
-EVM_BASE_RPC_URL=${evmBaseRpcUrl.trim()}
-EVM_RPC_URL=${evmBaseRpcUrl.trim()}
-EVM_ETH_RPC_URL=${evmEthRpcUrl.trim()}
-EVM_ROBINHOOD_RPC_URL=${evmRobinhoodRpcUrl.trim()}
-
-
-# Web3 Burner Wallets & Perps Account Keys
-SOLANA_PRIVATE_KEY=${solanaPrivateKey.trim()}
-EVM_PRIVATE_KEY=${evmPrivateKey.trim()}
-HYPERLIQUID_PRIVATE_KEY=${hyperliquidPrivateKey.trim()}
-
-# Security Audit Endpoints
-RUGCHECK_API_URL=https://api.rugcheck.xyz/v1
-`;
-
-  fs.writeFileSync(envPath, envContent, 'utf8');
+  fs.writeFileSync(envPath, mergedLines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n', 'utf8');
 
   console.log('\n======================================================');
   console.log('✅ Configuration file (.env) successfully generated!');
