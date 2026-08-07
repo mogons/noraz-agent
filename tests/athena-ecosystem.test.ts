@@ -20,37 +20,32 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       volume1hUsd: 75000,
       securityAuditPassed: true,
       socialHypeScore: 88,
+      confidence: 85,
     });
 
     expect(result.confidenceScore).toBeGreaterThanOrEqual(80);
     expect(result.passed).toBe(true);
   });
 
-  it('2. Solana Meme Agent: Should evaluate Solana DEX signals', () => {
+  it('2. Solana Meme Agent: preFilter + detectSignal with real GMGN fields', () => {
     const agent = new SolanaScreeningAgent();
-    const report = agent.detectRevivalAndCTO(
-      {
-        symbol: 'SOLMEME',
-        contractAddress: 'So11111111111111111111111111111111111111112',
-        volume24hUsd: 150000,
-        smartMoneyNetBuySolOrEth: 12,
-        devHoldingPercentage: 0.5,
-        smartMoneyCount: 3,
-        dexscreenerUrl: 'https://dexscreener.com/solana',
-      },
-      {
-        mintAuthorityDisabled: true,
-        freezeAuthorityDisabled: true,
-        lpBurnedPercentage: 100,
-        top10HoldersPercentage: 12.5,
-        isHoneypot: false,
-        score: 95,
-        riskLevel: 'GOOD',
-      }
-    );
-
-    expect(report.isCTO).toBe(true);
-    expect(report.volumeSpikeRatio).toBeGreaterThanOrEqual(5.0);
+    const det = agent.detectSignal({
+      chain: 'sol', address: 'So11111111111111111111111111111111111111112',
+      symbol: 'SOLMEME', name: 'Sol Meme', priceUsd: 0.001, marketCapUsd: 100000,
+      volume24hUsd: 150000, liquidityUsd: 40000, buys: 700, sells: 300, swaps: 1000,
+      holderCount: 300, top10HolderRate: 0.1, devTeamHoldRate: 0.005,
+      creatorClose: true, creatorTokenStatus: 'creator_close',
+      smartDegenCount: 3, renownedCount: 1, bundlerRate: 0.05,
+      ratTraderAmountRate: 0.01, rugRatio: 0.02, isWashTrading: false,
+      ctoFlag: true, renouncedMint: true, renouncedFreeze: true,
+      creationTimestamp: Date.now()/1000 - 6*3600, openTimestamp: Date.now()/1000 - 6*3600,
+      priceChange1m: 1, priceChange5m: 4, priceChange1h: 90,
+      visitingCount: 250, squareMentions: 5, twitterRenameCount: 0,
+      twitterDelPostCount: 0, twitterCreateTokenCount: 0,
+      buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, source: 'gmgn',
+    });
+    expect(det.type).toBe('CTO');
+    expect(det.confidence).toBeGreaterThanOrEqual(80);
   });
 
   it('3. EVM Meme Agent: evaluates EVM signals with real GoPlus security audit', async () => {
