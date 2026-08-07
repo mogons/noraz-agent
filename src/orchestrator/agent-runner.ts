@@ -40,11 +40,16 @@ export async function runAgent(
     lastText = resp.content;
 
     for (const tc of resp.toolCalls) {
-      messages.push({
+      const assistantMsg: any = {
         role: 'assistant',
         content: lastText || '',
         tool_calls: [{ id: tc.id, type: 'function', function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } }],
-      });
+      };
+      // DeepSeek/thinking models require reasoning_content to be passed back on follow-up rounds
+      if (resp.reasoningContent) {
+        assistantMsg.reasoning_content = resp.reasoningContent;
+      }
+      messages.push(assistantMsg);
 
       let result: { success: boolean; message: string; data?: any };
       try {

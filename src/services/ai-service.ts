@@ -29,6 +29,7 @@ export interface LLMToolCall {
 export interface LLMResponse {
   content: string;
   toolCalls: LLMToolCall[];
+  reasoningContent?: string;
 }
 
 export class AIService {
@@ -238,6 +239,7 @@ export class AIService {
             const message = data.choices?.[0]?.message;
             if (message) {
               const content = String(message.content || '').trim();
+              const reasoningContent = message.reasoning_content ? String(message.reasoning_content) : undefined;
               const rawCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
               const toolCalls: LLMToolCall[] = rawCalls
                 .map((c: any) => {
@@ -250,7 +252,7 @@ export class AIService {
                   };
                 })
                 .filter((c: LLMToolCall) => c.name);
-              return { content, toolCalls };
+              return { content, toolCalls, reasoningContent };
             }
           } catch {
             // fall through to error handling
