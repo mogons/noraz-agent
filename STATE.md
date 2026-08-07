@@ -28,13 +28,19 @@
 ## Task Status (FASE 1 — Architecture Unification)
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 1 | Perps contract + calibration | ✅ DONE (deac83e) | Belum di-review/merge — review tertunda saat user interupsi |
+| 1 | Perps contract + calibration | ✅ DONE + MERGED (7628be5) | Reviewed approved; mega tier OI≥$1B +25 justified (BTC/ETH hit 80 live) |
 | 2 | NFT contract | ⏳ wt-A | |
 | 3 | Prediction contract | ⏳ wt-A | |
 | 4 | CT-Alpha contract | ⏳ wt-B | TWEX key = user blocker (WAITING FOR HUMAN nanti) |
 | 5 | Hub registry + swarm dedup | ⏳ wt-C | |
 | 6 | index.ts unified ×8 + timeout + auto-execute | ⏳ wt-C | |
 | 7 | Final verification | ⏳ kapten | |
+
+## Deploy Log
+| Date | Commit | VPS status |
+|---|---|---|
+| 2026-08-07 | beb9549 (wallet-tracking) | ✅ deployed (user ran athena update) |
+| 2026-08-07 | 7628be5 (perps contract) | ⏳ belum deploy |
 
 ## Audit Log (FASE 2 nanti — catat di sini, jangan re-read)
 | Area | Status | Temuan | Prioritas |
@@ -49,8 +55,3 @@
 | services (backtester/analytics/db) | ⏳ FASE 2 | | |
 | security | ⏳ FASE 2 | prompt injection symbol→embed | |
 | observability/DX | ⏳ FASE 2 | REST cuma 2 endpoint | |
-
-## Deploy Log
-| Date | Commit | VPS status |
-|---|---|---|
-| 2026-08-07 | beb9549 (wallet-tracking) | ✅ deployed (user ran athena update) |
