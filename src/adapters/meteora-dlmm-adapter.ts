@@ -187,7 +187,7 @@ export class MeteoraDLMMAdapter {
   /**
    * High-yield filter on REAL metrics. Thresholds:
    * - fees >= $7 in 1h (real fee income)
-   * - 24h Fee/TVL > 1% (yield fee NYATA 24 jam terakhir — lebih cocok untuk
+   * - 24h Fee/TVL > 2% (yield fee NYATA 24 jam terakhir — lebih cocok untuk
    *   trader harian daripada APR annualized yang mengasumsikan kondisi 24 jam
    *   berulang setahun penuh)
    * - volume/ACTIVE TVL >= 100% per 1h (velocity: capital aktif berputar penuh)
@@ -204,7 +204,7 @@ export class MeteoraDLMMAdapter {
       // Market cap tokenX wajib > $100k (fail-closed: 0/tidak diketahui = tolak).
       const passesMc = pool.tokenXMarketCapUsd >= 100000;
       const passesFees = pool.fee1hUsd >= 7;
-      const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;
+      const passesFeeYield24h = pool.feesToTvlRatio24h > 0.02;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
       if (!(passesTvl && passesVol24h && passesMc && passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
