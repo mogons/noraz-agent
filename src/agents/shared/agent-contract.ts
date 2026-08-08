@@ -22,6 +22,8 @@ export interface CallCardPayload {
   bundlerPct?: string;
   dexPaidStatus?: string;
   smartMoneyInfo?: string;
+  /** Informational only (never a filter): apakah token terverifikasi di platform (Meteora blue check, dll). */
+  tokenVerified?: boolean;
   confidenceScore?: number;
   securityScore?: string;
   aiThesis: string;

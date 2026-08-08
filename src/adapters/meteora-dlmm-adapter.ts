@@ -21,6 +21,7 @@ export interface MeteoraPoolSignal {
   fees24hSol: number;
   feeAprPercentage: number;
   feesToTvlRatio1h: number;
+  feesToActiveTvlRatio1h: number;
   volumeToTvlRatio1h: number;
   volumeToActiveTvlRatio1h: number;
   organicVolumeScore1h: number;
@@ -130,6 +131,7 @@ export class MeteoraDLMMAdapter {
         const feeRate = volume1hUsd > 0 ? fee1hUsd / volume1hUsd : 0;
         const activeTvlUsd = feeRate > 0 ? feeRate * tvlUsd : tvlUsd * 0.3;
         const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
+        const feesToActiveTvlRatio1h = activeTvlUsd > 0 ? fee1hUsd / activeTvlUsd : 0;
         const organicVolumeScore1h = Math.min(100, Math.round(40 + volumeToTvlRatio1h * 600));
         const tokenAgeSec = Number(p.created_at) > 0 ? Date.now() / 1000 - Number(p.created_at) / 1000 : 0;
         const fees24hUsd = Number(p.fees?.['24h']) || 0;
@@ -147,6 +149,7 @@ export class MeteoraDLMMAdapter {
           fees24hSol: solPriceUsd > 0 ? fees24hUsd / solPriceUsd : 0,
           feeAprPercentage: Number((feeTvlRatioPct1h * 24 * 365).toFixed(1)) || 0,
           feesToTvlRatio1h,
+          feesToActiveTvlRatio1h,
           volumeToTvlRatio1h,
           volumeToActiveTvlRatio1h,
           organicVolumeScore1h,
@@ -176,23 +179,22 @@ export class MeteoraDLMMAdapter {
   /**
    * High-yield filter on REAL metrics. Thresholds per-1h:
    * - fees >= $7 in 1h (real fee income)
-   * - volume turnover >= 100% of ACTIVE TVL per 1h (velocity: capital aktif
-   *   berputar penuh tiap jam — indikator pool yang benar-benar diperdagangkan)
-   * - annualized fee yield > 100% (feeAprPercentage: pool menghasilkan fee
-   *   setara >100% TVL per tahun — mustahil dihitung per-jam, lihat README)
-   * - verified token (anti-scam: Meteora "blue check")
+   * - fees/ACTIVE TVL > 0.1% per 1h (fee yield atas modal aktif yang
+   *   benar-benar menghasilkan — bukan 100%/jam yang mustahil)
+   * - volume/ACTIVE TVL >= 100% per 1h (velocity: capital aktif berputar penuh)
    * - age >= 2h (pool mapan, bukan fresh rug-bait)
+   * Token verified TIDAK difilter (DLMM = likuiditas komunitas; verified-only
+   * terlalu mengecilkan pool) — hanya di-surface sebagai info di call card.
    * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
    */
   public filterHighYieldPools(pools: MeteoraPoolSignal[]): MeteoraPoolSignal[] {
     const bestByPair = new Map<string, MeteoraPoolSignal>();
     for (const pool of pools) {
       const passesFees = pool.fee1hUsd >= 7;
+      const passesFeeYield = pool.feesToActiveTvlRatio1h > 0.001;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
-      const passesApr = pool.feeAprPercentage > 100;
-      const passesVerified = pool.tokenXVerified;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesFees && passesVelocity && passesApr && passesVerified && passesAge)) continue;
+      if (!(passesFees && passesFeeYield && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.tokenXSymbol}-${pool.tokenYSymbol}`.toUpperCase();
       const existing = bestByPair.get(pairKey);

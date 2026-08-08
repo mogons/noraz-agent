@@ -88,6 +88,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     fees24hSol: 0,
     feeAprPercentage: 500, // > 100% annualized
     feesToTvlRatio1h: 0.00013, // 0.013% / 100
+    feesToActiveTvlRatio1h: 0.0067, // 0.67%/jam > 0.1%
     volumeToTvlRatio1h: 0.033,
     volumeToActiveTvlRatio1h: 1.67, // >= 1.0 (100%+ active TVL per jam)
     organicVolumeScore1h: 60,
@@ -107,18 +108,20 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     ...over,
   });
 
-  it('filterHighYieldPools keeps real-yield verified pools and dedupes per pair', () => {
+  it('filterHighYieldPools keeps real-yield pools and dedupes per pair', () => {
     const adapter = new MeteoraDLMMAdapter();
     const good = mkSignal();
     const secondSamePair = mkSignal({ poolAddress: 'pool456', tvlUsd: 300000, feesToTvlRatio1h: 0.0002 });
     const lowFees = mkSignal({ poolAddress: 'pool789', fee1hUsd: 5 });
     const lowVelocity = mkSignal({ poolAddress: 'pool800', volumeToActiveTvlRatio1h: 0.5 });
-    const lowApr = mkSignal({ poolAddress: 'pool801', feeAprPercentage: 50 });
-    const unverified = mkSignal({ poolAddress: 'pool999', tokenXVerified: false });
+    const lowFeeYield = mkSignal({ poolAddress: 'pool801', feesToActiveTvlRatio1h: 0.0005 });
     const young = mkSignal({ poolAddress: 'pool1000', tokenAgeMinutes: 60 });
+    // verified tidak difilter (DLMM = likuiditas komunitas) — unverified tetap lolos,
+    // pair beda (CATE-SOL) supaya tidak kena dedupe SOL-USDC
+    const unverified = mkSignal({ poolAddress: 'pool999', tokenXVerified: false, pairName: 'CATE-SOL', tokenXSymbol: 'CATE' });
 
-    const passed = adapter.filterHighYieldPools([good, secondSamePair, lowFees, lowVelocity, lowApr, unverified, young]);
-    expect(passed.length).toBe(1); // best per pair only (higher fee ratio wins)
+    const passed = adapter.filterHighYieldPools([good, secondSamePair, lowFees, lowVelocity, lowFeeYield, young, unverified]);
+    expect(passed.length).toBe(2); // best SOL-USDC + unverified CATE-SOL (verified bukan filter)
     expect(passed[0].poolAddress).toBe('pool456');
   });
 

@@ -126,6 +126,14 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       { name: 'Est. 24h Fee APR', value: payload.feeApr || 'N/A', inline: true }
     );
 
+    if (payload.tokenVerified !== undefined) {
+      embed.addFields({
+        name: '🛡️ Token Verification',
+        value: payload.tokenVerified ? '✅ Verified (Meteora blue check)' : '⚠️ **Unverified** — likuiditas komunitas, DYOR',
+        inline: true,
+      });
+    }
+
     if (payload.lpStrategy) {
       embed.addFields({ name: '🎯 Recommended LP Range & Strategy', value: payload.lpStrategy, inline: false });
     }

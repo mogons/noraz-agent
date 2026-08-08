@@ -74,6 +74,7 @@ export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-evm
     sniperPct: `${(pool.feesToTvlRatio1h * 100).toFixed(2)}% 1h`,
     bundlerPct: `${pool.volumeToTvlRatio1h.toFixed(1)}x vol/TVL`,
     dexPaidStatus: isSolana ? 'Meteora DLMM' : 'Uniswap v3',
+    tokenVerified: (pool as MeteoraPoolSignal).tokenXVerified,
     confidenceScore: 80,
     aiThesis: pool.aiRecommendation,
     liquidityUsd: pool.tvlUsd || 0,

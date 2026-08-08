@@ -10,6 +10,7 @@ export interface UniswapPoolSignal {
   fees24hEth: number;
   feeAprPercentage: number;
   feesToTvlRatio1h: number;
+  feesToActiveTvlRatio1h: number;
   volumeToTvlRatio1h: number;
   volumeToActiveTvlRatio1h: number;
   organicVolumeScore1h: number;
@@ -83,6 +84,7 @@ export class UniswapLPAdapter {
             fees24hEth: ethPriceUsd > 0 ? (fee1hUsd * 24) / ethPriceUsd : 0,
             feeAprPercentage: Number(((fee1hUsd / tvlUsd) * 24 * 365 * 100).toFixed(1)) || 0,
             feesToTvlRatio1h: fee1hUsd / tvlUsd,
+            feesToActiveTvlRatio1h: activeTvlUsd > 0 ? fee1hUsd / activeTvlUsd : 0,
             volumeToTvlRatio1h: volume1hUsd / tvlUsd,
             volumeToActiveTvlRatio1h: activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0,
             organicVolumeScore1h: Math.min(100, 40 + Math.round((volume1hUsd / tvlUsd) * 600)),
@@ -107,8 +109,8 @@ export class UniswapLPAdapter {
   /**
    * High-yield filter (mirror of Meteora, per-1h):
    * - fees >= $7 in 1h (real fee income)
-   * - volume turnover >= 100% of ACTIVE TVL per 1h (velocity)
-   * - annualized fee yield > 100% (feeAprPercentage)
+   * - fees/ACTIVE TVL > 0.1% per 1h (fee yield atas modal aktif)
+   * - volume/ACTIVE TVL >= 100% per 1h (velocity)
    * - age >= 2h (pool mapan)
    * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
    */
@@ -116,10 +118,10 @@ export class UniswapLPAdapter {
     const bestByPair = new Map<string, UniswapPoolSignal>();
     for (const pool of pools) {
       const passesFees = pool.fee1hUsd >= 7;
+      const passesFeeYield = pool.feesToActiveTvlRatio1h > 0.001;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
-      const passesApr = pool.feeAprPercentage > 100;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesFees && passesVelocity && passesApr && passesAge)) continue;
+      if (!(passesFees && passesFeeYield && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.pairName.split(' ')[0]}`.toUpperCase();
       const existing = bestByPair.get(pairKey);
