@@ -132,9 +132,9 @@ describe('SolanaScreeningAgent', () => {
 
   it('preFilter enforces 24H volume gate (minVolume24hUsd)', () => {
     const agent = new SolanaScreeningAgent();
-    // vol24h 300k >= 25k → lolos
+    // vol24h 300k >= 200k → lolos
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
-    // vol24h 20k < 25k → ditolak
+    // vol24h 20k < 200k → ditolak
     const low = agent.preFilter(mkToken({ volume24hUsd: 20000 }), 73.65);
     expect(low.ok).toBe(false);
     expect(low.reason).toContain('volume 24h');

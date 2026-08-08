@@ -95,7 +95,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     organicVolumeScore1h: 60,
     tokenAgeMinutes: 240, // >= 2h
     aiRecommendation: 'test',
-    volume24hUsd: 120000,
+    volume24hUsd: 250000,
     fee24hUsd: 500,
     tokenXSymbol: 'SOL',
     tokenYSymbol: 'USDC',

@@ -13,7 +13,7 @@ export interface RobinhoodSignal {
 }
 
 export interface RobinhoodScreeningConfig {
-  minVolume24hUsd: number;   // 100000
+  minVolume24hUsd: number;   // 200000
   minLiquidityUsd: number;   // 10000
   minAgeHours: number;       // 0 — degen early: token baru langsung lolos (smart money/CTO/KOL jadi penentu)
   maxRugRatio: number;       // 0.3
@@ -28,7 +28,7 @@ export interface RobinhoodScreeningConfig {
 }
 
 const DEFAULT_CONFIG: RobinhoodScreeningConfig = {
-  minVolume24hUsd: 100000,
+  minVolume24hUsd: 200000,
   minLiquidityUsd: 10000,
   minAgeHours: 0,
   maxRugRatio: 0.3,

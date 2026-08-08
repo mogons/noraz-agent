@@ -44,10 +44,10 @@ describe('RobinhoodScreeningAgent', () => {
     expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 0 }))).toBe(0);
   });
 
-  it('preFilter passes a rank-1h-style token (only 1h volume, est 24h > 100k)', () => {
+  it('preFilter passes a rank-1h-style token (only 1h volume, est 24h >= 200k)', () => {
     const agent = new RobinhoodScreeningAgent();
     const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 15000 }), ETH_PRICE);
-    expect(res.ok).toBe(true); // 15k × 24 = 360k ≥ 100k
+    expect(res.ok).toBe(true); // 15k × 24 = 360k ≥ 200k
   });
 
   it('preFilter rejects 1h-only token whose est 24h is below the gate', () => {

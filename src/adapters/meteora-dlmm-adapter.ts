@@ -200,11 +200,12 @@ export class MeteoraDLMMAdapter {
     const bestByPair = new Map<string, MeteoraPoolSignal>();
     for (const pool of pools) {
       const passesTvl = pool.tvlUsd >= 20000;
+      const passesVol24h = pool.volume24hUsd >= 200000;
       const passesFees = pool.fee1hUsd >= 7;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesTvl && passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
+      if (!(passesTvl && passesVol24h && passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.tokenXSymbol}-${pool.tokenYSymbol}`.toUpperCase();
       const existing = bestByPair.get(pairKey);
