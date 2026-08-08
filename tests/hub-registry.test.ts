@@ -4,6 +4,7 @@ import { CTAlphaAgent } from '../src/agents/ct-alpha/ct-alpha-agent.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter, MeteoraPoolSignal } from '../src/adapters/meteora-dlmm-adapter.js';
 import type { KrystalCloudAdapter, KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
+import type { GMGNAdapter } from '../src/adapters/gmgn-adapter.js';
 import type { TwitterService, TweetItem } from '../src/services/twitter-service.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
@@ -71,6 +72,62 @@ const mkKrystalStub = (pools: KrystalPoolSignal[]) => ({
   fetchTopRobinhoodPools: vi.fn(async () => pools),
   filterHighYieldPools: vi.fn((p: KrystalPoolSignal[]) => p),
 } as unknown as KrystalCloudAdapter);
+
+const mkGmgnStub = (infos: Record<string, any>) => ({
+  fetchTokenInfo: vi.fn(async (_chain: string, address: string) => infos[address] ?? null),
+} as unknown as GMGNAdapter);
+
+/** GMGN token info default (aman — semua field security null/clean). */
+const mkGmgnToken = (over: Record<string, any> = {}): any => ({
+  priceUsd: 0.0001,
+  marketCapUsd: 500000,
+  volume24hUsd: 250000,
+  volume1hUsd: 12000,
+  liquidityUsd: 60000,
+  buys: 100,
+  sells: 50,
+  swaps: 150,
+  holderCount: 800,
+  top10HolderRate: null,
+  devTeamHoldRate: null,
+  creatorClose: false,
+  creatorTokenStatus: null,
+  smartDegenCount: 3,
+  renownedCount: 1,
+  bundlerRate: null,
+  ratTraderAmountRate: null,
+  rugRatio: null,
+  isWashTrading: false,
+  isHoneypot: null,
+  ctoFlag: false,
+  renouncedMint: false,
+  renouncedFreeze: false,
+  creationTimestamp: Date.now() / 1000 - 7200,
+  openTimestamp: null,
+  priceChange1m: null,
+  priceChange5m: null,
+  priceChange1h: null,
+  visitingCount: 0,
+  squareMentions: 0,
+  twitterRenameCount: 0,
+  twitterDelPostCount: 0,
+  twitterCreateTokenCount: 0,
+  buyTax: null,
+  sellTax: null,
+  dexscrBoostFee: 0,
+  dexscrAd: 0,
+  totalFeeNative: null,
+  exchange: 'raydium',
+  launchpadPlatform: 'pump',
+  launchpadStatus: '1',
+  progress: null,
+  source: 'gmgn',
+  chain: 'sol',
+  address: 'tokX123',
+  symbol: 'CHIIKAWA',
+  name: 'Chiikawa',
+  ...over,
+});
 
 // NOTE: the healthy text intentionally avoids 'ai'/'agent'/'yield'/'airdrop'/'farm'
 // so category resolution lands on SMART_CT_CALL (deterministic, mirrors ct-alpha tests).
@@ -203,6 +260,99 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   it('alias "meteora" resolves to lp-solana', async () => {
     const hub = new AthenaHub({ meteoraAdapter: mkMeteoraStub([mkMeteoraPool()]) });
     expect(await hub.triggerAgentPass('meteora')).toHaveLength(1);
+  });
+
+  // ── LP security gate (GMGN) ─────────────────────────────────────────────
+
+  const mkSolPoolWithToken = (): MeteoraPoolSignal => ({
+    ...mkMeteoraPool(),
+    tokenXAddress: 'tokX123',
+    tokenXSymbol: 'CHIIKAWA',
+    tokenYAddress: 'tokYsol',
+    tokenYSymbol: 'SOL',
+  });
+
+  it('lp-solana: token rug (GMGN) menolak pool', async () => {
+    const hub = new AthenaHub({
+      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
+      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ rugRatio: 0.8 }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-solana');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-solana: token honeypot (GMGN) menolak pool', async () => {
+    const hub = new AthenaHub({
+      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
+      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ isHoneypot: true }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-solana');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-solana: token dengan tax > 10% menolak pool', async () => {
+    const hub = new AthenaHub({
+      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
+      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ sellTax: '15' }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-solana');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-solana: token null di GMGN → tetap post, ditandai tidak diaudit', async () => {
+    const hub = new AthenaHub({
+      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
+      gmgnAdapter: mkGmgnStub({}), // token tidak ditemukan
+    });
+    const results = await hub.triggerAgentPass('lp-solana');
+    expect(results).toHaveLength(1);
+    expect(results[0].payload?.securityScore).toContain('Tidak diaudit');
+  });
+
+  it('lp-solana: token aman → post + label keamanan terisi', async () => {
+    const hub = new AthenaHub({
+      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
+      gmgnAdapter: mkGmgnStub({
+        tokX123: mkGmgnToken({ top10HolderRate: 0.15, bundlerRate: 0.02, ratTraderAmountRate: 0.05, devTeamHoldRate: 0.01 }),
+      }),
+    });
+    const results = await hub.triggerAgentPass('lp-solana');
+    expect(results).toHaveLength(1);
+    const label = results[0].payload?.securityScore ?? '';
+    expect(label).toContain('Top10 15.0%');
+    expect(label).toContain('Bundler 2.0%');
+    expect(label).toContain('Insider 5.0%');
+  });
+
+  it('lp-robinhood: token meme honeypot menolak pool', async () => {
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+      })]),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ isHoneypot: true }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-robinhood: token null di GMGN → tetap post, ditandai tidak diaudit', async () => {
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+      })]),
+      gmgnAdapter: mkGmgnStub({}),
+    });
+    const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(1);
+    expect(results[0].payload?.securityScore).toContain('Tidak diaudit');
   });
 
   it('factory exception is caught and returns [] (fail-closed)', async () => {

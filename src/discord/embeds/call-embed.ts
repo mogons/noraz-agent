@@ -192,6 +192,10 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       });
     }
 
+    if (payload.securityScore) {
+      embed.addFields({ name: '🛡️ Token Security (GMGN)', value: sanitizeEmbedField(payload.securityScore, 250), inline: false });
+    }
+
     if (payload.lpStrategy) {
       embed.addFields({ name: '🎯 Recommended LP Range & Strategy', value: payload.lpStrategy, inline: false });
     }

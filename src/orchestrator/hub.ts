@@ -5,6 +5,8 @@ import type { AgentDomainId } from './agent-registry.js';
 import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
 import type { KrystalCloudAdapter } from '../adapters/krystal-cloud-adapter.js';
+import type { GMGNAdapter } from '../adapters/gmgn-adapter.js';
+import { securityGateToken, tokenSecurityLabel } from '../agents/shared/gmgn-meme-helpers.js';
 import { buildLPPayload } from './dispatch.js';
 
 export interface ChannelStatus {
@@ -19,6 +21,7 @@ export interface AthenaHubOptions {
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   meteoraAdapter?: MeteoraDLMMAdapter;
   krystalAdapter?: KrystalCloudAdapter;
+  gmgnAdapter?: GMGNAdapter;
 }
 
 export class AthenaHub {
@@ -30,6 +33,7 @@ export class AthenaHub {
   private agentFactories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   private meteoraAdapter?: MeteoraDLMMAdapter;
   private krystalAdapter?: KrystalCloudAdapter;
+  private gmgnAdapter?: GMGNAdapter;
 
   private stateStore?: any;
 
@@ -38,6 +42,7 @@ export class AthenaHub {
     this.agentFactories = options.agentFactories ?? {};
     this.meteoraAdapter = options.meteoraAdapter;
     this.krystalAdapter = options.krystalAdapter;
+    this.gmgnAdapter = options.gmgnAdapter;
     this.initializeAgentStatesDefaultPaused();
   }
 
@@ -240,8 +245,10 @@ export class AthenaHub {
       const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
       const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
       // Enrich token meme (tokenX) dengan GMGN: Meteora DLMM API tidak expose
-      // smart money/KOL/CTO — ambil dari GMGN token/info (fail-open).
-      const gmgn = new GMGNAdapter();
+      // smart money/KOL/CTO — ambil dari GMGN token/info (fail-open). Security
+      // gate token (honeypot/tax/rug/insider/bundler/top-10) dipakai sebagai
+      // FILTER: token berbahaya menolak pool-nya (fail-open bila tidak ditemukan).
+      const gmgn = this.gmgnAdapter ?? new GMGNAdapter();
       const enriched = new Map<string, any>();
       const results: AgentReport[] = [];
       for (const p of high) {
@@ -252,6 +259,13 @@ export class AthenaHub {
           } catch { enriched.set(p.tokenXAddress, null); }
         }
         const info = enriched.get(p.tokenXAddress) ?? null;
+        if (info) {
+          const sec = securityGateToken(info);
+          if (!sec.ok) {
+            console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — ${sec.reasons.join(' ')}`);
+            continue;
+          }
+        }
         const payload = buildLPPayload(p);
         if (info) {
           payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
@@ -262,6 +276,10 @@ export class AthenaHub {
           const smart = (info.smartDegenCount ?? 0) + (info.renownedCount ?? 0);
           if (smart > 0) payload.token0SmartDegenCount = smart;
           payload.gmgnUrl = `https://gmgn.ai/sol/token/${p.tokenXAddress}`;
+          payload.securityAuditPassed = true;
+          payload.securityScore = tokenSecurityLabel(info);
+        } else {
+          payload.securityScore = '⚠️ Tidak diaudit (GMGN)';
         }
         results.push({
           passed: true,
@@ -286,7 +304,9 @@ export class AthenaHub {
     const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
     const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
     // Enrich pakai key GMGN robinhood (rate limit per key) — fallback ke GMGN_API_KEY.
-    const gmgn = new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
+    // Security gate token meme (honeypot/tax/rug/insider/bundler/top-10) = FILTER:
+    // token berbahaya menolak pool-nya (fail-open bila tidak ditemukan di GMGN).
+    const gmgn = this.gmgnAdapter ?? new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
     const isBaseAsset = (sym: string) => /^(WETH|ETH|USDC|USDT|DAI|WBTC|WSTETH|STETH)$/i.test(sym);
     const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
     const results: AgentReport[] = [];
@@ -309,6 +329,13 @@ export class AthenaHub {
         } catch { enriched.set(memeToken.addr, null); }
       }
       const info = enriched.get(memeToken.addr) ?? null;
+      if (info) {
+        const sec = securityGateToken(info);
+        if (!sec.ok) {
+          console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — ${sec.reasons.join(' ')}`);
+          continue;
+        }
+      }
       const ageHours = info?.creationTimestamp !== null && info?.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : undefined;
       const smart = (info?.smartDegenCount ?? 0) + (info?.renownedCount ?? 0);
       results.push({
@@ -346,6 +373,7 @@ export class AthenaHub {
           aiThesis: p.aiRecommendation,
           confidenceScore: 80,
           securityAuditPassed: true,
+          securityScore: info ? tokenSecurityLabel(info) : '⚠️ Tidak diaudit (GMGN)',
           socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
           liquidityUsd: p.tvlUsd,
           volume1hUsd: p.volume1hUsd,

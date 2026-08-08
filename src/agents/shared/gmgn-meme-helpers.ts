@@ -144,17 +144,10 @@ export function preFilterToken(
   const vol24 = volume24hOf(t);
   if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
-  if (t.isWashTrading) return fail('wash trading terdeteksi.');
-  // Honeypot & tax gate dari data GMGN (fail-open: null = tidak dilaporkan, dilewati)
-  if (t.isHoneypot === true) return fail('honeypot (tidak bisa dijual).');
-  const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
-  const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
-  if (buyTax !== null && buyTax > 10) return fail(`buy tax ${buyTax}% > 10%.`);
-  if (sellTax !== null && sellTax > 10) return fail(`sell tax ${sellTax}% > 10%.`);
-  if (t.rugRatio !== null && t.rugRatio >= config.maxRugRatio) return fail(`rug ratio ${(t.rugRatio*100).toFixed(0)}% >= ${config.maxRugRatio*100}%.`);
-  if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= config.maxRatTraderRate) return fail(`insider ${(t.ratTraderAmountRate*100).toFixed(0)}% >= ${config.maxRatTraderRate*100}%.`);
-  if (t.bundlerRate !== null && t.bundlerRate >= config.maxBundlerRate) return fail(`bundler ${(t.bundlerRate*100).toFixed(0)}% >= ${config.maxBundlerRate*100}%.`);
-  if (t.top10HolderRate !== null && t.top10HolderRate >= config.maxTop10HolderRate) return fail(`top-10 holder ${(t.top10HolderRate*100).toFixed(0)}% >= ${config.maxTop10HolderRate*100}%.`);
+  // Security gate GMGN (honeypot, tax, rug, insider, bundler, top-10, wash) — shared
+  // dengan LP agent supaya ambang keamanan tetap satu sumber.
+  const sec = securityGateToken(t);
+  if (!sec.ok) return fail(sec.reasons.join(' '));
   // Total fees gate OPSIONAL: minTotalFeeUsd > 0 baru dicek. 0 = off (alpha early;
   // token baru fee-nya kecil tapi volume gate 100k sudah menyaring token mati).
   if (config.minTotalFeeUsd > 0) {
@@ -164,6 +157,60 @@ export function preFilterToken(
     if (totalFeeUsd < config.minTotalFeeUsd) return fail(`total fee $${totalFeeUsd.toFixed(0)} < $${config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).`);
   }
   return { ok: true, reason: 'ok' };
+}
+
+/**
+ * Security gate dari data GMGN (fail-open per field: null = tidak dilaporkan,
+ * dilewati) — dipakai meme agent DAN LP agent (token meme di pool).
+ * Ambang default identik dengan meme config: rug < 0.3, insider < 0.3,
+ * bundler < 0.5, top-10 < 0.4, tax <= 10%, honeypot & wash = tolak.
+ */
+export interface SecurityGateOptions {
+  maxRugRatio?: number;
+  maxRatTraderRate?: number;
+  maxBundlerRate?: number;
+  maxTop10HolderRate?: number;
+  maxTaxPct?: number;
+}
+
+const SECURITY_GATE_DEFAULTS: Required<SecurityGateOptions> = {
+  maxRugRatio: 0.3,
+  maxRatTraderRate: 0.3,
+  maxBundlerRate: 0.5,
+  maxTop10HolderRate: 0.4,
+  maxTaxPct: 10,
+};
+
+export function securityGateToken(
+  t: GMGNRawToken,
+  opts: SecurityGateOptions = {}
+): { ok: boolean; reasons: string[] } {
+  const o = { ...SECURITY_GATE_DEFAULTS, ...opts };
+  const reasons: string[] = [];
+  if (t.isWashTrading) reasons.push('wash trading terdeteksi.');
+  if (t.isHoneypot === true) reasons.push('honeypot (tidak bisa dijual).');
+  const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
+  const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
+  if (buyTax !== null && buyTax > o.maxTaxPct) reasons.push(`buy tax ${buyTax}% > ${o.maxTaxPct}%.`);
+  if (sellTax !== null && sellTax > o.maxTaxPct) reasons.push(`sell tax ${sellTax}% > ${o.maxTaxPct}%.`);
+  if (t.rugRatio !== null && t.rugRatio >= o.maxRugRatio) reasons.push(`rug ratio ${(t.rugRatio * 100).toFixed(0)}% >= ${o.maxRugRatio * 100}%.`);
+  if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= o.maxRatTraderRate) reasons.push(`insider ${(t.ratTraderAmountRate * 100).toFixed(0)}% >= ${o.maxRatTraderRate * 100}%.`);
+  if (t.bundlerRate !== null && t.bundlerRate >= o.maxBundlerRate) reasons.push(`bundler ${(t.bundlerRate * 100).toFixed(0)}% >= ${o.maxBundlerRate * 100}%.`);
+  if (t.top10HolderRate !== null && t.top10HolderRate >= o.maxTop10HolderRate) reasons.push(`top-10 holder ${(t.top10HolderRate * 100).toFixed(0)}% >= ${o.maxTop10HolderRate * 100}%.`);
+  return { ok: reasons.length === 0, reasons };
+}
+
+/**
+ * Label ringkas keamanan token untuk call card LP (render di embed): hanya
+ * field yang dilaporkan GMGN yang ditampilkan.
+ */
+export function tokenSecurityLabel(t: GMGNRawToken): string {
+  const parts: string[] = [];
+  if (t.top10HolderRate !== null) parts.push(`Top10 ${(t.top10HolderRate * 100).toFixed(1)}%`);
+  if (t.devTeamHoldRate !== null) parts.push(`Dev ${(t.devTeamHoldRate * 100).toFixed(1)}%`);
+  if (t.ratTraderAmountRate !== null) parts.push(`Insider ${(t.ratTraderAmountRate * 100).toFixed(1)}%`);
+  if (t.bundlerRate !== null) parts.push(`Bundler ${(t.bundlerRate * 100).toFixed(1)}%`);
+  return parts.length > 0 ? `✅ GMGN audited — ${parts.join(' • ')}` : '✅ GMGN audited';
 }
 
 /** Detect signal type + deterministic confidence (0-100) */
