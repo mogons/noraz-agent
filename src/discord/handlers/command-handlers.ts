@@ -447,26 +447,15 @@ export async function handleChatInput(
       ephemeral: true,
     });
 
+    // Run the update ASYNC (fire-and-forget): the sequence restarts PM2 at the
+    // end, which kills this very process — so we can never await a followUp
+    // after the restart. We only report failures that happen BEFORE the restart.
     try {
-      // Single source of truth: scripts/update-core.mjs (same logic as `athena update` —
-      // stash local changes, pull --ff-only, restore stash, npm install, build, pm2 restart).
       const { runAthenaUpdate } = await import('../../../scripts/update-core.mjs');
-      const result = runAthenaUpdate({ noRestart: false });
-
-      const stepLines = result.log.map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
-      const restartLine = result.restartOk
-        ? '🔄 **PM2 agent restarted — kode baru aktif.**'
-        : '⚠ **PM2 restart gagal** — jalankan `athena deploy` manual.';
-      await interaction.followUp({
-        content:
-          `${result.ok ? '✅' : '❌'} **Athena Upgrade ${result.ok ? 'Complete' : 'GAGAL'}!**\n\n` +
-          `${stepLines}\n` +
-          restartLine,
-        ephemeral: true,
-      });
+      runAthenaUpdate({ noRestart: false });
     } catch (err: any) {
       await interaction.followUp({
-        content: `❌ **Update Exception:** ${err.message}`,
+        content: `❌ **Update Exception (sebelum restart):** ${err.message}\n⚠ Bot akan restart sendiri — laporan lengkap cek ` + '`pm2 logs athena-agent`' + `.`,
         ephemeral: true,
       });
     }
