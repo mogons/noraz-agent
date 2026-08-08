@@ -13,7 +13,7 @@ const CHAIN_ID_MAP: Record<EvmChain, number> = {
   base: 8453,
   eth: 1,
   bsc: 56,
-  robinhood: 5318008,
+  robinhood: 4663, // verified 2026-08-08: GoPlus code=1 OK (5318008 = arbitrum, "not supported")
 };
 
 export class GoPlusSecurityService {
