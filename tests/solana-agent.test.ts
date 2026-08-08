@@ -133,6 +133,28 @@ describe('SolanaScreeningAgent', () => {
     expect(second.map((t) => t.address)).toEqual(['fresh2']);
   });
 
+  it('updateConfig applies whitelisted keys and rejects unknown/out-of-range', () => {
+    const agent = new SolanaScreeningAgent();
+    const res = agent.updateConfig({ minAgeHours: 3, passThreshold: 85, bogusKey: 5, minVolume24hUsd: 1 });
+    expect(res.applied.minAgeHours).toBe(3);
+    expect(res.applied.passThreshold).toBe(85);
+    expect(res.rejected.some((r) => r.includes('bogusKey'))).toBe(true);
+    expect(res.rejected.some((r) => r.includes('minVolume24hUsd'))).toBe(true);
+    expect(agent.getConfig().minAgeHours).toBe(3);
+    expect(agent.getConfig().passThreshold).toBe(85);
+    // unchanged defaults for untouched keys
+    expect(agent.getConfig().minLiquidityUsd).toBe(10000);
+  });
+
+  it('updateConfig validates signalTypes array (ints 1-21 only)', () => {
+    const agent = new SolanaScreeningAgent();
+    const ok = agent.updateConfig({ signalTypes: [6, 7, 11, 12] });
+    expect(ok.rejected.length).toBe(0);
+    expect(agent.getConfig().signalTypes).toEqual([6, 7, 11, 12]);
+    const bad = agent.updateConfig({ signalTypes: [99, 'x'] });
+    expect(bad.rejected.length).toBe(1);
+  });
+
   it('isGraduatedToken rejects bonding-curve tokens (exchange=pump) and unknown', () => {
     expect(isGraduatedToken(mkToken({ exchange: 'pump' }))).toBe(false);
     expect(isGraduatedToken(mkToken({ exchange: null }))).toBe(false);

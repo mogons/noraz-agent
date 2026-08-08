@@ -3,7 +3,7 @@ import { RugCheckService, RugCheckResult } from '../../services/security-service
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
   token: GMGNRawToken;
@@ -61,6 +61,23 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     this.rugCheck = new RugCheckService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /**
+   * Runtime config update (chat tool `set_screening_config`). Whitelisted keys
+   * only; invalid values are rejected, never silently clamped.
+   */
+  public updateConfig(partial: Record<string, unknown>): { applied: Record<string, unknown>; rejected: string[] } {
+    const { applied, rejected } = validateMemeConfigUpdate(partial);
+    this.config = { ...this.config, ...applied };
+    if (Object.keys(applied).length > 0) {
+      console.log(`[SOLANA AGENT] Config updated: ${JSON.stringify(applied)}`);
+    }
+    return { applied, rejected };
+  }
+
+  public getConfig(): SolanaScreeningConfig {
+    return { ...this.config };
   }
 
   /**

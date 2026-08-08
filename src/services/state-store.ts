@@ -64,6 +64,11 @@ export interface AthenaPersistedState {
   // Wallet auto-tracking targets (survives restarts)
   trackedTokens: TrackedToken[];
 
+  // Per-domain runtime screening config overrides (set via chat tool; merged
+  // over agent defaults at startup). Plain JSON-safe key/value — validation
+  // happens in the agents (whitelist + clamps) before persisting.
+  screeningConfigs: Record<string, Record<string, unknown>>;
+
   // Metadata
   lastUpdated: string;
   version: number;
@@ -103,6 +108,7 @@ export class StateStore {
       signalLedger: [],
       dedupEntries: {},
       trackedTokens: [],
+      screeningConfigs: {},
       lastUpdated: new Date().toISOString(),
       version: CURRENT_VERSION,
     };
@@ -151,6 +157,7 @@ export class StateStore {
         signalLedger: Array.isArray(data.signalLedger) ? data.signalLedger : [],
         dedupEntries: data.dedupEntries || {},
         trackedTokens: Array.isArray(data.trackedTokens) ? data.trackedTokens : [],
+        screeningConfigs: data.screeningConfigs || {},
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         version: CURRENT_VERSION,
       };
@@ -372,6 +379,20 @@ export class StateStore {
     } else {
       this.state.trackedTokens.push(tok);
     }
+    this.scheduleSave();
+  }
+
+  // ==========================================
+  // SCREENING CONFIG OVERRIDES (per domain, via chat tool)
+  // ==========================================
+
+  public getScreeningConfigs(): Record<string, Record<string, unknown>> {
+    return this.state.screeningConfigs;
+  }
+
+  /** Merge validated per-domain config overrides into persistent state. */
+  public setScreeningConfig(domain: string, partial: Record<string, unknown>): void {
+    this.state.screeningConfigs[domain] = { ...(this.state.screeningConfigs[domain] || {}), ...partial };
     this.scheduleSave();
   }
 }

@@ -138,8 +138,10 @@ const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
 const solanaTradeAdapter = new SolanaTradeAdapter();
 const evmTradeAdapter = new EVMTradeAdapter();
-const solanaScreeningAgent = new SolanaScreeningAgent();
-const robinhoodScreeningAgent = new RobinhoodScreeningAgent();
+// Apply persisted per-domain screening overrides (set via chat `set_screening_config`)
+const savedScreeningConfigs = stateStore.getScreeningConfigs();
+const solanaScreeningAgent = new SolanaScreeningAgent(savedScreeningConfigs['meme-solana'] as any);
+const robinhoodScreeningAgent = new RobinhoodScreeningAgent(savedScreeningConfigs['meme-robinhood'] as any);
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
 const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 

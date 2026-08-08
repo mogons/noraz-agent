@@ -187,3 +187,57 @@ export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: numbe
   if (strategyReason) parts.push(`Strategi: ${strategyReason}`);
   return parts.join(' | ');
 }
+
+/**
+ * Validated config update for meme agents (chat tool `set_screening_config`).
+ * Whitelist + clamps: unknown keys are rejected, out-of-range values are
+ * rejected (never silently clamped) so a bad LLM call can't corrupt screening.
+ * Returns { applied, rejected } with human-readable messages.
+ */
+const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
+  minVolume24hUsd: { min: 1000, max: 100_000_000 },
+  minLiquidityUsd: { min: 1000, max: 100_000_000 },
+  minAgeHours: { min: 0.5, max: 168 },
+  maxRugRatio: { min: 0.01, max: 1 },
+  maxRatTraderRate: { min: 0.01, max: 1 },
+  maxBundlerRate: { min: 0.01, max: 1 },
+  maxTop10HolderRate: { min: 0.01, max: 1 },
+  minTotalFeeUsd: { min: 10, max: 1_000_000 },
+  passThreshold: { min: 50, max: 99 },
+  rankLimit: { min: 10, max: 100 },
+  trenchesLimit: { min: 10, max: 80 },
+  hotSearchesLimit: { min: 10, max: 500 },
+  signalLimit: { min: 10, max: 50 },
+};
+
+export interface MemeConfigUpdateResult {
+  applied: Record<string, unknown>;
+  rejected: string[];
+}
+
+export function validateMemeConfigUpdate(partial: Record<string, unknown>): MemeConfigUpdateResult {
+  const applied: Record<string, unknown> = {};
+  const rejected: string[] = [];
+  for (const [key, value] of Object.entries(partial)) {
+    if (key === 'signalTypes') {
+      if (Array.isArray(value) && value.length > 0 && value.every((v) => Number.isInteger(v) && v >= 1 && v <= 21)) {
+        applied.signalTypes = value;
+      } else {
+        rejected.push(`signalTypes: harus array integer 1-21 (mis. [6,7,11,12])`);
+      }
+      continue;
+    }
+    const spec = MEME_CONFIG_SPEC[key];
+    if (!spec) {
+      rejected.push(`${key}: kunci tidak dikenal`);
+      continue;
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < spec.min || n > spec.max) {
+      rejected.push(`${key}: harus angka ${spec.min}-${spec.max}`);
+      continue;
+    }
+    applied[key] = n;
+  }
+  return { applied, rejected };
+}

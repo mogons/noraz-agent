@@ -3,7 +3,7 @@ import { GoPlusSecurityService, GoPlusTokenSecurity } from '../../services/goplu
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
 
 export interface RobinhoodSignal {
   token: GMGNRawToken;
@@ -61,6 +61,23 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     this.goplus = new GoPlusSecurityService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /**
+   * Runtime config update (chat tool `set_screening_config`). Whitelisted keys
+   * only; invalid values are rejected, never silently clamped.
+   */
+  public updateConfig(partial: Record<string, unknown>): { applied: Record<string, unknown>; rejected: string[] } {
+    const { applied, rejected } = validateMemeConfigUpdate(partial);
+    this.config = { ...this.config, ...applied };
+    if (Object.keys(applied).length > 0) {
+      console.log(`[ROBINHOOD AGENT] Config updated: ${JSON.stringify(applied)}`);
+    }
+    return { applied, rejected };
+  }
+
+  public getConfig(): RobinhoodScreeningConfig {
+    return { ...this.config };
   }
 
   /**

@@ -311,6 +311,18 @@ export class ToolRegistry {
           required: ['name', 'code'],
         },
       },
+      {
+        name: 'set_screening_config',
+        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume24hUsd (1000-100000000), minLiquidityUsd (1000-100000000), minAgeHours (0.5-168), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxBundlerRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (10-1000000), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalLimit (10-50), signalTypes (array of ints 1-21, e.g. [6,7,11,12]). Persisted across restarts.',
+        parameters: {
+          type: 'object',
+          properties: {
+            agentId: { type: 'string', description: 'Sub-agent domain: meme-solana or meme-robinhood.' },
+            config: { type: 'object', description: 'Key-value map of thresholds to update (whitelisted keys only).' },
+          },
+          required: ['agentId', 'config'],
+        },
+      },
     ];
   }
 
@@ -588,6 +600,31 @@ export class ToolRegistry {
           const { StrategyEngine } = await import('./strategy-engine.js');
           const engine = new StrategyEngine();
           return engine.writeIndicator(String(args.name || ''), String(args.code || ''));
+        }
+
+        case 'set_screening_config': {
+          if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
+          const agentId = String(args.agentId || '').toLowerCase().trim();
+          const config = (args.config && typeof args.config === 'object' ? args.config : {}) as Record<string, unknown>;
+          if (Object.keys(config).length === 0) {
+            return { success: false, message: `Tidak ada config untuk diubah untuk ${agentId}.` };
+          }
+          const agent = await this.orchestrator.getScreeningAgent(agentId);
+          if (!agent || typeof (agent as any).updateConfig !== 'function') {
+            return { success: false, message: `Agent ${agentId} tidak mendukung set_screening_config (domain LP tidak punya config).` };
+          }
+          const { applied, rejected } = (agent as any).updateConfig(config);
+          // Persist overrides so they survive restarts (validated already by the agent).
+          const { StateStore } = await import('../services/state-store.js');
+          const store = new StateStore();
+          if (Object.keys(applied).length > 0) store.setScreeningConfig(agentId, applied);
+          const appliedStr = Object.keys(applied).length > 0 ? `✅ Diterapkan: ${JSON.stringify(applied)}` : '';
+          const rejectedStr = rejected.length > 0 ? `\n❌ Ditolak: ${rejected.join('; ')}` : '';
+          return {
+            success: rejected.length === 0,
+            message: `Config ${agentId} diperbarui.${appliedStr}${rejectedStr}`,
+            data: { applied, rejected },
+          };
         }
 
         default:

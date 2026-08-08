@@ -179,6 +179,19 @@ export class AthenaHub {
     return [];
   }
 
+  /**
+   * Resolve the LIVE agent instance for a domain (the same singleton the 5-min
+   * loop uses) — or null when no factory is wired (LP domains / fresh resolve).
+   * Used by the chat tool `set_screening_config` to update runtime thresholds.
+   */
+  public async getScreeningAgent(domain: string): Promise<ScreeningAgent | null> {
+    const info = getAgentDomain(domain);
+    if (!info) return null;
+    const factory = this.agentFactories[info.id];
+    if (factory) return await factory();
+    return null;
+  }
+
   private async resolveAgent(id: AgentDomainId): Promise<ScreeningAgent> {
     switch (id) {
       case 'meme-solana': {
