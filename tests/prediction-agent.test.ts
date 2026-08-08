@@ -42,27 +42,13 @@ describe('PolymarketAgent', () => {
     expect(agent.domain).toBe('prediction');
   });
 
-  it('runScreeningPass returns [] with no markets — no network, no fake data', async () => {
+  it('runScreeningPass no-op: screening dinonaktifkan — selalu [] tanpa request API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
-    const agent = new PolymarketAgent(mkFakeAdapter([]));
+    const agent = new PolymarketAgent(mkFakeAdapter([mkMarket()]));
     const reports = await agent.runScreeningPass();
     expect(Array.isArray(reports)).toBe(true);
     expect(reports.length).toBe(0);
-  });
-
-  it('runScreeningPass returns AgentReport[] with payload for a strong market', async () => {
-    const agent = new PolymarketAgent(mkFakeAdapter([mkMarket()]));
-    (agent as any).strategyEngine = { getActiveStrategy: () => null };
-    const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(1);
-    const r = reports[0];
-    expect(r.passed).toBe(true);
-    expect(r.confidence).toBeGreaterThanOrEqual(80);
-    expect(r.signal).toBeDefined();
-    expect(r.reason).toBe(r.signal.aiThesis);
-    expect(r.payload?.domain).toBe('PREDICTION');
-    expect(r.payload?.symbol).toBe('Yes');
-    expect(r.payload?.securityAuditPassed).toBe(true);
+    vi.unstubAllGlobals();
   });
 
   it('evaluateMarket fail-closed: no real odds returns null', () => {
@@ -114,7 +100,7 @@ describe('PolymarketAgent', () => {
     expect(report!.confidenceScore).toBe(100);
   });
 
-  it('strategy extension: SKIP vetoes the signal', async () => {
+  it('strategy extension: tidak berjalan saat no-op (screening off)', async () => {
     const agent = new PolymarketAgent(mkFakeAdapter([mkMarket()]));
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
@@ -124,18 +110,12 @@ describe('PolymarketAgent', () => {
     expect(reports.length).toBe(0);
   });
 
-  it('strategy extension: BUY blends 0.7/0.3 and keeps the 80 gate', async () => {
-    const agent = new PolymarketAgent(mkFakeAdapter([mkMarket()]));
-    (agent as any).strategyEngine = {
-      getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
-      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
-    };
+  it('strategy extension: evaluasi arsitektur tetap hidup via evaluateMarket (no-op pass)', async () => {
+    const agent = new PolymarketAgent(mkFakeAdapter([]));
     const raw = agent.evaluateMarket(mkMarket())!;
-    const expected = Math.round(raw.confidenceScore * 0.7 + 0.3 * 90);
-    expect(expected).toBeGreaterThanOrEqual(80);
+    expect(raw.confidenceScore).toBeGreaterThanOrEqual(80);
     const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(1);
-    expect(reports[0].confidence).toBe(expected);
+    expect(reports.length).toBe(0); // pass tetap no-op
   });
 });
 

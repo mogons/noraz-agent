@@ -131,51 +131,14 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
    * extension layer (0.7/0.3 blend, SKIP vetoes) and emit AgentReport[] with
    * real-data payloads. The >= 80 gate must hold on the FINAL blended confidence
    * (fail-closed). Never fabricates data.
+   *
+   * NOTE (2026-08-09): screening sengaja di-NO-OP — prediction market tidak
+   * diprioritaskan (arsitektur & evaluasi tetap ada untuk diaktifkan lagi).
+   * Tidak ada request API sama sekali; channel & agent tetap terdaftar.
    */
   public async runScreeningPass(): Promise<AgentReport<PredictionSignalReport>[]> {
-    console.log('[POLYMARKET AGENT] Running prediction market screening pass...');
-    const reports: AgentReport<PredictionSignalReport>[] = [];
-
-    const categories: Array<'Crypto' | 'Macro' | 'Politics' | 'Tech' | 'Trending'> = ['Crypto', 'Macro', 'Politics', 'Tech'];
-    for (const cat of categories) {
-      const markets = await this.adapter.fetchTopMarkets(cat);
-      for (const m of markets) {
-        const report = this.evaluateMarket(m);
-        if (!report || report.confidenceScore < this.config.passThreshold) continue;
-
-        // Strategy extension layer (optional): adjust confidence
-        try {
-          const strat = this.strategyEngine.getActiveStrategy('prediction');
-          if (strat?.evaluate) {
-            const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
-            if (ev?.recommendedAction === 'SKIP') {
-              console.log(`[POLYMARKET AGENT] ⛔ ${report.marketId}: strategi menolak (${ev.reason})`);
-              continue;
-            }
-            if (ev && typeof ev.confidence === 'number') {
-              report.confidenceScore = Math.round(report.confidenceScore * 0.7 + Math.max(0, Math.min(100, ev.confidence)) * 0.3);
-            }
-          }
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[POLYMARKET AGENT] Strategi gagal: ${message}`);
-        }
-
-        // Fail-closed: the 80 gate must hold on the FINAL blended confidence
-        if (report.confidenceScore < this.config.passThreshold) continue;
-
-        reports.push({
-          passed: true,
-          signal: report,
-          reason: report.aiThesis,
-          confidence: report.confidenceScore,
-          payload: this.buildPayload(report, report.aiThesis),
-        });
-        console.log(`[POLYMARKET AGENT] 🎯 SIGNAL: ${report.recommendedOutcome} on "${report.question}" (${report.confidenceScore}%)`);
-      }
-    }
-
-    return reports;
+    console.log('[POLYMARKET AGENT] Screening dinonaktifkan sementara (no-op) — tidak ada request API.');
+    return [];
   }
 
   /**

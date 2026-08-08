@@ -118,27 +118,11 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     }
   });
 
-  it('6. Polymarket Prediction Agent: evaluates real markets (fail-closed without network)', async () => {
-    // Stub Gamma + CLOB with a real high-probability market so the test is deterministic.
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{
-        id: 1, title: 'Will BTC reach 100k in 2026?', category: 'Crypto', slug: 'btc-100k',
-        volume24hr: '2500000', liquidity: '800000',
-        markets: [{ id: 100, conditionId: '0xcond', clobTokenIds: ['0xclob1'], outcomePrices: '["0.94","0.06"]', endDate: '2026-12-31T23:59:59Z', slug: 'btc-100k' }],
-      }],
-    }));
+  it('6. Polymarket Prediction Agent: no-op (screening dinonaktifkan) — selalu [] tanpa request API', async () => {
     const agent = new PolymarketAgent();
     const reports = await agent.runScreeningPass();
-    vi.unstubAllGlobals();
     expect(Array.isArray(reports)).toBe(true);
-    for (const r of reports) {
-      // Contract shape: AgentReport<PredictionSignalReport>
-      expect(r.confidence).toBeGreaterThanOrEqual(80);
-      expect(r.signal.confidenceScore).toBeGreaterThanOrEqual(80);
-      expect(r.payload?.domain).toBe('PREDICTION');
-      expect(r.payload?.securityAuditPassed).toBe(true);
-    }
+    expect(reports.length).toBe(0);
   });
 
   it('7. Price Alert Service: Should parse natural language alert expressions', () => {
