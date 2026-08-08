@@ -115,14 +115,15 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     const lowFees = mkSignal({ poolAddress: 'pool789', fee1hUsd: 5 });
     const lowVelocity = mkSignal({ poolAddress: 'pool800', volumeToActiveTvlRatio1h: 0.5 });
     const lowFeeYield24h = mkSignal({ poolAddress: 'pool801', feesToTvlRatio24h: 0.005 });
-    const young = mkSignal({ poolAddress: 'pool1000', tokenAgeMinutes: 60 });
+    const young = mkSignal({ poolAddress: 'pool1000', tokenAgeMinutes: 60, pairName: 'YOUNG-SOL', tokenXSymbol: 'YOUNG' }); // umur tidak digate
     // verified tidak difilter (DLMM = likuiditas komunitas) — unverified tetap lolos,
     // pair beda (CATE-SOL) supaya tidak kena dedupe SOL-USDC
     const unverified = mkSignal({ poolAddress: 'pool999', tokenXVerified: false, pairName: 'CATE-SOL', tokenXSymbol: 'CATE' });
 
     const passed = adapter.filterHighYieldPools([good, secondSamePair, lowFees, lowVelocity, lowFeeYield24h, young, unverified]);
-    expect(passed.length).toBe(2); // best SOL-USDC + unverified CATE-SOL (verified bukan filter)
+    expect(passed.length).toBe(3); // best SOL-USDC + young (umur tak digate) + unverified CATE-SOL
     expect(passed[0].poolAddress).toBe('pool456');
+    expect(passed.map((p) => p.poolAddress)).toContain('pool1000');
   });
 
   it('filterHighYieldPools keeps distinct pairs', () => {

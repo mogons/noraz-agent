@@ -191,9 +191,9 @@ export class MeteoraDLMMAdapter {
    *   trader harian daripada APR annualized yang mengasumsikan kondisi 24 jam
    *   berulang setahun penuh)
    * - volume/ACTIVE TVL >= 100% per 1h (velocity: capital aktif berputar penuh)
-   * - age >= 2h (pool mapan, bukan fresh rug-bait)
    * Token verified TIDAK difilter (DLMM = likuiditas komunitas; verified-only
    * terlalu mengecilkan pool) — hanya di-surface sebagai info di call card.
+   * Umur pool TIDAK digate (2026-08-09: pool baru bisa langsung likuid & aktif).
    * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
    */
   public filterHighYieldPools(pools: MeteoraPoolSignal[]): MeteoraPoolSignal[] {
@@ -206,8 +206,7 @@ export class MeteoraDLMMAdapter {
       const passesFees = pool.fee1hUsd >= 7;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.02;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
-      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesTvl && passesVol24h && passesMc && passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
+      if (!(passesTvl && passesVol24h && passesMc && passesFees && passesFeeYield24h && passesVelocity)) continue;
 
       const pairKey = `${pool.tokenXSymbol}-${pool.tokenYSymbol}`.toUpperCase();
       const existing = bestByPair.get(pairKey);
