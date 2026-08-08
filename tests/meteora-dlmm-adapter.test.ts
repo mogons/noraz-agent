@@ -84,7 +84,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     tvlUsd: 150000,
     activeTvlUsd: 3000,
     volume1hUsd: 5000,
-    fee1hUsd: 20,
+    fee1hUsd: 60,
     fees24hSol: 0,
     feeAprPercentage: 500, // > 100% annualized
     feesToTvlRatio1h: 0.00013, // 0.013% / 100
