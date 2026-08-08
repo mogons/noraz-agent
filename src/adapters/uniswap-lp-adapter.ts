@@ -11,6 +11,7 @@ export interface UniswapPoolSignal {
   feeAprPercentage: number;
   feesToTvlRatio1h: number;
   feesToActiveTvlRatio1h: number;
+  feesToTvlRatio24h: number;
   volumeToTvlRatio1h: number;
   volumeToActiveTvlRatio1h: number;
   organicVolumeScore1h: number;
@@ -85,6 +86,7 @@ export class UniswapLPAdapter {
             feeAprPercentage: Number(((fee1hUsd / tvlUsd) * 24 * 365 * 100).toFixed(1)) || 0,
             feesToTvlRatio1h: fee1hUsd / tvlUsd,
             feesToActiveTvlRatio1h: activeTvlUsd > 0 ? fee1hUsd / activeTvlUsd : 0,
+            feesToTvlRatio24h: tvlUsd > 0 ? (volume24hUsd * (feeTierPct / 100)) / tvlUsd : 0,
             volumeToTvlRatio1h: volume1hUsd / tvlUsd,
             volumeToActiveTvlRatio1h: activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0,
             organicVolumeScore1h: Math.min(100, 40 + Math.round((volume1hUsd / tvlUsd) * 600)),
@@ -107,9 +109,9 @@ export class UniswapLPAdapter {
   }
 
   /**
-   * High-yield filter (mirror of Meteora, per-1h):
+   * High-yield filter (mirror of Meteora):
    * - fees >= $7 in 1h (real fee income)
-   * - fees/ACTIVE TVL > 0.1% per 1h (fee yield atas modal aktif)
+   * - 24h Fee/TVL > 1% (yield fee nyata 24 jam — untuk trader harian)
    * - volume/ACTIVE TVL >= 100% per 1h (velocity)
    * - age >= 2h (pool mapan)
    * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
@@ -118,10 +120,10 @@ export class UniswapLPAdapter {
     const bestByPair = new Map<string, UniswapPoolSignal>();
     for (const pool of pools) {
       const passesFees = pool.fee1hUsd >= 7;
-      const passesFeeYield = pool.feesToActiveTvlRatio1h > 0.001;
+      const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesFees && passesFeeYield && passesVelocity && passesAge)) continue;
+      if (!(passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.pairName.split(' ')[0]}`.toUpperCase();
       const existing = bestByPair.get(pairKey);

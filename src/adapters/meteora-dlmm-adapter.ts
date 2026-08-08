@@ -22,6 +22,7 @@ export interface MeteoraPoolSignal {
   feeAprPercentage: number;
   feesToTvlRatio1h: number;
   feesToActiveTvlRatio1h: number;
+  feesToTvlRatio24h: number;
   volumeToTvlRatio1h: number;
   volumeToActiveTvlRatio1h: number;
   organicVolumeScore1h: number;
@@ -126,6 +127,8 @@ export class MeteoraDLMMAdapter {
         if (!p.address || !(tvlUsd >= minTvlUsd)) continue;
 
         const feesToTvlRatio1h = feeTvlRatioPct1h / 100; // decimal 0-1
+        const feeTvlRatioPct24h = Number(p.fee_tvl_ratio?.['24h']) || 0;
+        const feesToTvlRatio24h = feeTvlRatioPct24h / 100; // decimal 0-1 (24h)
         const volumeToTvlRatio1h = tvlUsd > 0 ? volume1hUsd / tvlUsd : 0;
         // Active-TVL proxy: TVL yang efektif menghasilkan fee (fee_rate × tvl).
         const feeRate = volume1hUsd > 0 ? fee1hUsd / volume1hUsd : 0;
@@ -150,6 +153,7 @@ export class MeteoraDLMMAdapter {
           feeAprPercentage: Number((feeTvlRatioPct1h * 24 * 365).toFixed(1)) || 0,
           feesToTvlRatio1h,
           feesToActiveTvlRatio1h,
+          feesToTvlRatio24h,
           volumeToTvlRatio1h,
           volumeToActiveTvlRatio1h,
           organicVolumeScore1h,
@@ -177,10 +181,11 @@ export class MeteoraDLMMAdapter {
   }
 
   /**
-   * High-yield filter on REAL metrics. Thresholds per-1h:
+   * High-yield filter on REAL metrics. Thresholds:
    * - fees >= $7 in 1h (real fee income)
-   * - fees/ACTIVE TVL > 0.1% per 1h (fee yield atas modal aktif yang
-   *   benar-benar menghasilkan — bukan 100%/jam yang mustahil)
+   * - 24h Fee/TVL > 1% (yield fee NYATA 24 jam terakhir — lebih cocok untuk
+   *   trader harian daripada APR annualized yang mengasumsikan kondisi 24 jam
+   *   berulang setahun penuh)
    * - volume/ACTIVE TVL >= 100% per 1h (velocity: capital aktif berputar penuh)
    * - age >= 2h (pool mapan, bukan fresh rug-bait)
    * Token verified TIDAK difilter (DLMM = likuiditas komunitas; verified-only
@@ -191,10 +196,10 @@ export class MeteoraDLMMAdapter {
     const bestByPair = new Map<string, MeteoraPoolSignal>();
     for (const pool of pools) {
       const passesFees = pool.fee1hUsd >= 7;
-      const passesFeeYield = pool.feesToActiveTvlRatio1h > 0.001;
+      const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesFees && passesFeeYield && passesVelocity && passesAge)) continue;
+      if (!(passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.tokenXSymbol}-${pool.tokenYSymbol}`.toUpperCase();
       const existing = bestByPair.get(pairKey);
