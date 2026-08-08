@@ -31,9 +31,9 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
 });
 
 const mkFakeAdapter = (signals: OpenSeaNFTSignal[]): OpenSeaAdapter => ({
-  trackedCollections: [
+  fetchTrendingCollections: vi.fn(async () => [
     { slug: 'pudgypenguins', name: 'Pudgy Penguins', chain: 'ethereum' },
-  ],
+  ]),
   fetchFloorSnipingSignals: vi.fn(async () => signals),
 } as unknown as OpenSeaAdapter);
 
@@ -70,13 +70,14 @@ describe('NFTScreeningAgent', () => {
     expect(r.payload?.securityAuditPassed).toBe(true);
   });
 
-  it('runScreeningPass drops sub-80 signals (velocity-only = 70)', async () => {
+  it('runScreeningPass posts velocity-only signals (velocity >= 1/h = 80, kalibrasi baru)', async () => {
     const agent = new NFTScreeningAgent(
       mkFakeAdapter([mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })])
     );
     (agent as any).strategyEngine = { getActiveStrategy: () => null };
     const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(0);
+    expect(reports.length).toBe(1);
+    expect(reports[0].confidence).toBe(80);
   });
 
   it('buildPayload maps real fields', () => {
@@ -107,7 +108,7 @@ describe('NFTScreeningAgent', () => {
     expect(p.title).toBe('Pudgy Penguins (floor)');
   });
 
-  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, and (whale sweep OR floor surge)', () => {
+  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, dan momentum (sweep/surge/spike/velocity)', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal())!)).toBe(true);
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ floorPriceEth: 0.005, priceEth: 0.006 }))!)).toBe(false);
@@ -117,7 +118,11 @@ describe('NFTScreeningAgent', () => {
     )!;
     expect(volOnly.isVolumeSpike).toBe(true);
     expect(volOnly.isFloorSurge).toBe(false);
-    expect(agent.deriveCollectionSafety(volOnly)).toBe(false);
+    expect(agent.deriveCollectionSafety(volOnly)).toBe(true); // spike termasuk momentum
+    const velOnly = agent.evaluateListing(
+      mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })
+    )!;
+    expect(agent.deriveCollectionSafety(velOnly)).toBe(true); // velocity >= ambang = momentum
   });
 
   it('deriveCollectionSafety: whale sweep OR floor surge alone can pass (with floor + velocity)', () => {

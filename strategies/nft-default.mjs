@@ -6,7 +6,7 @@ export default {
     'Default NFT strategy: floor-momentum scoring for EVM collections on OpenSea. ' +
     'Gates: min floor 0.01 ETH (fail-closed if missing), min sales velocity 1/h, min volume spike 1.5x, ' +
     'collection security audit must pass. ' +
-    'Scoring (0-100): floor surge 35, volume spike 25, sales velocity 20, whale sweep 20. ' +
+    'Scoring (base 60 + bonus, konsisten agent): floor surge 35, volume spike 25, sales velocity 20, whale sweep 20. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
     passThreshold: 80,
@@ -38,25 +38,25 @@ export default {
     if (volSpike < p.minVolSpike) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Vol spike ${volSpike.toFixed(2)}x < ${p.minVolSpike}x minimum.` };
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan koleksi tidak lolos (floor/velocity/momentum).' };
 
-    let score = 0;
+    // Base 60 konsisten dengan agent evaluateListing (baseline + trigger bonus).
+    let score = 60;
 
     // ── Floor surge (35) — real price discovery ──
     if (surge !== null) {
-      if (surge >= 30) { score += 35; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+35)`); }
-      else if (surge >= 15) { score += 25; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+25)`); }
-      else if (surge >= 5) { score += 15; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+15)`); }
+      if (surge >= 15) { score += 35; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+35)`); }
+      else if (surge >= 8) { score += 25; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+25)`); }
+      else if (surge >= 3) { score += 15; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+15)`); }
       else { score += 5; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+5)`); }
     }
 
     // ── Volume spike (25) — demand explosion ──
-    if (volSpike >= 3) { score += 25; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+25)`); }
-    else if (volSpike >= 2) { score += 15; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+15)`); }
+    if (volSpike >= 2) { score += 25; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+25)`); }
+    else if (volSpike >= 1.5) { score += 15; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+15)`); }
     else { score += 8; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+8)`); }
 
     // ── Sales velocity (20) — actual trading activity ──
-    if (velocity >= 2) { score += 20; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+20)`); }
-    else if (velocity >= 1) { score += 10; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+10)`); }
-    else { score += 5; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+5)`); }
+    if (velocity >= 1) { score += 20; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+20)`); }
+    else { score += 10; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+10)`); }
 
     // ── Verified whale sweep (20) — smart money confirmation ──
     if (isWhaleSweep) { score += 20; reasons.push(`🐋 Verified whale sweep (+20)`); }

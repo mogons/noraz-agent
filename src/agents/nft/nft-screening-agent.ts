@@ -24,17 +24,21 @@ export interface NFTSnipingReport {
 }
 
 export interface NFTScreeningConfig {
-  floorSurgeThresholdPct: number;   // >= +30% floor pump in 1h
-  volSpikeThresholdRatio: number;   // >= 3.0x volume surge vs baseline
-  minSalesVelocity1h: number;       // >= 1.0 sales/hour (koleksi aktif; 25/h mustahil untuk blue chip)
+  floorSurgeThresholdPct: number;   // >= +15% floor pump in 1h (kalibrasi 2026-08-09: 30% terlalu jarang utk blue chip)
+  volSpikeThresholdRatio: number;   // >= 2.0x volume surge vs baseline (kalibrasi: 3.0x terlalu jarang)
+  minSalesVelocity1h: number;       // >= 1.0 sales/hour (koleksi aktif)
   passThreshold: number;            // Swarm consensus gate (>= 80)
+  chains: string[];                 // multichain: ethereum, base, robinhood
+  trendingLimitPerChain: number;    // top N koleksi trending per chain per pass
 }
 
 const DEFAULT_CONFIG: NFTScreeningConfig = {
-  floorSurgeThresholdPct: 30,
-  volSpikeThresholdRatio: 3.0,
+  floorSurgeThresholdPct: 15,
+  volSpikeThresholdRatio: 2.0,
   minSalesVelocity1h: 1.0,
   passThreshold: 80,
+  chains: ['ethereum', 'base', 'robinhood'],
+  trendingLimitPerChain: 5,
 };
 
 /**
@@ -90,7 +94,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     if (isFloorSurge) confidenceScore += 20;
     if (isVolumeSpike) confidenceScore += 20;
     if (isWhaleSweep) confidenceScore += 20;
-    if (isHighVelocity) confidenceScore += 10;
+    if (isHighVelocity) confidenceScore += 20; // kalibrasi 2026-08-09: 10 → 20 (velocity-only = 80, post saat koleksi aktif)
     confidenceScore = Math.min(100, confidenceScore);
 
     let detectionReason = 'NFT Momentum Signal Detected';
@@ -135,8 +139,12 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     console.log('[NFT AGENT] Running EVM NFT Momentum & Whale Sweep screening pass...');
     const reports: AgentReport<NFTSnipingReport>[] = [];
 
-    for (const item of this.adapter.trackedCollections) {
-      const signals = await this.adapter.fetchFloorSnipingSignals(item.slug);
+    // Screening menyeluruh: trending collections per chain (dinamis, bukan list statis).
+    const candidates = await this.adapter.fetchTrendingCollections(this.config.chains, this.config.trendingLimitPerChain);
+    console.log(`[NFT AGENT] ${candidates.length} koleksi trending (${this.config.chains.join(', ')}) — screening...`);
+
+    for (const item of candidates) {
+      const signals = await this.adapter.fetchFloorSnipingSignals(item.slug, item.chain);
       for (const sig of signals) {
         const report = this.evaluateListing(sig);
         if (!report || report.confidenceScore < this.config.passThreshold) continue;
@@ -188,7 +196,8 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
   public deriveCollectionSafety(report: NFTSnipingReport): boolean {
     const floorOk = report.floorPriceEth > 0.01;
     const velocityOk = report.salesVelocity1h > 0;
-    const momentumOk = report.isWhaleSweep || report.isFloorSurge;
+    // Momentum: sweep / surge / spike / velocity-trigger — velocity >= ambang = aktivitas nyata.
+    const momentumOk = report.isWhaleSweep || report.isFloorSurge || report.isVolumeSpike || report.salesVelocity1h >= this.config.minSalesVelocity1h;
     return floorOk && velocityOk && momentumOk;
   }
 

@@ -44,6 +44,38 @@ const mkSaleEvent = (over: any = {}) => ({
 describe('OpenSeaAdapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; });
 
+  it('fetchTrendingCollections: satu request untuk semua chain, parse slug/name/chain', async () => {
+    process.env.OPENSEA_API_KEY = 'os-test';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        collections: [
+          { collection: 'pudgypenguins', name: 'Pudgy Penguins', contracts: [{ address: '0x1', chain: 'ethereum' }] },
+          { collection: 'base-paint', name: 'BasePaint', contracts: [{ address: '0x2', chain: 'base' }] },
+          { collection: 'rbh-nft', name: 'RBH NFT', contracts: [{ address: '0x3', chain: 'robinhood' }] },
+        ],
+      }),
+    }));
+    const adapter = new OpenSeaAdapter();
+    const cols = await adapter.fetchTrendingCollections(['ethereum', 'base', 'robinhood'], 5);
+    expect(cols).toHaveLength(3);
+    expect(cols[0].slug).toBe('pudgypenguins');
+    expect(cols[0].chain).toBe('ethereum');
+    expect(cols[1].chain).toBe('base');
+    expect(cols[2].chain).toBe('robinhood');
+    const url = (vi.mocked(fetch).mock.calls[0][0] as string);
+    expect(url).toContain('chains=ethereum%2Cbase%2Crobinhood');
+    expect(url).toContain('limit=5');
+  });
+
+  it('fetchTrendingCollections: [] tanpa key / API gagal (fail-closed)', async () => {
+    const adapter = new OpenSeaAdapter();
+    expect(await adapter.fetchTrendingCollections()).toEqual([]);
+    process.env.OPENSEA_API_KEY = 'os-test';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    expect(await adapter.fetchTrendingCollections()).toEqual([]);
+  });
+
   it('menghitung surge/velocity/volume-spike dari data v2 REAL (stats + floor_prices + events)', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     const now = t0();

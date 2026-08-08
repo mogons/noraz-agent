@@ -78,17 +78,48 @@ export class OpenSeaAdapter {
   private apiKey?: string;
   private isDryRun: boolean;
 
-  public readonly trackedCollections = [
-    { slug: 'pudgypenguins', name: 'Pudgy Penguins', chain: 'ethereum' as const },
-    { slug: 'azuki', name: 'Azuki', chain: 'ethereum' as const },
-    { slug: 'lilpudgys', name: 'Lil Pudgys', chain: 'ethereum' as const },
-    { slug: 'doodles-official', name: 'Doodles', chain: 'ethereum' as const },
-    { slug: 'base-paint', name: 'BasePaint', chain: 'base' as const },
-  ];
+  /** Chain yang di-screen (OpenSea ChainIdentifier, termasuk robinhood). */
+  public readonly supportedChains = ['ethereum', 'base', 'robinhood'] as const;
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.OPENSEA_API_KEY;
     this.isDryRun = isDryRunMode();
+  }
+
+  /**
+   * Trending collections per chains (satu request untuk semua chain — param
+   * `chains` comma-separated). Screening menyeluruh: daftar dinamis dari
+   * sales activity OpenSea, bukan list statis. Timeframe one_hour = aktivitas
+   * terkini. Fail-closed: [] kalau API gagal / tanpa key.
+   */
+  public async fetchTrendingCollections(
+    chains: readonly string[] = this.supportedChains,
+    limit = 5
+  ): Promise<Array<{ slug: string; name: string; chain: string }>> {
+    if (!this.apiKey) return [];
+    try {
+      const res = await fetch(
+        `https://api.opensea.io/api/v2/collections/trending?timeframe=one_hour&chains=${encodeURIComponent(chains.join(','))}&limit=${limit}`,
+        { headers: { 'accept': 'application/json', 'x-api-key': this.apiKey }, signal: AbortSignal.timeout(15000) }
+      );
+      if (!res.ok) {
+        console.warn(`[OPENSEA ADAPTER] trending HTTP ${res.status}`);
+        return [];
+      }
+      const data: any = await res.json();
+      const cols: any[] = Array.isArray(data?.collections) ? data.collections : [];
+      return cols
+        .map((c) => ({
+          slug: String(c?.collection || ''),
+          name: String(c?.name || ''),
+          chain: String(c?.contracts?.[0]?.chain || 'ethereum'),
+        }))
+        .filter((c) => c.slug.length > 0);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[OPENSEA ADAPTER] trending failed: ${message}`);
+      return [];
+    }
   }
 
   public parseChain(input: string | number): { id: number; name: string; slug: string } {
@@ -241,7 +272,7 @@ export class OpenSeaAdapter {
    *   3. /events/collection/{slug}?event_type=sale → velocity 1h, volume 1h vs baseline 1h, whale sweep
    * Fail-closed per endpoint: data yang tidak tersedia = 0/false (never fabricated).
    */
-  public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins'): Promise<OpenSeaNFTSignal[]> {
+  public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins', chain: string = 'ethereum'): Promise<OpenSeaNFTSignal[]> {
     if (!this.apiKey) {
       console.log(`[OPENSEA ADAPTER] No API key configured for ${collectionSlug}. Returning empty.`);
       return [];
@@ -344,14 +375,14 @@ export class OpenSeaAdapter {
       // Velocity: events 1h real kalau ada; kalau tidak → rata-rata 24h (jujur).
       const velocity = eventsAvailable && salesVelocity1h > 0 ? salesVelocity1h : (sales24h > 0 ? sales24h / 24 : 0);
 
-      const tracked = this.trackedCollections.find((t) => t.slug === collectionSlug);
+      const tracked = undefined;
       return [
         {
           collectionSlug,
-          collectionName: tracked?.name ?? collectionSlug.replace(/-/g, ' ').toUpperCase(),
+          collectionName: collectionSlug.replace(/-/g, ' ').toUpperCase(),
           tokenId: '',
-          name: `${tracked?.name ?? collectionSlug.replace(/-/g, ' ').toUpperCase()} (floor)`,
-          chain: tracked?.chain ?? 'ethereum',
+          name: `${collectionSlug.replace(/-/g, ' ').toUpperCase()} (floor)`,
+          chain: chain as OpenSeaNFTSignal['chain'],
           priceEth: floorPriceEth,
           floorPriceEth,
           floorSurge1hPct,
