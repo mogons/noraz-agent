@@ -128,18 +128,20 @@ export function preFilterToken(
 ): { ok: boolean; reason: string } {
   const fail = (reason: string) => ({ ok: false as const, reason: `⛔ ${t.symbol}: ${reason}` });
   if (t.source === 'dexscreener') {
-    // DexScreener fallback lacks GMGN social/CTO fields — allow only volume-based Momentum, still age-gated
-    if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
-    const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
-    if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
+    // DexScreener fallback lacks GMGN social/CTO fields — allow only volume-based Momentum
     const vol24 = volume24hOf(t);
     if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
     if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
     return { ok: true, reason: 'ok' };
   }
-  if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
-  const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
-  if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
+  // Age gate OPSIONAL: minAgeHours > 0 baru dicek (degen early = 0 → token baru lolos).
+  // creation_timestamp null hanya fail-closed KALAU age gate aktif; kalau 0, umur
+  // tidak jadi kriteria (alpha early), gate lain (volume/liq/rug/insider) tetap jalan.
+  if (config.minAgeHours > 0) {
+    if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
+    const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
+    if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
+  }
   const vol24 = volume24hOf(t);
   if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
@@ -148,11 +150,14 @@ export function preFilterToken(
   if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= config.maxRatTraderRate) return fail(`insider ${(t.ratTraderAmountRate*100).toFixed(0)}% >= ${config.maxRatTraderRate*100}%.`);
   if (t.bundlerRate !== null && t.bundlerRate >= config.maxBundlerRate) return fail(`bundler ${(t.bundlerRate*100).toFixed(0)}% >= ${config.maxBundlerRate*100}%.`);
   if (t.top10HolderRate !== null && t.top10HolderRate >= config.maxTop10HolderRate) return fail(`top-10 holder ${(t.top10HolderRate*100).toFixed(0)}% >= ${config.maxTop10HolderRate*100}%.`);
-  // Global total fees gate: total_fee (native SOL/ETH) × live native price must exceed minTotalFeeUsd
-  if (t.totalFeeNative === null) return fail('total fee tidak diketahui (fail-closed).');
-  if (nativePriceUsd === null || nativePriceUsd <= 0) return fail('harga live tidak tersedia — gagal konversi fee (fail-closed).');
-  const totalFeeUsd = t.totalFeeNative * nativePriceUsd;
-  if (totalFeeUsd < config.minTotalFeeUsd) return fail(`total fee $${totalFeeUsd.toFixed(0)} < $${config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).`);
+  // Total fees gate OPSIONAL: minTotalFeeUsd > 0 baru dicek. 0 = off (alpha early;
+  // token baru fee-nya kecil tapi volume gate 100k sudah menyaring token mati).
+  if (config.minTotalFeeUsd > 0) {
+    if (t.totalFeeNative === null) return fail('total fee tidak diketahui (fail-closed).');
+    if (nativePriceUsd === null || nativePriceUsd <= 0) return fail('harga live tidak tersedia — gagal konversi fee (fail-closed).');
+    const totalFeeUsd = t.totalFeeNative * nativePriceUsd;
+    if (totalFeeUsd < config.minTotalFeeUsd) return fail(`total fee $${totalFeeUsd.toFixed(0)} < $${config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).`);
+  }
   return { ok: true, reason: 'ok' };
 }
 
@@ -162,6 +167,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
   const smartDegen = t.smartDegenCount;
   const renowned = t.renownedCount;
   const vol24 = volume24hOf(t);
+  const ageHours = t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null;
 
   // CTO (GMGN source only)
   if (t.ctoFlag && t.source === 'gmgn') {
@@ -171,11 +177,13 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallet (+15)`); }
     if (renowned >= 1) { score += 10; reasons.push(`⭐ KOL ${renowned} (+10)`); }
     if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
+    if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 Launch baru + CTO (+10)'); }
     return { type: 'CTO', confidence: Math.min(100, score), reasons };
   }
 
-  // Revival
-  if (t.priceChange1h !== null && t.priceChange1h > 50) {
+  // Revival — HANYA token lama (umur >= 4h): token muda yang pump itu MOMENTUM
+  // awal (degen early), bukan revival dari kematian.
+  if (ageHours !== null && ageHours >= 4 && t.priceChange1h !== null && t.priceChange1h > 50) {
     let score = 15;
     reasons.push('🕐 Umur > 4h (+15)');
     score += 30; reasons.push(`📈 Harga +${t.priceChange1h.toFixed(0)}% 1h (+30)`);
@@ -185,7 +193,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     return { type: 'REVIVAL', confidence: Math.min(100, score), reasons };
   }
 
-  // Momentum
+  // Momentum (termasuk degen early — token baru yang langsung ramai)
   {
     let score = 0;
     if (t.priceChange5m !== null && t.priceChange5m > 0) { score += 15; reasons.push(`⚡ 5m +${t.priceChange5m.toFixed(1)}% (+15)`); }
@@ -194,6 +202,8 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     if (total > 0 && t.buys / total > 0.6) { score += 20; reasons.push(`⚖️ Buy ${((t.buys/total)*100).toFixed(0)}% / Sell ${((t.sells/total)*100).toFixed(0)}% (+20)`); }
     if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
     if (smartDegen >= 1) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} (+15)`); }
+    // Alpha early: token baru (< 2h) + smart money masuk bareng = indikasi kuat
+    if (ageHours !== null && ageHours < 2 && smartDegen >= 1) { score += 10; reasons.push(`🆕 Launch ${ageHours.toFixed(1)}h + smart money masuk bareng (+10)`); }
     if (t.top10HolderRate !== null && t.top10HolderRate < 0.3) { score += 10; reasons.push(`👥 Top-10 ${(t.top10HolderRate*100).toFixed(1)}% (+10)`); }
     const visitingBonus = t.visitingCount >= 200 ? 5 : 0;
     if (visitingBonus > 0) { score += visitingBonus; reasons.push(`👀 ${t.visitingCount} kunjungan GMGN (+${visitingBonus})`); }
@@ -256,12 +266,12 @@ export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: numbe
 const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   minVolume24hUsd: { min: 1000, max: 100_000_000 },
   minLiquidityUsd: { min: 1000, max: 100_000_000 },
-  minAgeHours: { min: 0.5, max: 168 },
+  minAgeHours: { min: 0, max: 168 },
   maxRugRatio: { min: 0.01, max: 1 },
   maxRatTraderRate: { min: 0.01, max: 1 },
   maxBundlerRate: { min: 0.01, max: 1 },
   maxTop10HolderRate: { min: 0.01, max: 1 },
-  minTotalFeeUsd: { min: 10, max: 1_000_000 },
+  minTotalFeeUsd: { min: 0, max: 1_000_000 },
   passThreshold: { min: 50, max: 99 },
   rankLimit: { min: 10, max: 100 },
   trenchesLimit: { min: 10, max: 80 },

@@ -26,17 +26,12 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
 describe('SolanaScreeningAgent', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; });
 
-  it('preFilter rejects unknown age (fail-closed)', () => {
+  it('preFilter passes young & unknown-age tokens (age gate off — degen early)', () => {
     const agent = new SolanaScreeningAgent();
-    const res = agent.preFilter(mkToken({ creationTimestamp: null }), 73.65);
-    expect(res.ok).toBe(false);
-    expect(res.reason).toContain('fail-closed');
-  });
-
-  it('preFilter rejects young tokens', () => {
-    const agent = new SolanaScreeningAgent();
-    const res = agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), 73.65);
-    expect(res.ok).toBe(false);
+    // age gate default 0: umur tidak jadi kriteria, token baru 1 jam lolos
+    expect(agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), 73.65).ok).toBe(true);
+    // creationTimestamp null juga lolos (umur bukan kriteria)
+    expect(agent.preFilter(mkToken({ creationTimestamp: null }), 73.65).ok).toBe(true);
   });
 
   it('preFilter rejects wash trading & high bundler', () => {
@@ -47,22 +42,21 @@ describe('SolanaScreeningAgent', () => {
 
   it('preFilter passes a healthy token', () => {
     const agent = new SolanaScreeningAgent();
-    // totalFeeNative 50 SOL @ $73.65 = $3,682 >= $500 gate
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
   });
 
-  it('preFilter enforces global total-fee gate (> $500, live native price)', () => {
+  it('preFilter ignores total fee when fee gate is off (default 0)', () => {
     const agent = new SolanaScreeningAgent();
-    // 5 SOL @ $73.65 = $368 < $500 → reject
-    const lowFee = agent.preFilter(mkToken({ totalFeeNative: 5 }), 73.65);
-    expect(lowFee.ok).toBe(false);
-    expect(lowFee.reason).toContain('total fee');
-    // 10 SOL @ $73.65 = $736 >= $500 → pass
-    expect(agent.preFilter(mkToken({ totalFeeNative: 10 }), 73.65).ok).toBe(true);
+    expect(agent.preFilter(mkToken({ totalFeeNative: 5 }), 73.65).ok).toBe(true);
+    expect(agent.preFilter(mkToken({ totalFeeNative: null }), 73.65).ok).toBe(true);
+    expect(agent.preFilter(mkToken(), null).ok).toBe(true);
   });
 
-  it('preFilter rejects unknown total fee and missing live price (fail-closed)', () => {
+  it('preFilter re-enables age & fee gates when thresholds > 0', () => {
     const agent = new SolanaScreeningAgent();
+    agent.updateConfig({ minAgeHours: 2, minTotalFeeUsd: 500 });
+    expect(agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), 73.65).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ totalFeeNative: 5 }), 73.65).ok).toBe(false);
     expect(agent.preFilter(mkToken({ totalFeeNative: null }), 73.65).ok).toBe(false);
     expect(agent.preFilter(mkToken(), null).ok).toBe(false);
   });

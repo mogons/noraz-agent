@@ -24,17 +24,12 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
 describe('RobinhoodScreeningAgent', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; });
 
-  it('preFilter rejects unknown age (fail-closed)', () => {
+  it('preFilter passes young & unknown-age tokens (age gate off — degen early)', () => {
     const agent = new RobinhoodScreeningAgent();
-    const res = agent.preFilter(mkToken({ creationTimestamp: null }), ETH_PRICE);
-    expect(res.ok).toBe(false);
-    expect(res.reason).toContain('fail-closed');
-  });
-
-  it('preFilter rejects young tokens', () => {
-    const agent = new RobinhoodScreeningAgent();
-    const res = agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), ETH_PRICE);
-    expect(res.ok).toBe(false);
+    // age gate default 0: umur tidak jadi kriteria, token baru 1 jam lolos
+    expect(agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), ETH_PRICE).ok).toBe(true);
+    // creationTimestamp null juga lolos (umur bukan kriteria)
+    expect(agent.preFilter(mkToken({ creationTimestamp: null }), ETH_PRICE).ok).toBe(true);
   });
 
   it('preFilter rejects wash trading & high bundler', () => {
@@ -64,22 +59,22 @@ describe('RobinhoodScreeningAgent', () => {
 
   it('preFilter passes a healthy token', () => {
     const agent = new RobinhoodScreeningAgent();
-    // totalFeeNative 1 ETH @ $1929.03 = $1,929 >= $500 gate
     expect(agent.preFilter(mkToken(), ETH_PRICE).ok).toBe(true);
   });
 
-  it('preFilter enforces global total-fee gate (> $500, live ETH price)', () => {
+  it('preFilter ignores total fee when fee gate is off (default 0)', () => {
     const agent = new RobinhoodScreeningAgent();
-    // 0.2 ETH @ $1929.03 = $385.81 < $500 → reject
-    const lowFee = agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE);
-    expect(lowFee.ok).toBe(false);
-    expect(lowFee.reason).toContain('total fee');
-    // 0.3 ETH @ $1929.03 = $578.71 >= $500 → pass
-    expect(agent.preFilter(mkToken({ totalFeeNative: 0.3 }), ETH_PRICE).ok).toBe(true);
+    // fee gate mati: fee kecil, null, dan harga live null semuanya LOLOS
+    expect(agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE).ok).toBe(true);
+    expect(agent.preFilter(mkToken({ totalFeeNative: null }), ETH_PRICE).ok).toBe(true);
+    expect(agent.preFilter(mkToken(), null).ok).toBe(true);
   });
 
-  it('preFilter rejects unknown total fee and missing live price (fail-closed)', () => {
+  it('preFilter re-enables age & fee gates when thresholds > 0', () => {
     const agent = new RobinhoodScreeningAgent();
+    agent.updateConfig({ minAgeHours: 2, minTotalFeeUsd: 500 });
+    expect(agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE).ok).toBe(false);
     expect(agent.preFilter(mkToken({ totalFeeNative: null }), ETH_PRICE).ok).toBe(false);
     expect(agent.preFilter(mkToken(), null).ok).toBe(false);
   });
