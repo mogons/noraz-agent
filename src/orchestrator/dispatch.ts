@@ -71,14 +71,14 @@ export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-evm
     network: isSolana ? 'Solana' : (pool as UniswapPoolSignal).network,
     liquidity: `$${(pool.tvlUsd / 1000).toFixed(1)}k`,
     devHoldingPct: `${pool.feeAprPercentage}% APR`,
-    sniperPct: `${(pool.feesToTvlRatio4h * 100).toFixed(2)}% 4h`,
-    bundlerPct: `${pool.volumeToTvlRatio4h.toFixed(1)}x vol/TVL`,
+    sniperPct: `${(pool.feesToTvlRatio1h * 100).toFixed(2)}% 1h`,
+    bundlerPct: `${pool.volumeToTvlRatio1h.toFixed(1)}x vol/TVL`,
     dexPaidStatus: isSolana ? 'Meteora DLMM' : 'Uniswap v3',
     confidenceScore: 80,
     aiThesis: pool.aiRecommendation,
     liquidityUsd: pool.tvlUsd || 0,
-    volume1hUsd: pool.volume4hUsd / 4 || 0,
+    volume1hUsd: pool.volume1hUsd || 0,
     securityAuditPassed: true,
-    socialHypeScore: pool.organicVolumeScore4h || 0,
+    socialHypeScore: pool.organicVolumeScore1h || 0,
   };
 }

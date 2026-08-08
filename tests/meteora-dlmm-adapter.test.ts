@@ -44,10 +44,10 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     const p = pools[0];
     expect(p.poolAddress).toBe('pool123');
     expect(p.tvlUsd).toBe(150000);
-    expect(p.volume4hUsd).toBe(40000);
-    expect(p.fee4hUsd).toBe(150);
-    expect(p.feeAprPercentage).toBeCloseTo(0.1 * 6 * 365, 5); // fee_tvl_ratio in percent
-    expect(p.feesToTvlRatio4h).toBeCloseTo(0.001, 5); // 0.1% / 100
+    expect(p.volume1hUsd).toBe(5000);
+    expect(p.fee1hUsd).toBe(20);
+    expect(p.feeAprPercentage).toBeCloseTo(0.013 * 24 * 365, 0); // fee_tvl_ratio in percent, rounded 1dp
+    expect(p.feesToTvlRatio1h).toBeCloseTo(0.00013, 5); // 0.013% / 100
     expect(p.tokenXVerified).toBe(true);
     expect(p.tokenXHolders).toBe(5000);
     expect(p.tokenAgeMinutes).toBeGreaterThan(240);
@@ -59,7 +59,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     await adapter.fetchTopYieldPools(10000, 200);
     const url = (vi.mocked(fetch).mock.calls[0][0] as string);
     expect(url).toContain('page_size=200');
-    expect(url).toContain('fee_tvl_ratio_4h%3Adesc'); // fee_tvl_ratio_4h:desc (URL-encoded)
+    expect(url).toContain('fee_tvl_ratio_1h%3Adesc'); // fee_tvl_ratio_1h:desc (URL-encoded)
     expect(url).toContain('tvl%3E%3D10000'); // tvl>=10000
     expect(url).toContain('is_blacklisted%3Dfalse'); // is_blacklisted=false (URL-encoded)
   });
@@ -82,16 +82,16 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     binStep: 10,
     baseFeePercentage: 0.3,
     tvlUsd: 150000,
-    activeTvlUsd: 45000,
-    volume4hUsd: 40000,
-    fee4hUsd: 150,
+    activeTvlUsd: 3000,
+    volume1hUsd: 5000,
+    fee1hUsd: 20,
     fees24hSol: 0,
-    feeAprPercentage: 219, // 0.1% x 6 x 365
-    feesToTvlRatio4h: 0.001, // 0.1% / 100
-    volumeToTvlRatio4h: 0.267,
-    volumeToActiveTvlRatio4h: 0.89,
-    organicVolumeScore4h: 80,
-    tokenAgeMinutes: 43200,
+    feeAprPercentage: 500, // > 100% annualized
+    feesToTvlRatio1h: 0.00013, // 0.013% / 100
+    volumeToTvlRatio1h: 0.033,
+    volumeToActiveTvlRatio1h: 1.67, // >= 1.0 (100%+ active TVL per jam)
+    organicVolumeScore1h: 60,
+    tokenAgeMinutes: 240, // >= 2h
     recommendedDistribution: 'Spot' as const,
     aiRecommendation: 'test',
     volume24hUsd: 120000,
@@ -110,12 +110,14 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
   it('filterHighYieldPools keeps real-yield verified pools and dedupes per pair', () => {
     const adapter = new MeteoraDLMMAdapter();
     const good = mkSignal();
-    const secondSamePair = mkSignal({ poolAddress: 'pool456', tvlUsd: 300000, feesToTvlRatio4h: 0.002 });
-    const lowFees = mkSignal({ poolAddress: 'pool789', fee4hUsd: 5 });
+    const secondSamePair = mkSignal({ poolAddress: 'pool456', tvlUsd: 300000, feesToTvlRatio1h: 0.0002 });
+    const lowFees = mkSignal({ poolAddress: 'pool789', fee1hUsd: 5 });
+    const lowVelocity = mkSignal({ poolAddress: 'pool800', volumeToActiveTvlRatio1h: 0.5 });
+    const lowApr = mkSignal({ poolAddress: 'pool801', feeAprPercentage: 50 });
     const unverified = mkSignal({ poolAddress: 'pool999', tokenXVerified: false });
     const young = mkSignal({ poolAddress: 'pool1000', tokenAgeMinutes: 60 });
 
-    const passed = adapter.filterHighYieldPools([good, secondSamePair, lowFees, unverified, young]);
+    const passed = adapter.filterHighYieldPools([good, secondSamePair, lowFees, lowVelocity, lowApr, unverified, young]);
     expect(passed.length).toBe(1); // best per pair only (higher fee ratio wins)
     expect(passed[0].poolAddress).toBe('pool456');
   });

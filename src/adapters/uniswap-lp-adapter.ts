@@ -5,14 +5,14 @@ export interface UniswapPoolSignal {
   feeTierPercentage: number;
   tvlUsd: number;
   activeTvlUsd: number;
-  volume4hUsd: number;
-  fee4hUsd: number;
+  volume1hUsd: number;
+  fee1hUsd: number;
   fees24hEth: number;
   feeAprPercentage: number;
-  feesToTvlRatio4h: number;
-  volumeToTvlRatio4h: number;
-  volumeToActiveTvlRatio4h: number;
-  organicVolumeScore4h: number;
+  feesToTvlRatio1h: number;
+  volumeToTvlRatio1h: number;
+  volumeToActiveTvlRatio1h: number;
+  organicVolumeScore1h: number;
   tokenAgeMinutes?: number;
   recommendedPriceRange: { minPrice: number; maxPrice: number };
   aiRecommendation: string;
@@ -68,8 +68,8 @@ export class UniswapLPAdapter {
           const network = CHAIN_MAP[chainId];
           if (!network) continue;
           const feeTierPct = p.feeTier ? p.feeTier / 10000 : 0.3;
-          const volume4hUsd = volume24hUsd / 6;
-          const fee4hUsd = volume4hUsd * feeTierPct;
+          const volume1hUsd = volume24hUsd / 24;
+          const fee1hUsd = volume1hUsd * (feeTierPct / 100);
           const activeTvlUsd = tvlUsd * 0.3;
           pools.push({
             poolAddress: p.pairAddress,
@@ -78,20 +78,20 @@ export class UniswapLPAdapter {
             feeTierPercentage: feeTierPct,
             tvlUsd,
             activeTvlUsd,
-            volume4hUsd,
-            fee4hUsd,
-            fees24hEth: ethPriceUsd > 0 ? (fee4hUsd * 6) / ethPriceUsd : 0,
-            feeAprPercentage: Number(((fee4hUsd / tvlUsd) * 6 * 365 * 100).toFixed(1)) || 0,
-            feesToTvlRatio4h: fee4hUsd / tvlUsd,
-            volumeToTvlRatio4h: volume4hUsd / tvlUsd,
-            volumeToActiveTvlRatio4h: activeTvlUsd > 0 ? volume4hUsd / activeTvlUsd : 0,
-            organicVolumeScore4h: Math.min(100, 40 + Math.round((volume4hUsd / tvlUsd) * 15)),
+            volume1hUsd,
+            fee1hUsd,
+            fees24hEth: ethPriceUsd > 0 ? (fee1hUsd * 24) / ethPriceUsd : 0,
+            feeAprPercentage: Number(((fee1hUsd / tvlUsd) * 24 * 365 * 100).toFixed(1)) || 0,
+            feesToTvlRatio1h: fee1hUsd / tvlUsd,
+            volumeToTvlRatio1h: volume1hUsd / tvlUsd,
+            volumeToActiveTvlRatio1h: activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0,
+            organicVolumeScore1h: Math.min(100, 40 + Math.round((volume1hUsd / tvlUsd) * 600)),
             tokenAgeMinutes: undefined,
             recommendedPriceRange: {
               minPrice: Number(p.priceUsd) * 0.95 || 0,
               maxPrice: Number(p.priceUsd) * 1.05 || 0,
             },
-            aiRecommendation: `Live ${p.dexId} pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume4hUsd / 1000).toFixed(1)}k 4h volume.`,
+            aiRecommendation: `Live ${p.dexId} pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume1hUsd / 1000).toFixed(1)}k 1h volume.`,
           });
         }
         }
@@ -104,15 +104,29 @@ export class UniswapLPAdapter {
     }
   }
 
+  /**
+   * High-yield filter (mirror of Meteora, per-1h):
+   * - fees >= $7 in 1h (real fee income)
+   * - volume turnover >= 100% of ACTIVE TVL per 1h (velocity)
+   * - annualized fee yield > 100% (feeAprPercentage)
+   * - age >= 2h (pool mapan)
+   * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
+   */
   public filterHighYieldEVMPools(pools: UniswapPoolSignal[]): UniswapPoolSignal[] {
-    return pools.filter(pool => {
-      const passesMinFeesEth = pool.fees24hEth >= 0.5;
-      const passesFeesRatio = pool.feesToTvlRatio4h >= 0.05;
-      const passesVolumeToTvl = pool.volumeToTvlRatio4h >= 1.5;
-      const passesVolumeVelocity = pool.volumeToActiveTvlRatio4h >= 6.0;
-      const passesOrganicScore = pool.organicVolumeScore4h >= 65;
-      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 240 : true;
-      return passesMinFeesEth && passesFeesRatio && passesVolumeToTvl && passesVolumeVelocity && passesOrganicScore && passesAge;
-    });
+    const bestByPair = new Map<string, UniswapPoolSignal>();
+    for (const pool of pools) {
+      const passesFees = pool.fee1hUsd >= 7;
+      const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
+      const passesApr = pool.feeAprPercentage > 100;
+      const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
+      if (!(passesFees && passesVelocity && passesApr && passesAge)) continue;
+
+      const pairKey = `${pool.pairName.split(' ')[0]}`.toUpperCase();
+      const existing = bestByPair.get(pairKey);
+      if (!existing || pool.feesToTvlRatio1h > existing.feesToTvlRatio1h) {
+        bestByPair.set(pairKey, pool);
+      }
+    }
+    return [...bestByPair.values()];
   }
 }

@@ -27,7 +27,7 @@ describe('UniswapLPAdapter', () => {
     expect(pools[0].poolAddress).toBe('0xRealPoolAddress');
     expect(pools[0].network).toBe('Base');
     expect(pools[0].tvlUsd).toBe(850000);
-    expect(pools[0].volume4hUsd).toBeGreaterThan(0);
+    expect(pools[0].volume1hUsd).toBeGreaterThan(0);
     expect(pools[0].feeTierPercentage).toBe(0.3);
   });
 
