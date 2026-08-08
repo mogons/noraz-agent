@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RobinhoodScreeningAgent, RobinhoodSignal } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
-import { createDedupe, volume24hOf } from '../src/agents/shared/gmgn-meme-helpers.js';
+import { createDedupe, volume24hOf, buildSignalBoostMap, applySignalBoost } from '../src/agents/shared/gmgn-meme-helpers.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 
 const ETH_PRICE = 1929.03;
@@ -213,5 +213,39 @@ describe('RobinhoodScreeningAgent', () => {
     expect(first.length).toBe(2);
     const second = dedupe([mkToken({ address: 'repeat1' }), mkToken({ address: 'fresh2' })]);
     expect(second.map((t) => t.address)).toEqual(['fresh2']);
+  });
+
+  it('buildSignalBoostMap merges events per address (types + latest trigger)', () => {
+    const now = Math.floor(Date.now() / 1000);
+    const map = buildSignalBoostMap([
+      { token_address: '0xABC', signal_type: 12, trigger_at: now - 120 },
+      { token_address: '0xabc', signal_type: 20, trigger_at: now - 60 },
+      { token_address: '0xDEF', signal_type: 6, trigger_at: now - 9999 },
+    ]);
+    expect(map.size).toBe(2);
+    expect(map.get('0xabc')!.types).toEqual([12, 20]); // case-insensitive merge
+    expect(map.get('0xabc')!.lastTriggerAt).toBe(now - 60);
+  });
+
+  it('applySignalBoost adds confidence for fresh signal events, never for NONE', () => {
+    const now = Math.floor(Date.now() / 1000);
+    const map = buildSignalBoostMap([{ token_address: '0xabc', signal_type: 11, trigger_at: now - 10 }]);
+    const det = { type: 'MOMENTUM' as const, confidence: 70, reasons: ['base'] };
+    const boosted = applySignalBoost(det, map, '0xABC');
+    expect(boosted.confidence).toBe(85); // +15 fresh (<=30m)
+    expect(boosted.reasons.some((r) => r.includes('📡 Signal GMGN'))).toBe(true);
+    // NONE stays NONE even with fresh signal
+    const none = applySignalBoost({ type: 'NONE', confidence: 0, reasons: [] }, map, '0xABC');
+    expect(none.type).toBe('NONE');
+    // stale events (>4h) add nothing
+    const stale = buildSignalBoostMap([{ token_address: '0xabc', signal_type: 11, trigger_at: now - 6 * 3600 }]);
+    expect(applySignalBoost(det, stale, '0xabc').confidence).toBe(70);
+  });
+
+  it('collectSignalBoostMap is fail-open (empty map on network failure)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
+    const agent = new RobinhoodScreeningAgent();
+    const map = await agent.collectSignalBoostMap();
+    expect(map.size).toBe(0);
   });
 });

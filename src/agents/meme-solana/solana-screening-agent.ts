@@ -3,7 +3,8 @@ import { RugCheckService, RugCheckResult } from '../../services/security-service
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import type { SignalBoostMap } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
   token: GMGNRawToken;
@@ -81,15 +82,18 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   }
 
   /**
-   * 4 data sources, all focused on GRADUATED tokens (sudah di DEX, bukan
+   * 3 data sources, all focused on GRADUATED tokens (sudah di DEX, bukan
    * bonding curve) dengan timeframe 1H:
    * 1. Trending rank (interval 1h, filter is_out_market) — yang lagi naik
    * 2. Trenches completed — baru selesai bonding curve -> DEX
-   * 3. Token signals — smart money/KOL/CTO/price events
-   * 4. Hot searches (migrated) — yang paling dicari orang
+   * 3. Hot searches (migrated) — yang paling dicari orang
+   * NOTE: token_signal di-drop sebagai sumber kandidat: GMGN tidak pernah
+   * mengisi volume/swap di event (semua chain) — token signal selalu mati di
+   * gate volume. Event smart-money/KOL/CTO dipakai sebagai overlay analisa
+   * (collectSignalBoostMap -> applySignalBoost). Investigasi 2026-08-08.
    */
   public async collectCandidates(): Promise<GMGNRawToken[]> {
-    const [rank, trenches, signals, hotSearches] = await Promise.all([
+    const [rank, trenches, hotSearches] = await Promise.all([
       this.gmgn.fetchRank('sol', {
         interval: '1h',
         limit: this.config.rankLimit,
@@ -100,14 +104,12 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
         limit: this.config.trenchesLimit,
         filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3, max_insider_ratio: 0.3 },
       }),
-      this.gmgn.fetchTokenSignals('sol', this.config.signalTypes, { groups: [{ signal_type: this.config.signalTypes }] }),
       this.gmgn.fetchHotSearches({ chain: 'sol', interval: '1h', limit: this.config.hotSearchesLimit, filters: ['migrated', 'renounced', 'frozen'] }),
     ]);
 
     const candidates = [
       ...rank,
       ...trenches.completed,
-      ...signals.map((e) => e.data),
       ...hotSearches,
     ];
     return this.dedupeTokens.dedupe(candidates);
@@ -117,6 +119,22 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   public async collectSignalEvents(): Promise<GMGNRawToken[]> {
     const events = await this.gmgn.fetchTokenSignals('sol', this.config.signalTypes);
     return events.map((e) => e.data).filter((t) => t.address);
+  }
+
+  /**
+   * Signal booster map (analytical overlay, NOT a candidate source): GMGN
+   * token_signal never fills volume/swaps (any chain), so its events are used
+   * to boost confidence on tokens that already pass rank/trenches/hot gates.
+   * Fail-open: any error -> empty map, screening proceeds unchanged.
+   */
+  public async collectSignalBoostMap(): Promise<SignalBoostMap> {
+    try {
+      const events = await this.gmgn.fetchTokenSignals('sol', this.config.signalTypes);
+      return buildSignalBoostMap(events);
+    } catch (err: any) {
+      console.warn(`[SOLANA AGENT] Signal booster gagal (dilewati): ${err.message}`);
+      return new Map();
+    }
   }
 
   /** Trenches (3-min cadence; legacy alias used by tests/TUI) */
@@ -193,8 +211,14 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       console.warn(`[SOLANA AGENT] Gagal ambil harga SOL: ${err.message}`);
     }
 
-    // 1. Collect candidates from 4 sources (all graduated-focused)
-    const candidates = await this.collectCandidates();
+    // 1. Collect candidates from 3 sources + signal booster overlay (all graduated-focused)
+    const [candidates, signalBoostMap] = await Promise.all([
+      this.collectCandidates(),
+      this.collectSignalBoostMap(),
+    ]);
+    if (signalBoostMap.size > 0) {
+      console.log(`[SOLANA AGENT] Signal overlay: ${signalBoostMap.size} token punya event smart-money/KOL/CTO.`);
+    }
 
     // 2. Pre-filter (cheap) then RugCheck (expensive) then detect
     for (const t of candidates) {
@@ -213,7 +237,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
         continue;
       }
 
-      const det = this.detectSignal(t);
+      const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {
         console.log(`[SOLANA AGENT] ⚪ ${t.symbol}: ${det.type} ${det.confidence}% < ${this.config.passThreshold}% (${det.reasons.join(' | ')})`);
         continue;

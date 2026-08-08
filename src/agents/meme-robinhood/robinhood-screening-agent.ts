@@ -3,7 +3,8 @@ import { GoPlusSecurityService, GoPlusTokenSecurity } from '../../services/goplu
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import type { SignalBoostMap } from '../shared/gmgn-meme-helpers.js';
 
 export interface RobinhoodSignal {
   token: GMGNRawToken;
@@ -119,6 +120,22 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     return events.map((e) => e.data).filter((t) => t.address);
   }
 
+  /**
+   * Signal booster map (analytical overlay, NOT a candidate source): GMGN
+   * token_signal never fills volume/swaps (any chain), so its events are used
+   * to boost confidence on tokens that already pass rank/trenches/hot gates.
+   * Fail-open: any error -> empty map, screening proceeds unchanged.
+   */
+  public async collectSignalBoostMap(): Promise<SignalBoostMap> {
+    try {
+      const events = await this.gmgn.fetchTokenSignals('robinhood', this.config.signalTypes);
+      return buildSignalBoostMap(events);
+    } catch (err: any) {
+      console.warn(`[ROBINHOOD AGENT] Signal booster gagal (dilewati): ${err.message}`);
+      return new Map();
+    }
+  }
+
   /** Trenches (3-min cadence; legacy alias used by tests/TUI) */
   public async collectTrenches(): Promise<GMGNRawToken[]> {
     const trenches = await this.gmgn.fetchTrenches('robinhood', { types: ['completed'], limit: this.config.trenchesLimit });
@@ -193,8 +210,14 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       console.warn(`[ROBINHOOD AGENT] Gagal ambil harga ETH: ${err.message}`);
     }
 
-    // 1. Collect candidates from 4 sources (all graduated-focused)
-    const candidates = await this.collectCandidates();
+    // 1. Collect candidates from 3 sources + signal booster overlay (all graduated-focused)
+    const [candidates, signalBoostMap] = await Promise.all([
+      this.collectCandidates(),
+      this.collectSignalBoostMap(),
+    ]);
+    if (signalBoostMap.size > 0) {
+      console.log(`[ROBINHOOD AGENT] Signal overlay: ${signalBoostMap.size} token punya event smart-money/KOL/CTO.`);
+    }
 
     // 2. Pre-filter (cheap) then GoPlus audit (expensive) then detect
     for (const t of candidates) {
@@ -217,7 +240,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
         continue;
       }
 
-      const det = this.detectSignal(t);
+      const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {
         console.log(`[ROBINHOOD AGENT] ⚪ ${t.symbol}: ${det.type} ${det.confidence}% < ${this.config.passThreshold}% (${det.reasons.join(' | ')})`);
         continue;

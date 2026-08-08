@@ -74,6 +74,51 @@ export function createDedupe(): { dedupe(tokens: GMGNRawToken[]): GMGNRawToken[]
   };
 }
 
+/**
+ * Signal event map for the analysis booster: address (lowercase) -> the
+ * signal types observed + most recent trigger time. Built once per pass from
+ * /v1/market/token_signal, which GMGN never populates with volume/swaps for
+ * any chain — so it is used as an analytical overlay, not a candidate source.
+ */
+export type SignalBoostMap = Map<string, { types: number[]; lastTriggerAt: number }>;
+
+export function buildSignalBoostMap(events: Array<{ token_address: string; signal_type: number; trigger_at: number }>): SignalBoostMap {
+  const map: SignalBoostMap = new Map();
+  for (const e of events) {
+    if (!e?.token_address) continue;
+    const addr = e.token_address.toLowerCase();
+    const cur = map.get(addr);
+    if (!cur) {
+      map.set(addr, { types: [e.signal_type], lastTriggerAt: e.trigger_at });
+    } else {
+      if (!cur.types.includes(e.signal_type)) cur.types.push(e.signal_type);
+      if (e.trigger_at > cur.lastTriggerAt) cur.lastTriggerAt = e.trigger_at;
+    }
+  }
+  return map;
+}
+
+/**
+ * Apply the signal booster to a detected signal: if the token has fresh GMGN
+ * signal events (smart money / KOL / CTO), add confidence + a reason line.
+ * Never lowers confidence; NONE stays NONE (booster can't fabricate a signal).
+ */
+export function applySignalBoost(
+  det: MemeSignalResult,
+  boostMap: SignalBoostMap | null,
+  address: string
+): MemeSignalResult {
+  if (!boostMap || !address || det.type === 'NONE') return det;
+  const entry = boostMap.get(address.toLowerCase());
+  if (!entry) return det;
+  const minsAgo = (Date.now() / 1000 - entry.lastTriggerAt) / 60;
+  if (minsAgo > 240) return det; // stale events add nothing
+  const bonus = minsAgo <= 30 ? 15 : minsAgo <= 120 ? 10 : 5;
+  const typesLabel = entry.types.length > 0 ? `(${entry.types.join(',')})` : '';
+  const reason = `📡 Signal GMGN ${minsAgo.toFixed(0)}m lalu ${typesLabel} (+${bonus})`;
+  return { ...det, confidence: Math.min(100, det.confidence + bonus), reasons: [...det.reasons, reason] };
+}
+
 /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
 export function preFilterToken(
   t: GMGNRawToken,
