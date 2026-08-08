@@ -30,6 +30,8 @@ export interface CallCardPayload {
   dexScreenerUrl?: string;
   gmgnUrl?: string;
   rugcheckUrl?: string;
+  /** Direct pool page (Meteora app / Uniswap explore) — domain-specific LP link. */
+  poolUrl?: string;
   securityAuditPassed: boolean;
   socialHypeScore: number;
   liquidityUsd: number;

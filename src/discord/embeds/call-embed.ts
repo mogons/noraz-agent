@@ -151,7 +151,14 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         .setStyle(ButtonStyle.Secondary)
     );
 
-    if (payload.dexScreenerUrl) {
+    if (payload.poolUrl) {
+      buttonsRow.addComponents(
+        new ButtonBuilder()
+          .setLabel(isMeteora ? '🌐 View on Meteora' : '🌐 View on Uniswap')
+          .setURL(payload.poolUrl)
+          .setStyle(ButtonStyle.Link)
+      );
+    } else if (payload.dexScreenerUrl) {
       buttonsRow.addComponents(
         new ButtonBuilder()
           .setLabel('📊 View Pool Analytics')

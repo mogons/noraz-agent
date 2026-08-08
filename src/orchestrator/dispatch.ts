@@ -75,6 +75,7 @@ export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana'): CallCar
     tokenVerified: pool.tokenXVerified,
     confidenceScore: 80,
     aiThesis: pool.aiRecommendation,
+    poolUrl: `https://app.meteora.ag/pools/${pool.poolAddress}`,
     liquidityUsd: pool.tvlUsd || 0,
     volume1hUsd: pool.volume1hUsd || 0,
     securityAuditPassed: true,

@@ -172,7 +172,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.domain).toBe('LP_ROBINHOOD');
     expect(r.payload?.contractAddress ?? (r.signal as any).token?.address).toBe('0xabc');
     expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
-    expect(r.payload?.dexScreenerUrl).toContain('app.uniswap.org');
+    expect(r.payload?.poolUrl).toBe('https://app.uniswap.org/explore/pools/robinhood/0xabc');
   });
 
   it('lp-robinhood dedupes per symbol (satu terbaik)', async () => {
