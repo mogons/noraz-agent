@@ -132,9 +132,9 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.title).toBe('SOL-USDC');
   });
 
-  it('lp-robinhood reuses meme-robinhood screening (GMGN) with LP gates (mirror LP solana)', async () => {
-    // LP gates (estimasi fee 0.3%): fee1h>=7, 24hFee/TVL>1%, vol/activeTvl>=100%/jam
-    // strong: liq=100k, vol24h=500k → vol1h=20.8k, fee1h=62.5✓, feeTvl=1.5%✓, vol/actTvl=69.4✓
+  it('lp-robinhood reuses meme-robinhood screening (GMGN) with velocity-only LP gate', async () => {
+    // Gate: liquidity > 10k + velocity (vol1h / (0.003 x liq)) >= 100%
+    // strong: liq=100k, vol24h=500k → vel = (500k/24)/(0.003*100k) = 69.4x ✓
     const strongToken = {
       address: '0xabc',
       symbol: 'T1',
@@ -148,7 +148,8 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
       liquidityUsd: 10000,
       volume24hUsd: 500000,
     };
-    // lowvol: liq=100k, vol24h=20k → fee1h=2.5 < 7 → DITOLAK
+    // lowvol: liq=100k, vol24h=20k → vel = (20k/24)/(0.003*100k) = 2.8x ≥ 1.0 → LOLOS
+    // (hanya velocity yang wajib — fee/APR tidak difilter)
     const lowvolToken = {
       address: '0xlow',
       symbol: 'LOW',
@@ -165,14 +166,13 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
       },
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
-    expect(results).toHaveLength(1); // thin (liq<=10k) + lowvol (fee1h<7) ditolak
+    expect(results).toHaveLength(2); // thin (liq<=10k) ditolak; strong + lowvol lolos velocity
     const r = results[0];
     expect(r.passed).toBe(true);
     expect(r.payload?.domain).toBe('LP_ROBINHOOD');
     expect(r.payload?.contractAddress ?? (r.signal as any).token?.address).toBe('0xabc');
     expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
     expect(r.payload?.dexScreenerUrl).toContain('app.uniswap.org');
-    expect(r.payload?.feeApr).toContain('%');
   });
 
   it('lp-robinhood dedupes per symbol (satu terbaik)', async () => {
