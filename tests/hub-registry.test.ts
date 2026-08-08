@@ -44,7 +44,7 @@ const mkMeteoraStub = (pools: MeteoraPoolSignal[]) => ({
   filterHighYieldPools: vi.fn((p: MeteoraPoolSignal[]) => p),
 } as unknown as MeteoraDLMMAdapter);
 
-const mkKrystalPool = (): KrystalPoolSignal => ({
+const mkKrystalPool = (over: Partial<KrystalPoolSignal> = {}): KrystalPoolSignal => ({
   poolAddress: '0xpool1',
   pairName: 'WETH-USDC',
   network: 'Robinhood',
@@ -66,6 +66,7 @@ const mkKrystalPool = (): KrystalPoolSignal => ({
   token0Address: '0xweth',
   token1Address: '0xusdc',
   aiRecommendation: 'Live Uniswap V3 pool WETH-USDC (Robinhood Chain)',
+  ...over,
 });
 
 const mkKrystalStub = (pools: KrystalPoolSignal[]) => ({
@@ -176,6 +177,29 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.poolUrl).toBe('https://app.uniswap.org/explore/pools/robinhood/0xpool1');
     expect(r.payload?.krystalUrl).toContain('defi.krystal.app');
     expect(r.payload?.feeApr).toContain('%');
+  });
+
+  it('lp-robinhood orders meme token first (WETH-PEPE pool -> token0=PEPE, title PEPE-WETH)', async () => {
+    // Uniswap v3 mengembalikan token0=WETH (base) — payload harus menaruh meme (PEPE) duluan,
+    // konsisten dengan LP solana (Chiikawa-SOL): title & detail ikut token meme.
+    const hub = new AthenaHub({ krystalAdapter: mkKrystalStub([mkKrystalPool({
+      pairName: 'WETH-PEPE',
+      token0Symbol: 'WETH',
+      token1Symbol: 'PEPE',
+      token0Address: '0xweth',
+      token1Address: '0xpepe',
+    })]) });
+    const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(1);
+    const p = results[0].payload!;
+    expect(p.title).toBe('PEPE-WETH');
+    expect(p.symbol).toBe('PEPE');
+    expect(p.token0Symbol).toBe('PEPE');
+    expect(p.token1Symbol).toBe('WETH');
+    expect(p.token0Address).toBe('0xpepe');
+    expect(p.token1Address).toBe('0xweth');
+    expect(p.token0ChartUrl).toContain('0xpepe');
+    expect(p.gmgnUrl).toContain('0xpepe');
   });
 
   it('alias "meteora" resolves to lp-solana', async () => {

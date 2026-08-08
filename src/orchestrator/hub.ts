@@ -264,11 +264,17 @@ export class AthenaHub {
     const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
     const results: AgentReport[] = [];
     for (const p of high) {
-      // Token meme = non-base di antara token0/token1; kalau keduanya non-base
-      // (atau keduanya base), pilih token0 sebagai representasi.
-      const memeToken = !isBaseAsset(p.token0Symbol) ? { addr: p.token0Address, sym: p.token0Symbol, isToken0: true }
-        : !isBaseAsset(p.token1Symbol) ? { addr: p.token1Address, sym: p.token1Symbol, isToken0: false }
-        : { addr: p.token0Address, sym: p.token0Symbol, isToken0: true };
+      // Urutkan token: token meme (non-base, mis. PEPE) jadi yang pertama,
+      // base asset (WETH/USDC/…) jadi kedua — konsisten dengan LP solana
+      // (Meteora: "Chiikawa-SOL", meme duluan). Fallback: token0 tetap pertama.
+      const memeToken = !isBaseAsset(p.token0Symbol)
+        ? { addr: p.token0Address, sym: p.token0Symbol }
+        : !isBaseAsset(p.token1Symbol)
+          ? { addr: p.token1Address, sym: p.token1Symbol }
+          : { addr: p.token0Address, sym: p.token0Symbol };
+      const baseToken = memeToken.sym === p.token0Symbol
+        ? { addr: p.token1Address, sym: p.token1Symbol }
+        : { addr: p.token0Address, sym: p.token0Symbol };
       if (memeToken.addr && !enriched.has(memeToken.addr)) {
         try {
           const info = await gmgn.fetchTokenInfo('robinhood', memeToken.addr);
@@ -285,19 +291,19 @@ export class AthenaHub {
         confidence: 80,
         payload: {
           domain: 'LP_ROBINHOOD' as const,
-          title: p.pairName,
-          symbol: p.token0Symbol,
+          title: `${memeToken.sym}-${baseToken.sym}`,
+          symbol: memeToken.sym,
           contractAddress: p.poolAddress,
           network: 'Robinhood Chain (Uniswap v3)',
           dexPaidStatus: `Uniswap V3 • ${p.feeTier / 10000}% fee`,
           poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${p.poolAddress}`,
           krystalUrl: `https://defi.krystal.app/pools/detail?chainId=4663&feeTier=${p.feeTier}&poolAddress=${p.poolAddress}&protocol=uniswapv3`,
-          token0Address: p.token0Address,
-          token1Address: p.token1Address,
-          token0Symbol: p.token0Symbol,
-          token1Symbol: p.token1Symbol,
-          token0ChartUrl: p.token0Address ? `https://dexscreener.com/robinhood/${p.token0Address}` : undefined,
-          token1ChartUrl: p.token1Address ? `https://dexscreener.com/robinhood/${p.token1Address}` : undefined,
+          token0Address: memeToken.addr,
+          token1Address: baseToken.addr,
+          token0Symbol: memeToken.sym,
+          token1Symbol: baseToken.sym,
+          token0ChartUrl: memeToken.addr ? `https://dexscreener.com/robinhood/${memeToken.addr}` : undefined,
+          token1ChartUrl: baseToken.addr ? `https://dexscreener.com/robinhood/${baseToken.addr}` : undefined,
           gmgnUrl: memeToken.addr ? `https://gmgn.ai/robinhood/token/${memeToken.addr}` : undefined,
           token0PriceUsd: info?.priceUsd || undefined,
           token0MarketCapUsd: info?.marketCapUsd || undefined,
