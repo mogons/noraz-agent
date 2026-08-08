@@ -17,6 +17,7 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   visitingCount: 300, squareMentions: 10,
   twitterRenameCount: 0, twitterDelPostCount: 0, twitterCreateTokenCount: 1,
   buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, totalFeeNative: 1, source: 'gmgn',
+  exchange: 'pump_amm', launchpadPlatform: 'Pump.fun', launchpadStatus: '1', progress: 1,
   ...over,
 });
 

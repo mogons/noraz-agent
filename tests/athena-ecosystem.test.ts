@@ -44,6 +44,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       visitingCount: 250, squareMentions: 5, twitterRenameCount: 0,
       twitterDelPostCount: 0, twitterCreateTokenCount: 0,
       buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, source: 'gmgn',
+      exchange: 'pump_amm', launchpadPlatform: 'Pump.fun', launchpadStatus: '1', progress: 1,
     });
     expect(det.type).toBe('CTO');
     expect(det.confidence).toBeGreaterThanOrEqual(80);
@@ -72,6 +73,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       visitingCount: 300, squareMentions: 10,
       twitterRenameCount: 0, twitterDelPostCount: 0, twitterCreateTokenCount: 1,
       buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, totalFeeNative: 1, source: 'gmgn',
+      exchange: 'pump_amm', launchpadPlatform: 'Pump.fun', launchpadStatus: '1', progress: 1,
     };
 
     // 1 ETH @ live price gate: preFilter passes the healthy token (fail-closed gates all clear)

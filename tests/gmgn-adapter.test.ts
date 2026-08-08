@@ -114,4 +114,64 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(fn).toHaveBeenCalledTimes(2);
     expect(res).toEqual([]);
   }, 15000);
+
+  it('fetchTrenches sends the v2 request shape and parses completed', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: {
+        completed: [{ address: 'c1', symbol: 'COMP', exchange: 'raydium', launchpad_platform: 'Pump.fun', launchpad_status: '1', progress: 1 }],
+        new_creation: [], pump: [],
+      } }),
+    });
+    vi.stubGlobal('fetch', fn);
+    const adapter = new GMGNAdapter();
+    const res = await adapter.fetchTrenches('sol', {
+      types: ['completed'],
+      limit: 80,
+      filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3 },
+    });
+    expect(res.completed.length).toBe(1);
+    expect(res.completed[0].exchange).toBe('raydium');
+    expect(res.completed[0].progress).toBe(1);
+    const body = JSON.parse(fn.mock.calls[0][1].body);
+    expect(body.version).toBe('v2');
+    expect(body.completed).toBeDefined();
+    expect(body.completed.limit).toBe(80);
+    expect(body.completed.max_rug_ratio).toBe(0.3);
+    expect(body.completed.launchpad_platform_v2).toBe(true);
+  });
+
+  it('fetchHotSearches parses the top tokens block', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: [{ interval: '1h', chain: 'sol', tokens: [{ address: 'h1', symbol: 'HOT', exchange: 'pump_amm', launchpad_status: '1' }] }] }),
+    }));
+    const adapter = new GMGNAdapter();
+    const tokens = await adapter.fetchHotSearches({ chain: 'sol', interval: '1h', filters: ['migrated', 'renounced', 'frozen'] });
+    expect(tokens.length).toBe(1);
+    expect(tokens[0].symbol).toBe('HOT');
+    expect(tokens[0].exchange).toBe('pump_amm');
+  });
+
+  it('normalizes exchange/launchpad/progress fields for graduated detection', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: { data: { rank: [
+        { symbol: 'DEX', address: 'd1', exchange: 'raydium', launchpad_platform: 'Pump.fun', launchpad_status: '1' },
+        { symbol: 'BOND', address: 'b1', exchange: 'pump', progress: 0.4 },
+      ] } } }),
+    }));
+    const adapter = new GMGNAdapter();
+    const tokens = await adapter.fetchRank('sol');
+    expect(tokens[0].exchange).toBe('raydium');
+    expect(tokens[0].launchpadStatus).toBe('1');
+    expect(tokens[1].exchange).toBe('pump');
+    expect(tokens[1].progress).toBe(0.4);
+  });
 });

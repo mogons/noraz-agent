@@ -3,7 +3,7 @@ import { RugCheckService, RugCheckResult } from '../../services/security-service
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
   token: GMGNRawToken;
@@ -15,31 +15,36 @@ export interface SolanaSignal {
 export interface SolanaScreeningConfig {
   minVolume24hUsd: number;   // 50000
   minLiquidityUsd: number;   // 10000
-  minAgeHours: number;       // 4
+  minAgeHours: number;       // 2 — < 2h masih rawan rug
   maxRugRatio: number;       // 0.3
   maxRatTraderRate: number;  // 0.3
   maxBundlerRate: number;    // 0.5
   maxTop10HolderRate: number;// 0.4
   minTotalFeeUsd: number;    // 500 — global total fees (SOL native) converted to USD
   passThreshold: number;     // 80
-  signalTypes: number[];     // [1..13, 17..21]
-  rankLimit: number;         // 20
-  trenchesLimit: number;     // 20
+  signalTypes: number[];     // smart-money/KOL/CTO/price events (graduated focus)
+  rankLimit: number;         // 100 (trending, 1h)
+  trenchesLimit: number;     // 80 (completed only)
+  hotSearchesLimit: number;  // 100 (hot searches, migrated)
+  signalLimit: number;       // 50 per group
 }
 
 const DEFAULT_CONFIG: SolanaScreeningConfig = {
   minVolume24hUsd: 50000,
   minLiquidityUsd: 10000,
-  minAgeHours: 4,
+  minAgeHours: 2,
   maxRugRatio: 0.3,
   maxRatTraderRate: 0.3,
   maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
   minTotalFeeUsd: 500,
   passThreshold: 80,
-  signalTypes: [1,2,3,4,5,6,7,8,9,10,11,12,13,17,18,19,20,21],
-  rankLimit: 20,
-  trenchesLimit: 20,
+  // 6 PriceUp, 7 PriceATH, 8 McpKeyLevel, 11 Cto, 12 SmartDegenBuy, 13/19 PlatformCall, 20 KOLBuy
+  signalTypes: [6, 7, 8, 11, 12, 13, 19, 20],
+  rankLimit: 100,
+  trenchesLimit: 80,
+  hotSearchesLimit: 100,
+  signalLimit: 50,
 };
 
 export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
@@ -58,15 +63,48 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /** 1-min cadence: signal feed events (primary trigger) */
+  /**
+   * 4 data sources, all focused on GRADUATED tokens (sudah di DEX, bukan
+   * bonding curve) dengan timeframe 1H:
+   * 1. Trending rank (interval 1h, filter is_out_market) — yang lagi naik
+   * 2. Trenches completed — baru selesai bonding curve -> DEX
+   * 3. Token signals — smart money/KOL/CTO/price events
+   * 4. Hot searches (migrated) — yang paling dicari orang
+   */
+  public async collectCandidates(): Promise<GMGNRawToken[]> {
+    const [rank, trenches, signals, hotSearches] = await Promise.all([
+      this.gmgn.fetchRank('sol', {
+        interval: '1h',
+        limit: this.config.rankLimit,
+        filters: ['renounced', 'frozen', 'is_out_market'],
+      }),
+      this.gmgn.fetchTrenches('sol', {
+        types: ['completed'],
+        limit: this.config.trenchesLimit,
+        filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3, max_insider_ratio: 0.3 },
+      }),
+      this.gmgn.fetchTokenSignals('sol', this.config.signalTypes, { groups: [{ signal_type: this.config.signalTypes }] }),
+      this.gmgn.fetchHotSearches({ chain: 'sol', interval: '1h', limit: this.config.hotSearchesLimit, filters: ['migrated', 'renounced', 'frozen'] }),
+    ]);
+
+    const candidates = [
+      ...rank,
+      ...trenches.completed,
+      ...signals.map((e) => e.data),
+      ...hotSearches,
+    ];
+    return this.dedupeTokens.dedupe(candidates);
+  }
+
+  /** Signal feed events (1-min cadence; legacy alias used by tests/TUI) */
   public async collectSignalEvents(): Promise<GMGNRawToken[]> {
     const events = await this.gmgn.fetchTokenSignals('sol', this.config.signalTypes);
     return events.map((e) => e.data).filter((t) => t.address);
   }
 
-  /** 3-min cadence: trenches (alpha: near-completion + completed) */
+  /** Trenches (3-min cadence; legacy alias used by tests/TUI) */
   public async collectTrenches(): Promise<GMGNRawToken[]> {
-    const trenches = await this.gmgn.fetchTrenches('sol', { limit: this.config.trenchesLimit });
+    const trenches = await this.gmgn.fetchTrenches('sol', { types: ['completed'], limit: this.config.trenchesLimit });
     return [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed].filter((t) => t.address);
   }
 
@@ -138,14 +176,17 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       console.warn(`[SOLANA AGENT] Gagal ambil harga SOL: ${err.message}`);
     }
 
-    // 1. Collect candidates: signal events (primary) + trenches (alpha)
-    const candidates = this.dedupeTokens.dedupe([
-      ...(await this.collectSignalEvents()),
-      ...(await this.collectTrenches()),
-    ]);
+    // 1. Collect candidates from 4 sources (all graduated-focused)
+    const candidates = await this.collectCandidates();
 
     // 2. Pre-filter (cheap) then RugCheck (expensive) then detect
     for (const t of candidates) {
+      // Graduated-only: reject tokens still on the bonding curve (exchange='pump')
+      if (!isGraduatedToken(t)) {
+        console.log(`[SOLANA AGENT] ⛔ ${t.symbol}: belum graduated (bonding curve).`);
+        continue;
+      }
+
       const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[SOLANA AGENT] ${filter.reason}`); continue; }
 

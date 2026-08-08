@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { SolanaScreeningAgent, SolanaSignal } from '../src/agents/meme-solana/solana-screening-agent.js';
-import { createDedupe } from '../src/agents/shared/gmgn-meme-helpers.js';
+import { createDedupe, isGraduatedToken } from '../src/agents/shared/gmgn-meme-helpers.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 
 const requireEsm = createRequire(import.meta.url);
@@ -19,6 +19,7 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   visitingCount: 300, squareMentions: 10,
   twitterRenameCount: 0, twitterDelPostCount: 0, twitterCreateTokenCount: 1,
   buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, totalFeeNative: 50, source: 'gmgn',
+  exchange: 'pump_amm', launchpadPlatform: 'Pump.fun', launchpadStatus: '1', progress: 1,
   ...over,
 });
 
@@ -130,5 +131,13 @@ describe('SolanaScreeningAgent', () => {
     expect(first.length).toBe(2);
     const second = dedupe([mkToken({ address: 'repeat1' }), mkToken({ address: 'fresh2' })]);
     expect(second.map((t) => t.address)).toEqual(['fresh2']);
+  });
+
+  it('isGraduatedToken rejects bonding-curve tokens (exchange=pump) and unknown', () => {
+    expect(isGraduatedToken(mkToken({ exchange: 'pump' }))).toBe(false);
+    expect(isGraduatedToken(mkToken({ exchange: null }))).toBe(false);
+    expect(isGraduatedToken(mkToken({ exchange: 'pump_amm' }))).toBe(true);
+    expect(isGraduatedToken(mkToken({ exchange: 'raydium' }))).toBe(true);
+    expect(isGraduatedToken(mkToken({ source: 'dexscreener', exchange: null }))).toBe(true);
   });
 });

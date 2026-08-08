@@ -44,6 +44,14 @@ export interface GMGNRawToken {
   dexscrBoostFee: number;
   dexscrAd: number;
   totalFeeNative: number | null;
+  /** Current exchange/venue: 'pump' = masih bonding curve; 'pump_amm'/'raydium'/dll = sudah graduated ke DEX. */
+  exchange: string | null;
+  /** Launchpad asal (Pump.fun, letsbonk, moonshot_app, ...). */
+  launchpadPlatform: string | null;
+  /** '0' = launching (bonding curve), '1' = migrated/graduated ke DEX. */
+  launchpadStatus: string | null;
+  /** Bonding curve progress 0-1 (trenches/signal snapshot). */
+  progress: number | null;
   source: 'gmgn' | 'dexscreener';
 }
 
@@ -79,7 +87,7 @@ export class GMGNAdapter {
   private async gmgnRequest<T>(
     method: 'GET' | 'POST',
     subPath: string,
-    query: Record<string, string | number> = {},
+    query: Record<string, string | number | string[] | number[]> = {},
     body?: unknown,
     retries = 1
   ): Promise<T | null> {
@@ -87,8 +95,17 @@ export class GMGNAdapter {
     if (!key) return null;
     const timestamp = Math.floor(Date.now() / 1000);
     const client_id = crypto.randomUUID();
-    const qs = new URLSearchParams({ ...Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])), timestamp: String(timestamp), client_id });
-    const url = `${this.baseUrl}${subPath}?${qs.toString()}`;
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (Array.isArray(v)) {
+        for (const item of v) params.append(k, String(item));
+      } else {
+        params.set(k, String(v));
+      }
+    }
+    params.set('timestamp', String(timestamp));
+    params.set('client_id', client_id);
+    const url = `${this.baseUrl}${subPath}?${params.toString()}`;
     try {
       const res = await fetch(url, {
         method,
@@ -159,6 +176,12 @@ export class GMGNAdapter {
       totalFeeNative: typeof raw.total_fee === 'number' && raw.total_fee > 0
         ? raw.total_fee
         : (typeof raw.gas_fee === 'number' && raw.gas_fee > 0 ? raw.gas_fee : null),
+      exchange: raw.exchange ? String(raw.exchange) : null,
+      launchpadPlatform: raw.launchpad_platform ? String(raw.launchpad_platform) : null,
+      launchpadStatus: raw.launchpad_status !== undefined && raw.launchpad_status !== null
+        ? String(raw.launchpad_status)
+        : null,
+      progress: typeof raw.progress === 'number' ? raw.progress : null,
       source,
     };
   }
@@ -226,21 +249,60 @@ export class GMGNAdapter {
     return this.normalizeToken(this.flattenTokenInfo(data), chain);
   }
 
-  public async fetchRank(chain: SolChain = 'sol', opts: { interval?: RankInterval; limit?: number } = {}): Promise<GMGNRawToken[]> {
-    const res = await this.gmgnRequest<any>('GET', '/v1/market/rank', {
-      chain, interval: opts.interval || '1h', limit: opts.limit || 20,
-    });
+  /**
+   * /v1/market/rank — trending tokens per interval.
+   * Server-side filters: boolean tags (e.g. renounced/frozen/is_out_market),
+   * platforms (Pump.fun, letsbonk, ...), and min_* / max_* range fields.
+   */
+  public async fetchRank(
+    chain: SolChain = 'sol',
+    opts: {
+      interval?: RankInterval;
+      limit?: number;
+      filters?: string[];
+      platforms?: string[];
+      range?: Record<string, string | number>;
+    } = {}
+  ): Promise<GMGNRawToken[]> {
+    const query: Record<string, string | number | string[]> = {
+      chain,
+      interval: opts.interval || '1h',
+      limit: opts.limit || 100,
+    };
+    if (opts.filters?.length) query.filters = opts.filters;
+    if (opts.platforms?.length) query.platforms = opts.platforms;
+    if (opts.range) Object.assign(query, opts.range);
+    const res = await this.gmgnRequest<any>('GET', '/v1/market/rank', query);
     if (!res) return [];
     const rank: any[] = res?.data?.data?.rank || res?.data?.rank || res?.rank || [];
     if (!Array.isArray(rank)) return [];
     return rank.map((t) => this.normalizeToken(t, chain));
   }
 
-  public async fetchTrenches(chain: SolChain = 'sol', opts: { limit?: number } = {}): Promise<{ newCreation: GMGNRawToken[]; nearCompletion: GMGNRawToken[]; completed: GMGNRawToken[] }> {
-    const res = await this.gmgnRequest<any>('POST', '/v1/trenches', { chain }, {
-      type: ['new_creation', 'near_completion', 'completed'],
-      limit: opts.limit || 20,
-    });
+  /**
+   * /v1/trenches — newly launched tokens per category. Uses the v2 request
+   * shape (version + per-category filter section). `near_completion` is
+   * returned under the `pump` key by the API.
+   */
+  public async fetchTrenches(
+    chain: SolChain = 'sol',
+    opts: {
+      types?: Array<'new_creation' | 'near_completion' | 'completed'>;
+      limit?: number;
+      filters?: Record<string, string | number>;
+    } = {}
+  ): Promise<{ newCreation: GMGNRawToken[]; nearCompletion: GMGNRawToken[]; completed: GMGNRawToken[] }> {
+    const types = opts.types?.length ? opts.types : ['new_creation', 'near_completion', 'completed'];
+    const actualLimit = opts.limit || 80;
+    const section: Record<string, unknown> = {
+      filters: ['offchain', 'onchain'],
+      launchpad_platform_v2: true,
+      limit: actualLimit,
+      ...(opts.filters || {}),
+    };
+    const body: Record<string, unknown> = { version: 'v2' };
+    for (const type of types) body[type] = { ...section };
+    const res = await this.gmgnRequest<any>('POST', '/v1/trenches', { chain }, body);
     const empty = { newCreation: [], nearCompletion: [], completed: [] };
     if (!res) return empty;
     const d = res?.data || {};
@@ -251,11 +313,24 @@ export class GMGNAdapter {
     };
   }
 
-  public async fetchTokenSignals(chain: SolChain = 'sol', signalTypes: number[] = [], opts: { limit?: number; mcMin?: number; mcMax?: number } = {}): Promise<TokenSignalEvent[]> {
-    const res = await this.gmgnRequest<any>('POST', '/v1/market/token_signal', {}, {
-      chain,
-      groups: [{ signal_type: signalTypes.length > 0 ? signalTypes : undefined, mc_min: opts.mcMin, mc_max: opts.mcMax }],
-    });
+  /**
+   * /v1/market/token_signal — real-time signal events (price spikes, smart
+   * money buys, CTO, KOL buys, ...). Max 50 results per group; multiple
+   * groups run in parallel and merge by trigger_at desc.
+   */
+  public async fetchTokenSignals(
+    chain: SolChain = 'sol',
+    signalTypes: number[] = [],
+    opts: {
+      groups?: Array<{ signal_type?: number[]; mc_min?: number; mc_max?: number; trigger_mc_min?: number; trigger_mc_max?: number; total_fee_min?: number; total_fee_max?: number }>;
+      mcMin?: number;
+      mcMax?: number;
+    } = {}
+  ): Promise<TokenSignalEvent[]> {
+    const groups = opts.groups?.length
+      ? opts.groups
+      : [{ signal_type: signalTypes.length > 0 ? signalTypes : undefined, mc_min: opts.mcMin, mc_max: opts.mcMax }];
+    const res = await this.gmgnRequest<any>('POST', '/v1/market/token_signal', {}, { chain, groups });
     if (!res) return [];
     const data = res?.data;
     if (!Array.isArray(data)) return [];
@@ -266,6 +341,36 @@ export class GMGNAdapter {
       trigger_mc: Number(e.trigger_mc || 0),
       data: this.normalizeToken(e.data || {}, chain),
     })).filter((e) => e.token_address);
+  }
+
+  /**
+   * /v1/market/hot_searches — most-searched tokens ranked by visiting_count.
+   * Supports server-side boolean filters (e.g. migrated/renounced/frozen).
+   */
+  public async fetchHotSearches(
+    opts: {
+      chain?: SolChain;
+      interval?: RankInterval;
+      limit?: number;
+      filters?: string[];
+    } = {}
+  ): Promise<GMGNRawToken[]> {
+    const chain = opts.chain || 'sol';
+    const res = await this.gmgnRequest<any>('POST', '/v1/market/hot_searches', {}, {
+      params: [{
+        label: 'hot-search',
+        chain,
+        interval: opts.interval || '1h',
+        limit: opts.limit || 100,
+        ...(opts.filters?.length ? { filters: opts.filters } : {}),
+      }],
+    });
+    if (!res) return [];
+    const data = res?.data;
+    if (!Array.isArray(data) || data.length === 0) return [];
+    const tokens = data[0]?.tokens;
+    if (!Array.isArray(tokens)) return [];
+    return tokens.map((t: any) => this.normalizeToken(t, chain));
   }
 
   /**
@@ -359,6 +464,10 @@ export class GMGNAdapter {
       dexscrBoostFee: 0,
       dexscrAd: 0,
       totalFeeNative: null, // DexScreener does not expose total fees
+      exchange: null,
+      launchpadPlatform: null,
+      launchpadStatus: null,
+      progress: null,
       source: 'dexscreener',
     };
   }
