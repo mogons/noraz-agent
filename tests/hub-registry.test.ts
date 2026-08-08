@@ -173,6 +173,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.contractAddress).toBe('0xpool1');
     expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
     expect(r.payload?.poolUrl).toBe('https://app.uniswap.org/explore/pools/robinhood/0xpool1');
+    expect(r.payload?.krystalUrl).toContain('defi.krystal.app');
     expect(r.payload?.feeApr).toContain('%');
   });
 

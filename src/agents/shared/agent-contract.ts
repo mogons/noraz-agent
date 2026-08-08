@@ -32,6 +32,8 @@ export interface CallCardPayload {
   rugcheckUrl?: string;
   /** Direct pool page (Meteora app / Uniswap explore) — domain-specific LP link. */
   poolUrl?: string;
+  /** Extra data-source link for LP (e.g. Krystal pool page — verifikasi data). */
+  krystalUrl?: string;
   securityAuditPassed: boolean;
   socialHypeScore: number;
   liquidityUsd: number;

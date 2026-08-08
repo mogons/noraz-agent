@@ -163,6 +163,15 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       );
     }
 
+    if (payload.krystalUrl) {
+      buttonsRow.addComponents(
+        new ButtonBuilder()
+          .setLabel('🔍 View on Krystal')
+          .setURL(payload.krystalUrl)
+          .setStyle(ButtonStyle.Link)
+      );
+    }
+
     return { embeds: [embed], components: [buttonsRow] };
   }
 

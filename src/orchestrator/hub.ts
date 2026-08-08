@@ -268,6 +268,7 @@ export class AthenaHub {
         dexPaidStatus: `Uniswap V3 • ${p.feeTier / 10000}% fee`,
         dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
         poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${p.poolAddress}`,
+        krystalUrl: `https://defi.krystal.app/pools/robinhood?token=${p.token0Address}`,
         liquidity: `$${(p.tvlUsd / 1000).toFixed(1)}k`,
         devHoldingPct: `${p.feeAprPercentage}% APR`,
         sniperPct: `${p.apr24h.toFixed(1)}% 24h`,
