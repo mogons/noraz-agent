@@ -33,7 +33,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const det = agent.detectSignal({
       chain: 'sol', address: 'So11111111111111111111111111111111111111112',
       symbol: 'SOLMEME', name: 'Sol Meme', priceUsd: 0.001, marketCapUsd: 100000,
-      volume24hUsd: 150000, liquidityUsd: 40000, buys: 700, sells: 300, swaps: 1000,
+      volume24hUsd: 150000, volume1hUsd: 30000, liquidityUsd: 40000, buys: 700, sells: 300, swaps: 1000,
       holderCount: 300, top10HolderRate: 0.1, devTeamHoldRate: 0.005,
       creatorClose: true, creatorTokenStatus: 'creator_close',
       smartDegenCount: 3, renownedCount: 1, bundlerRate: 0.05,
@@ -63,7 +63,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const token: GMGNRawToken = {
       chain: 'robinhood', address: '0x1234567890123456789012345678901234567890',
       symbol: 'RHMEME', name: 'Robinhood Meme',
-      priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, liquidityUsd: 50000,
+      priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 30000, liquidityUsd: 50000,
       buys: 800, sells: 200, swaps: 1000, holderCount: 500,
       top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
       smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,

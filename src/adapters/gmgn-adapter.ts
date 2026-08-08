@@ -11,6 +11,7 @@ export interface GMGNRawToken {
   priceUsd: number;
   marketCapUsd: number;
   volume24hUsd: number;
+  volume1hUsd: number; // real 1h volume bila tersedia (trenches/signal); 0 = tidak diketahui
   liquidityUsd: number;
   buys: number;
   sells: number;
@@ -141,6 +142,7 @@ export class GMGNAdapter {
       priceUsd: Number(raw.price || raw.price_usd || 0),
       marketCapUsd: Number(raw.market_cap ?? raw.usd_market_cap ?? 0),
       volume24hUsd: Number(raw.volume ?? raw.volume_24h ?? 0),
+      volume1hUsd: Number(raw.volume_1h ?? 0), // real 1h volume (trenches/signal); 0 bila sumber tidak menyediakan
       liquidityUsd: Number(raw.liquidity ?? 0),
       buys: Number(raw.buys ?? raw.buys_24h ?? 0),
       sells: Number(raw.sells ?? raw.sells_24h ?? 0),
@@ -421,6 +423,7 @@ export class GMGNAdapter {
   private normalizeDexScreenerPair(pair: any, chain: SolChain): GMGNRawToken {
     const priceUsd = parseFloat(pair.priceUsd || '0') || 0;
     const volume24hUsd = pair.volume?.h24 || 0;
+    const volume1hUsd = pair.volume?.h1 || 0;
     const liquidityUsd = pair.liquidity?.usd || 0;
     const priceChange1h = typeof pair.priceChange?.h1 === 'number' ? pair.priceChange.h1 : null;
     return {
@@ -431,6 +434,7 @@ export class GMGNAdapter {
       priceUsd,
       marketCapUsd: pair.marketCap || pair.fdv || 0,
       volume24hUsd,
+      volume1hUsd,
       liquidityUsd,
       buys: 0,
       sells: 0,

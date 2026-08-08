@@ -7,7 +7,7 @@ const ETH_PRICE = 1929.03;
 
 const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   chain: 'robinhood', address: 'addr1', symbol: 'TEST', name: 'Test Token',
-  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, liquidityUsd: 50000,
+  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 30000, liquidityUsd: 50000,
   buys: 800, sells: 200, swaps: 1000, holderCount: 500,
   top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
   smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,
