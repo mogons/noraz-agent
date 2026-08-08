@@ -83,6 +83,12 @@ export default {
     const change5m = typeof g.price_change_percent5m === 'number' ? g.price_change_percent5m : null;
     const change1h = typeof g.price_change_percent1h === 'number' ? g.price_change_percent1h : null;
 
+    // ── Quality gate: minimal 1 dari 3 {smart wallet, CTO, KOL} ──
+    const signalStrength = (smartDegen >= 1 ? 1 : 0) + (ctoFlag ? 1 : 0) + (renowned >= 1 ? 1 : 0);
+    if (signalStrength < 1) {
+      return { confidence: 0, recommendedAction: 'SKIP', reason: '⚠️ Kosongan: tanpa smart wallet, CTO, maupun KOL — skip.' };
+    }
+
     // CTO (Community Takeover)
     if (ctoFlag) {
       let score = 40;

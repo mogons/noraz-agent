@@ -104,6 +104,20 @@ describe('RobinhoodScreeningAgent', () => {
     expect(det.type).not.toBe('CTO');
   });
 
+  it('detectSignal rejects "kosongan" tokens — butuh minimal 1 dari 3 (smart wallet/CTO/KOL)', () => {
+    const agent = new RobinhoodScreeningAgent();
+    // 0/3 sinyal: cuma volume pump, tanpa smart wallet/CTO/KOL → NONE
+    const empty = agent.detectSignal(mkToken({ smartDegenCount: 0, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3, volume24hUsd: 300000 }));
+    expect(empty.type).toBe('NONE');
+    expect(empty.reasons.some((r) => r.includes('Kosongan'))).toBe(true);
+    // 1/3 sinyal: cuma smart wallet → MOMENTUM (lolos gate)
+    const one = agent.detectSignal(mkToken({ smartDegenCount: 1, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3 }));
+    expect(one.type).toBe('MOMENTUM');
+    // 2/3 sinyal: smart wallet + KOL → MOMENTUM
+    const two = agent.detectSignal(mkToken({ smartDegenCount: 1, renownedCount: 1, ctoFlag: false, priceChange1h: 40, priceChange5m: 3 }));
+    expect(two.type).toBe('MOMENTUM');
+  });
+
   it('runScreeningPass returns [] without network', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));

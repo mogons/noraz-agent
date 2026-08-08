@@ -169,6 +169,14 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
   const vol24 = volume24hOf(t);
   const ageHours = t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null;
 
+  // Quality gate: minimal 1 dari 3 sinyal {smart wallet, CTO, KOL} wajib ada.
+  // Token "kosongan" (cuma volume/pump tanpa smart money/CTO/KOL sama sekali)
+  // = noise, bukan alpha — langsung NONE, tidak pernah jadi call.
+  const signalStrength = (smartDegen >= 1 ? 1 : 0) + (t.ctoFlag ? 1 : 0) + (renowned >= 1 ? 1 : 0);
+  if (signalStrength < 1) {
+    return { type: 'NONE', confidence: 0, reasons: ['⚠️ Kosongan: tanpa smart wallet, CTO, maupun KOL — skip.'] };
+  }
+
   // CTO (GMGN source only)
   if (t.ctoFlag && t.source === 'gmgn') {
     let score = 40;
