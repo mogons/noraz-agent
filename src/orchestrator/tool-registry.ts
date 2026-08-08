@@ -521,6 +521,7 @@ export class ToolRegistry {
         case 'get_runtime_config': {
           if (!this.orchestrator) return { success: false, message: 'Orchestrator not attached.' };
           const dryRun = process.env.DRY_RUN !== 'false';
+          const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
           const active = this.orchestrator.getActiveDomains();
           const keyNames = ['GMGN_API_KEY', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'POLYGON_RPC_URL', 'SOLANA_RPC_URL', 'BASE_RPC_URL'];
           const keys = keyNames.map((k) => {
@@ -533,7 +534,9 @@ export class ToolRegistry {
             success: true,
             message: 'Runtime configuration.',
             data: {
-              dryRun,
+              mode: autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL_EXECUTION',
+              autoExecuteEnabled,
+              dryRun, // safety flag only — execution is manual
               activeAgents: active,
               apiKeys: keys,
               aiProvider: ai?.provider || null,

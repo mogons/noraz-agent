@@ -52,7 +52,7 @@ export async function launchTUI(): Promise<void> {
     console.clear();
     console.log(ATHENA_PARTHENON_ASCII);
     console.log(`${C.cyan}${C.bright}========================================================================${C.reset}`);
-    console.log(`${C.yellow}🌿 Aegis Safeguard:${C.reset} DRY_RUN Mode Active | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, eksekusi via link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
     console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
@@ -232,7 +232,7 @@ export async function launchTUI(): Promise<void> {
             const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
-- Execution Mode: DRY_RUN Active (Safe Simulation).
+- Execution Mode: MANUAL EXECUTION — bot hanya screener/caller, eksekusi dilakukan user via link di call card.
 - Global Portfolio Drawdown Limit: 50.0%.
 - Current Portfolio Drawdown: 0.0%.${memoryContext}`;
 

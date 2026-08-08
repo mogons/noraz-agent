@@ -173,13 +173,13 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
   public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
     const activeDomains = hub ? hub.getActiveDomains() : [];
-    const isDryRun = isDryRunMode();
+    const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
     const text = `🏛️ *ATHENA CONTROL CENTER DASHBOARD (TELEGRAM)*
 
-⚙️ *Mode:* ${isDryRun ? 'DRY_RUN Active (Safe Simulation)' : '⚡ LIVE Execution Active'}
+⚙️ *Mode:* ${autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL EXECUTION — screener/caller, eksekusi via link'}
 🛡️ *Max Drawdown:* 50.0%
 
 🤖 *Active Sub-Agents Status:*

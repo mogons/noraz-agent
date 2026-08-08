@@ -360,7 +360,7 @@ export async function handleControlRoomMessage(
   const simEth = process.env.SIMULATION_BALANCE_ETH || '1.0';
   const simPoly = process.env.SIMULATION_BALANCE_POLYMARKET || '500.0';
   const simHl = process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
-  const isDryRun = isDryRunMode();
+  const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
 
   // Shared Athena system prompt (persona + architecture) + live operating params
   const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../../services/athena-system-prompt.js');
@@ -372,14 +372,14 @@ export async function handleControlRoomMessage(
     ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
     : '- Active Sub-Agents: NONE (semua screening agent sedang PAUSED)';
   const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
-Current Operating Parameters & Live Simulation Balances:
-- Execution Mode: ${isDryRun ? 'DRY_RUN Active (Simulation Mode)' : 'LIVE TRADING'}
+Current Operating Parameters:
+- Execution Mode: ${autoExecuteEnabled ? 'AUTO_EXECUTE (bot bisa eksekusi)' : 'MANUAL EXECUTION — bot HANYA screener/caller, semua eksekusi dilakukan user sendiri via link yang disediakan di call card'}
 ${activeAgentsLine}
-- Active Portfolio Simulation Balances:
-  • Solana Balance: ${simSol} SOL
-  • EVM Balance: ${simEth} ETH (Base / Mainnet)
-  • Polymarket Balance: $${simPoly} USDC (Polygon L2)
-  • Hyperliquid Perps Balance: $${simHl} USDC
+- Referenced Wallet Balances (untuk tracking posisi user, bukan untuk eksekusi):
+  • Solana: ${simSol} SOL
+  • EVM: ${simEth} ETH (Base / Robinhood)
+  • Polymarket: $${simPoly} USDC
+  • Hyperliquid Perps: $${simHl} USDC
 - Global Portfolio Drawdown Limit: 50.0%
 - Current Portfolio Drawdown: 0.0%${memoryContext}`;
 
