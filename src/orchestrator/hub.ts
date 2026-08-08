@@ -260,7 +260,8 @@ export class AthenaHub {
         }
         const info = enriched.get(p.tokenXAddress) ?? null;
         if (info) {
-          const sec = securityGateToken(info);
+          // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
+          const sec = securityGateToken(info, { enableTaxGate: false });
           if (!sec.ok) {
             console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — ${sec.reasons.join(' ')}`);
             continue;
@@ -330,7 +331,8 @@ export class AthenaHub {
       }
       const info = enriched.get(memeToken.addr) ?? null;
       if (info) {
-        const sec = securityGateToken(info);
+        // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
+        const sec = securityGateToken(info, { enableTaxGate: false });
         if (!sec.ok) {
           console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — ${sec.reasons.join(' ')}`);
           continue;

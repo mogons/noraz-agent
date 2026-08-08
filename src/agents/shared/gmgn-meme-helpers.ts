@@ -171,6 +171,8 @@ export interface SecurityGateOptions {
   maxBundlerRate?: number;
   maxTop10HolderRate?: number;
   maxTaxPct?: number;
+  /** Gate buy/sell tax (default true). LP agent mematikan ini: token LP sering punya tax kecil. */
+  enableTaxGate?: boolean;
 }
 
 const SECURITY_GATE_DEFAULTS: Required<SecurityGateOptions> = {
@@ -179,6 +181,7 @@ const SECURITY_GATE_DEFAULTS: Required<SecurityGateOptions> = {
   maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
   maxTaxPct: 10,
+  enableTaxGate: true,
 };
 
 export function securityGateToken(
@@ -189,10 +192,12 @@ export function securityGateToken(
   const reasons: string[] = [];
   if (t.isWashTrading) reasons.push('wash trading terdeteksi.');
   if (t.isHoneypot === true) reasons.push('honeypot (tidak bisa dijual).');
-  const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
-  const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
-  if (buyTax !== null && buyTax > o.maxTaxPct) reasons.push(`buy tax ${buyTax}% > ${o.maxTaxPct}%.`);
-  if (sellTax !== null && sellTax > o.maxTaxPct) reasons.push(`sell tax ${sellTax}% > ${o.maxTaxPct}%.`);
+  if (o.enableTaxGate) {
+    const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
+    const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
+    if (buyTax !== null && buyTax > o.maxTaxPct) reasons.push(`buy tax ${buyTax}% > ${o.maxTaxPct}%.`);
+    if (sellTax !== null && sellTax > o.maxTaxPct) reasons.push(`sell tax ${sellTax}% > ${o.maxTaxPct}%.`);
+  }
   if (t.rugRatio !== null && t.rugRatio >= o.maxRugRatio) reasons.push(`rug ratio ${(t.rugRatio * 100).toFixed(0)}% >= ${o.maxRugRatio * 100}%.`);
   if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= o.maxRatTraderRate) reasons.push(`insider ${(t.ratTraderAmountRate * 100).toFixed(0)}% >= ${o.maxRatTraderRate * 100}%.`);
   if (t.bundlerRate !== null && t.bundlerRate >= o.maxBundlerRate) reasons.push(`bundler ${(t.bundlerRate * 100).toFixed(0)}% >= ${o.maxBundlerRate * 100}%.`);

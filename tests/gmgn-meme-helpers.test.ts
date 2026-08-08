@@ -48,6 +48,18 @@ describe('securityGateToken — gate keamanan GMGN (meme & LP shared)', () => {
     expect(securityGateToken(mkToken({ buyTax: '10', sellTax: '5' })).ok).toBe(true);
   });
 
+  it('enableTaxGate: false → tax besar lolos (mode LP)', () => {
+    const r = securityGateToken(mkToken({ buyTax: '30', sellTax: '25' }), { enableTaxGate: false });
+    expect(r.ok).toBe(true);
+  });
+
+  it('enableTaxGate: false tetap menolak field berbahaya lain (rug)', () => {
+    const r = securityGateToken(mkToken({ sellTax: '25', rugRatio: 0.5 }), { enableTaxGate: false });
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join(' ')).toContain('rug');
+    expect(r.reasons.join(' ')).not.toContain('tax');
+  });
+
   it('rug ratio >= 0.3 → tolak (0.29 lolos)', () => {
     expect(securityGateToken(mkToken({ rugRatio: 0.3 })).ok).toBe(false);
     expect(securityGateToken(mkToken({ rugRatio: 0.29 })).ok).toBe(true);

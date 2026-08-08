@@ -290,13 +290,13 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-solana: token dengan tax > 10% menolak pool', async () => {
+  it('lp-solana: token dengan tax > 10% tetap lolos (tax gate dimatikan untuk LP)', async () => {
     const hub = new AthenaHub({
       meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
       gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ sellTax: '15' }) }),
     });
     const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(0);
+    expect(results).toHaveLength(1);
   });
 
   it('lp-solana: token null di GMGN → tetap post, ditandai tidak diaudit', async () => {
