@@ -25,15 +25,15 @@ export interface NFTSnipingReport {
 
 export interface NFTScreeningConfig {
   floorSurgeThresholdPct: number;   // >= +30% floor pump in 4h
-  volSpikeThresholdRatio: number;   // >= 3.0x 4h volume surge
-  minSalesVelocity1h: number;       // >= 25 sales/hour
+  volSpikeThresholdRatio: number;   // >= 3.0x volume surge vs baseline
+  minSalesVelocity1h: number;       // >= 1.0 sales/hour (koleksi aktif; 25/h mustahil untuk blue chip)
   passThreshold: number;            // Swarm consensus gate (>= 80)
 }
 
 const DEFAULT_CONFIG: NFTScreeningConfig = {
   floorSurgeThresholdPct: 30,
   volSpikeThresholdRatio: 3.0,
-  minSalesVelocity1h: 25,
+  minSalesVelocity1h: 1.0,
   passThreshold: 80,
 };
 
@@ -78,8 +78,8 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     // 3. Sales Velocity Check (>= 25 sales/hour)
     const isHighVelocity = signal.salesVelocity1h >= this.config.minSalesVelocity1h;
 
-    // 4. Verified Whale Sweep Check
-    const isWhaleSweep = signal.isWhaleSweep && Boolean(signal.whaleInfo?.isVerifiedWhale);
+    // 4. Verified Whale Sweep Check — faktual: satu buyer membeli >= 3 NFT dalam 1 jam
+    const isWhaleSweep = signal.isWhaleSweep && Boolean(signal.whaleInfo);
 
     // Hard gate: must trigger at least one momentum or whale sweep criteria
     if (!isFloorSurge && !isVolumeSpike && !isHighVelocity && !isWhaleSweep) {
@@ -95,13 +95,13 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
 
     let detectionReason = 'NFT Momentum Signal Detected';
     if (isFloorSurge && isWhaleSweep) {
-      detectionReason = `🚀 NFT PUMP & WHALE SWEEP: ${signal.collectionName} Floor surged +${signal.floorSurge4hPct.toFixed(1)}% in 4h with Verified Whale Sweep (${signal.whaleInfo?.address.slice(0, 8)}...)!`;
+      detectionReason = `🚀 NFT PUMP & WHALE SWEEP: ${signal.collectionName} Floor surged +${signal.floorSurge4hPct.toFixed(1)}% in 4h with Sweep (${signal.whaleInfo?.address.slice(0, 8)}... bought ${signal.whaleInfo?.buyCount} items / ${signal.whaleInfo?.spentEth.toFixed(2)} ETH)!`;
     } else if (isFloorSurge) {
       detectionReason = `📈 FLOOR PUMP SURGE: ${signal.collectionName} Floor price surged +${signal.floorSurge4hPct.toFixed(1)}% in 4 hours!`;
     } else if (isVolumeSpike) {
-      detectionReason = `🌊 VOLUME EXPLOSION SPIKE: ${signal.collectionName} 4h trading volume surged ${signal.volumeSpike4hRatio.toFixed(1)}x above baseline!`;
+      detectionReason = `🌊 VOLUME EXPLOSION SPIKE: ${signal.collectionName} trading volume surged ${signal.volumeSpike4hRatio.toFixed(1)}x above baseline!`;
     } else if (isWhaleSweep) {
-      detectionReason = `🐋 VERIFIED WHALE SWEEP: Smart Money (${signal.whaleInfo?.address.slice(0, 8)}..., Holdings $${((signal.whaleInfo?.portfolioValueUsd || 0) / 1000).toFixed(1)}k, PnL +${signal.whaleInfo?.realizedPnlEth} ETH) swept multiple NFTs!`;
+      detectionReason = `🐋 WHALE SWEEP: ${signal.whaleInfo?.address.slice(0, 8)}... membeli ${signal.whaleInfo?.buyCount} NFT dalam 1 jam (${signal.whaleInfo?.spentEth.toFixed(2)} ETH)!`;
     }
 
     return {

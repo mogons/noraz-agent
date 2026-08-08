@@ -18,15 +18,12 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
   floorPriceEth: 8.0,
   floorSurge4hPct: 35,
   volumeSpike4hRatio: 3.5,
-  salesVelocity1h: 30,
+  salesVelocity1h: 2,
   isWhaleSweep: true,
   whaleInfo: {
     address: '0xabc123def456',
-    portfolioValueUsd: 500000,
-    realizedPnlEth: 12.5,
-    walletAgeDays: 400,
-    lastActiveDaysAgo: 2,
-    isVerifiedWhale: true,
+    buyCount: 4,
+    spentEth: 30.5,
   },
   openseaUrl: 'https://opensea.io/collection/pudgypenguins',
   aiThesis: 'pudgy floor momentum thesis',
@@ -75,7 +72,7 @@ describe('NFTScreeningAgent', () => {
 
   it('runScreeningPass drops sub-80 signals (velocity-only = 70)', async () => {
     const agent = new NFTScreeningAgent(
-      mkFakeAdapter([mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 30 })])
+      mkFakeAdapter([mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })])
     );
     (agent as any).strategyEngine = { getActiveStrategy: () => null };
     const reports = await agent.runScreeningPass();
@@ -128,7 +125,7 @@ describe('NFTScreeningAgent', () => {
     const surgeOnly = agent.evaluateListing(mkSignal({ isWhaleSweep: false, whaleInfo: undefined, volumeSpike4hRatio: 1.0 }))!;
     expect(agent.deriveCollectionSafety(surgeOnly)).toBe(true);
     const whaleOnly = agent.evaluateListing(
-      mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: true })
+      mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
     )!;
     expect(agent.deriveCollectionSafety(whaleOnly)).toBe(true);
   });
@@ -136,11 +133,11 @@ describe('NFTScreeningAgent', () => {
   it('deriveCollectionSafety: floor boundary is strict (0.01 fails, just above passes)', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     const atBoundary = agent.evaluateListing(
-      mkSignal({ floorPriceEth: 0.01, priceEth: 0.011, isWhaleSweep: true })
+      mkSignal({ floorPriceEth: 0.01, priceEth: 0.011, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
     )!;
     expect(agent.deriveCollectionSafety(atBoundary)).toBe(false); // fail-closed: requires > 0.01
     const justAbove = agent.evaluateListing(
-      mkSignal({ floorPriceEth: 0.0101, priceEth: 0.011, isWhaleSweep: true })
+      mkSignal({ floorPriceEth: 0.0101, priceEth: 0.011, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
     )!;
     expect(agent.deriveCollectionSafety(justAbove)).toBe(true);
   });
@@ -196,7 +193,7 @@ describe('nft-default strategy', () => {
     priceEth: 8.2,
     floorSurge4hPct: 35,
     volumeSpike4hRatio: 3.5,
-    salesVelocity1h: 30,
+    salesVelocity1h: 2,
     isFloorSurge: true,
     isVolumeSpike: true,
     isWhaleSweep: true,
@@ -235,7 +232,7 @@ describe('nft-default strategy', () => {
 
   it('SKIP when salesVelocity1h missing or below minVelocity1h', () => {
     expect(strat.evaluate({ ...healthy, salesVelocity1h: undefined }).recommendedAction).toBe('SKIP');
-    expect(strat.evaluate({ ...healthy, salesVelocity1h: 2 }).recommendedAction).toBe('SKIP');
+    expect(strat.evaluate({ ...healthy, salesVelocity1h: 0.5 }).recommendedAction).toBe('SKIP');
   });
 
   it('SKIP when volumeSpike4hRatio missing (fail-closed)', () => {

@@ -1,34 +1,103 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { OpenSeaAdapter } from '../src/adapters/opensea-adapter.js';
 
+// Struktur fixture mengikuti OpenSea API v2 yang NYATA (diverifikasi live):
+// stats → { total: { floor_price }, intervals: [{ interval: 'one_day'|'seven_day', volume, sales }] }
+// floor_prices → { floor_prices: [{ time, token_unit }] } (timeframe=one_day, resolution=25)
+// events → { asset_events: [{ event_type: 'sale', event_timestamp, buyer, payment: { quantity, decimals } }] }
+
+const HOUR = 3600;
+const t0 = () => Math.floor(Date.now() / 1000);
+
+const mkStats = (over: any = {}) => ({
+  total: { floor_price: 8.0, sales: 1000, num_owners: 5000, volume: 50000, floor_price_symbol: 'ETH' },
+  intervals: [
+    { interval: 'one_day', volume: 50, sales: 12 },
+    { interval: 'seven_day', volume: 200, sales: 60 },
+    { interval: 'thirty_day', volume: 900, sales: 250 },
+  ],
+  ...over,
+});
+
+const mkFloorPrices = (now: number, nowEth: number, fourHAgoEth: number) => {
+  const points = [];
+  for (let i = 24; i >= 0; i--) {
+    const t = now - i * HOUR;
+    // naik dari fourHAgoEth → nowEth dalam 3 jam terakhir: titik 4 jam lalu masih fourHAgoEth
+    const eth = i <= 3 ? nowEth : fourHAgoEth;
+    points.push({ time: t, token_unit: eth, usd_price: String(eth * 3000), symbol: 'ETH', chain: 'ethereum' });
+  }
+  return { floor_prices: points };
+};
+
+const mkSaleEvent = (over: any = {}) => ({
+  event_type: 'sale',
+  event_timestamp: t0() - HOUR,
+  buyer: '0xwhale1',
+  seller: '0xseller',
+  chain: 'ethereum',
+  payment: { quantity: '4000000000000000000', decimals: 18, symbol: 'ETH', token_address: '0x0000' },
+  nft: { identifier: '1', name: 'Pudgy #1' },
+  ...over,
+});
+
 describe('OpenSeaAdapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; });
 
-  it('computes surge/velocity from real stats instead of hardcoding them', async () => {
+  it('menghitung surge/velocity/volume-spike dari data v2 REAL (stats + floor_prices + events)', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
+    const now = t0();
     vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          total: { floor_price: 12.5, volume: 850, one_day_change: 0.35 },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          events: Array.from({ length: 30 }, () => ({
-            event_type: 'successful',
-            transaction: { from_account: { address: '0xwhale1' } },
-          })),
-        }),
-      }));
+      .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })                                     // stats
+      .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 6.0) })                 // floor_prices: 8.0 vs 6.0 = +33.3%
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
+        mkSaleEvent({ event_timestamp: now - 600 }),   // dalam 1 jam
+        mkSaleEvent({ event_timestamp: now - 1800 }),  // dalam 1 jam
+        mkSaleEvent({ event_timestamp: now - 5 * HOUR }), // 5h lalu → baseline 4-8h
+      ] }) }));                                                                                             // events sale
     const adapter = new OpenSeaAdapter();
     const signals = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(signals.length).toBe(1);
-    expect(signals[0].floorSurge4hPct).toBeGreaterThanOrEqual(0);
-    expect(signals[0].salesVelocity1h).toBeGreaterThan(0);
-    expect(signals[0].isWhaleSweep).toBeTypeOf('boolean');
-    expect(signals[0].whaleInfo?.address ?? '').not.toContain('0x7a2B49');
+    const s = signals[0];
+    expect(s.floorPriceEth).toBe(8.0);
+    expect(s.floorSurge4hPct).toBeGreaterThan(30);   // floor naik 8 vs 6 = +33%
+    expect(s.salesVelocity1h).toBe(2);               // 2 sale dalam 1 jam terakhir
+    expect(s.volumeSpike4hRatio).toBe(2);            // 8 ETH (4h) vs 4 ETH (4-8h baseline)
+    expect(s.chain).toBe('ethereum');
+  });
+
+  it('whale sweep terdeteksi faktual: satu buyer beli 3+ dalam 1 jam', async () => {
+    process.env.OPENSEA_API_KEY = 'os-test';
+    const now = t0();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })
+      .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 8.0) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
+        mkSaleEvent({ event_timestamp: now - 600 }),
+        mkSaleEvent({ event_timestamp: now - 1200 }),
+        mkSaleEvent({ event_timestamp: now - 1800 }),
+      ] }) }));
+    const adapter = new OpenSeaAdapter();
+    const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
+    expect(s.isWhaleSweep).toBe(true);
+    expect(s.whaleInfo?.address).toBe('0xwhale1');
+    expect(s.whaleInfo?.buyCount).toBe(3);
+    expect(s.whaleInfo?.spentEth).toBeCloseTo(12, 5); // 3 × 4 ETH
+  });
+
+  it('tanpa events yang valid → velocity & spike fallback jujur ke stats 24h', async () => {
+    process.env.OPENSEA_API_KEY = 'os-test';
+    const now = t0();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })
+      .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 8.0) })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({}) })); // events ditolak key
+    const adapter = new OpenSeaAdapter();
+    const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
+    expect(s.isWhaleSweep).toBe(false);
+    // one_day vol 50 vs baseline 6 hari ((200-50)/6=25) → 2.0x; velocity 12/24 = 0.5
+    expect(s.volumeSpike4hRatio).toBeCloseTo(2.0, 5);
+    expect(s.salesVelocity1h).toBeCloseTo(0.5, 5);
   });
 
   it('returns [] without an API key (no fake signals)', async () => {
@@ -39,6 +108,14 @@ describe('OpenSeaAdapter', () => {
   it('returns [] on API failure (fail-closed)', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    const adapter = new OpenSeaAdapter();
+    expect(await adapter.fetchFloorSnipingSignals('pudgypenguins')).toEqual([]);
+  });
+
+  it('returns [] when floor price is 0 (fail-closed)', async () => {
+    process.env.OPENSEA_API_KEY = 'os-test';
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => mkStats({ total: { floor_price: 0 } }) }));
     const adapter = new OpenSeaAdapter();
     expect(await adapter.fetchFloorSnipingSignals('pudgypenguins')).toEqual([]);
   });
@@ -77,15 +154,5 @@ describe('OpenSeaAdapter', () => {
     const res = await adapter.executeSwap({ chain: 'ethereum', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 }, wallet);
     expect(res.success).toBe(false);
     expect(res.txHash).toBeUndefined();
-  });
-
-  it('floor surge uses one_day_change as percentage (no 100x inflation)', async () => {
-    process.env.OPENSEA_API_KEY = 'os-test';
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: { floor_price: 10, volume: 500, one_day_change: 0.35 } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ events: [] }) }));
-    const adapter = new OpenSeaAdapter();
-    const [sig] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
-    expect(sig.floorSurge4hPct).toBe(0.35); // not 35
   });
 });

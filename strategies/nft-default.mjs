@@ -4,14 +4,14 @@ export default {
   version: '1.0.0',
   description:
     'Default NFT strategy: floor-momentum scoring for EVM collections on OpenSea. ' +
-    'Gates: min floor 0.01 ETH (fail-closed if missing), min sales velocity 5/h, min 4h volume spike 1.5x, ' +
+    'Gates: min floor 0.01 ETH (fail-closed if missing), min sales velocity 1/h, min volume spike 1.5x, ' +
     'collection security audit must pass. ' +
-    'Scoring (0-100): floor surge 35, volume spike 25, sales velocity 20, verified whale sweep 20. ' +
+    'Scoring (0-100): floor surge 35, volume spike 25, sales velocity 20, whale sweep 20. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
     passThreshold: 80,
     minFloorEth: 0.01,
-    minVelocity1h: 5,
+    minVelocity1h: 1.0,
     minVolSpike: 1.5,
   },
   evaluate(ctx) {
@@ -54,9 +54,9 @@ export default {
     else { score += 8; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 4h (+8)`); }
 
     // ── Sales velocity (20) — actual trading activity ──
-    if (velocity >= 25) { score += 20; reasons.push(`⚡ ${velocity}/h sales (+20)`); }
-    else if (velocity >= 10) { score += 10; reasons.push(`⚡ ${velocity}/h sales (+10)`); }
-    else { score += 5; reasons.push(`⚡ ${velocity}/h sales (+5)`); }
+    if (velocity >= 2) { score += 20; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+20)`); }
+    else if (velocity >= 1) { score += 10; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+10)`); }
+    else { score += 5; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+5)`); }
 
     // ── Verified whale sweep (20) — smart money confirmation ──
     if (isWhaleSweep) { score += 20; reasons.push(`🐋 Verified whale sweep (+20)`); }
