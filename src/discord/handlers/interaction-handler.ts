@@ -41,11 +41,17 @@ export async function handleInteraction(
     }
   } catch (error: any) {
     console.error('Interaction handling error:', error);
-    if (interaction.isRepliable() && !interaction.replied) {
-      await interaction.reply({
-        content: `❌ Error processing interaction: ${error.message}`,
-        ephemeral: true,
-      });
+    if (!interaction.isRepliable()) return;
+    const message = `❌ Error processing interaction: ${error.message}`;
+    try {
+      if (interaction.deferred) {
+        // Already deferred (e.g. /analyze, /screening) — must edit, not reply
+        await interaction.editReply(message);
+      } else if (!interaction.replied) {
+        await interaction.reply({ content: message, flags: 1 << 6 }); // EPHEMERAL
+      }
+    } catch (replyErr: any) {
+      console.error('Error replying to interaction:', replyErr.message);
     }
   }
 }

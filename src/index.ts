@@ -182,6 +182,11 @@ if (discordToken && clientId) {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
     ],
+    rest: {
+      // Naikkan timeout REST Discord (default 10s) — VPS pernah timeout saat
+      // restart + bootstrap + reply bersamaan, bikin "Athena is thinking..."
+      timeout: 30000,
+    },
   });
 
   client.once('ready', async () => {
