@@ -267,7 +267,8 @@ export class AthenaHub {
       const activeTvlUsd = UNISWAP_V3_FEE_RATE * liquidityUsd;
       const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
 
-      // Mirror LP solana gates
+      // Mirror LP solana gates + liquidity floor
+      if (liquidityUsd <= 10000) continue; // LP-grade liquidity > $10k
       if (fee1hUsd < 7) continue;
       if (feeTvlRatio24h <= 0.01) continue;
       if (volumeToActiveTvlRatio1h < 1.0) continue;

@@ -141,7 +141,13 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
       liquidityUsd: 100000,
       volume24hUsd: 500000,
     };
-    // thin: liq=10k, vol24h=100k → feeTvl=3%✓ tapi fee1h=12.5✓, vol/actTvl=138✓, liq kecil tapi lolos gate? cek: fee1h=100k/24*0.003=12.5✓, feeTvl=3%✓, vol/actTvl=(100k/24)/(0.003*10k)=138✓ → LOLOS semua gate
+    // thin: liq=10k (≤10k → DITOLAK liquidity floor)
+    const thinToken = {
+      address: '0xthin',
+      symbol: 'THIN',
+      liquidityUsd: 10000,
+      volume24hUsd: 500000,
+    };
     // lowvol: liq=100k, vol24h=20k → fee1h=2.5 < 7 → DITOLAK
     const lowvolToken = {
       address: '0xlow',
@@ -153,12 +159,13 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
       agentFactories: {
         'meme-robinhood': () => mkStubAgent('meme-robinhood', [
           { passed: true, signal: { token: strongToken }, reason: 'test', confidence: 85 },
+          { passed: true, signal: { token: thinToken }, reason: 'test thin', confidence: 85 },
           { passed: true, signal: { token: lowvolToken }, reason: 'test low', confidence: 85 },
         ]),
       },
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
-    expect(results).toHaveLength(1); // lowvol ditolak (fee1h < 7)
+    expect(results).toHaveLength(1); // thin (liq<=10k) + lowvol (fee1h<7) ditolak
     const r = results[0];
     expect(r.passed).toBe(true);
     expect(r.payload?.domain).toBe('LP_ROBINHOOD');
