@@ -2,17 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runAthenaUpdate } from '../scripts/update-core.mjs';
 
 const mockExecSync = vi.fn();
+const mockSpawn = vi.fn(() => ({ unref: vi.fn(), on: vi.fn() }));
 vi.mock('node:child_process', () => ({
   execSync: (...args: unknown[]) => mockExecSync(...args),
+  spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
 describe('runAthenaUpdate', () => {
   beforeEach(() => {
     mockExecSync.mockReset();
     mockExecSync.mockImplementation(() => '');
+    mockSpawn.mockReset();
+    mockSpawn.mockImplementation(() => ({ unref: vi.fn(), on: vi.fn() }));
   });
 
-  it('runs stash (only when dirty), pull, install, build, and pm2 restart in order', () => {
+  it('runs stash (only when dirty), pull, install, build, then schedules pm2 restart via detached spawn', () => {
     mockExecSync.mockImplementationOnce(() => ' M src/x.ts\n'); // dirty worktree
     const result = runAthenaUpdate({ cwd: '/repo' });
 
@@ -23,8 +27,13 @@ describe('runAthenaUpdate', () => {
     expect(calls[3]).toBe('git stash pop');
     expect(calls[4]).toBe('npm install');
     expect(calls[5]).toBe('npm run build');
-    expect(calls[6]).toContain('pm2 restart athena-agent');
+    // pm2 restart now runs via detached spawn, not execSync
+    expect(mockSpawn).toHaveBeenCalledTimes(1);
+    const [shell, args] = mockSpawn.mock.calls[0] as [string, string[]];
+    expect(shell).toBe('sh');
+    expect(args[1]).toContain('pm2 restart athena-agent');
     expect(result.ok).toBe(true);
+    expect(result.restartOk).toBe(true);
   });
 
   it('skips stash when the worktree is clean', () => {
@@ -39,8 +48,7 @@ describe('runAthenaUpdate', () => {
 
   it('skips pm2 restart when noRestart is set', () => {
     const result = runAthenaUpdate({ cwd: '/repo', noRestart: true });
-    const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((c) => c.includes('pm2 restart'))).toBe(false);
+    expect(mockSpawn).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
   });
 

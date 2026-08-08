@@ -15,7 +15,7 @@
  * Fail-closed: pull/build gagal => exit code != 0 (Discord menampilkan error).
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,29 +75,46 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   // 5. Build
   const buildOk = step('npm run build', 'npm run build');
 
+  const allOk = pullOk && installOk && buildOk;
+
   // 6. Restart pm2 (kecuali --no-restart)
+  // Penting: restart dijalankan DETACHED + delay (proses terpisah). Kalau
+  // dieksekusi sinkron dari dalam proses bot, pm2 akan menghentikan proses
+  // bot ini di tengah execSync → execSync terputus → restart "dilaporkan"
+  // gagal padahal sebenarnya berhasil (bot online). Detached + unref membuat
+  // restart jalan mandiri di pm2 daemon tanpa membunuh proses update dulu.
+  // Delay 3s memberi waktu proses update menulis laporan & return sebelum
+  // pm2 restart menghentikan proses ini.
   let restartOk = true;
   if (!noRestart) {
-    console.log('\n▶ Restart PM2 agent');
+    console.log('\n▶ Restart PM2 agent (detached — proses update tidak dimatikan sendiri)');
     const pm2Cmd = 'pm2 restart athena-agent --update-env || npx pm2 restart athena-agent --update-env';
     try {
-      execSync(pm2Cmd, { cwd, stdio: 'inherit', shell: true, timeout: 120000 });
-      console.log('✅ PM2 agent restarted.');
-      log.push({ label: 'pm2 restart', command: pm2Cmd, ok: true });
-    } catch {
+      const child = spawn('sh', ['-c', `sleep 3 && ${pm2Cmd}`], {
+        detached: true,
+        stdio: 'ignore',
+        cwd,
+      });
+      // spawn error adalah async event — tanpa handler ini proses bisa crash
+      // (mis. di Windows yang tidak punya `sh`). VPS Linux selalu punya `sh`.
+      child.on('error', (err) => {
+        restartOk = false;
+        console.warn(`⚠ Gagal spawn restart: ${err.message}`);
+      });
+      child.unref();
+      console.log('✅ PM2 restart dijadwalkan (detached, +3s).');
+      log.push({ label: 'pm2 restart (detached)', command: pm2Cmd, ok: true });
+    } catch (err) {
       restartOk = false;
-      console.warn('⚠ pm2 tidak tersedia / agent tidak ditemukan — SKIP restart. (Jalankan `athena deploy` manual kalau perlu.)');
-      log.push({ label: 'pm2 restart', command: pm2Cmd, ok: false });
+      console.warn(`⚠ Gagal menjadwalkan restart: ${err.message}`);
+      log.push({ label: 'pm2 restart (detached)', command: pm2Cmd, ok: false });
     }
   } else {
     console.log('\n⏭ Skip pm2 restart (--no-restart).');
   }
 
-  const allOk = pullOk && installOk && buildOk;
-
   // Tulis laporan ke file agar proses yang baru (setelah restart) bisa
-  // mengirim laporan update ke Discord — karena restart membunuh proses lama
-  // sebelum sempat membalas interaction.
+  // mengirim laporan update ke Discord — restart akan membunuh proses lama.
   try {
     const reportPath = path.join(REPO_ROOT, 'database', 'last_update_report.json');
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
