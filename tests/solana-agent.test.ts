@@ -40,6 +40,15 @@ describe('SolanaScreeningAgent', () => {
     expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), 73.65).ok).toBe(true);
   });
 
+  it('preFilter enforces market cap gate (wajib > $100k, fail-closed)', () => {
+    const agent = new SolanaScreeningAgent();
+    expect(agent.preFilter(mkToken({ marketCapUsd: 50000 }), 73.65).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ marketCapUsd: 0 }), 73.65).ok).toBe(false);
+    const r = agent.preFilter(mkToken({ marketCapUsd: 50000 }), 73.65);
+    expect(r.reason).toContain('market cap');
+    expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true); // 200k ≥ 100k
+  });
+
   it('preFilter passes a healthy token', () => {
     const agent = new SolanaScreeningAgent();
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);

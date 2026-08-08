@@ -101,6 +101,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     tokenYSymbol: 'USDC',
     tokenXVerified: true,
     tokenXHolders: 5000,
+    tokenXMarketCapUsd: 500000,
     tokenXMarketCapUsd: 1000000,
     aprDecimal: 0.5,
     apyDecimal: 2.5,
@@ -130,5 +131,13 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     const b = mkSignal({ poolAddress: 'poolB', pairName: 'CATE-SOL', tokenXSymbol: 'CATE' });
     const passed = adapter.filterHighYieldPools([a, b]);
     expect(passed.length).toBe(2);
+  });
+
+  it('filterHighYieldPools menolak tokenX market cap < $100k (fail-closed)', () => {
+    const adapter = new MeteoraDLMMAdapter();
+    const lowMc = mkSignal({ poolAddress: 'poolLowMc', tokenXMarketCapUsd: 50000 });
+    const zeroMc = mkSignal({ poolAddress: 'poolZeroMc', tokenXMarketCapUsd: 0 }); // tidak diketahui
+    const passed = adapter.filterHighYieldPools([lowMc, zeroMc]);
+    expect(passed.length).toBe(0);
   });
 });

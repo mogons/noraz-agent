@@ -330,6 +330,16 @@ export class AthenaHub {
         } catch { enriched.set(memeToken.addr, null); }
       }
       const info = enriched.get(memeToken.addr) ?? null;
+      // Market cap token meme WAJIB > $100k (fail-closed: token tidak ditemukan
+      // di GMGN / MC tidak diketahui = pool ditolak).
+      if (!info) {
+        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — token tidak ditemukan di GMGN (MC tidak bisa diverifikasi).`);
+        continue;
+      }
+      if (info.marketCapUsd < 100000) {
+        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym} MC $${(info.marketCapUsd / 1000).toFixed(0)}k < $100k.`);
+        continue;
+      }
       if (info) {
         // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
         const sec = securityGateToken(info, { enableTaxGate: false });
@@ -375,7 +385,7 @@ export class AthenaHub {
           aiThesis: p.aiRecommendation,
           confidenceScore: 80,
           securityAuditPassed: true,
-          securityScore: info ? tokenSecurityLabel(info) : '⚠️ Tidak diaudit (GMGN)',
+          securityScore: tokenSecurityLabel(info),
           socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
           liquidityUsd: p.tvlUsd,
           volume1hUsd: p.volume1hUsd,

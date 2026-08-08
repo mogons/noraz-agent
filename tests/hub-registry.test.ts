@@ -220,7 +220,10 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
 
   it('lp-robinhood wraps Krystal pool data into LP_ROBINHOOD payload', async () => {
     // Krystal adapter flow: fetch → filterHighYieldPools → payload LP
-    const hub = new AthenaHub({ krystalAdapter: mkKrystalStub([mkKrystalPool()]) });
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool()]),
+      gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }), // WETH = memeToken (base fallback) — MC besar
+    });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
     const r = results[0];
@@ -237,13 +240,16 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   it('lp-robinhood orders meme token first (WETH-PEPE pool -> token0=PEPE, title PEPE-WETH)', async () => {
     // Uniswap v3 mengembalikan token0=WETH (base) — payload harus menaruh meme (PEPE) duluan,
     // konsisten dengan LP solana (Chiikawa-SOL): title & detail ikut token meme.
-    const hub = new AthenaHub({ krystalAdapter: mkKrystalStub([mkKrystalPool({
-      pairName: 'WETH-PEPE',
-      token0Symbol: 'WETH',
-      token1Symbol: 'PEPE',
-      token0Address: '0xweth',
-      token1Address: '0xpepe',
-    })]) });
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+      })]),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken() }),
+    });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
     const p = results[0].payload!;
@@ -339,7 +345,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: token null di GMGN → tetap post, ditandai tidak diaudit', async () => {
+  it('lp-robinhood: token null di GMGN → pool DITOLAK (MC tidak bisa diverifikasi)', async () => {
     const hub = new AthenaHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -351,8 +357,38 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
       gmgnAdapter: mkGmgnStub({}),
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-robinhood: market cap token meme < $100k → pool DITOLAK', async () => {
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+      })]),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ marketCapUsd: 50000 }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(0);
+  });
+
+  it('lp-robinhood: token aman MC besar → post + label keamanan terisi', async () => {
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+      })]),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ marketCapUsd: 500000 }) }),
+    });
+    const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
-    expect(results[0].payload?.securityScore).toContain('Tidak diaudit');
+    expect(results[0].payload?.securityScore).toContain('GMGN audited');
   });
 
   it('factory exception is caught and returns [] (fail-closed)', async () => {

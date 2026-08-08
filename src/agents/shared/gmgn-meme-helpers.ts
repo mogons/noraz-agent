@@ -10,6 +10,7 @@ import type { GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 export interface MemePreFilterConfig {
   minVolume24hUsd: number;
   minLiquidityUsd: number;
+  minMarketCapUsd: number;
   minAgeHours: number;
   maxRugRatio: number;
   maxRatTraderRate: number;
@@ -143,6 +144,8 @@ export function preFilterToken(
   const vol24 = volume24hOf(t);
   if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
+  // Market cap gate (fail-closed: 0/tidak diketahui = tolak) — wajib di atas ambang.
+  if (t.marketCapUsd < config.minMarketCapUsd) return fail(`market cap $${(t.marketCapUsd/1000).toFixed(1)}k < $${config.minMarketCapUsd/1000}k.`);
   // Security gate GMGN (honeypot, tax, rug, insider, top-10, wash) — shared
   // dengan LP agent supaya ambang keamanan tetap satu sumber.
   const sec = securityGateToken(t);
@@ -329,6 +332,7 @@ export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: numbe
 const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   minVolume24hUsd: { min: 1000, max: 100_000_000 },
   minLiquidityUsd: { min: 1000, max: 100_000_000 },
+  minMarketCapUsd: { min: 1000, max: 1_000_000_000 },
   minAgeHours: { min: 0, max: 168 },
   maxRugRatio: { min: 0.01, max: 1 },
   maxRatTraderRate: { min: 0.01, max: 1 },

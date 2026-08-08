@@ -38,6 +38,15 @@ describe('RobinhoodScreeningAgent', () => {
     expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), ETH_PRICE).ok).toBe(true);
   });
 
+  it('preFilter enforces market cap gate (wajib > $100k, fail-closed)', () => {
+    const agent = new RobinhoodScreeningAgent();
+    expect(agent.preFilter(mkToken({ marketCapUsd: 50000 }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ marketCapUsd: 0 }), ETH_PRICE).ok).toBe(false);
+    const r = agent.preFilter(mkToken({ marketCapUsd: 50000 }), ETH_PRICE);
+    expect(r.reason).toContain('market cap');
+    expect(agent.preFilter(mkToken(), ETH_PRICE).ok).toBe(true); // 200k ≥ 100k
+  });
+
   it('volume24hOf uses real 24h when present, else estimates 1h×24, else 0', () => {
     expect(volume24hOf(mkToken({ volume24hUsd: 50000, volume1hUsd: 0 }))).toBe(50000);
     expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 30000 }))).toBe(720000);
