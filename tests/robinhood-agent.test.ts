@@ -62,12 +62,14 @@ describe('RobinhoodScreeningAgent', () => {
     expect(agent.preFilter(mkToken(), ETH_PRICE).ok).toBe(true);
   });
 
-  it('preFilter ignores total fee when fee gate is off (default 0)', () => {
+  it('preFilter enforces total-fee gate (> $500, live ETH price)', () => {
     const agent = new RobinhoodScreeningAgent();
-    // fee gate mati: fee kecil, null, dan harga live null semuanya LOLOS
-    expect(agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE).ok).toBe(true);
-    expect(agent.preFilter(mkToken({ totalFeeNative: null }), ETH_PRICE).ok).toBe(true);
-    expect(agent.preFilter(mkToken(), null).ok).toBe(true);
+    // 0.2 ETH @ $1929.03 = $385.81 < $500 → reject
+    expect(agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE).ok).toBe(false);
+    // fee null → fail-closed (aktivitas organik tak tercatat)
+    expect(agent.preFilter(mkToken({ totalFeeNative: null }), ETH_PRICE).ok).toBe(false);
+    // 1 ETH @ $1929.03 = $1,929 ≥ $500 → pass
+    expect(agent.preFilter(mkToken(), ETH_PRICE).ok).toBe(true);
   });
 
   it('preFilter re-enables age & fee gates when thresholds > 0', () => {
@@ -221,14 +223,14 @@ describe('RobinhoodScreeningAgent', () => {
     expect(ev.recommendedAction).not.toBe('SKIP');
     expect(ev.confidence).toBeGreaterThanOrEqual(80);
 
-    // Fee gate off by default: null fee tidak lagi mematikan sinyal (degen early)
-    const feeOff = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
-    expect(feeOff.recommendedAction).not.toBe('SKIP');
-
-    // Kalau fee gate diaktifkan ulang (params > 0), null fee kembali fail-closed
-    const stratWithFee = { ...strat, params: { ...strat.params, minTotalFeeUsd: 500 } };
-    const feeOn = stratWithFee.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    // Fee gate aktif (default 500): null fee → fail-closed (aktivitas tak tercatat)
+    const feeOn = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
     expect(feeOn.recommendedAction).toBe('SKIP');
+
+    // Kalau fee gate dimatikan (params 0), null fee tidak lagi mematikan
+    const stratNoFee = { ...strat, params: { ...strat.params, minTotalFeeUsd: 0 } };
+    const feeOff = stratNoFee.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    expect(feeOff.recommendedAction).not.toBe('SKIP');
   });
 
   it('dedupe prunes seenTokens entries older than 5 minutes', () => {

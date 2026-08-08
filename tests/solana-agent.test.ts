@@ -45,11 +45,14 @@ describe('SolanaScreeningAgent', () => {
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
   });
 
-  it('preFilter ignores total fee when fee gate is off (default 0)', () => {
+  it('preFilter enforces total-fee gate (> $500, live native price)', () => {
     const agent = new SolanaScreeningAgent();
-    expect(agent.preFilter(mkToken({ totalFeeNative: 5 }), 73.65).ok).toBe(true);
-    expect(agent.preFilter(mkToken({ totalFeeNative: null }), 73.65).ok).toBe(true);
-    expect(agent.preFilter(mkToken(), null).ok).toBe(true);
+    // 5 SOL @ $73.65 = $368 < $500 → reject
+    expect(agent.preFilter(mkToken({ totalFeeNative: 5 }), 73.65).ok).toBe(false);
+    // fee null → fail-closed (aktivitas organik tak tercatat)
+    expect(agent.preFilter(mkToken({ totalFeeNative: null }), 73.65).ok).toBe(false);
+    // 50 SOL @ $73.65 = $3,682 ≥ $500 → pass
+    expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
   });
 
   it('preFilter re-enables age & fee gates when thresholds > 0', () => {

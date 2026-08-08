@@ -19,7 +19,7 @@ export default {
     maxTwitterRenameCount: 3,
     maxTwitterDelPostCount: 5,
     maxTwitterCreateTokenCount: 10,
-    minTotalFeeUsd: 0,
+    minTotalFeeUsd: 500,
   },
   evaluate(ctx) {
     const p = this.params;

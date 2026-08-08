@@ -21,7 +21,7 @@ export interface SolanaScreeningConfig {
   maxRatTraderRate: number;  // 0.3
   maxBundlerRate: number;    // 0.5
   maxTop10HolderRate: number;// 0.4
-  minTotalFeeUsd: number;    // 0 — gate fee dimatikan (volume 100k sudah menyaring token mati)
+  minTotalFeeUsd: number;    // 500 — gate fee aktif: token tanpa aktivitas organik (fee tak tercatat) ditolak
   passThreshold: number;     // 80
   signalTypes: number[];     // smart-money/KOL/CTO/price events (graduated focus)
   rankLimit: number;         // 100 (trending, 1h)
@@ -38,7 +38,7 @@ const DEFAULT_CONFIG: SolanaScreeningConfig = {
   maxRatTraderRate: 0.3,
   maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
-  minTotalFeeUsd: 0,
+  minTotalFeeUsd: 500,
   passThreshold: 80,
   // 6 PriceUp, 7 PriceATH, 8 McpKeyLevel, 11 Cto, 12 SmartDegenBuy, 13/19 PlatformCall, 20 KOLBuy
   signalTypes: [6, 7, 8, 11, 12, 13, 19, 20],
