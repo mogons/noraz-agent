@@ -4,6 +4,7 @@ import { AGENT_DOMAINS, getAgentDomain, normalizeDomainKey as registryNormalizeD
 import type { AgentDomainId } from './agent-registry.js';
 import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
+import type { KrystalCloudAdapter } from '../adapters/krystal-cloud-adapter.js';
 import { buildLPPayload } from './dispatch.js';
 
 export interface ChannelStatus {
@@ -17,6 +18,7 @@ export interface AthenaHubOptions {
   /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   meteoraAdapter?: MeteoraDLMMAdapter;
+  krystalAdapter?: KrystalCloudAdapter;
 }
 
 export class AthenaHub {
@@ -27,6 +29,7 @@ export class AthenaHub {
 
   private agentFactories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   private meteoraAdapter?: MeteoraDLMMAdapter;
+  private krystalAdapter?: KrystalCloudAdapter;
 
   private stateStore?: any;
 
@@ -34,6 +37,7 @@ export class AthenaHub {
     this.riskManager = new RiskManager();
     this.agentFactories = options.agentFactories ?? {};
     this.meteoraAdapter = options.meteoraAdapter;
+    this.krystalAdapter = options.krystalAdapter;
     this.initializeAgentStatesDefaultPaused();
   }
 
@@ -242,69 +246,41 @@ export class AthenaHub {
         payload: buildLPPayload(p, 'lp-solana'),
       }));
     }
-    // lp-robinhood: reuse the meme-robinhood screening singleton (GMGN 4 sources,
-    // graduated-only, GoPlus audit) — lalu terapkan SATU gate LP:
-    //   - velocity: volume 1h >= 100% ACTIVE TVL (0.3% × liq) — cari pool yang
-    //     benar-benar ramai diperdagangkan (turnover tinggi)
-    //   - liquidity > $10k (pagar keamanan, sama seperti meme agent)
-    // Fee/APR TIDAK difilter — user cek sendiri di Uniswap via CA yang di-surface.
-    // CA di-surface supaya user bisa cari pool di app.uniswap.org/explore/pools/robinhood.
-    const memeAgent = await this.getScreeningAgent('meme-robinhood');
-    if (!memeAgent) return [];
-    const reports = await memeAgent.runScreeningPass();
-    const UNISWAP_V3_FEE_RATE = 0.003; // default 0.3% tier — dipakai hanya untuk active-TVL proxy
-    const bestBySymbol = new Map<string, AgentReport>();
-    for (const r of reports) {
-      const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
-      if (!t) continue;
-      const liquidityUsd = t.liquidityUsd || 0;
-      const volume24hUsd = t.volume24hUsd || 0;
-      const volume1hUsd = volume24hUsd / 24;
-      const activeTvlUsd = UNISWAP_V3_FEE_RATE * liquidityUsd;
-      const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
-
-      // Velocity gate (ramai vs modal aktif) + liquidity floor
-      if (liquidityUsd <= 10000) continue;
-      if (volumeToActiveTvlRatio1h < 1.0) continue;
-
-      // Dedupe per pair: satu terbaik per symbol (velocity tertinggi)
-      const symbol = String(r.payload?.symbol || (t as any).symbol || 'TOKEN').toUpperCase();
-      const existing = bestBySymbol.get(symbol);
-      if (!existing) {
-        bestBySymbol.set(symbol, r);
-      } else {
-        const existingT = (existing.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
-        const existingVel = existingT ? ((existingT.volume24hUsd || 0) / 24) / (UNISWAP_V3_FEE_RATE * (existingT.liquidityUsd || 1)) : 0;
-        if (volumeToActiveTvlRatio1h > existingVel) bestBySymbol.set(symbol, r);
-      }
-    }
-    return [...bestBySymbol.values()].map((r) => {
-      const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
-      const liquidityUsd = t?.liquidityUsd || 0;
-      const volume24hUsd = t?.volume24hUsd || 0;
-      return {
-        passed: true,
-        signal: r.signal,
-        reason: r.reason,
-        confidence: r.confidence,
-        payload: {
-          ...(r.payload || {}),
-          domain: 'LP_ROBINHOOD' as const,
-          title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
-          symbol: r.payload?.symbol || 'TOKEN',
-          aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
-          network: 'Robinhood Chain (Uniswap v3)',
-          dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
-          dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
-          poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${r.payload?.contractAddress || (t as any)?.address || ''}`,
-          liquidity: `$${(liquidityUsd / 1000).toFixed(1)}k`,
-          securityAuditPassed: r.payload?.securityAuditPassed ?? true,
-          socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
-          liquidityUsd: r.payload?.liquidityUsd ?? liquidityUsd,
-          volume1hUsd: r.payload?.volume1hUsd ?? volume24hUsd / 24,
-        },
-      };
-    });
+    // lp-robinhood: Krystal Cloud Data API (indexer pool robinhood chain yang
+    // andal — subgraph unsupported, Uniswap Data API butuh akses khusus).
+    // Data NYATA: tvl, volume/fee/APR per 1h-24h, farm incentives. Filter
+    // mirror LP solana (Meteora): fee1h>=7, 24h Fee/TVL>1%, velocity>=100%,
+    // tvl>=10k, dedupe per pair. Pool address di-surface → link Uniswap langsung.
+    const { KrystalCloudAdapter } = await import('../adapters/krystal-cloud-adapter.js');
+    const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
+    const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
+    return high.map((p) => ({
+      passed: true,
+      signal: p,
+      reason: p.aiRecommendation,
+      confidence: 80,
+      payload: {
+        domain: 'LP_ROBINHOOD' as const,
+        title: p.pairName,
+        symbol: p.token0Symbol,
+        contractAddress: p.poolAddress,
+        network: 'Robinhood Chain (Uniswap v3)',
+        dexPaidStatus: `Uniswap V3 • ${p.feeTier / 10000}% fee`,
+        dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
+        poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${p.poolAddress}`,
+        liquidity: `$${(p.tvlUsd / 1000).toFixed(1)}k`,
+        devHoldingPct: `${p.feeAprPercentage}% APR`,
+        sniperPct: `${p.apr24h.toFixed(1)}% 24h`,
+        bundlerPct: p.farmApr24h > 0 ? `+${p.farmApr24h.toFixed(1)}% farm` : 'no farm',
+        feeApr: `${(p.feesToTvlRatio24h * 100).toFixed(2)}% (24h Fee/TVL)`,
+        aiThesis: p.aiRecommendation,
+        confidenceScore: 80,
+        securityAuditPassed: true,
+        socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
+        liquidityUsd: p.tvlUsd,
+        volume1hUsd: p.volume1hUsd,
+      },
+    }));
   }
 
   public getAgentStatuses(): Record<string, { active: boolean; autoExecute: boolean; maxTradeAmount: number }> {

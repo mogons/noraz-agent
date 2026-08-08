@@ -3,6 +3,7 @@ import { AthenaHub } from '../src/orchestrator/hub.js';
 import { CTAlphaAgent } from '../src/agents/ct-alpha/ct-alpha-agent.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter, MeteoraPoolSignal } from '../src/adapters/meteora-dlmm-adapter.js';
+import type { KrystalCloudAdapter, KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
 import type { TwitterService, TweetItem } from '../src/services/twitter-service.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
@@ -42,6 +43,34 @@ const mkMeteoraStub = (pools: MeteoraPoolSignal[]) => ({
   fetchTopYieldPools: vi.fn(async () => pools),
   filterHighYieldPools: vi.fn((p: MeteoraPoolSignal[]) => p),
 } as unknown as MeteoraDLMMAdapter);
+
+const mkKrystalPool = (): KrystalPoolSignal => ({
+  poolAddress: '0xpool1',
+  pairName: 'WETH-USDC',
+  network: 'Robinhood',
+  feeTier: 3000,
+  tvlUsd: 150000,
+  activeTvlUsd: 3000,
+  volume1hUsd: 5000,
+  fee1hUsd: 20,
+  volume24hUsd: 120000,
+  fee24hUsd: 360,
+  feesToTvlRatio24h: 0.0024,
+  volumeToTvlRatio1h: 0.033,
+  volumeToActiveTvlRatio1h: 1.67,
+  feeAprPercentage: 87.6,
+  apr24h: 28.4,
+  farmApr24h: 0,
+  token0Symbol: 'WETH',
+  token1Symbol: 'USDC',
+  token0Address: '0xweth',
+  aiRecommendation: 'Live Uniswap V3 pool WETH-USDC (Robinhood Chain)',
+});
+
+const mkKrystalStub = (pools: KrystalPoolSignal[]) => ({
+  fetchTopRobinhoodPools: vi.fn(async () => pools),
+  filterHighYieldPools: vi.fn((p: KrystalPoolSignal[]) => p),
+} as unknown as KrystalCloudAdapter);
 
 // NOTE: the healthy text intentionally avoids 'ai'/'agent'/'yield'/'airdrop'/'farm'
 // so category resolution lands on SMART_CT_CALL (deterministic, mirrors ct-alpha tests).
@@ -132,63 +161,19 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.title).toBe('SOL-USDC');
   });
 
-  it('lp-robinhood reuses meme-robinhood screening (GMGN) with velocity-only LP gate', async () => {
-    // Gate: liquidity > 10k + velocity (vol1h / (0.003 x liq)) >= 100%
-    // strong: liq=100k, vol24h=500k → vel = (500k/24)/(0.003*100k) = 69.4x ✓
-    const strongToken = {
-      address: '0xabc',
-      symbol: 'T1',
-      liquidityUsd: 100000,
-      volume24hUsd: 500000,
-    };
-    // thin: liq=10k (≤10k → DITOLAK liquidity floor)
-    const thinToken = {
-      address: '0xthin',
-      symbol: 'THIN',
-      liquidityUsd: 10000,
-      volume24hUsd: 500000,
-    };
-    // lowvol: liq=100k, vol24h=20k → vel = (20k/24)/(0.003*100k) = 2.8x ≥ 1.0 → LOLOS
-    // (hanya velocity yang wajib — fee/APR tidak difilter)
-    const lowvolToken = {
-      address: '0xlow',
-      symbol: 'LOW',
-      liquidityUsd: 100000,
-      volume24hUsd: 20000,
-    };
-    const hub = new AthenaHub({
-      agentFactories: {
-        'meme-robinhood': () => mkStubAgent('meme-robinhood', [
-          { passed: true, signal: { token: strongToken }, reason: 'test', confidence: 85 },
-          { passed: true, signal: { token: thinToken }, reason: 'test thin', confidence: 85 },
-          { passed: true, signal: { token: lowvolToken }, reason: 'test low', confidence: 85 },
-        ]),
-      },
-    });
-    const results = await hub.triggerAgentPass('lp-robinhood');
-    expect(results).toHaveLength(2); // thin (liq<=10k) ditolak; strong + lowvol lolos velocity
-    const r = results[0];
-    expect(r.passed).toBe(true);
-    expect(r.payload?.domain).toBe('LP_ROBINHOOD');
-    expect(r.payload?.contractAddress ?? (r.signal as any).token?.address).toBe('0xabc');
-    expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
-    expect(r.payload?.poolUrl).toBe('https://app.uniswap.org/explore/pools/robinhood/0xabc');
-  });
-
-  it('lp-robinhood dedupes per symbol (satu terbaik)', async () => {
-    const t1 = { address: '0x1', symbol: 'DUPE', liquidityUsd: 100000, volume24hUsd: 500000 };
-    const t2 = { address: '0x2', symbol: 'DUPE', liquidityUsd: 100000, volume24hUsd: 800000 }; // feeTvl lebih tinggi
-    const hub = new AthenaHub({
-      agentFactories: {
-        'meme-robinhood': () => mkStubAgent('meme-robinhood', [
-          { passed: true, signal: { token: t1 }, reason: 'a', confidence: 85 },
-          { passed: true, signal: { token: t2 }, reason: 'b', confidence: 85 },
-        ]),
-      },
-    });
+  it('lp-robinhood wraps Krystal pool data into LP_ROBINHOOD payload', async () => {
+    // Krystal adapter flow: fetch → filterHighYieldPools → payload LP
+    const hub = new AthenaHub({ krystalAdapter: mkKrystalStub([mkKrystalPool()]) });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
-    expect((results[0].signal as any).token?.address).toBe('0x2'); // feeTvl tertinggi menang
+    const r = results[0];
+    expect(r.passed).toBe(true);
+    expect(r.confidence).toBe(80);
+    expect(r.payload?.domain).toBe('LP_ROBINHOOD');
+    expect(r.payload?.contractAddress).toBe('0xpool1');
+    expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
+    expect(r.payload?.poolUrl).toBe('https://app.uniswap.org/explore/pools/robinhood/0xpool1');
+    expect(r.payload?.feeApr).toContain('%');
   });
 
   it('alias "meteora" resolves to lp-solana', async () => {
