@@ -231,16 +231,9 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
 
       const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[ROBINHOOD AGENT] ${filter.reason}`); continue; }
-
-      const audit: GoPlusTokenSecurity | null = await this.goplus.auditToken('robinhood', t.address);
-      if (!audit) {
-        console.log(`[ROBINHOOD AGENT] ⛔ ${t.symbol}: GoPlus audit gagal/null (fail-closed).`);
-        continue;
-      }
-      if (audit.buyTaxPct > 10 || audit.sellTaxPct > 10) {
-        console.log(`[ROBINHOOD AGENT] ⛔ ${t.symbol}: pajak tinggi (buy ${audit.buyTaxPct}% / sell ${audit.sellTaxPct}% > 10%).`);
-        continue;
-      }
+      // Audit keamanan kini dari data GMGN di preFilter (rug_ratio, is_honeypot,
+      // buy/sell tax, insider, bundler, top-10, wash) — GoPlus tidak punya data
+      // untuk sebagian besar token robinhood (4663) & gagal null → hilangkan.
 
       const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {

@@ -220,7 +220,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       console.log(`[SOLANA AGENT] Signal overlay: ${signalBoostMap.size} token punya event smart-money/KOL/CTO.`);
     }
 
-    // 2. Pre-filter (cheap) then RugCheck (expensive) then detect
+    // 2. Pre-filter (cheap) then detect
     for (const t of candidates) {
       // Graduated-only: reject tokens still on the bonding curve (exchange='pump')
       if (!isGraduatedToken(t)) {
@@ -230,12 +230,9 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
 
       const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[SOLANA AGENT] ${filter.reason}`); continue; }
-
-      const audit: RugCheckResult = await this.rugCheck.auditSolanaToken(t.address);
-      if (!audit.isSafeForRunner) {
-        console.log(`[SOLANA AGENT] ⛔ ${t.symbol}: RugCheck tidak lolos (score ${audit.score}).`);
-        continue;
-      }
+      // Audit keamanan kini dari data GMGN di preFilter (rug_ratio, is_honeypot,
+      // buy/sell tax, insider, bundler, top-10, wash, renounced) — RugCheck API
+      // eksternal dihapus (rate-limit & biaya; data GMGN sudah selengkap itu).
 
       const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {

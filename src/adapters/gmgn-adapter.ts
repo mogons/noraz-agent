@@ -27,6 +27,8 @@ export interface GMGNRawToken {
   ratTraderAmountRate: number | null;
   rugRatio: number | null;
   isWashTrading: boolean;
+  /** Honeypot flag dari GMGN (EVM: '1' = tidak bisa dijual). null = tidak dilaporkan. */
+  isHoneypot: boolean | null;
   ctoFlag: boolean;
   renouncedMint: boolean;
   renouncedFreeze: boolean;
@@ -232,6 +234,9 @@ export class GMGNAdapter {
       ratTraderAmountRate: typeof raw.rat_trader_amount_rate === 'number' ? raw.rat_trader_amount_rate : null,
       rugRatio: typeof raw.rug_ratio === 'number' ? raw.rug_ratio : null,
       isWashTrading: raw.is_wash_trading === true || raw.is_wash_trading === 1,
+      isHoneypot: raw.is_honeypot === '1' || raw.is_honeypot === 1 || raw.is_honeypot === true
+        ? true
+        : (raw.is_honeypot === '0' || raw.is_honeypot === 0 || raw.is_honeypot === false ? false : null),
       ctoFlag: raw.cto_flag === 1 || raw.cto_flag === true,
       renouncedMint: raw.renounced_mint === 1 || raw.renounced_mint === true,
       renouncedFreeze: raw.renounced_freeze_account === 1 || raw.renounced_freeze_account === true,
@@ -528,6 +533,7 @@ export class GMGNAdapter {
       ratTraderAmountRate: null,
       rugRatio: null,
       isWashTrading: false,
+      isHoneypot: null,
       ctoFlag: false,
       renouncedMint: false,
       renouncedFreeze: false,

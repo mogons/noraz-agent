@@ -146,6 +146,12 @@ export function preFilterToken(
   if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
   if (t.isWashTrading) return fail('wash trading terdeteksi.');
+  // Honeypot & tax gate dari data GMGN (fail-open: null = tidak dilaporkan, dilewati)
+  if (t.isHoneypot === true) return fail('honeypot (tidak bisa dijual).');
+  const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
+  const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
+  if (buyTax !== null && buyTax > 10) return fail(`buy tax ${buyTax}% > 10%.`);
+  if (sellTax !== null && sellTax > 10) return fail(`sell tax ${sellTax}% > 10%.`);
   if (t.rugRatio !== null && t.rugRatio >= config.maxRugRatio) return fail(`rug ratio ${(t.rugRatio*100).toFixed(0)}% >= ${config.maxRugRatio*100}%.`);
   if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= config.maxRatTraderRate) return fail(`insider ${(t.ratTraderAmountRate*100).toFixed(0)}% >= ${config.maxRatTraderRate*100}%.`);
   if (t.bundlerRate !== null && t.bundlerRate >= config.maxBundlerRate) return fail(`bundler ${(t.bundlerRate*100).toFixed(0)}% >= ${config.maxBundlerRate*100}%.`);

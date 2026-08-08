@@ -127,7 +127,7 @@ describe('RobinhoodScreeningAgent', () => {
     expect(reports.length).toBe(0);
   });
 
-  it('runScreeningPass returns [] when GoPlus audit is unavailable (fail-closed)', async () => {
+  it('runScreeningPass passes a healthy token using GMGN-based audit (no GoPlus needed)', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     const mkWire = (t: GMGNRawToken) => ({
       address: t.address, symbol: t.symbol, name: t.name,
@@ -138,6 +138,7 @@ describe('RobinhoodScreeningAgent', () => {
       renowned_count: t.renownedCount, bundler_rate: t.bundlerRate,
       rat_trader_amount_rate: t.ratTraderAmountRate, rug_ratio: t.rugRatio,
       is_wash_trading: t.isWashTrading ? 1 : 0, cto_flag: t.ctoFlag ? 1 : 0,
+      is_honeypot: t.isHoneypot ? 1 : 0, buy_tax: t.buyTax, sell_tax: t.sellTax,
       renounced_mint: t.renouncedMint ? 1 : 0, renounced_freeze_account: t.renouncedFreeze ? 1 : 0,
       creation_timestamp: t.creationTimestamp, open_timestamp: t.openTimestamp,
       price_change_percent1m: t.priceChange1m, price_change_percent5m: t.priceChange5m,
@@ -146,29 +147,37 @@ describe('RobinhoodScreeningAgent', () => {
       twitter_del_post_token_count: t.twitterDelPostCount,
       twitter_create_token_count: t.twitterCreateTokenCount,
       total_fee: t.totalFeeNative, dexscr_boost_fee: t.dexscrBoostFee, dexscr_ad: t.dexscrAd,
+      exchange: t.exchange, launchpad_platform: t.launchpadPlatform, launchpad_status: t.launchpadStatus, progress: t.progress,
     });
-    const healthy = mkToken(); // passes preFilter: 6h old, $300k vol, $50k liq, 1 ETH fee
+    const healthy = mkToken(); // passes preFilter: $300k vol, $50k liq, CTO + smart money
     const rankResponse = {
       code: 0,
       data: { data: { rank: [mkWire(healthy)] } },
     };
     const emptyTrenches = { code: 0, data: { new_creation: [], pump: [], near_completion: [], completed: [] } };
     const priceResponse = { ethereum: { usd: ETH_PRICE, usd_24h_change: 1.5 } };
-    const goplusNullish = { code: 1, result: {} }; // no security data for the token
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('openapi.gmgn.ai/v1/market/rank')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => rankResponse };
       if (url.includes('openapi.gmgn.ai/v1/market/hot_searches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: [{ tokens: [] }] }) };
       if (url.includes('openapi.gmgn.ai/v1/trenches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => emptyTrenches };
       if (url.includes('coingecko')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => priceResponse };
-      if (url.includes('gopluslabs')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => goplusNullish };
       throw new Error(`unexpected fetch: ${url}`);
     }));
 
     const agent = new RobinhoodScreeningAgent();
-    expect(agent.preFilter(healthy, ETH_PRICE).ok).toBe(true); // sanity: audit branch is exercised
+    expect(agent.preFilter(healthy, ETH_PRICE).ok).toBe(true); // sanity: GMGN audit gates pass
     const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(0);
+    expect(reports.length).toBe(1);
+    expect(reports[0].payload?.domain).toBe('MEME_EVM');
+  });
+
+  it('preFilter rejects honeypot & high-tax tokens from GMGN audit data', () => {
+    const agent = new RobinhoodScreeningAgent();
+    expect(agent.preFilter(mkToken({ isHoneypot: true }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ buyTax: '15' }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ sellTax: '20' }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ isHoneypot: false, buyTax: '0', sellTax: '0' }), ETH_PRICE).ok).toBe(true);
   });
 
   it('toStrategyGmgn contract maps GMGN fields for the default strategy (native_price_usd = ETH)', async () => {
