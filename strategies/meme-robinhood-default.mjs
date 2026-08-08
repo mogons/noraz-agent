@@ -6,12 +6,12 @@ export default {
     'Default meme-robinhood strategy: detects CTO (community takeover), Revival (dead token waking up), ' +
     'and Momentum (volume/hype pump) signals from real GMGN fields. Deterministic scoring, no LLM. ' +
     'Fail-closed: missing fields contribute 0; signals below 80 are SKIP. ' +
-    'Global fee gate priced in native ETH (Robinhood Chain).',
+    'Degen early: age & fee gates off by default (0) — smart money/CTO/KOL jadi penentu.',
   params: {
     passThreshold: 80,
     minVolume24hUsd: 50000,
     minLiquidityUsd: 10000,
-    minAgeHours: 4,
+    minAgeHours: 0,
     maxRugRatio: 0.3,
     maxRatTraderRate: 0.3,
     maxBundlerRate: 0.5,
@@ -20,7 +20,7 @@ export default {
     maxTwitterRenameCount: 3,
     maxTwitterDelPostCount: 5,
     maxTwitterCreateTokenCount: 10,
-    minTotalFeeUsd: 500,
+    minTotalFeeUsd: 0,
   },
   evaluate(ctx) {
     const p = this.params;
@@ -38,8 +38,8 @@ export default {
     const reasons = [];
 
     // ── Hard fail-closed gates (missing data = reject, never fake-pass) ──
-    if (ageHours === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Umur token tidak diketahui (fail-closed).' };
-    if (ageHours < p.minAgeHours) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Umur ${ageHours.toFixed(1)}h < ${p.minAgeHours}h minimum.` };
+    if (p.minAgeHours > 0 && ageHours === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Umur token tidak diketahui (fail-closed).' };
+    if (p.minAgeHours > 0 && ageHours < p.minAgeHours) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Umur ${ageHours.toFixed(1)}h < ${p.minAgeHours}h minimum.` };
     if (volume24h < p.minVolume24hUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Volume $${(volume24h / 1000).toFixed(1)}k < ${p.minVolume24hUsd / 1000}k.` };
     if (liquidity < p.minLiquidityUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Likuiditas $${(liquidity / 1000).toFixed(1)}k < ${p.minLiquidityUsd / 1000}k.` };
     if (isWash) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Wash trading terdeteksi (volume palsu).' };
@@ -48,15 +48,17 @@ export default {
     if (bundlerRate !== null && bundlerRate >= p.maxBundlerRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Bundler rate ${(bundlerRate * 100).toFixed(1)}% >= ${p.maxBundlerRate * 100}%.` };
     if (top10Holder !== null && top10Holder >= p.maxTop10HolderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Top-10 holder ${(top10Holder * 100).toFixed(1)}% >= ${p.maxTop10HolderRate * 100}%.` };
 
-    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan (RugCheck) tidak lolos.' };
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan (GoPlus) tidak lolos.' };
 
-    // ── Global total fees gate: total_fee (native ETH) × live native price > $500 ──
-    const totalFeeNative = typeof g.total_fee === 'number' && g.total_fee > 0 ? g.total_fee : null;
-    const nativePriceUsd = typeof g.native_price_usd === 'number' && g.native_price_usd > 0 ? g.native_price_usd : null;
-    if (totalFeeNative === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Total fee tidak diketahui (fail-closed).' };
-    if (nativePriceUsd === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga native live tidak tersedia — gagal konversi fee (fail-closed).' };
-    const totalFeeUsd = totalFeeNative * nativePriceUsd;
-    if (totalFeeUsd < p.minTotalFeeUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Total fee $${totalFeeUsd.toFixed(0)} < $${p.minTotalFeeUsd} (${totalFeeNative.toFixed(2)} native ETH @ $${nativePriceUsd.toFixed(2)}).` };
+    // ── Global total fees gate OPSIONAL: hanya aktif jika minTotalFeeUsd > 0 ──
+    if (p.minTotalFeeUsd > 0) {
+      const totalFeeNative = typeof g.total_fee === 'number' && g.total_fee > 0 ? g.total_fee : null;
+      const nativePriceUsd = typeof g.native_price_usd === 'number' && g.native_price_usd > 0 ? g.native_price_usd : null;
+      if (totalFeeNative === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Total fee tidak diketahui (fail-closed).' };
+      if (nativePriceUsd === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga native live tidak tersedia — gagal konversi fee (fail-closed).' };
+      const totalFeeUsd = totalFeeNative * nativePriceUsd;
+      if (totalFeeUsd < p.minTotalFeeUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Total fee $${totalFeeUsd.toFixed(0)} < $${p.minTotalFeeUsd} (${totalFeeNative.toFixed(2)} native ETH @ $${nativePriceUsd.toFixed(2)}).` };
+    }
 
     // ── Social red flags (Twitter/X dev behavior, free — from GMGN fields) ──
     const twitterRename = Number(g.twitter_rename_count ?? 0);
@@ -90,11 +92,12 @@ export default {
       if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallet (+15)`); }
       if (renowned >= 1) { score += 10; reasons.push(`⭐ KOL ${renowned} (+10)`); }
       if (volume24h >= 100000) { score += 15; reasons.push(`🔥 Volume $${(volume24h / 1000).toFixed(0)}k (+15)`); }
+      if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 Launch baru + CTO (+10)'); }
       return finish('CTO', score);
     }
 
-    // Revival (dead token waking up after 4h)
-    if (change1h !== null && change1h > 50) {
+    // Revival (dead token waking up) — HANYA token lama (umur >= 4h)
+    if (ageHours !== null && ageHours >= 4 && change1h !== null && change1h > 50) {
       let score = 15;
       reasons.push('🕐 Umur > 4h (+15)');
       score += 30; reasons.push(`📈 Harga +${change1h.toFixed(0)}% 1h (+30)`);
@@ -104,7 +107,7 @@ export default {
       return finish('REVIVAL', score);
     }
 
-    // Momentum (general pump)
+    // Momentum (general pump, termasuk degen early)
     {
       let score = 0;
       if (change5m !== null && change5m > 0) { score += 15; reasons.push(`⚡ 5m +${change5m.toFixed(1)}% (+15)`); }
@@ -113,6 +116,7 @@ export default {
       if (totalTrades > 0 && buys / totalTrades > 0.6) { score += 20; reasons.push(`⚖️ Buy ${((buys / totalTrades) * 100).toFixed(0)}% / Sell ${((sells / totalTrades) * 100).toFixed(0)}% (+20)`); }
       if (volume24h >= 100000) { score += 15; reasons.push(`🔥 Volume $${(volume24h / 1000).toFixed(0)}k (+15)`); }
       if (smartDegen >= 1) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} (+15)`); }
+      if (ageHours !== null && ageHours < 2 && smartDegen >= 1) { score += 10; reasons.push(`🆕 Launch ${ageHours.toFixed(1)}h + smart money masuk bareng (+10)`); }
       if (top10Holder !== null && top10Holder < 0.3) { score += 10; reasons.push(`👥 Top-10 ${(top10Holder * 100).toFixed(1)}% (+10)`); }
       return finish('MOMENTUM', score);
     }

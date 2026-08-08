@@ -198,8 +198,14 @@ describe('RobinhoodScreeningAgent', () => {
     expect(ev.recommendedAction).not.toBe('SKIP');
     expect(ev.confidence).toBeGreaterThanOrEqual(80);
 
-    const failClosed = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
-    expect(failClosed.recommendedAction).toBe('SKIP');
+    // Fee gate off by default: null fee tidak lagi mematikan sinyal (degen early)
+    const feeOff = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    expect(feeOff.recommendedAction).not.toBe('SKIP');
+
+    // Kalau fee gate diaktifkan ulang (params > 0), null fee kembali fail-closed
+    const stratWithFee = { ...strat, params: { ...strat.params, minTotalFeeUsd: 500 } };
+    const feeOn = stratWithFee.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    expect(feeOn.recommendedAction).toBe('SKIP');
   });
 
   it('dedupe prunes seenTokens entries older than 5 minutes', () => {

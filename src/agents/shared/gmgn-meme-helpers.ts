@@ -221,7 +221,8 @@ export function toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
     name: t.name,
     source: t.source,
     ageHours: t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null,
-    volume_24h: t.volume24hUsd,
+    volume_24h: volume24hOf(t), // jujur: real 24h atau est 1h×24 (rank 1h cuma kasih volume 1h)
+    volume_1h: t.volume1hUsd,
     liquidity: t.liquidityUsd,
     is_wash_trading: t.isWashTrading ? 1 : 0,
     total_fee: t.totalFeeNative,
