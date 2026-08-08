@@ -34,10 +34,10 @@ describe('SolanaScreeningAgent', () => {
     expect(agent.preFilter(mkToken({ creationTimestamp: null }), 73.65).ok).toBe(true);
   });
 
-  it('preFilter rejects wash trading & high bundler', () => {
+  it('preFilter rejects wash trading (bundler tidak digate)', () => {
     const agent = new SolanaScreeningAgent();
     expect(agent.preFilter(mkToken({ isWashTrading: true }), 73.65).ok).toBe(false);
-    expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), 73.65).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), 73.65).ok).toBe(true);
   });
 
   it('preFilter passes a healthy token', () => {

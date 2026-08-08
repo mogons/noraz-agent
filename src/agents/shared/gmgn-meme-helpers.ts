@@ -13,7 +13,6 @@ export interface MemePreFilterConfig {
   minAgeHours: number;
   maxRugRatio: number;
   maxRatTraderRate: number;
-  maxBundlerRate: number;
   maxTop10HolderRate: number;
   minTotalFeeUsd: number;
 }
@@ -144,7 +143,7 @@ export function preFilterToken(
   const vol24 = volume24hOf(t);
   if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
-  // Security gate GMGN (honeypot, tax, rug, insider, bundler, top-10, wash) — shared
+  // Security gate GMGN (honeypot, tax, rug, insider, top-10, wash) — shared
   // dengan LP agent supaya ambang keamanan tetap satu sumber.
   const sec = securityGateToken(t);
   if (!sec.ok) return fail(sec.reasons.join(' '));
@@ -163,12 +162,12 @@ export function preFilterToken(
  * Security gate dari data GMGN (fail-open per field: null = tidak dilaporkan,
  * dilewati) — dipakai meme agent DAN LP agent (token meme di pool).
  * Ambang default identik dengan meme config: rug < 0.3, insider < 0.3,
- * bundler < 0.5, top-10 < 0.4, tax <= 10%, honeypot & wash = tolak.
+ * top-10 < 0.4, tax <= 10%, honeypot & wash = tolak. Bundler TIDAK digate
+ * (token alpha sering bundler tinggi — filter bundler dihapus 2026-08-09).
  */
 export interface SecurityGateOptions {
   maxRugRatio?: number;
   maxRatTraderRate?: number;
-  maxBundlerRate?: number;
   maxTop10HolderRate?: number;
   maxTaxPct?: number;
   /** Gate buy/sell tax (default true). LP agent mematikan ini: token LP sering punya tax kecil. */
@@ -178,7 +177,6 @@ export interface SecurityGateOptions {
 const SECURITY_GATE_DEFAULTS: Required<SecurityGateOptions> = {
   maxRugRatio: 0.3,
   maxRatTraderRate: 0.3,
-  maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
   maxTaxPct: 10,
   enableTaxGate: true,
@@ -200,7 +198,6 @@ export function securityGateToken(
   }
   if (t.rugRatio !== null && t.rugRatio >= o.maxRugRatio) reasons.push(`rug ratio ${(t.rugRatio * 100).toFixed(0)}% >= ${o.maxRugRatio * 100}%.`);
   if (t.ratTraderAmountRate !== null && t.ratTraderAmountRate >= o.maxRatTraderRate) reasons.push(`insider ${(t.ratTraderAmountRate * 100).toFixed(0)}% >= ${o.maxRatTraderRate * 100}%.`);
-  if (t.bundlerRate !== null && t.bundlerRate >= o.maxBundlerRate) reasons.push(`bundler ${(t.bundlerRate * 100).toFixed(0)}% >= ${o.maxBundlerRate * 100}%.`);
   if (t.top10HolderRate !== null && t.top10HolderRate >= o.maxTop10HolderRate) reasons.push(`top-10 holder ${(t.top10HolderRate * 100).toFixed(0)}% >= ${o.maxTop10HolderRate * 100}%.`);
   return { ok: reasons.length === 0, reasons };
 }
@@ -335,7 +332,6 @@ const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   minAgeHours: { min: 0, max: 168 },
   maxRugRatio: { min: 0.01, max: 1 },
   maxRatTraderRate: { min: 0.01, max: 1 },
-  maxBundlerRate: { min: 0.01, max: 1 },
   maxTop10HolderRate: { min: 0.01, max: 1 },
   minTotalFeeUsd: { min: 0, max: 1_000_000 },
   passThreshold: { min: 50, max: 99 },

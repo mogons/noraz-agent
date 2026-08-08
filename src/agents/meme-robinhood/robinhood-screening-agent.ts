@@ -18,7 +18,6 @@ export interface RobinhoodScreeningConfig {
   minAgeHours: number;       // 0 — degen early: token baru langsung lolos (smart money/CTO/KOL jadi penentu)
   maxRugRatio: number;       // 0.3
   maxRatTraderRate: number;  // 0.3
-  maxBundlerRate: number;    // 0.5
   maxTop10HolderRate: number;// 0.4
   minTotalFeeUsd: number;    // 500 — gate fee aktif: token tanpa aktivitas organik (fee tak tercatat) ditolak
   passThreshold: number;     // 80
@@ -34,7 +33,6 @@ const DEFAULT_CONFIG: RobinhoodScreeningConfig = {
   minAgeHours: 0,
   maxRugRatio: 0.3,
   maxRatTraderRate: 0.3,
-  maxBundlerRate: 0.5,
   maxTop10HolderRate: 0.4,
   minTotalFeeUsd: 500,
   passThreshold: 80,
@@ -98,7 +96,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       this.gmgn.fetchTrenches('robinhood', {
         types: ['completed'],
         limit: this.config.trenchesLimit,
-        filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3, max_insider_ratio: 0.3 },
+        filters: { max_rug_ratio: 0.3, max_insider_ratio: 0.3 },
       }),
       this.gmgn.fetchHotSearches({ chain: 'robinhood', interval: '1h', limit: this.config.hotSearchesLimit, filters: ['migrated', 'not_honeypot', 'verified', 'renounced'] }),
     ]);

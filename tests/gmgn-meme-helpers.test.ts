@@ -69,8 +69,8 @@ describe('securityGateToken — gate keamanan GMGN (meme & LP shared)', () => {
     expect(securityGateToken(mkToken({ ratTraderAmountRate: 0.3 })).ok).toBe(false);
   });
 
-  it('bundler >= 0.5 → tolak', () => {
-    expect(securityGateToken(mkToken({ bundlerRate: 0.5 })).ok).toBe(false);
+  it('bundler tinggi → LOLOS (filter bundler dihapus — token alpha sering bundler tinggi)', () => {
+    expect(securityGateToken(mkToken({ bundlerRate: 0.9 })).ok).toBe(true);
   });
 
   it('top-10 holder >= 0.4 → tolak', () => {
@@ -80,7 +80,7 @@ describe('securityGateToken — gate keamanan GMGN (meme & LP shared)', () => {
   it('semua field berbahaya sekaligus → semua alasan tercantum', () => {
     const r = securityGateToken(mkToken({ rugRatio: 0.5, bundlerRate: 0.6, ratTraderAmountRate: 0.4, top10HolderRate: 0.5 }));
     expect(r.ok).toBe(false);
-    expect(r.reasons.length).toBe(4);
+    expect(r.reasons.length).toBe(3); // bundler tidak lagi digate
   });
 
   it('opsi ambang kustom dapat diperketat', () => {

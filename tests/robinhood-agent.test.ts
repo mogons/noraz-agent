@@ -32,10 +32,10 @@ describe('RobinhoodScreeningAgent', () => {
     expect(agent.preFilter(mkToken({ creationTimestamp: null }), ETH_PRICE).ok).toBe(true);
   });
 
-  it('preFilter rejects wash trading & high bundler', () => {
+  it('preFilter rejects wash trading (bundler tidak digate)', () => {
     const agent = new RobinhoodScreeningAgent();
     expect(agent.preFilter(mkToken({ isWashTrading: true }), ETH_PRICE).ok).toBe(false);
-    expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), ETH_PRICE).ok).toBe(false);
+    expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), ETH_PRICE).ok).toBe(true);
   });
 
   it('volume24hOf uses real 24h when present, else estimates 1h×24, else 0', () => {
