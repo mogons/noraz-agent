@@ -157,7 +157,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     embed.addFields(
       { name: 'Network', value: payload.network, inline: true },
       { name: 'Pool TVL', value: payload.marketCap || payload.liquidity || 'N/A', inline: true },
-      { name: 'Est. 24h Fee APR', value: payload.feeApr || 'N/A', inline: true }
+      { name: 'Fee 1h / TVL', value: payload.feeApr || 'N/A', inline: true }
     );
 
     // CA masing-masing token + chart link (DexScreener/GMGN)
