@@ -192,7 +192,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       securityAuditPassed: true, // set after GoPlus passes (see runScreeningPass)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
-      volume1hUsd: t.volume24hUsd / 24,
+      volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t) / 24,
     };
   }
 
@@ -255,7 +255,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
           const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', {
             domain: 'MEME_EVM', symbol: t.symbol, contractAddress: t.address,
             priceUsd: t.priceUsd, liquidityUsd: t.liquidityUsd,
-            volume24hUsd: t.volume24hUsd, volume1hUsd: t.volume24hUsd/24,
+            volume24hUsd: volume24hOf(t), volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t)/24,
             smartMoneyCount: t.smartDegenCount, securityAuditPassed: true,
             socialHypeScore: confidence,
             gmgn: { ...toStrategyGmgn(t), native_price_usd: nativePriceUsd },
