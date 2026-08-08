@@ -402,14 +402,17 @@ if (discordToken && clientId) {
           recentSignals.set(dedupKey, now);
           stateStore.setDedupEntry(dedupKey, now);
 
-          // AUTO-EXECUTE (simulated while DRY_RUN=true)
+          // AUTO-EXECUTE — LOCKED OFF by default (manual-execution mode).
+          // The bot is a screener/caller only: every execution is done by the
+          // user. Flip AUTO_EXECUTE_ENABLED=true in .env to re-enable.
+          const AUTO_EXECUTE_ENABLED = process.env.AUTO_EXECUTE_ENABLED === 'true';
           const autoExecDomain: string | undefined =
             item.channelName === 'call-meme-solana' ? 'meme-solana' :
             item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
             item.channelName === 'call-perps-futures' ? 'perps' :
             item.channelName === 'call-prediction-markets' ? 'prediction' :
             undefined;
-          if (autoExecDomain) {
+          if (autoExecDomain && AUTO_EXECUTE_ENABLED) {
             const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
             if (autoExec.enabled) {
               try {
@@ -499,7 +502,7 @@ if (discordToken && clientId) {
           // 3. Register called tokens for wallet auto-tracking (own-position detection + exit alerts)
           if (item.channelName === 'call-meme-solana' && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('sol', item.payload.contractAddress, item.payload.symbol);
-          } else if (item.channelName === 'call-meme-robinhood' && item.payload.contractAddress) {
+          } else if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
           }
 
