@@ -139,5 +139,7 @@ describe('SolanaScreeningAgent', () => {
     expect(isGraduatedToken(mkToken({ exchange: 'pump_amm' }))).toBe(true);
     expect(isGraduatedToken(mkToken({ exchange: 'raydium' }))).toBe(true);
     expect(isGraduatedToken(mkToken({ source: 'dexscreener', exchange: null }))).toBe(true);
+    // EVM: exchange = contract/pool address — venue exists = graduated
+    expect(isGraduatedToken(mkToken({ chain: 'robinhood', exchange: '0x8366a39cc670b4001a1121b8f6a443a643e40951' }))).toBe(true);
   });
 });

@@ -26,14 +26,18 @@ export interface MemeSignalResult {
 
 /**
  * Graduated = token sudah keluar dari bonding curve ke DEX open market.
- * GMGN menandai venue lewat `exchange`: 'pump' = masih internal pump.fun
- * market; 'pump_amm' / 'raydium' / 'meteora' / dll = sudah di DEX.
- * DexScreener pairs by definition sudah di DEX. Unknown/null = fail-closed reject.
+ * - SOL: GMGN menandai venue lewat `exchange` — 'pump' = masih internal
+ *   pump.fun market; 'pump_amm'/'raydium'/'meteora'/dll = sudah di DEX.
+ * - EVM: `exchange` berisi contract/pool address (0x...) — kehadirannya
+ *   menandakan venue sudah terbentuk (bukan bonding curve).
+ * - DexScreener pairs by definition sudah di DEX. Unknown/null = fail-closed reject.
  */
 export function isGraduatedToken(t: GMGNRawToken): boolean {
   if (t.source === 'dexscreener') return true;
   const ex = t.exchange?.toLowerCase();
-  return Boolean(ex) && ex !== 'pump';
+  if (!ex) return false;
+  if (ex.startsWith('0x')) return true;
+  return ex !== 'pump';
 }
 
 /** Dedupe by contract address (case-insensitive), 60s cooldown, pruned after 5 min */
