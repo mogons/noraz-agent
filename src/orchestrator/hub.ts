@@ -4,7 +4,6 @@ import { AGENT_DOMAINS, getAgentDomain, normalizeDomainKey as registryNormalizeD
 import type { AgentDomainId } from './agent-registry.js';
 import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
-import type { UniswapLPAdapter } from '../adapters/uniswap-lp-adapter.js';
 import { buildLPPayload } from './dispatch.js';
 
 export interface ChannelStatus {
@@ -18,7 +17,6 @@ export interface AthenaHubOptions {
   /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   meteoraAdapter?: MeteoraDLMMAdapter;
-  uniswapAdapter?: UniswapLPAdapter;
 }
 
 export class AthenaHub {
@@ -29,7 +27,6 @@ export class AthenaHub {
 
   private agentFactories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   private meteoraAdapter?: MeteoraDLMMAdapter;
-  private uniswapAdapter?: UniswapLPAdapter;
 
   private stateStore?: any;
 
@@ -37,7 +34,6 @@ export class AthenaHub {
     this.riskManager = new RiskManager();
     this.agentFactories = options.agentFactories ?? {};
     this.meteoraAdapter = options.meteoraAdapter;
-    this.uniswapAdapter = options.uniswapAdapter;
     this.initializeAgentStatesDefaultPaused();
   }
 
@@ -46,10 +42,9 @@ export class AthenaHub {
     this.agentFactories = { ...this.agentFactories, ...factories };
   }
 
-  /** Late wiring seam for LP adapters (composition root). */
-  public attachAdapters(deps: { meteoraAdapter?: MeteoraDLMMAdapter; uniswapAdapter?: UniswapLPAdapter }): void {
+  /** Late wiring seam for the Meteora LP adapter (composition root). */
+  public attachAdapters(deps: { meteoraAdapter?: MeteoraDLMMAdapter }): void {
     this.meteoraAdapter = deps.meteoraAdapter ?? this.meteoraAdapter;
-    this.uniswapAdapter = deps.uniswapAdapter ?? this.uniswapAdapter;
   }
 
   public attachStateStore(store: any): void {
@@ -224,7 +219,14 @@ export class AthenaHub {
     }
   }
 
-  /** LP domains are adapter-flow based: wrap passing pools into contract-shaped reports. */
+  /**
+   * LP domains.
+   * - lp-solana: adapter-flow Meteora DLMM (official data API).
+   * - lp-robinhood: Robinhood Chain tidak punya indexer pool publik yang
+   *   andal (subgraph unsupported, Uniswap Data API butuh akses khusus) —
+   *   reuse screening GMGN meme-robinhood (sudah graduated-only + GoPlus)
+   *   dan surface CA di card; user mencari pool-nya sendiri di Uniswap.
+   */
   public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
     if (id === 'lp-solana') {
       const { MeteoraDLMMAdapter } = await import('../adapters/meteora-dlmm-adapter.js');
@@ -238,15 +240,31 @@ export class AthenaHub {
         payload: buildLPPayload(p, 'lp-solana'),
       }));
     }
-    const { UniswapLPAdapter } = await import('../adapters/uniswap-lp-adapter.js');
-    const adapter = this.uniswapAdapter ?? new UniswapLPAdapter();
-    const high = adapter.filterHighYieldEVMPools(await adapter.fetchTopYieldEVMPools());
-    return high.map((p) => ({
+    // lp-robinhood: reuse the meme-robinhood screening singleton (GMGN 4 sources,
+    // graduated-only, GoPlus audit) — the LP call surfaces the token CA so the
+    // user can locate the pool directly on Uniswap (app.uniswap.org/explore/pools/robinhood).
+    const memeAgent = await this.getScreeningAgent('meme-robinhood');
+    if (!memeAgent) return [];
+    const reports = await memeAgent.runScreeningPass();
+    return reports.map((r) => ({
       passed: true,
-      signal: p,
-      reason: p.aiRecommendation,
-      confidence: 80,
-      payload: buildLPPayload(p, 'lp-robinhood'),
+      signal: r.signal,
+      reason: r.reason,
+      confidence: r.confidence,
+      payload: {
+        ...(r.payload || {}),
+        domain: 'LP_ROBINHOOD' as const,
+        title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
+        symbol: r.payload?.symbol || 'TOKEN',
+        aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
+        network: 'Robinhood Chain (Uniswap v3)',
+        dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
+        dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
+        securityAuditPassed: r.payload?.securityAuditPassed ?? true,
+        socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
+        liquidityUsd: r.payload?.liquidityUsd ?? 0,
+        volume1hUsd: r.payload?.volume1hUsd ?? 0,
+      },
     }));
   }
 

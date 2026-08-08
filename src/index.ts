@@ -17,7 +17,6 @@ import { globalMarketRegimeFilter } from './services/market-regime.js';
 import { bootstrapDiscordChannels } from './discord/setup/channel-bootstrap.js';
 import { SkillLoader } from './services/skill-loader.js';
 import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
-import { UniswapLPAdapter } from './adapters/uniswap-lp-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
 import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
 import { EVMTradeAdapter } from './adapters/evm-adapter.js';
@@ -133,7 +132,6 @@ const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new
 const aiService = new AIService();
 const skillLoader = new SkillLoader();
 const meteoraAdapter = new MeteoraDLMMAdapter();
-const uniswapAdapter = new UniswapLPAdapter();
 const openseaAdapter = new OpenSeaAdapter();
 const polymarketAdapter = new PolymarketAdapter();
 const solanaTradeAdapter = new SolanaTradeAdapter();
@@ -147,7 +145,7 @@ const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 
 // Wire shared adapters + singleton agent instances into the Hub so on-demand
 // passes (Discord/TUI) use the SAME instances as the 5-min loop.
-hub.attachAdapters({ meteoraAdapter, uniswapAdapter });
+hub.attachAdapters({ meteoraAdapter });
 hub.attachAgentFactories({
   'meme-solana': () => solanaScreeningAgent,
   'meme-robinhood': () => robinhoodScreeningAgent,

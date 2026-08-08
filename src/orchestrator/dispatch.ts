@@ -1,6 +1,5 @@
 import type { CallCardPayload } from '../agents/shared/agent-contract.js';
 import type { MeteoraPoolSignal } from '../adapters/meteora-dlmm-adapter.js';
-import type { RobinhoodLPPoolSignal } from '../adapters/uniswap-lp-adapter.js';
 
 export interface DispatchedSignal {
   channelName: string;
@@ -55,27 +54,25 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
 }
 
 /**
- * LP pool signals (Meteora Solana / Uniswap EVM) share a common yield-shape;
- * this single helper builds the call-card payload for both domains so hub.ts
- * and index.ts never duplicate the mapping.
+ * LP pool signal (Meteora Solana) — shared yield-shape; this single helper
+ * builds the call-card payload so hub.ts never duplicates the mapping.
  */
-export type LPPoolSignal = MeteoraPoolSignal | RobinhoodLPPoolSignal;
+export type LPPoolSignal = MeteoraPoolSignal;
 
-export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-robinhood'): CallCardPayload {
-  const isSolana = domain === 'lp-solana';
+export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana'): CallCardPayload {
   return {
-    domain: isSolana ? 'LP_METEORA' : 'LP_ROBINHOOD',
+    domain: 'LP_METEORA',
     title: pool.pairName,
     symbol: pool.pairName.split(' ')[0],
     contractAddress: pool.poolAddress,
-    network: isSolana ? 'Solana' : (pool as RobinhoodLPPoolSignal).network,
+    network: 'Solana',
     liquidity: `$${(pool.tvlUsd / 1000).toFixed(1)}k`,
     devHoldingPct: `${pool.feeAprPercentage}% APR`,
     sniperPct: `${(pool.feesToTvlRatio1h * 100).toFixed(2)}% 1h`,
     bundlerPct: `${pool.volumeToTvlRatio1h.toFixed(1)}x vol/TVL`,
     feeApr: `${(pool.feesToTvlRatio24h * 100).toFixed(2)}% (24h Fee/TVL)`,
-    dexPaidStatus: isSolana ? 'Meteora DLMM' : 'Uniswap v3',
-    tokenVerified: (pool as MeteoraPoolSignal).tokenXVerified,
+    dexPaidStatus: 'Meteora DLMM',
+    tokenVerified: pool.tokenXVerified,
     confidenceScore: 80,
     aiThesis: pool.aiRecommendation,
     liquidityUsd: pool.tvlUsd || 0,

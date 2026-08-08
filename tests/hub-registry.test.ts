@@ -3,7 +3,6 @@ import { AthenaHub } from '../src/orchestrator/hub.js';
 import { CTAlphaAgent } from '../src/agents/ct-alpha/ct-alpha-agent.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
 import type { MeteoraDLMMAdapter, MeteoraPoolSignal } from '../src/adapters/meteora-dlmm-adapter.js';
-import type { UniswapLPAdapter, UniswapPoolSignal } from '../src/adapters/uniswap-lp-adapter.js';
 import type { TwitterService, TweetItem } from '../src/services/twitter-service.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
@@ -39,34 +38,10 @@ const mkMeteoraPool = (): MeteoraPoolSignal => ({
   aiRecommendation: 'Live Meteora DLMM pool (official API): SOL-USDC',
 });
 
-const mkUniswapPool = (): UniswapPoolSignal => ({
-  poolAddress: 'pool456',
-  pairName: 'WETH-USDC',
-  network: 'Base',
-  feeTierPercentage: 0.05,
-  tvlUsd: 200000,
-  activeTvlUsd: 180000,
-  volume1hUsd: 15000,
-  fee1hUsd: 8,
-  fees24hEth: 0.05,
-  feeAprPercentage: 18.5,
-  feesToTvlRatio1h: 0.00004,
-  volumeToTvlRatio1h: 0.075,
-  volumeToActiveTvlRatio1h: 0.083,
-  organicVolumeScore1h: 75,
-  recommendedPriceRange: { minPrice: 1, maxPrice: 2 },
-  aiRecommendation: 'Live aerodrome pool WETH-USDC on Base',
-});
-
 const mkMeteoraStub = (pools: MeteoraPoolSignal[]) => ({
   fetchTopYieldPools: vi.fn(async () => pools),
   filterHighYieldPools: vi.fn((p: MeteoraPoolSignal[]) => p),
 } as unknown as MeteoraDLMMAdapter);
-
-const mkUniswapStub = (pools: UniswapPoolSignal[]) => ({
-  fetchTopYieldEVMPools: vi.fn(async () => pools),
-  filterHighYieldEVMPools: vi.fn((p: UniswapPoolSignal[]) => p),
-} as unknown as UniswapLPAdapter);
 
 // NOTE: the healthy text intentionally avoids 'ai'/'agent'/'yield'/'airdrop'/'farm'
 // so category resolution lands on SMART_CT_CALL (deterministic, mirrors ct-alpha tests).
@@ -157,26 +132,43 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.title).toBe('SOL-USDC');
   });
 
-  it('lp-robinhood wraps adapter flow into contract-shaped reports with payload', async () => {
-    const hub = new AthenaHub({ uniswapAdapter: mkUniswapStub([mkUniswapPool()]) });
+  it('lp-robinhood reuses meme-robinhood screening (GMGN) with LP_ROBINHOOD payload', async () => {
+    const memeReport: AgentReport = {
+      passed: true,
+      signal: { symbol: 'TOKEN1' },
+      reason: 'test reason',
+      confidence: 85,
+      payload: {
+        domain: 'MEME_EVM',
+        title: 'Token1 (T1)',
+        symbol: 'T1',
+        contractAddress: '0xabc',
+        network: 'Robinhood',
+        aiThesis: 'test',
+        securityAuditPassed: true,
+        socialHypeScore: 85,
+        liquidityUsd: 50000,
+        volume1hUsd: 10000,
+      },
+    };
+    const hub = new AthenaHub({
+      agentFactories: {
+        'meme-robinhood': () => mkStubAgent('meme-robinhood', [memeReport]),
+      },
+    });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
     const r = results[0];
     expect(r.passed).toBe(true);
-    expect(r.confidence).toBe(80);
-    expect((r.signal as UniswapPoolSignal).network).toBe('Base');
     expect(r.payload?.domain).toBe('LP_ROBINHOOD');
-    expect(r.payload?.network).toBe('Base');
-    expect(r.payload?.title).toBe('WETH-USDC');
+    expect(r.payload?.contractAddress).toBe('0xabc');
+    expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
+    expect(r.payload?.dexScreenerUrl).toContain('app.uniswap.org');
   });
 
-  it('alias "meteora" resolves to lp-solana and "uniswap" to lp-robinhood', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkMeteoraPool()]),
-      uniswapAdapter: mkUniswapStub([mkUniswapPool()]),
-    });
+  it('alias "meteora" resolves to lp-solana', async () => {
+    const hub = new AthenaHub({ meteoraAdapter: mkMeteoraStub([mkMeteoraPool()]) });
     expect(await hub.triggerAgentPass('meteora')).toHaveLength(1);
-    expect(await hub.triggerAgentPass('uniswap')).toHaveLength(1);
   });
 
   it('factory exception is caught and returns [] (fail-closed)', async () => {

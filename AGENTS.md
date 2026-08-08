@@ -75,7 +75,6 @@ Athena/
 │   │   ├── gmgn-adapter.ts        # GMGN OpenAPI (rank/trenches/signals/audit)
 │   │   ├── hyperliquid-adapter.ts # Perps market data + order execution
 │   │   ├── meteora-dlmm-adapter.ts # Solana LP pools (DexScreener fallback)
-│   │   ├── uniswap-lp-adapter.ts  # EVM LP pools (DexScreener fallback)
 │   │   ├── opensea-adapter.ts     # NFT floor signals + swap aggregator
 │   │   ├── polymarket-adapter.ts  # Gamma/CLOB market data + bets
 │   │   └── mev-execution-guard.ts # Transaction simulation + priority fees
