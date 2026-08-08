@@ -114,10 +114,26 @@ export class GMGNAdapter {
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
       if (res.status === 429) {
-        const reset = Number(res.headers.get('X-RateLimit-Reset') || 0) * 1000;
-        const waitMs = Math.max(reset - Date.now(), 5000);
-        console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s before retry (attempt ${retries}).`);
-        if (retries > 0) { await new Promise(r => setTimeout(r, waitMs)); return this.gmgnRequest(method, subPath, query, body, retries - 1); }
+        // Retry santun (docs GMGN): baca waktu reset, tunggu sampai reset + buffer,
+        // lalu retry MAKSIMAL sekali. Jangan spam: setiap retry saat cooldown
+        // memperpanjang ban 5 detik (sampai 5 menit). Ban panjang (>30s) di-skip —
+        // scan berikutnya (5 menit lagi) yang coba ulang.
+        let resetSec = Number(res.headers.get('X-RateLimit-Reset') || 0);
+        let banned = false;
+        if (!resetSec) {
+          try {
+            const errBody: any = await res.json();
+            resetSec = Number(errBody?.reset_at || 0);
+            banned = errBody?.error === 'RATE_LIMIT_BANNED';
+          } catch { /* body bukan JSON — pakai header saja */ }
+        }
+        const waitMs = resetSec > 0 ? Math.max(resetSec * 1000 - Date.now(), 0) + 1000 : 5000;
+        if (!banned && retries > 0 && waitMs <= 30_000) {
+          console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s, lalu retry sekali (attempt tersisa: ${retries}).`);
+          await new Promise((r) => setTimeout(r, waitMs));
+          return this.gmgnRequest(method, subPath, query, body, retries - 1);
+        }
+        console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, coba lagi di pass berikutnya (~5m).`);
         return null;
       }
       if (!res.ok) { console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`); return null; }

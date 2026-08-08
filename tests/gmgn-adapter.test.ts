@@ -168,6 +168,32 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(res).toEqual([]);
   }, 15000);
 
+  it('skips long bans (>30s) without retrying (never extends the ban)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn().mockResolvedValue({
+      ok: false, status: 429,
+      headers: { get: () => null },
+      json: async () => ({ code: 429, error: 'RATE_LIMIT_BANNED', message: 'banned', reset_at: Math.floor(Date.now()/1000) + 300 }),
+    });
+    vi.stubGlobal('fetch', fn);
+    const adapter = new GMGNAdapter();
+    const res = await adapter.fetchRank('sol');
+    expect(fn).toHaveBeenCalledTimes(1); // no retry during a 5-minute ban
+    expect(res).toEqual([]);
+  });
+
+  it('retries once when the reset is near (<30s) then gives up', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: { get: () => String(Math.floor(Date.now()/1000) + 2) } })
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: { get: () => String(Math.floor(Date.now()/1000) + 2) } });
+    vi.stubGlobal('fetch', fn);
+    const adapter = new GMGNAdapter();
+    const res = await adapter.fetchRank('sol');
+    expect(fn).toHaveBeenCalledTimes(2); // one wait + one retry, then stop
+    expect(res).toEqual([]);
+  }, 15000);
+
   it('fetchTrenches sends the v2 request shape and parses completed', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     const fn = vi.fn().mockResolvedValue({
