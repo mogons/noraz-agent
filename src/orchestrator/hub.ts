@@ -243,53 +243,74 @@ export class AthenaHub {
       }));
     }
     // lp-robinhood: reuse the meme-robinhood screening singleton (GMGN 4 sources,
-    // graduated-only, GoPlus audit) — then apply LP-specific gates on GMGN data:
-    // liquidity >= $50k, est. 24h Fee/TVL > 1% (0.3% Uniswap v3 tier), velocity
-    // (volume/liquidity) >= 2.5% per jam. CA di-surface supaya user bisa cari
-    // pool di app.uniswap.org/explore/pools/robinhood.
+    // graduated-only, GoPlus audit) — lalu terapkan filter LP yang SAMA dengan
+    // LP solana (Meteora), dengan estimasi fee 0.3% (tier Uniswap v3 default):
+    //   - fee1h >= $7                    → vol1h × 0.003 >= 7
+    //   - 24h Fee/TVL > 1%               → vol24h × 0.003 / liq > 0.01
+    //   - volume/activeTvl >= 100%/jam   → vol1h / (0.003 × liq) >= 1.0
+    //   - age >= 2h (dari meme agent)
+    //   - dedupe per pair (symbol terbaik)
+    // CA di-surface supaya user bisa cari pool di app.uniswap.org/explore/pools/robinhood.
     const memeAgent = await this.getScreeningAgent('meme-robinhood');
     if (!memeAgent) return [];
     const reports = await memeAgent.runScreeningPass();
     const UNISWAP_V3_FEE_RATE = 0.003; // default 0.3% tier
-    return reports
-      .filter((r) => {
-        const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
-        if (!t) return false;
-        const liquidityUsd = t.liquidityUsd || 0;
-        const volume24hUsd = t.volume24hUsd || 0;
-        if (liquidityUsd < 50000) return false; // LP-grade liquidity
-        const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
-        const velocityPerHour = volume24hUsd / 24 / liquidityUsd;
-        return feeTvlRatio24h > 0.01 && velocityPerHour >= 0.025;
-      })
-      .map((r) => {
-        const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
-        const liquidityUsd = t?.liquidityUsd || 0;
-        const volume24hUsd = t?.volume24hUsd || 0;
-        const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
-        return {
-          passed: true,
-          signal: r.signal,
-          reason: r.reason,
-          confidence: r.confidence,
-          payload: {
-            ...(r.payload || {}),
-            domain: 'LP_ROBINHOOD' as const,
-            title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
-            symbol: r.payload?.symbol || 'TOKEN',
-            aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
-            network: 'Robinhood Chain (Uniswap v3)',
-            dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
-            dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
-            liquidity: `$${(liquidityUsd / 1000).toFixed(1)}k`,
-            feeApr: `${(feeTvlRatio24h * 100).toFixed(2)}% (est. 24h Fee/TVL, 0.3% tier)`,
-            securityAuditPassed: r.payload?.securityAuditPassed ?? true,
-            socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
-            liquidityUsd: r.payload?.liquidityUsd ?? liquidityUsd,
-            volume1hUsd: r.payload?.volume1hUsd ?? volume24hUsd / 24,
-          },
-        };
-      });
+    const bestBySymbol = new Map<string, AgentReport>();
+    for (const r of reports) {
+      const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
+      if (!t) continue;
+      const liquidityUsd = t.liquidityUsd || 0;
+      const volume24hUsd = t.volume24hUsd || 0;
+      const volume1hUsd = volume24hUsd / 24;
+      const fee1hUsd = volume1hUsd * UNISWAP_V3_FEE_RATE;
+      const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
+      const activeTvlUsd = UNISWAP_V3_FEE_RATE * liquidityUsd;
+      const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
+
+      // Mirror LP solana gates
+      if (fee1hUsd < 7) continue;
+      if (feeTvlRatio24h <= 0.01) continue;
+      if (volumeToActiveTvlRatio1h < 1.0) continue;
+
+      // Dedupe per pair: satu terbaik per symbol (fee ratio tertinggi)
+      const symbol = String(r.payload?.symbol || (t as any).symbol || 'TOKEN').toUpperCase();
+      const existing = bestBySymbol.get(symbol);
+      if (!existing) {
+        bestBySymbol.set(symbol, r);
+      } else {
+        const existingT = (existing.signal as { token?: { volume24hUsd?: number; liquidityUsd?: number } } | undefined)?.token;
+        const existingFeeTvl = existingT ? ((existingT.volume24hUsd || 0) * UNISWAP_V3_FEE_RATE) / (existingT.liquidityUsd || 1) : 0;
+        if (feeTvlRatio24h > existingFeeTvl) bestBySymbol.set(symbol, r);
+      }
+    }
+    return [...bestBySymbol.values()].map((r) => {
+      const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
+      const liquidityUsd = t?.liquidityUsd || 0;
+      const volume24hUsd = t?.volume24hUsd || 0;
+      const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
+      return {
+        passed: true,
+        signal: r.signal,
+        reason: r.reason,
+        confidence: r.confidence,
+        payload: {
+          ...(r.payload || {}),
+          domain: 'LP_ROBINHOOD' as const,
+          title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
+          symbol: r.payload?.symbol || 'TOKEN',
+          aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
+          network: 'Robinhood Chain (Uniswap v3)',
+          dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
+          dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
+          liquidity: `$${(liquidityUsd / 1000).toFixed(1)}k`,
+          feeApr: `${(feeTvlRatio24h * 100).toFixed(2)}% (est. 24h Fee/TVL, 0.3% tier)`,
+          securityAuditPassed: r.payload?.securityAuditPassed ?? true,
+          socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
+          liquidityUsd: r.payload?.liquidityUsd ?? liquidityUsd,
+          volume1hUsd: r.payload?.volume1hUsd ?? volume24hUsd / 24,
+        },
+      };
+    });
   }
 
   public getAgentStatuses(): Record<string, { active: boolean; autoExecute: boolean; maxTradeAmount: number }> {
