@@ -8,7 +8,7 @@
 import type { GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 
 export interface MemePreFilterConfig {
-  minVolume1hUsd: number;
+  minVolume24hUsd: number;
   minLiquidityUsd: number;
   minAgeHours: number;
   maxRugRatio: number;
@@ -16,11 +16,6 @@ export interface MemePreFilterConfig {
   maxBundlerRate: number;
   maxTop10HolderRate: number;
   minTotalFeeUsd: number;
-}
-
-/** Volume 1 jam terakhir: pakai volume_1h real (trenches/signal) bila ada, else estimasi vol24h/24. */
-export function volume1hOf(t: GMGNRawToken): number {
-  return t.volume1hUsd > 0 ? t.volume1hUsd : t.volume24hUsd / 24;
 }
 
 export interface MemeSignalResult {
@@ -76,20 +71,19 @@ export function preFilterToken(
   tag: string
 ): { ok: boolean; reason: string } {
   const fail = (reason: string) => ({ ok: false as const, reason: `⛔ ${t.symbol}: ${reason}` });
-  const vol1h = volume1hOf(t);
   if (t.source === 'dexscreener') {
     // DexScreener fallback lacks GMGN social/CTO fields — allow only volume-based Momentum, still age-gated
     if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
     const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
     if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
-    if (vol1h < config.minVolume1hUsd) return fail(`vol 1h $${(vol1h/1000).toFixed(1)}k < $${config.minVolume1hUsd/1000}k.`);
+    if (t.volume24hUsd < config.minVolume24hUsd) return fail(`volume 24h $${(t.volume24hUsd/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
     if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
     return { ok: true, reason: 'ok' };
   }
   if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
   const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
   if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
-  if (vol1h < config.minVolume1hUsd) return fail(`vol 1h $${(vol1h/1000).toFixed(1)}k < $${config.minVolume1hUsd/1000}k.`);
+  if (t.volume24hUsd < config.minVolume24hUsd) return fail(`volume 24h $${(t.volume24hUsd/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
   if (t.isWashTrading) return fail('wash trading terdeteksi.');
   if (t.rugRatio !== null && t.rugRatio >= config.maxRugRatio) return fail(`rug ratio ${(t.rugRatio*100).toFixed(0)}% >= ${config.maxRugRatio*100}%.`);
@@ -201,7 +195,7 @@ export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: numbe
  * Returns { applied, rejected } with human-readable messages.
  */
 const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
-  minVolume1hUsd: { min: 1000, max: 100_000_000 },
+  minVolume24hUsd: { min: 1000, max: 100_000_000 },
   minLiquidityUsd: { min: 1000, max: 100_000_000 },
   minAgeHours: { min: 0.5, max: 168 },
   maxRugRatio: { min: 0.01, max: 1 },

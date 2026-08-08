@@ -313,7 +313,7 @@ export class ToolRegistry {
       },
       {
         name: 'set_screening_config',
-        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume1hUsd (1000-100000000), minLiquidityUsd (1000-100000000), minAgeHours (0.5-168), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxBundlerRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (10-1000000), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalLimit (10-50), signalTypes (array of ints 1-21, e.g. [6,7,11,12]). Persisted across restarts.',
+        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume24hUsd (1000-100000000), minLiquidityUsd (1000-100000000), minAgeHours (0.5-168), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxBundlerRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (10-1000000), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalLimit (10-50), signalTypes (array of ints 1-21, e.g. [6,7,11,12]). Persisted across restarts.',
         parameters: {
           type: 'object',
           properties: {

@@ -133,28 +133,23 @@ describe('SolanaScreeningAgent', () => {
     expect(second.map((t) => t.address)).toEqual(['fresh2']);
   });
 
-  it('preFilter enforces 1H volume gate (real volume_1h when present, else vol24h/24)', () => {
+  it('preFilter enforces 24H volume gate (minVolume24hUsd)', () => {
     const agent = new SolanaScreeningAgent();
-    // real volume_1h = 30k >= 25k → lolos
-    expect(agent.preFilter(mkToken({ volume1hUsd: 30000 }), 73.65).ok).toBe(true);
-    // real volume_1h = 20k < 25k → ditolak
-    const low1h = agent.preFilter(mkToken({ volume1hUsd: 20000 }), 73.65);
-    expect(low1h.ok).toBe(false);
-    expect(low1h.reason).toContain('vol 1h');
-    // tanpa volume_1h → estimasi vol24h/24 = 300000/24 = 12.5k < 25k → ditolak
-    const estLow = agent.preFilter(mkToken({ volume1hUsd: 0 }), 73.65);
-    expect(estLow.ok).toBe(false);
-    // tanpa volume_1h tapi vol24h besar (800k → 33.3k/jam) → lolos
-    expect(agent.preFilter(mkToken({ volume1hUsd: 0, volume24hUsd: 800000 }), 73.65).ok).toBe(true);
+    // vol24h 300k >= 25k → lolos
+    expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
+    // vol24h 20k < 25k → ditolak
+    const low = agent.preFilter(mkToken({ volume24hUsd: 20000 }), 73.65);
+    expect(low.ok).toBe(false);
+    expect(low.reason).toContain('volume 24h');
   });
 
   it('updateConfig applies whitelisted keys and rejects unknown/out-of-range', () => {
     const agent = new SolanaScreeningAgent();
-    const res = agent.updateConfig({ minAgeHours: 3, passThreshold: 85, bogusKey: 5, minVolume1hUsd: 1 });
+    const res = agent.updateConfig({ minAgeHours: 3, passThreshold: 85, bogusKey: 5, minVolume24hUsd: 1 });
     expect(res.applied.minAgeHours).toBe(3);
     expect(res.applied.passThreshold).toBe(85);
     expect(res.rejected.some((r) => r.includes('bogusKey'))).toBe(true);
-    expect(res.rejected.some((r) => r.includes('minVolume1hUsd'))).toBe(true);
+    expect(res.rejected.some((r) => r.includes('minVolume24hUsd'))).toBe(true);
     expect(agent.getConfig().minAgeHours).toBe(3);
     expect(agent.getConfig().passThreshold).toBe(85);
     // unchanged defaults for untouched keys
