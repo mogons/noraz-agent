@@ -234,6 +234,8 @@ async function runWizard() {
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
   console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS (MANDATORY FOR AGENTS)');
   let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
+  let gmgnRobinhoodApiKey = existingEnv.GMGN_API_KEY_ROBINHOOD || '';
+  let krystalApiKey = existingEnv.KRYSTAL_CLOUD_API_KEY || '';
   let openseaApiKey = existingEnv.OPENSEA_API_KEY || '';
   let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
@@ -242,31 +244,39 @@ async function runWizard() {
   let jupiterApiKey = existingEnv.JUPITER_API_KEY || '';
 
   const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Solana/LP Agents]';
-  const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
+  const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (Solana — GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
   gmgnApiKey = inputGmgn.trim() || gmgnApiKey;
 
+  const defaultGmgnRh = gmgnRobinhoodApiKey ? ` [Default: ${gmgnRobinhoodApiKey.slice(0, 8)}...]` : ' [Kosong = robinhood pakai key yang sama]';
+  const inputGmgnRh = await askQuestion(` 2. GMGN_API_KEY_ROBINHOOD (Opsional — key GMGN terpisah agar solana & robinhood tidak kena rate limit bareng)${defaultGmgnRh}: `);
+  gmgnRobinhoodApiKey = inputGmgnRh.trim() || gmgnRobinhoodApiKey;
+
+  const defaultKrystal = krystalApiKey ? ` [Default: ${krystalApiKey.slice(0, 8)}...]` : ' [Mandatory for LP Robinhood Agent]';
+  const inputKrystal = await askQuestion(` 3. KRYSTAL_CLOUD_API_KEY (Krystal Cloud DeFi Data — pool robinhood chain)${defaultKrystal}: `);
+  krystalApiKey = inputKrystal.trim() || krystalApiKey;
+
   const defaultOpensea = openseaApiKey ? ` [Default: ${openseaApiKey.slice(0, 8)}...]` : ' [Mandatory for NFT Agent]';
-  const inputOpensea = await askQuestion(` 2. OPENSEA_API_KEY (OpenSea REST API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
+  const inputOpensea = await askQuestion(` 4. OPENSEA_API_KEY (OpenSea REST API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
   const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Mandatory for CT Alpha Agent]';
-  const inputTwex = await askQuestion(` 3. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment & CT Alpha)${defaultTwex}: `);
+  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment & CT Alpha)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
 
   const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/LP Agents]';
-  const inputGoplus = await askQuestion(` 4. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
+  const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
   goplusApiKey = inputGoplus.trim() || goplusApiKey;
 
   const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Polymarket Agent]';
-  const inputPoly = await askQuestion(` 5. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
+  const inputPoly = await askQuestion(` 7. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
   polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
 
   const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/Robinhood Entry via Uniswap API]';
-  const inputUniswap = await askQuestion(` 6. UNISWAP_API_KEY (Uniswap Trade API — EVM/Robinhood swap entry)${defaultUniswap}: `);
+  const inputUniswap = await askQuestion(` 8. UNISWAP_API_KEY (Uniswap Trade API — EVM/Robinhood swap entry)${defaultUniswap}: `);
   uniswapApiKey = inputUniswap.trim() || uniswapApiKey;
 
   const defaultJupiter = jupiterApiKey ? ` [Default: ${jupiterApiKey.slice(0, 8)}...]` : ' [Optional — higher rate limits for Solana Jupiter quotes]';
-  const inputJupiter = await askQuestion(` 7. JUPITER_API_KEY (Jupiter API — optional, Solana swap entry rate limits)${defaultJupiter}: `);
+  const inputJupiter = await askQuestion(` 9. JUPITER_API_KEY (Jupiter API — optional, Solana swap entry rate limits)${defaultJupiter}: `);
   jupiterApiKey = inputJupiter.trim() || jupiterApiKey;
 
   // 6. WEB3 RPC ENDPOINTS
@@ -368,6 +378,8 @@ async function runWizard() {
     OPENAI_API_KEY: primaryAiKey,
     ANTHROPIC_API_KEY: primaryAiKey,
     GMGN_API_KEY: gmgnApiKey.trim(),
+    GMGN_API_KEY_ROBINHOOD: gmgnRobinhoodApiKey.trim(),
+    KRYSTAL_CLOUD_API_KEY: krystalApiKey.trim(),
     OPENSEA_API_KEY: openseaApiKey.trim(),
     TWEX_API_KEY: twexApiKey.trim(),
     TWITTER_BEARER_TOKEN: twexApiKey.trim(),
