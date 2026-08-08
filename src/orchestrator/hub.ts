@@ -258,7 +258,8 @@ export class AthenaHub {
     const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
     const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
     const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
-    const gmgn = new GMGNAdapter();
+    // Enrich pakai key GMGN robinhood (rate limit per key) — fallback ke GMGN_API_KEY.
+    const gmgn = new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
     const isBaseAsset = (sym: string) => /^(WETH|ETH|USDC|USDT|DAI|WBTC|WSTETH|STETH)$/i.test(sym);
     const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
     const results: AgentReport[] = [];

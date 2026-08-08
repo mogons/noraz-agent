@@ -81,6 +81,35 @@ export class GMGNAdapter {
   private baseUrl = 'https://openapi.gmgn.ai';
   private apiKey?: string;
 
+  /**
+   * Global pacing queue — ALL GMGN requests (every adapter instance: meme
+   * solana/robinhood, LP enrich, dll) antri di sini dengan spacing minimal
+   * agar request tidak bertabrakan dalam satu sesi 5 menit. GMGN memakai
+   * leaky bucket rate=20/capacity=20 per key — dengan spacing ini burst
+   * (mis. 30 request enrich LP sekaligus) otomatis tersebar.
+   */
+  private static requestQueue: Promise<void> = Promise.resolve();
+  private static lastRequestAt = 0;
+  private readonly requestSpacingMs = Math.max(
+    100,
+    Number(process.env.GMGN_REQUEST_SPACING_MS || 300)
+  );
+
+  private async paced<T>(fn: () => Promise<T>): Promise<T> {
+    const prev = GMGNAdapter.requestQueue;
+    let release!: () => void;
+    GMGNAdapter.requestQueue = new Promise((r) => { release = r; });
+    await prev;
+    try {
+      const wait = Math.max(0, GMGNAdapter.lastRequestAt + this.requestSpacingMs - Date.now());
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      GMGNAdapter.lastRequestAt = Date.now();
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.GMGN_API_KEY;
   }
@@ -94,59 +123,62 @@ export class GMGNAdapter {
   ): Promise<T | null> {
     const key = this.apiKey || process.env.GMGN_API_KEY || '';
     if (!key) return null;
-    const timestamp = Math.floor(Date.now() / 1000);
-    const client_id = crypto.randomUUID();
-    const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(query)) {
-      if (Array.isArray(v)) {
-        for (const item of v) params.append(k, String(item));
-      } else {
-        params.set(k, String(v));
+    const doRequest = async (attemptsLeft: number): Promise<T | null> => {
+      const timestamp = Math.floor(Date.now() / 1000);
+      const client_id = crypto.randomUUID();
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) {
+        if (Array.isArray(v)) {
+          for (const item of v) params.append(k, String(item));
+        } else {
+          params.set(k, String(v));
+        }
       }
-    }
-    params.set('timestamp', String(timestamp));
-    params.set('client_id', client_id);
-    const url = `${this.baseUrl}${subPath}?${params.toString()}`;
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'X-APIKEY': key, 'Content-Type': 'application/json', 'User-Agent': 'athena/1.0' },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
-      if (res.status === 429) {
-        // Retry santun (docs GMGN): baca waktu reset, tunggu sampai reset + buffer,
-        // lalu retry MAKSIMAL sekali. Jangan spam: setiap retry saat cooldown
-        // memperpanjang ban 5 detik (sampai 5 menit). Ban panjang (>30s) di-skip —
-        // scan berikutnya (5 menit lagi) yang coba ulang.
-        let resetSec = Number(res.headers.get('X-RateLimit-Reset') || 0);
-        let banned = false;
-        if (!resetSec) {
-          try {
-            const errBody: any = await res.json();
-            resetSec = Number(errBody?.reset_at || 0);
-            banned = errBody?.error === 'RATE_LIMIT_BANNED';
-          } catch { /* body bukan JSON — pakai header saja */ }
+      params.set('timestamp', String(timestamp));
+      params.set('client_id', client_id);
+      const url = `${this.baseUrl}${subPath}?${params.toString()}`;
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'X-APIKEY': key, 'Content-Type': 'application/json', 'User-Agent': 'athena/1.0' },
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+        if (res.status === 429) {
+          // Retry santun (docs GMGN): baca waktu reset, tunggu sampai reset + buffer,
+          // lalu retry MAKSIMAL sekali. Jangan spam: setiap retry saat cooldown
+          // memperpanjang ban 5 detik (sampai 5 menit). Ban panjang (>30s) di-skip —
+          // scan berikutnya (5 menit lagi) yang coba ulang.
+          let resetSec = Number(res.headers.get('X-RateLimit-Reset') || 0);
+          let banned = false;
+          if (!resetSec) {
+            try {
+              const errBody: any = await res.json();
+              resetSec = Number(errBody?.reset_at || 0);
+              banned = errBody?.error === 'RATE_LIMIT_BANNED';
+            } catch { /* body bukan JSON — pakai header saja */ }
+          }
+          const waitMs = resetSec > 0 ? Math.max(resetSec * 1000 - Date.now(), 0) + 1000 : 5000;
+          if (!banned && attemptsLeft > 0 && waitMs <= 30_000) {
+            console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s, lalu retry sekali (attempt tersisa: ${attemptsLeft}).`);
+            await new Promise((r) => setTimeout(r, waitMs));
+            return doRequest(attemptsLeft - 1);
+          }
+          console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, coba lagi di pass berikutnya (~5m).`);
+          return null;
         }
-        const waitMs = resetSec > 0 ? Math.max(resetSec * 1000 - Date.now(), 0) + 1000 : 5000;
-        if (!banned && retries > 0 && waitMs <= 30_000) {
-          console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s, lalu retry sekali (attempt tersisa: ${retries}).`);
-          await new Promise((r) => setTimeout(r, waitMs));
-          return this.gmgnRequest(method, subPath, query, body, retries - 1);
+        if (!res.ok) { console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`); return null; }
+        const json: any = await res.json();
+        if (json && typeof json === 'object' && json.code !== undefined && json.code !== 0) {
+          console.warn(`[GMGN] API code ${json.code}: ${json.message || json.error || ''}`);
+          return null;
         }
-        console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, coba lagi di pass berikutnya (~5m).`);
+        return json as T;
+      } catch (err: any) {
+        console.error(`[GMGN ERROR] ${subPath}: ${err.message}`);
         return null;
       }
-      if (!res.ok) { console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`); return null; }
-      const json: any = await res.json();
-      if (json && typeof json === 'object' && json.code !== undefined && json.code !== 0) {
-        console.warn(`[GMGN] API code ${json.code}: ${json.message || json.error || ''}`);
-        return null;
-      }
-      return json as T;
-    } catch (err: any) {
-      console.error(`[GMGN ERROR] ${subPath}: ${err.message}`);
-      return null;
-    }
+    };
+    return this.paced(() => doRequest(retries));
   }
 
   /**

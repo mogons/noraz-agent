@@ -2,12 +2,31 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GMGNAdapter } from '../src/adapters/gmgn-adapter.js';
 
 describe('GMGNAdapter (OpenAPI)', () => {
-  afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; });
+  afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; delete process.env.GMGN_REQUEST_SPACING_MS; });
 
   it('returns [] without an API key (fail-closed)', async () => {
     const adapter = new GMGNAdapter();
     expect(await adapter.fetchRank('sol')).toEqual([]);
   });
+
+  it('paces requests — burst calls are spaced apart (shared queue across instances)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    process.env.GMGN_REQUEST_SPACING_MS = '120'; // minimal spacing for fast tests
+    const okRes = { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: { data: { rank: [] } } }) };
+    const callTimes: number[] = [];
+    const fn = vi.fn().mockImplementation(async () => { callTimes.push(Date.now()); return okRes; });
+    vi.stubGlobal('fetch', fn);
+    const a = new GMGNAdapter();
+    const b = new GMGNAdapter(); // different instance — queue is static/shared
+    await Promise.all([
+      a.fetchRank('sol'), a.fetchRank('sol'), b.fetchRank('sol'), b.fetchRank('sol'), a.fetchRank('sol'),
+    ]);
+    expect(fn).toHaveBeenCalledTimes(5);
+    callTimes.sort((x, y) => x - y);
+    // With 120ms spacing, 5 requests span at least 4 × 120ms apart overall.
+    const totalMs = callTimes[callTimes.length - 1] - callTimes[0];
+    expect(totalMs).toBeGreaterThanOrEqual(400);
+  }, 15000);
 
   it('parses /v1/market/rank response with real GMGN fields', async () => {
     process.env.GMGN_API_KEY = 'test-key';
