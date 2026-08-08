@@ -49,6 +49,8 @@ describe('KrystalCloudAdapter', () => {
     expect(p.volume24hUsd).toBe(120000);
     expect(p.feesToTvlRatio24h).toBeCloseTo(0.0024, 5);
     expect(p.network).toBe('Robinhood');
+    expect(p.token0Address).toBe('0xweth');
+    expect(p.token1Address).toBe('0xusdc');
     // activeTvl proxy = fee_rate × tvl = (20/5000) × 150000 = 600
     expect(p.activeTvlUsd).toBeCloseTo(600, 5);
     expect(p.volumeToActiveTvlRatio1h).toBeCloseTo(8.33, 2);

@@ -34,6 +34,22 @@ export interface CallCardPayload {
   poolUrl?: string;
   /** Extra data-source link for LP (e.g. Krystal pool page — verifikasi data). */
   krystalUrl?: string;
+  /** LP: kontrak masing-masing token di pool (token X/meme & token Y/base). */
+  token0Address?: string;
+  token1Address?: string;
+  token0Symbol?: string;
+  token1Symbol?: string;
+  /** LP: chart token (DexScreener/GMGN) — per token. */
+  token0ChartUrl?: string;
+  token1ChartUrl?: string;
+  /** LP: detail token meme (token X) — degen style. */
+  token0PriceUsd?: number;
+  token0MarketCapUsd?: number;
+  token0Volume24hUsd?: number;
+  token0Holders?: number;
+  token0AgeHours?: number;
+  token0SmartDegenCount?: number;
+  token0Verified?: boolean;
   securityAuditPassed: boolean;
   socialHypeScore: number;
   liquidityUsd: number;

@@ -34,9 +34,13 @@ export interface MeteoraPoolSignal {
   fee24hUsd: number;
   tokenXSymbol: string;
   tokenYSymbol: string;
+  tokenXAddress: string;
+  tokenYAddress: string;
   tokenXVerified: boolean;
   tokenXHolders: number;
   tokenXMarketCapUsd: number;
+  tokenXPriceUsd: number;
+  tokenXAgeHours: number;
   aprDecimal: number;
   apyDecimal: number;
   isBlacklisted: boolean;
@@ -164,9 +168,13 @@ export class MeteoraDLMMAdapter {
           fee24hUsd: fees24hUsd,
           tokenXSymbol: p.token_x?.symbol || 'X',
           tokenYSymbol: p.token_y?.symbol || 'Y',
+          tokenXAddress: p.token_x?.address || '',
+          tokenYAddress: p.token_y?.address || '',
           tokenXVerified: Boolean(p.token_x?.is_verified),
           tokenXHolders: Number(p.token_x?.holders) || 0,
           tokenXMarketCapUsd: Number(p.token_x?.market_cap) || 0,
+          tokenXPriceUsd: Number(p.token_x?.price) || 0,
+          tokenXAgeHours: tokenAgeSec > 0 ? Math.floor(tokenAgeSec / 3600 * 10) / 10 : 0,
           aprDecimal: Number(p.apr) || 0,
           apyDecimal: Number(p.apy) || 0,
           isBlacklisted: Boolean(p.is_blacklisted),

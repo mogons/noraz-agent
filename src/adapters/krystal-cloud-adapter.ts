@@ -29,6 +29,7 @@ export interface KrystalPoolSignal {
   token0Symbol: string;
   token1Symbol: string;
   token0Address: string;
+  token1Address: string;
   aiRecommendation: string;
 }
 
@@ -146,6 +147,7 @@ export class KrystalCloudAdapter {
         token0Symbol: t0.symbol,
         token1Symbol: t1.symbol,
         token0Address: t0.address,
+        token1Address: t1.address,
         aiRecommendation: `Live Uniswap V3 pool ${t0.symbol}-${t1.symbol} (Robinhood Chain): $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume24hUsd / 1000).toFixed(1)}k 24h volume, $${(fee24hUsd / 1000).toFixed(1)}k 24h fees (${(feesToTvlRatio24h * 100).toFixed(2)}%/24h).`,
       });
     }

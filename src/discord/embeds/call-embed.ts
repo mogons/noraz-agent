@@ -126,6 +126,30 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       { name: 'Est. 24h Fee APR', value: payload.feeApr || 'N/A', inline: true }
     );
 
+    // CA masing-masing token + chart link (DexScreener/GMGN)
+    const token0Line = payload.token0Address
+      ? `\`${payload.token0Address}\`\n🔗 [Chart DexScreener](${payload.token0ChartUrl ?? '#'})${payload.gmgnUrl ? ` • [GMGN](${payload.gmgnUrl})` : ''}`
+      : 'N/A';
+    const token1Line = payload.token1Address
+      ? `\`${payload.token1Address}\`\n🔗 [Chart DexScreener](${payload.token1ChartUrl ?? '#'})`
+      : 'N/A';
+    embed.addFields(
+      { name: `🪙 ${payload.token0Symbol || 'Token X'} (CA)`, value: token0Line, inline: false },
+      { name: `🪙 ${payload.token1Symbol || 'Token Y'} (CA)`, value: token1Line, inline: false }
+    );
+
+    // Detail token meme (degen style) — hanya field yang ada datanya
+    const token0Detail: string[] = [];
+    if (payload.token0PriceUsd !== undefined) token0Detail.push(`💰 Price **$${payload.token0PriceUsd.toFixed(8)}**`);
+    if (payload.token0MarketCapUsd !== undefined) token0Detail.push(`📈 MC **$${(payload.token0MarketCapUsd / 1000).toFixed(1)}k**`);
+    if (payload.token0Volume24hUsd !== undefined) token0Detail.push(`💦 24h Vol **$${(payload.token0Volume24hUsd / 1000).toFixed(1)}k**`);
+    if (payload.token0Holders !== undefined) token0Detail.push(`👥 Holders **${payload.token0Holders.toLocaleString()}**`);
+    if (payload.token0AgeHours !== undefined) token0Detail.push(`🎂 Umur **${payload.token0AgeHours.toFixed(1)}h**`);
+    if (payload.token0SmartDegenCount !== undefined && payload.token0SmartDegenCount > 0) token0Detail.push(`🧠 Smart+KOL **${payload.token0SmartDegenCount}**`);
+    if (token0Detail.length > 0) {
+      embed.addFields({ name: `📊 Detail ${payload.token0Symbol || 'Token X'}`, value: token0Detail.join(' • '), inline: false });
+    }
+
     if (payload.tokenVerified !== undefined) {
       embed.addFields({
         name: '🛡️ Token Verification',
@@ -154,13 +178,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
           .setURL(payload.poolUrl)
           .setStyle(ButtonStyle.Link)
       );
-    } else if (payload.dexScreenerUrl) {
-      buttonsRow.addComponents(
-        new ButtonBuilder()
-          .setLabel('📊 View Pool Analytics')
-          .setURL(payload.dexScreenerUrl)
-          .setStyle(ButtonStyle.Link)
-      );
     }
 
     if (payload.krystalUrl) {
@@ -168,6 +185,15 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         new ButtonBuilder()
           .setLabel('🔍 View on Krystal')
           .setURL(payload.krystalUrl)
+          .setStyle(ButtonStyle.Link)
+      );
+    }
+
+    if (payload.token0ChartUrl) {
+      buttonsRow.addComponents(
+        new ButtonBuilder()
+          .setLabel(`📊 Chart ${payload.token0Symbol || 'Token X'}`)
+          .setURL(payload.token0ChartUrl)
           .setStyle(ButtonStyle.Link)
       );
     }

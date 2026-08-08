@@ -250,38 +250,75 @@ export class AthenaHub {
     // andal — subgraph unsupported, Uniswap Data API butuh akses khusus).
     // Data NYATA: tvl, volume/fee/APR per 1h-24h, farm incentives. Filter
     // mirror LP solana (Meteora): fee1h>=7, 24h Fee/TVL>1%, velocity>=100%,
-    // tvl>=10k, dedupe per pair. Pool address di-surface → link Uniswap langsung.
+    // tvl>=10k, dedupe per pair. CA kedua token + chart link di-surface;
+    // detail token meme (harga/MC/volume/holder/umur/smart money) di-enrich
+    // dari GMGN token/info — token meme = yang BUKAN base asset (WETH/USDC/…),
+    // fail-open.
     const { KrystalCloudAdapter } = await import('../adapters/krystal-cloud-adapter.js');
+    const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
     const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
     const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
-    return high.map((p) => ({
-      passed: true,
-      signal: p,
-      reason: p.aiRecommendation,
-      confidence: 80,
-      payload: {
-        domain: 'LP_ROBINHOOD' as const,
-        title: p.pairName,
-        symbol: p.token0Symbol,
-        contractAddress: p.poolAddress,
-        network: 'Robinhood Chain (Uniswap v3)',
-        dexPaidStatus: `Uniswap V3 • ${p.feeTier / 10000}% fee`,
-        dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
-        poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${p.poolAddress}`,
-        krystalUrl: `https://defi.krystal.app/pools/robinhood?token=${p.token0Address}`,
-        liquidity: `$${(p.tvlUsd / 1000).toFixed(1)}k`,
-        devHoldingPct: `${p.feeAprPercentage}% APR`,
-        sniperPct: `${p.apr24h.toFixed(1)}% 24h`,
-        bundlerPct: p.farmApr24h > 0 ? `+${p.farmApr24h.toFixed(1)}% farm` : 'no farm',
-        feeApr: `${(p.feesToTvlRatio24h * 100).toFixed(2)}% (24h Fee/TVL)`,
-        aiThesis: p.aiRecommendation,
-        confidenceScore: 80,
-        securityAuditPassed: true,
-        socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
-        liquidityUsd: p.tvlUsd,
-        volume1hUsd: p.volume1hUsd,
-      },
-    }));
+    const gmgn = new GMGNAdapter();
+    const isBaseAsset = (sym: string) => /^(WETH|ETH|USDC|USDT|DAI|WBTC|WSTETH|STETH)$/i.test(sym);
+    const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
+    const results: AgentReport[] = [];
+    for (const p of high) {
+      // Token meme = non-base di antara token0/token1; kalau keduanya non-base
+      // (atau keduanya base), pilih token0 sebagai representasi.
+      const memeToken = !isBaseAsset(p.token0Symbol) ? { addr: p.token0Address, sym: p.token0Symbol, isToken0: true }
+        : !isBaseAsset(p.token1Symbol) ? { addr: p.token1Address, sym: p.token1Symbol, isToken0: false }
+        : { addr: p.token0Address, sym: p.token0Symbol, isToken0: true };
+      if (memeToken.addr && !enriched.has(memeToken.addr)) {
+        try {
+          const info = await gmgn.fetchTokenInfo('robinhood', memeToken.addr);
+          enriched.set(memeToken.addr, info);
+        } catch { enriched.set(memeToken.addr, null); }
+      }
+      const info = enriched.get(memeToken.addr) ?? null;
+      const ageHours = info?.creationTimestamp !== null && info?.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : undefined;
+      const smart = (info?.smartDegenCount ?? 0) + (info?.renownedCount ?? 0);
+      results.push({
+        passed: true,
+        signal: p,
+        reason: p.aiRecommendation,
+        confidence: 80,
+        payload: {
+          domain: 'LP_ROBINHOOD' as const,
+          title: p.pairName,
+          symbol: p.token0Symbol,
+          contractAddress: p.poolAddress,
+          network: 'Robinhood Chain (Uniswap v3)',
+          dexPaidStatus: `Uniswap V3 • ${p.feeTier / 10000}% fee`,
+          poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${p.poolAddress}`,
+          krystalUrl: `https://defi.krystal.app/pools/detail?chainId=4663&feeTier=${p.feeTier}&poolAddress=${p.poolAddress}&protocol=uniswapv3`,
+          token0Address: p.token0Address,
+          token1Address: p.token1Address,
+          token0Symbol: p.token0Symbol,
+          token1Symbol: p.token1Symbol,
+          token0ChartUrl: p.token0Address ? `https://dexscreener.com/robinhood/${p.token0Address}` : undefined,
+          token1ChartUrl: p.token1Address ? `https://dexscreener.com/robinhood/${p.token1Address}` : undefined,
+          gmgnUrl: memeToken.addr ? `https://gmgn.ai/robinhood/token/${memeToken.addr}` : undefined,
+          token0PriceUsd: info?.priceUsd || undefined,
+          token0MarketCapUsd: info?.marketCapUsd || undefined,
+          token0Volume24hUsd: info?.volume24hUsd || undefined,
+          token0Holders: info?.holderCount || undefined,
+          token0AgeHours: ageHours,
+          token0SmartDegenCount: info ? smart : undefined,
+          liquidity: `$${(p.tvlUsd / 1000).toFixed(1)}k`,
+          devHoldingPct: `${p.feeAprPercentage}% APR`,
+          sniperPct: `${p.apr24h.toFixed(1)}% 24h`,
+          bundlerPct: p.farmApr24h > 0 ? `+${p.farmApr24h.toFixed(1)}% farm` : 'no farm',
+          feeApr: `${(p.feesToTvlRatio24h * 100).toFixed(2)}% (24h Fee/TVL)`,
+          aiThesis: p.aiRecommendation,
+          confidenceScore: 80,
+          securityAuditPassed: true,
+          socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
+          liquidityUsd: p.tvlUsd,
+          volume1hUsd: p.volume1hUsd,
+        },
+      });
+    }
+    return results;
   }
 
   public getAgentStatuses(): Record<string, { active: boolean; autoExecute: boolean; maxTradeAmount: number }> {

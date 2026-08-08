@@ -64,6 +64,7 @@ const mkKrystalPool = (): KrystalPoolSignal => ({
   token0Symbol: 'WETH',
   token1Symbol: 'USDC',
   token0Address: '0xweth',
+  token1Address: '0xusdc',
   aiRecommendation: 'Live Uniswap V3 pool WETH-USDC (Robinhood Chain)',
 });
 
