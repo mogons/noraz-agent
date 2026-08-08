@@ -224,8 +224,10 @@ export class AthenaHub {
    * - lp-solana: adapter-flow Meteora DLMM (official data API).
    * - lp-robinhood: Robinhood Chain tidak punya indexer pool publik yang
    *   andal (subgraph unsupported, Uniswap Data API butuh akses khusus) —
-   *   reuse screening GMGN meme-robinhood (sudah graduated-only + GoPlus)
-   *   dan surface CA di card; user mencari pool-nya sendiri di Uniswap.
+   *   reuse screening GMGN meme-robinhood (graduated-only + GoPlus) lalu
+   *   terapkan filter LP berbasis data GMGN (likuiditas, estimasi fee
+   *   yield 0.3% Uniswap v3, velocity) supaya call-nya LP-specific,
+   *   bukan duplikat meme. CA di-surface di card; user cari pool di Uniswap.
    */
   public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
     if (id === 'lp-solana') {
@@ -241,31 +243,53 @@ export class AthenaHub {
       }));
     }
     // lp-robinhood: reuse the meme-robinhood screening singleton (GMGN 4 sources,
-    // graduated-only, GoPlus audit) — the LP call surfaces the token CA so the
-    // user can locate the pool directly on Uniswap (app.uniswap.org/explore/pools/robinhood).
+    // graduated-only, GoPlus audit) — then apply LP-specific gates on GMGN data:
+    // liquidity >= $50k, est. 24h Fee/TVL > 1% (0.3% Uniswap v3 tier), velocity
+    // (volume/liquidity) >= 2.5% per jam. CA di-surface supaya user bisa cari
+    // pool di app.uniswap.org/explore/pools/robinhood.
     const memeAgent = await this.getScreeningAgent('meme-robinhood');
     if (!memeAgent) return [];
     const reports = await memeAgent.runScreeningPass();
-    return reports.map((r) => ({
-      passed: true,
-      signal: r.signal,
-      reason: r.reason,
-      confidence: r.confidence,
-      payload: {
-        ...(r.payload || {}),
-        domain: 'LP_ROBINHOOD' as const,
-        title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
-        symbol: r.payload?.symbol || 'TOKEN',
-        aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
-        network: 'Robinhood Chain (Uniswap v3)',
-        dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
-        dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
-        securityAuditPassed: r.payload?.securityAuditPassed ?? true,
-        socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
-        liquidityUsd: r.payload?.liquidityUsd ?? 0,
-        volume1hUsd: r.payload?.volume1hUsd ?? 0,
-      },
-    }));
+    const UNISWAP_V3_FEE_RATE = 0.003; // default 0.3% tier
+    return reports
+      .filter((r) => {
+        const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
+        if (!t) return false;
+        const liquidityUsd = t.liquidityUsd || 0;
+        const volume24hUsd = t.volume24hUsd || 0;
+        if (liquidityUsd < 50000) return false; // LP-grade liquidity
+        const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
+        const velocityPerHour = volume24hUsd / 24 / liquidityUsd;
+        return feeTvlRatio24h > 0.01 && velocityPerHour >= 0.025;
+      })
+      .map((r) => {
+        const t = (r.signal as { token?: { liquidityUsd?: number; volume24hUsd?: number } } | undefined)?.token;
+        const liquidityUsd = t?.liquidityUsd || 0;
+        const volume24hUsd = t?.volume24hUsd || 0;
+        const feeTvlRatio24h = (volume24hUsd * UNISWAP_V3_FEE_RATE) / liquidityUsd;
+        return {
+          passed: true,
+          signal: r.signal,
+          reason: r.reason,
+          confidence: r.confidence,
+          payload: {
+            ...(r.payload || {}),
+            domain: 'LP_ROBINHOOD' as const,
+            title: r.payload?.title || `${r.payload?.symbol || 'TOKEN'} (LP on Robinhood Chain)`,
+            symbol: r.payload?.symbol || 'TOKEN',
+            aiThesis: r.payload?.aiThesis || r.reason || 'Token lolos screening — cari pool di Uniswap.',
+            network: 'Robinhood Chain (Uniswap v3)',
+            dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
+            dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
+            liquidity: `$${(liquidityUsd / 1000).toFixed(1)}k`,
+            feeApr: `${(feeTvlRatio24h * 100).toFixed(2)}% (est. 24h Fee/TVL, 0.3% tier)`,
+            securityAuditPassed: r.payload?.securityAuditPassed ?? true,
+            socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
+            liquidityUsd: r.payload?.liquidityUsd ?? liquidityUsd,
+            volume1hUsd: r.payload?.volume1hUsd ?? volume24hUsd / 24,
+          },
+        };
+      });
   }
 
   public getAgentStatuses(): Record<string, { active: boolean; autoExecute: boolean; maxTradeAmount: number }> {

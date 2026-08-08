@@ -132,38 +132,37 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.title).toBe('SOL-USDC');
   });
 
-  it('lp-robinhood reuses meme-robinhood screening (GMGN) with LP_ROBINHOOD payload', async () => {
-    const memeReport: AgentReport = {
-      passed: true,
-      signal: { symbol: 'TOKEN1' },
-      reason: 'test reason',
-      confidence: 85,
-      payload: {
-        domain: 'MEME_EVM',
-        title: 'Token1 (T1)',
-        symbol: 'T1',
-        contractAddress: '0xabc',
-        network: 'Robinhood',
-        aiThesis: 'test',
-        securityAuditPassed: true,
-        socialHypeScore: 85,
-        liquidityUsd: 50000,
-        volume1hUsd: 10000,
-      },
+  it('lp-robinhood reuses meme-robinhood screening (GMGN) with LP-specific gates', async () => {
+    // LP gates: liquidity >= 50k, est 24h Fee/TVL > 1% (0.3% tier), velocity >= 2.5%/jam
+    const strongToken = {
+      address: '0xabc',
+      symbol: 'T1',
+      liquidityUsd: 100000,
+      volume24hUsd: 500000, // fee/TVL = 500k*0.003/100k = 1.5% > 1% ✓ ; velocity = 500k/24/100k = 20.8% ✓
+    };
+    const thinToken = {
+      address: '0xthin',
+      symbol: 'THIN',
+      liquidityUsd: 10000, // < 50k → ditolak
+      volume24hUsd: 100000,
     };
     const hub = new AthenaHub({
       agentFactories: {
-        'meme-robinhood': () => mkStubAgent('meme-robinhood', [memeReport]),
+        'meme-robinhood': () => mkStubAgent('meme-robinhood', [
+          { passed: true, signal: { token: strongToken }, reason: 'test', confidence: 85 },
+          { passed: true, signal: { token: thinToken }, reason: 'test thin', confidence: 85 },
+        ]),
       },
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
-    expect(results).toHaveLength(1);
+    expect(results).toHaveLength(1); // thin token ditolak oleh LP gate
     const r = results[0];
     expect(r.passed).toBe(true);
     expect(r.payload?.domain).toBe('LP_ROBINHOOD');
-    expect(r.payload?.contractAddress).toBe('0xabc');
+    expect(r.payload?.contractAddress ?? (r.signal as any).token?.address).toBe('0xabc');
     expect(r.payload?.network).toBe('Robinhood Chain (Uniswap v3)');
     expect(r.payload?.dexScreenerUrl).toContain('app.uniswap.org');
+    expect(r.payload?.feeApr).toContain('%');
   });
 
   it('alias "meteora" resolves to lp-solana', async () => {
