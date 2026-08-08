@@ -377,7 +377,7 @@ if (discordToken && clientId) {
 
         const perpsDispatched = await dispatchDomain({
           domain: 'perps',
-          channelName: 'call-perps-futures',
+          channelName: 'call-whale-tracking',
           isActive: () => hub.isAgentActive('perps'),
           runPass: () => withScreeningTimeout(perpsScreeningAgent.runScreeningPass(), 'perps'),
           keyReady: () => apiKeyGuard.checkDomainKeys('perps'),
@@ -446,7 +446,7 @@ if (discordToken && clientId) {
           const autoExecDomain: string | undefined =
             item.channelName === 'call-meme-solana' ? 'meme-solana' :
             item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
-            item.channelName === 'call-perps-futures' ? 'perps' :
+            item.channelName === 'call-whale-tracking' ? 'perps' :
             item.channelName === 'call-prediction-markets' ? 'prediction' :
             undefined;
           if (autoExecDomain && AUTO_EXECUTE_ENABLED) {

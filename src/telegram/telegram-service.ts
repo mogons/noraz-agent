@@ -85,7 +85,7 @@ export class TelegramService {
       'audit-on-demand',
       'call-meme-solana',
       'call-meme-robinhood',
-      'call-perps-futures',
+      'call-whale-tracking',
       'call-lp-solana',
       'call-lp-robinhood',
       'call-nft-sniping',
@@ -187,7 +187,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 • 🔷 Robinhood Meme (\`meme-robinhood\`): ${getStatus('meme-robinhood')}
 • ⚡ Solana LP (\`lp-solana\`): ${getStatus('lp-solana')}
 • 💧 Robinhood LP (\`lp-robinhood\`): ${getStatus('lp-robinhood')}
-• 📈 Perps Futures (\`perps\`): ${getStatus('perps')}
+• 🐋 Whale Tracking (\`perps\`): ${getStatus('perps')}
 • 🖼️ NFT Sniping (\`nft\`): ${getStatus('nft')}
 • 🎯 Polymarket (\`prediction\`): ${getStatus('prediction')}
 • 💡 Smart CT Alpha (\`ct-alpha\`): ${getStatus('ct-alpha')}
@@ -205,7 +205,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           { text: '▶️ Toggle Robinhood LP', callback_data: 'toggle_lp-robinhood' },
         ],
         [
-          { text: '▶️ Toggle Perps', callback_data: 'toggle_perps' },
+          { text: '▶️ Toggle Whale', callback_data: 'toggle_perps' },
           { text: '▶️ Toggle NFT', callback_data: 'toggle_nft' },
         ],
         [

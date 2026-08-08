@@ -94,11 +94,14 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(reports.length).toBe(0);
   });
 
-  it('4. Perpetual Futures Agent: Should evaluate Hyperliquid leverage setups', async () => {
+  it('4. Whale Tracking Agent: fail-closed tanpa network — zero reports', async () => {
     const hlAdapter = new HyperliquidAdapter();
     const agent = new PerpsScreeningAgent(hlAdapter);
-    const reports = await agent.screenAllAssets();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
+    const reports = await agent.runScreeningPass();
+    vi.unstubAllGlobals();
     expect(Array.isArray(reports)).toBe(true);
+    expect(reports.length).toBe(0);
   }, 30000);
 
   it('5. EVM NFT Agent: Should evaluate NFT Momentum & Whale Sweeps', async () => {

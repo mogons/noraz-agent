@@ -1,83 +1,57 @@
 /**
- * Hyperliquid Perpetual Futures Adapter
- * 
- * Connects to Hyperliquid L1 DEX for reading market data (Open Interest, Funding Rates,
- * Order Book depth) and executing perpetual futures trades.
- * 
- * Uses @nktkas/hyperliquid SDK pattern (InfoClient for reads, ExchangeClient for writes).
+ * Hyperliquid Adapter — Whale Positioning Tracker
+ *
+ * Reads Hyperliquid L1 DEX data for smart-money tracking:
+ * - leaderboard (PvP, 7d) → top trader addresses per asset
+ * - clearinghouseState per address → open positions (signed size, USD value)
+ * - leaderboardTrades (5m) → recent fills from leaderboard participants (incl. spot)
+ *
  * API Docs: https://hyperliquid.gitbook.io/hyperliquid-docs
  */
 
-import { isDryRun as isDryRunMode } from '../config/config.js';
-export interface HyperliquidMarketData {
-  coin: string;           // e.g. "BTC", "ETH", "SOL", "HYPE"
-  assetIndex: number;     // Hyperliquid numeric asset index
-  markPriceUsd: number;
-  midPriceUsd: number;
-  openInterestUsd: number;
-  oiChange1hPercent: number;   // Open Interest % change in last 1 hour
-  oiChange4hPercent: number;   // Open Interest % change in last 4 hours
-  volume1hUsd: number;
-  volume4hUsd: number;
-  volume24hUsd: number;
-  fundingRate8h: number;       // Current 8-hour funding rate (e.g. 0.0005 = 0.05%)
-  fundingRateAnnualized: number;
-  bestBidUsd: number;
-  bestAskUsd: number;
-  spreadPercent: number;       // Bid-Ask spread as percentage
+export interface HyperliquidTrader {
+  address: string;
+  returnPct: number;   // PvP 7d return %
+  pnlUsd: number;
 }
 
-export interface HyperliquidPerpsSignal {
-  coin: string;
-  assetIndex: number;
-  direction: 'LONG' | 'SHORT';
-  confidence: number;          // 0-100 consensus score
-  entryPriceUsd: number;
-  suggestedLeverage: number;   // e.g. 3, 5, 10
-  stopLossPercent: number;     // e.g. 5 = -5% from entry
-  takeProfitPercent: number;   // e.g. 15 = +15% from entry
-  marketData: HyperliquidMarketData;
-  signalReasons: string[];     // Human-readable reasoning array
-  aiThesis: string;            // AI-generated thesis summary
+export interface HyperliquidPosition {
+  coin: string;           // e.g. "BTC", "GOLD", "XYZ100"
+  side: 'LONG' | 'SHORT'; // derived from signed size
+  sizeUsd: number;        // position notional value in USD
+  entryPx: number;
+  leverage: number;       // e.g. 10
+  funding: number;        // 8h funding rate
 }
 
-export interface HyperliquidOrderResult {
-  success: boolean;
-  orderId?: string;
-  filledPrice?: number;
-  filledSize?: number;
-  error?: string;
+export interface HyperliquidTradeFill {
+  coin: string;        // perps: "BTC"; spot: "BTC/USDC" etc.
+  isSpot: boolean;
+  px: number;
+  sz: number;
+  usd: number;         // px * sz
+  side: 'BUY' | 'SELL'; // derived from order side
+  user: string;
+  timestamp: number;
+}
+
+export interface HyperliquidLeaderboardTrades {
+  fills: HyperliquidTradeFill[];
+  fetchedAt: number;
 }
 
 export class HyperliquidAdapter {
   private infoApiUrl = 'https://api.hyperliquid.xyz/info';
-  private exchangeApiUrl = 'https://api.hyperliquid.xyz/exchange';
-  private isDryRun: boolean;
+
+  // Assets tracked by the whale agent (perps indices live on Hyperliquid).
+  public readonly trackedAssets: string[] = ['BTC', 'GOLD', 'XYZ100'];
 
   // Live name → index resolution cache (from meta.universe), refreshed per fetch.
-  // The old hardcoded assetMap was stale (24/27 wrong, ghosts like GOLD/XYZ100/OIL
-  // that are not listed on Hyperliquid) — indices MUST come from the live meta()
-  // response so perps never scores the wrong coin's candles/OI/funding.
+  // Indices MUST come from the live meta() response so perps never reads the
+  // wrong coin's leaderboard/positions.
   private universeByName: Map<string, number> | null = null;
   private universeFetchedAt = 0;
   private static readonly UNIVERSE_TTL_MS = 5 * 60 * 1000; // refresh every 5 min
-
-  // Primary tickers: always screened every pass
-  public readonly primaryWatchlist: string[] = ['BTC', 'ETH', 'SOL', 'HYPE'];
-
-  // Secondary tickers: only screened when exceptional opportunity is detected
-  public readonly secondaryPool: string[] = [
-    'ARB', 'DOGE', 'WIF', 'PEPE', 'ONDO', 'SUI', 'AVAX',
-    'LINK', 'OP', 'TIA', 'JUP', 'W', 'RENDER', 'INJ', 'SEI',
-    'TRX', 'BNB', 'ADA',
-  ];
-
-  constructor() {
-    this.isDryRun = isDryRunMode();
-  }
-
-  // In-memory OI snapshots for computing OI change % over time
-  private oiSnapshots: Map<string, Array<{ ts: number; oi: number }>> = new Map();
 
   /**
    * Resolve a coin's current asset index from the live meta() universe.
@@ -119,216 +93,132 @@ export class HyperliquidAdapter {
   }
 
   /**
-   * Fetch real-time market data for a specific coin from Hyperliquid Info API
+   * Top PvP leaderboard traders for one asset (7d window).
+   * `asset` 0 = all assets; a specific index = that perps market.
+   * Returns the top `topN` traders sorted by PvP PnL.
    */
-  public async fetchMarketData(coin: string): Promise<HyperliquidMarketData | null> {
+  public async fetchLeaderboardTraders(
+    coin: string,
+    topN: number,
+    timeWindow: '7d' = '7d',
+  ): Promise<HyperliquidTrader[]> {
+    const assetIndex = await this.resolveAssetIndex(coin);
+    if (assetIndex === null) return [];
     try {
-      const upperCoin = coin.toUpperCase();
-      const assetIndex = await this.resolveAssetIndex(upperCoin);
-      if (assetIndex === null) {
-        console.warn(`[HYPERLIQUID] Unknown coin: ${upperCoin}. Not listed in live meta() universe.`);
-        return null;
-      }
-
-      console.log(`[HYPERLIQUID] Fetching live market data for ${upperCoin} (Asset #${assetIndex})...`);
-
-      // Call Hyperliquid Info API for real-time market data
-      const response = await fetch(this.infoApiUrl, {
+      const res = await fetch(this.infoApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'metaAndAssetCtxs' }),
+        body: JSON.stringify({ type: 'leaderboard', timeWindow, asset: assetIndex }),
+        signal: AbortSignal.timeout(15000),
       });
-
-      if (!response.ok) {
-        console.error(`[HYPERLIQUID] API HTTP error: ${response.status} ${response.statusText}`);
-        return null;
+      if (!res.ok) {
+        console.error(`[HYPERLIQUID] leaderboard(${coin}) HTTP ${res.status}`);
+        return [];
       }
-
-      const data: any = await response.json();
-      if (!Array.isArray(data) || data.length < 2) {
-        console.error('[HYPERLIQUID] Unexpected API response format');
-        return null;
-      }
-
-      const [, assetCtxs] = data;
-      if (!Array.isArray(assetCtxs) || assetIndex >= assetCtxs.length) {
-        console.error(`[HYPERLIQUID] Asset index ${assetIndex} out of bounds (total: ${assetCtxs?.length || 0})`);
-        return null;
-      }
-
-      const ctx = assetCtxs[assetIndex];
-      const markPx = parseFloat(ctx.markPx || '0');
-      const midPx = parseFloat(ctx.midPx || '0');
-      const openInterest = parseFloat(ctx.openInterest || '0');
-      const funding = parseFloat(ctx.funding || '0');
-      const dayNtlVlm = parseFloat(ctx.dayNtlVlm || '0');
-
-      // Compute OI change from cached snapshots (in-memory tracking)
-      const now = Date.now();
-      const oiKey = upperCoin;
-      if (!this.oiSnapshots.has(oiKey)) {
-        this.oiSnapshots.set(oiKey, []);
-      }
-      const snapshots = this.oiSnapshots.get(oiKey)!;
-      snapshots.push({ ts: now, oi: openInterest * markPx });
-      // Keep only last 5 hours of snapshots
-      const fiveHoursAgo = now - 5 * 3600000;
-      while (snapshots.length > 0 && snapshots[0].ts < fiveHoursAgo) {
-        snapshots.shift();
-      }
-
-      const currentOiUsd = openInterest * markPx;
-      const oneHourAgo = now - 3600000;
-      const fourHoursAgo = now - 4 * 3600000;
-      const oi1hRef = snapshots.find(s => s.ts <= oneHourAgo)?.oi || currentOiUsd;
-      const oi4hRef = snapshots.find(s => s.ts <= fourHoursAgo)?.oi || currentOiUsd;
-      const oiChange1hPercent = oi1hRef > 0 ? ((currentOiUsd - oi1hRef) / oi1hRef) * 100 : 0;
-      const oiChange4hPercent = oi4hRef > 0 ? ((currentOiUsd - oi4hRef) / oi4hRef) * 100 : 0;
-
-      // Fetch L2 order book for bid/ask spread
-      let bestBid = midPx * 0.999;
-      let bestAsk = midPx * 1.001;
-      try {
-        const l2Res = await fetch(this.infoApiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'l2Book', coin: upperCoin }),
-        });
-        if (l2Res.ok) {
-          const l2: any = await l2Res.json();
-          if (l2.levels && Array.isArray(l2.levels) && l2.levels.length >= 2) {
-            const bids = l2.levels[0];
-            const asks = l2.levels[1];
-            if (bids.length > 0) bestBid = parseFloat(bids[0].px);
-            if (asks.length > 0) bestAsk = parseFloat(asks[0].px);
-          }
-        }
-      } catch { /* L2 fetch is best-effort */ }
-
-      const spreadPct = midPx > 0 ? ((bestAsk - bestBid) / midPx) * 100 : 0;
-
-      return {
-        coin: upperCoin,
-        assetIndex,
-        markPriceUsd: markPx,
-        midPriceUsd: midPx,
-        openInterestUsd: currentOiUsd,
-        oiChange1hPercent,
-        oiChange4hPercent,
-        volume1hUsd: dayNtlVlm / 24,     // Approximate 1h from 24h volume
-        volume4hUsd: (dayNtlVlm / 24) * 4,
-        volume24hUsd: dayNtlVlm,
-        fundingRate8h: funding,
-        fundingRateAnnualized: funding * 3 * 365 * 100,
-        bestBidUsd: bestBid,
-        bestAskUsd: bestAsk,
-        spreadPercent: spreadPct,
-      };
+      const data: any = await res.json();
+      if (!Array.isArray(data)) return [];
+      return data
+        .slice(0, topN)
+        .map((t: any) => ({
+          address: String(t.address || ''),
+          returnPct: Number(t.returnPct) || 0,
+          pnlUsd: Number(t.pnl) || 0,
+        }))
+        .filter((t: HyperliquidTrader) => t.address.length > 0);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[HYPERLIQUID ERROR] Failed to fetch market data for ${coin}:`, message);
-      return null;
+      console.warn(`[HYPERLIQUID] leaderboard(${coin}) failed: ${message}`);
+      return [];
     }
   }
 
   /**
-   * Execute a perpetual futures order on Hyperliquid (supports DRY_RUN simulation)
+   * Open positions (clearinghouse state) for one wallet address.
+   * `szi` is signed: > 0 = LONG, < 0 = SHORT. `positionValue` is in USD.
    */
-  public async placeOrder(
-    coin: string,
-    isBuy: boolean,
-    sizeUsd: number,
-    leverage: number,
-    limitPrice?: number,
-  ): Promise<HyperliquidOrderResult> {
-    const upperCoin = coin.toUpperCase();
-    const assetIndex = await this.resolveAssetIndex(upperCoin);
-    if (assetIndex === null) {
-      return { success: false, error: `Unknown coin: ${upperCoin} (not listed in live meta() universe)` };
+  public async fetchClearinghouseState(user: string): Promise<HyperliquidPosition[]> {
+    try {
+      const res = await fetch(this.infoApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'clearinghouseState', user }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        console.error(`[HYPERLIQUID] clearinghouseState HTTP ${res.status} (${user.slice(0, 6)}…)`);
+        return [];
+      }
+      const data: any = await res.json();
+      const positions = Array.isArray(data?.assetPositions) ? data.assetPositions : [];
+      const out: HyperliquidPosition[] = [];
+      for (const ap of positions) {
+        const pos = ap?.position;
+        if (!pos) continue;
+        const coin = String(pos.coin || '');
+        const szi = Number(pos.szi) || 0;
+        const positionValue = Number(pos.positionValue) || 0;
+        if (!coin || szi === 0 || positionValue <= 0) continue;
+        out.push({
+          coin,
+          side: szi > 0 ? 'LONG' : 'SHORT',
+          sizeUsd: positionValue,
+          entryPx: Number(pos.entryPx) || 0,
+          leverage: Number(pos.leverage?.value) || 0,
+          funding: Number(pos.funding) || 0,
+        });
+      }
+      return out;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[HYPERLIQUID] clearinghouseState(${user.slice(0, 6)}…) failed: ${message}`);
+      return [];
     }
-
-    const side = isBuy ? 'LONG' : 'SHORT';
-    console.log(`[HYPERLIQUID] ${this.isDryRun ? '[DRY_RUN]' : '[LIVE]'} Placing ${side} order: ${upperCoin} | Size: $${sizeUsd} | Leverage: ${leverage}x`);
-
-    if (this.isDryRun) {
-      // Simulate successful fill at mid-market price
-      const marketData = await this.fetchMarketData(upperCoin);
-      const fillPrice = marketData?.midPriceUsd || 0;
-      const fillSize = sizeUsd / fillPrice;
-
-      console.log(`[HYPERLIQUID] [DRY_RUN] Simulated fill: ${fillSize.toFixed(6)} ${upperCoin} @ $${fillPrice.toFixed(2)}`);
-
-      return {
-        success: true,
-        orderId: `DRY_RUN_${Date.now()}_${upperCoin}_${side}`,
-        filledPrice: fillPrice,
-        filledSize: fillSize,
-      };
-    }
-
-    // PRODUCTION: Use ExchangeClient from @nktkas/hyperliquid
-    /*
-    const wallet = privateKeyToAccount(process.env.HYPERLIQUID_PRIVATE_KEY as `0x${string}`);
-    const transport = new HttpTransport();
-    const exchange = new ExchangeClient({ transport, wallet });
-
-    // Set leverage first
-    await exchange.updateLeverage({ asset: assetIndex, isCross: true, leverage });
-
-    // Place market order
-    const result = await exchange.order({
-      orders: [{
-        a: assetIndex,
-        b: isBuy,
-        p: limitPrice?.toString() || '0', // 0 = market order
-        s: (sizeUsd / midPrice).toFixed(6),
-        r: false,
-        t: { limit: { tif: 'Ioc' } }, // Immediate-or-Cancel for market-like fills
-      }],
-      grouping: 'na',
-    });
-    */
-
-    return { success: false, error: 'Live trading not yet connected. Set DRY_RUN=false and configure HYPERLIQUID_PRIVATE_KEY.' };
   }
 
   /**
-   * Close an existing position (reduce-only order)
+   * Recent fills from all leaderboard participants (perps + spot) within the
+   * window. Spot coins come back as "BTC/USDC" style with isSpot=true.
    */
-  public async closePosition(coin: string, positionSizeUsd: number, isBuy: boolean): Promise<HyperliquidOrderResult> {
-    console.log(`[HYPERLIQUID] ${this.isDryRun ? '[DRY_RUN]' : '[LIVE]'} Closing ${isBuy ? 'LONG' : 'SHORT'} position: ${coin} | Size: $${positionSizeUsd}`);
-
-    if (this.isDryRun) {
-      const marketData = await this.fetchMarketData(coin);
-      return {
-        success: true,
-        orderId: `DRY_RUN_CLOSE_${Date.now()}_${coin}`,
-        filledPrice: marketData?.midPriceUsd || 0,
-        filledSize: positionSizeUsd / (marketData?.midPriceUsd || 1),
-      };
+  public async fetchLeaderboardTrades(
+    timeWindow: '5m' = '5m',
+  ): Promise<HyperliquidLeaderboardTrades> {
+    try {
+      const res = await fetch(this.infoApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'leaderboardTrades', timeWindow }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        console.error(`[HYPERLIQUID] leaderboardTrades HTTP ${res.status}`);
+        return { fills: [], fetchedAt: Date.now() };
+      }
+      const data: any = await res.json();
+      const raw: any[] = Array.isArray(data?.trades) ? data.trades : [];
+      const fills: HyperliquidTradeFill[] = raw
+        .map((t) => {
+          const coin = String(t.coin || '');
+          const px = Number(t.px) || 0;
+          const sz = Number(t.sz) || 0;
+          const side = t.side === 'B' ? 'BUY' : t.side === 'A' ? 'SELL' : null;
+          if (!coin || px <= 0 || sz <= 0 || !side) return null;
+          return {
+            coin,
+            isSpot: Boolean(t.isSpot),
+            px,
+            sz,
+            usd: px * sz,
+            side,
+            user: String(t.user || ''),
+            timestamp: Number(t.t) || 0,
+          };
+        })
+        .filter((f): f is HyperliquidTradeFill => f !== null);
+      return { fills, fetchedAt: Date.now() };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[HYPERLIQUID] leaderboardTrades failed: ${message}`);
+      return { fills: [], fetchedAt: Date.now() };
     }
-
-    return { success: false, error: 'Live close not yet connected.' };
-  }
-
-  /**
-   * Get current user positions (read from Hyperliquid Info API)
-   */
-  public async getUserPositions(walletAddress: string): Promise<Array<{ coin: string; sizeUsd: number; entryPx: number; unrealizedPnl: number; leverage: number; side: 'LONG' | 'SHORT' }>> {
-    console.log(`[HYPERLIQUID] Fetching open positions for wallet: ${walletAddress.slice(0, 10)}...`);
-
-    /*
-    // PRODUCTION: Call Info API
-    const response = await fetch(this.infoApiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'clearinghouseState', user: walletAddress }),
-    });
-    const data = await response.json();
-    return data.assetPositions.map(...);
-    */
-
-    // Return empty array for simulation (positions tracked in PositionManager)
-    return [];
   }
 }

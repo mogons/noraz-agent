@@ -1,287 +1,233 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createRequire } from 'node:module';
-import path from 'node:path';
+import { describe, it, expect, vi } from 'vitest';
 import { PerpsScreeningAgent } from '../src/agents/perps/perps-screening-agent.js';
-import type { HyperliquidAdapter, HyperliquidMarketData, HyperliquidPerpsSignal } from '../src/adapters/hyperliquid-adapter.js';
-import type { Candle } from '../src/services/technical-indicators.js';
+import type { HyperliquidTrader, HyperliquidPosition, HyperliquidTradeFill } from '../src/adapters/hyperliquid-adapter.js';
 
-const requireEsm = createRequire(import.meta.url);
+// ── Mock adapter ──────────────────────────────────────────────────────────
 
-// ── Fixtures ──────────────────────────────────────────────────────────────
+interface MockAdapterOverrides {
+  trackedAssets?: string[];
+  traders?: Record<string, HyperliquidTrader[]>;
+  positions?: Record<string, HyperliquidPosition[]>;
+  fills?: HyperliquidTradeFill[];
+}
 
-const mkMarket = (over: Partial<HyperliquidMarketData> = {}): HyperliquidMarketData => ({
-  coin: 'BTC',
-  assetIndex: 0,
-  markPriceUsd: 60000,
-  midPriceUsd: 60000,
-  openInterestUsd: 150_000_000,
-  oiChange1hPercent: 20,
-  oiChange4hPercent: 25,
-  volume1hUsd: 50_000_000,
-  volume4hUsd: 200_000_000,
-  volume24hUsd: 1_200_000_000,
-  fundingRate8h: -0.0001,
-  fundingRateAnnualized: -10.95,
-  bestBidUsd: 59994,
-  bestAskUsd: 60006,
-  spreadPercent: 0.02,
-  ...over,
-});
+function makeAdapter(over: MockAdapterOverrides = {}) {
+  const state = {
+    traders: over.traders ?? {},
+    positions: over.positions ?? {},
+    fills: over.fills ?? [],
+  };
+  const adapter = {
+    trackedAssets: over.trackedAssets ?? ['BTC'],
+    fetchLeaderboardTraders: vi.fn(async (coin: string): Promise<HyperliquidTrader[]> => state.traders[coin] ?? []),
+    fetchClearinghouseState: vi.fn(async (user: string): Promise<HyperliquidPosition[]> => state.positions[user] ?? []),
+    fetchLeaderboardTrades: vi.fn(async (): Promise<{ fills: HyperliquidTradeFill[]; fetchedAt: number }> => ({ fills: state.fills, fetchedAt: Date.now() })),
+  };
+  return { adapter, state };
+}
 
-/** Gently rising candles → EMA9 > EMA21 > EMA50 > EMA200 with small pullbacks */
-const mkBullishCandles = (count = 250): Candle[] => {
-  const candles: Candle[] = [];
-  let price = 60000;
-  const start = Date.now() - count * 3600000;
-  for (let i = 0; i < count; i++) {
-    const pullback = i % 5 === 4;
-    const change = pullback ? 0.9975 : 1.003;
-    const open = price;
-    const close = price * change;
-    candles.push({
-      openTime: start + i * 3600000,
-      open,
-      high: Math.max(open, close) * 1.0015,
-      low: Math.min(open, close) * 0.9985,
-      close,
-      volume: 1000 + i,
-    });
-    price = close;
-  }
-  return candles;
-};
+const traderA: HyperliquidTrader = { address: '0x1111111111111111111111111111111111111111', returnPct: 12.5, pnlUsd: 800_000 };
+const traderB: HyperliquidTrader = { address: '0x2222222222222222222222222222222222222222', returnPct: -4.2, pnlUsd: -50_000 };
 
-const mkSignal = (market: HyperliquidMarketData, over: Partial<HyperliquidPerpsSignal> = {}): HyperliquidPerpsSignal => ({
-  coin: market.coin,
-  assetIndex: market.assetIndex,
-  direction: 'LONG',
-  confidence: 85,
-  entryPriceUsd: market.midPriceUsd,
-  suggestedLeverage: 10,
-  stopLossPercent: 5,
-  takeProfitPercent: 10,
-  marketData: market,
-  signalReasons: [],
-  aiThesis: `${market.coin} thesis`,
-  ...over,
-});
+const longA: HyperliquidPosition = { coin: 'BTC', side: 'LONG', sizeUsd: 2_000_000, entryPx: 60000, leverage: 10, funding: 0.0001 };
+const shortB: HyperliquidPosition = { coin: 'BTC', side: 'SHORT', sizeUsd: 1_500_000, entryPx: 61000, leverage: 5, funding: -0.0001 };
+const smallLong: HyperliquidPosition = { coin: 'BTC', side: 'LONG', sizeUsd: 400_000, entryPx: 59000, leverage: 3, funding: 0 };
+const ethLong: HyperliquidPosition = { coin: 'ETH', side: 'LONG', sizeUsd: 9_000_000, entryPx: 3000, leverage: 10, funding: 0 };
 
-const mkFakeAdapter = (markets: Record<string, HyperliquidMarketData>) => ({
-  primaryWatchlist: Object.keys(markets),
-  secondaryPool: [],
-  fetchMarketData: vi.fn(async (coin: string) => markets[coin] ?? null),
-} as unknown as HyperliquidAdapter);
+// ── buildSignal ───────────────────────────────────────────────────────────
 
-/** Stub global fetch so fetchCandles() returns bullish candles (no network). */
-const stubCandles = () => {
-  vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init: any) => {
-    const body = JSON.parse(init.body);
-    if (body.type === 'candleSnapshot') {
-      const candles = mkBullishCandles();
-      return {
-        ok: true,
-        json: async () => candles.map((c) => ({ t: c.openTime, o: c.open, h: c.high, l: c.low, c: c.close, v: c.volume })),
-      };
-    }
-    return { ok: true, json: async () => [] };
-  }));
-};
+describe('buildSignal — agregasi posisi per aset', () => {
+  it('menjumlahkan long/short, memfilter detail per trader >= $1M, mengabaikan coin lain', () => {
+    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
+    const sig = agent.buildSignal(
+      'BTC',
+      [
+        { address: traderA.address, pos: longA },
+        { address: traderB.address, pos: shortB },
+        { address: traderA.address, pos: smallLong }, // < $1M: masuk total, tidak masuk detail
+        { address: traderA.address, pos: ethLong },   // bukan BTC: diabaikan
+      ],
+      new Map([[traderA.address, 12.5]]),
+      new Map(),
+    );
 
-// ── Tests ─────────────────────────────────────────────────────────────────
-
-describe('PerpsScreeningAgent', () => {
-  afterEach(() => { vi.unstubAllGlobals(); });
-
-  it('contract: domain is perps', () => {
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    expect(agent.domain).toBe('perps');
+    expect(sig.totalLongUsd).toBe(2_400_000);
+    expect(sig.totalShortUsd).toBe(1_500_000);
+    expect(sig.netUsd).toBe(900_000);
+    expect(sig.longCount).toBe(1); // 1 trader long (2 posisi milik traderA)
+    expect(sig.shortCount).toBe(1);
+    expect(sig.longTraders).toHaveLength(1);
+    expect(sig.longTraders[0].address).toBe(traderA.address);
+    expect(sig.longTraders[0].sizeUsd).toBe(2_400_000); // 2M + 400k agregat per trader
+    expect(sig.longTraders[0].returnPct).toBe(12.5);
+    expect(sig.shortTraders).toHaveLength(1);
+    expect(sig.shortTraders[0].sizeUsd).toBe(1_500_000);
   });
 
-  it('runScreeningPass returns [] with empty watchlist — no network, no fake data', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    const reports = await agent.runScreeningPass();
-    expect(Array.isArray(reports)).toBe(true);
-    expect(reports.length).toBe(0);
-  });
-
-  it('runScreeningPass returns AgentReport[] with payload for a deep+trending setup', async () => {
-    stubCandles();
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({ BTC: mkMarket() }));
-    (agent as any).strategyEngine = { getActiveStrategy: () => null };
-    const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(1);
-    const r = reports[0];
-    expect(r.passed).toBe(true);
-    expect(r.confidence).toBeGreaterThanOrEqual(80);
-    expect(r.reason).toBe(r.signal.aiThesis);
-    expect(r.payload?.domain).toBe('PERPS');
-    expect(r.payload?.contractAddress).toBe('BTC');
-    expect(r.payload?.securityAuditPassed).toBe(true);
-  });
-
-  it('buildPayload maps real market fields', () => {
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    const market = mkMarket({ midPriceUsd: 61234.5 });
-    const signal = mkSignal(market, { confidence: 87, entryPriceUsd: 61234.5, aiThesis: 'BTC-USDT LONG setup' });
-    const p = agent.buildPayload(signal, 'BTC-USDT LONG setup');
-    expect(p.domain).toBe('PERPS');
-    expect(p.title).toBe('LONG BTC (10x)');
-    expect(p.symbol).toBe('BTC');
-    expect(p.contractAddress).toBe('BTC');
-    expect(p.network).toBe('Hyperliquid Perps');
-    expect(p.priceUsd).toBe('$61234.5');
-    expect(p.marketCap).toContain('SL');
-    expect(p.marketCap).toContain('TP');
-    expect(p.liquidityUsd).toBe(150_000_000);
-    expect(p.volume1hUsd).toBe(50_000_000);
-    expect(p.confidenceScore).toBe(87);
-    expect(p.aiThesis).toBe('BTC-USDT LONG setup');
-    expect(p.socialHypeScore).toBe(87);
-    expect(p.dexScreenerUrl).toBe('https://app.hyperliquid.xyz/trade/BTC');
-    expect(p.securityAuditPassed).toBe(true);
-  });
-
-  it('buildPayload: securityAuditPassed false when OI shallow', () => {
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    const signal = mkSignal(mkMarket({ openInterestUsd: 5_000_000 }));
-    expect(agent.buildPayload(signal, 'x').securityAuditPassed).toBe(false);
-  });
-
-  it('deriveSecurityPassed: deep+tight+sane funding passes; each violation fails', () => {
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    expect(agent.deriveSecurityPassed(mkMarket())).toBe(true);
-    expect(agent.deriveSecurityPassed(mkMarket({ openInterestUsd: 9_999_999 }))).toBe(false);
-    expect(agent.deriveSecurityPassed(mkMarket({ spreadPercent: 0.11 }))).toBe(false);
-    expect(agent.deriveSecurityPassed(mkMarket({ fundingRate8h: 0.003 }))).toBe(false);
-    expect(agent.deriveSecurityPassed(mkMarket({ fundingRate8h: -0.0021 }))).toBe(false);
-    // Boundary values (OI $10M, spread 0.1%, |funding| 0.002) pass exactly
-    expect(agent.deriveSecurityPassed(mkMarket({ openInterestUsd: 10_000_000, spreadPercent: 0.1, fundingRate8h: -0.002 }))).toBe(true);
-  });
-
-  it('depth bonus: strong deep setup (OI $150M, vol $50M, tight spread, bullish EMA) reaches >= 80', async () => {
-    stubCandles();
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    const signal = await (agent as any).evaluateSetup(mkMarket());
-    expect(signal).not.toBeNull();
-    expect(signal.confidence).toBeGreaterThanOrEqual(80);
-    expect(signal.aiThesis).toContain('Depth: $150M OI (+15)');
-  });
-
-  it('depth bonus tiers appear in thesis: 1B→+25, 150M→+15, 30M→+10, 12M→+5, 9M→+0', async () => {
-    stubCandles();
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({}));
-    for (const [oi, bonus] of [[1_000_000_000, '+25'], [150_000_000, '+15'], [30_000_000, '+10'], [12_000_000, '+5'], [9_000_000, '+0']]) {
-      const signal = await (agent as any).evaluateSetup(mkMarket({ openInterestUsd: oi }));
-      expect(signal.aiThesis).toContain(`Depth: $${(oi / 1e6).toFixed(0)}M OI (${bonus})`);
-    }
-  });
-
-  it('strategy extension: SKIP vetoes the signal', async () => {
-    stubCandles();
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({ BTC: mkMarket() }));
-    (agent as any).strategyEngine = {
-      getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
-      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
-    };
-    const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(0);
-  });
-
-  it('strategy extension: BUY blends 0.7/0.3 and keeps the 80 gate', async () => {
-    stubCandles();
-    const agent = new PerpsScreeningAgent(mkFakeAdapter({ BTC: mkMarket() }));
-    (agent as any).strategyEngine = {
-      getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
-      runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
-    };
-    const raw = await (agent as any).evaluateSetup(mkMarket());
-    const expected = Math.round(raw.confidence * 0.7 + 0.3 * 90);
-    expect(expected).toBeGreaterThanOrEqual(80);
-    const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(1);
-    expect(reports[0].confidence).toBe(expected);
+  it('menggabungkan beberapa posisi trader yang sama', () => {
+    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
+    const sig = agent.buildSignal(
+      'BTC',
+      [
+        { address: traderA.address, pos: longA },
+        { address: traderA.address, pos: { ...smallLong, sizeUsd: 800_000 } }, // total 2.8M
+      ],
+      new Map(),
+      new Map(),
+    );
+    expect(sig.totalLongUsd).toBe(2_800_000);
+    expect(sig.longTraders).toHaveLength(1);
+    expect(sig.longTraders[0].sizeUsd).toBe(2_800_000);
   });
 });
 
-describe('perps-default strategy', () => {
-  const strat = (requireEsm(path.join(process.cwd(), 'strategies', 'perps-default.mjs')) as any).default;
+// ── aggregateSpotFlow ─────────────────────────────────────────────────────
 
-  it('BUY on healthy LONG ctx (>= 80, not SKIP)', () => {
-    const ev = strat.evaluate({
-      domain: 'PERPS', symbol: 'BTC', contractAddress: 'BTC',
-      priceUsd: 60000, liquidityUsd: 150_000_000, volume1hUsd: 50_000_000,
-      socialHypeScore: 90, securityAuditPassed: true, direction: 'LONG',
-      openInterestUsd: 150_000_000, fundingRate8h: -0.0001, spreadPercent: 0.01,
-      oiChange1hPercent: 20, oiChange4hPercent: 25, volume4hUsd: 200_000_000,
+describe('aggregateSpotFlow — aliran spot', () => {
+  it('menolak fill < $100k dan mengagregat buy/sell per market', () => {
+    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
+    const fills: HyperliquidTradeFill[] = [
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.5, usd: 150_000, side: 'BUY', user: '0xa', timestamp: 1 },
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 0.8, usd: 48_000, side: 'BUY', user: '0xb', timestamp: 2 }, // < 100k → ditolak
+      { coin: 'BTC/USDC', isSpot: true, px: 61000, sz: 2.0, usd: 122_000, side: 'SELL', user: '0xc', timestamp: 3 },
+      { coin: 'ETH/USDC', isSpot: true, px: 3000, sz: 40, usd: 120_000, side: 'BUY', user: '0xd', timestamp: 4 },
+    ];
+    const map = agent.aggregateSpotFlow(fills);
+    expect(map.get('BTC/USDC')).toEqual({ market: 'BTC/USDC', buyUsd: 150_000, sellUsd: 122_000, fillCount: 2 });
+    expect(map.get('ETH/USDC')).toEqual({ market: 'ETH/USDC', buyUsd: 120_000, sellUsd: 0, fillCount: 1 });
+  });
+});
+
+// ── isMaterialChange / runScreeningPass ───────────────────────────────────
+
+describe('isMaterialChange & runScreeningPass — event detection', () => {
+  it('pass pertama selalu post (baseline)', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
     });
-    expect(ev.recommendedAction).not.toBe('SKIP');
-    expect(ev.confidence).toBeGreaterThanOrEqual(80);
+    void state;
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].payload?.domain).toBe('WHALE');
+    expect(reports[0].payload?.whaleReport?.totalLongUsd).toBe(2_000_000);
   });
 
-  it('BUY on healthy SHORT ctx (funding pays shorts)', () => {
-    const ev = strat.evaluate({
-      domain: 'PERPS', symbol: 'BTC', contractAddress: 'BTC',
-      priceUsd: 60000, liquidityUsd: 150_000_000, volume1hUsd: 50_000_000,
-      socialHypeScore: 90, securityAuditPassed: true, direction: 'SHORT',
-      openInterestUsd: 150_000_000, fundingRate8h: 0.0001, spreadPercent: 0.01,
-      oiChange1hPercent: 20, oiChange4hPercent: 25, volume4hUsd: 200_000_000,
+  it('tidak post ulang saat tidak ada perubahan material', async () => {
+    const { adapter } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
     });
-    expect(ev.recommendedAction).not.toBe('SKIP');
-    expect(ev.confidence).toBeGreaterThanOrEqual(80);
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0);
   });
 
-  it('reads snake_case hyperliquid ctx contract (gmgn-like fallback)', () => {
-    const ev = strat.evaluate({
-      domain: 'PERPS', symbol: 'BTC', securityAuditPassed: true, direction: 'LONG',
-      hyperliquid: {
-        open_interest_usd: 150_000_000, funding_rate_8h: -0.0001, spread_percent: 0.01,
-        oi_change_1h_percent: 20, oi_change_4h_percent: 25,
-        volume_1h_usd: 50_000_000, volume_4h_usd: 200_000_000,
-      },
+  it('post saat posisi baru >= $1M muncul', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA, traderB] },
+      positions: { [traderA.address]: [longA], [traderB.address]: [] },
     });
-    expect(ev.recommendedAction).not.toBe('SKIP');
-    expect(ev.confidence).toBeGreaterThanOrEqual(80);
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    state.positions[traderB.address] = [shortB];
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].signal.shortTraders).toHaveLength(1);
   });
 
-  it('SKIP when OI missing (fail-closed)', () => {
-    const ev = strat.evaluate({
-      domain: 'PERPS', symbol: 'BTC', priceUsd: 60000,
-      volume1hUsd: 50_000_000, socialHypeScore: 90, securityAuditPassed: true, direction: 'LONG',
+  it('post saat posisi >= $1M ditutup', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA, traderB] },
+      positions: { [traderA.address]: [longA], [traderB.address]: [shortB] },
     });
-    expect(ev.recommendedAction).toBe('SKIP');
-    expect(ev.reason).toContain('fail-closed');
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    state.positions[traderB.address] = [];
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].signal.shortTraders).toHaveLength(0);
   });
 
-  it('mega-depth tier (OI >= $1B) scores highest', () => {
-    const base = {
-      domain: 'PERPS', symbol: 'BTC', priceUsd: 60000, securityAuditPassed: true, direction: 'LONG',
-      volume1hUsd: 50_000_000, spreadPercent: 0.01, fundingRate8h: -0.0001,
-      oiChange1hPercent: 20, oiChange4hPercent: 25,
-    };
-    // volume4h scaled with OI so the volume/OI ratio stays identical (0.5x → +4 both)
-    const mega = strat.evaluate({ ...base, openInterestUsd: 2_300_000_000, liquidityUsd: 2_300_000_000, volume4hUsd: 1_150_000_000 });
-    const mid = strat.evaluate({ ...base, openInterestUsd: 150_000_000, liquidityUsd: 150_000_000, volume4hUsd: 75_000_000 });
-    expect(mega.recommendedAction).toBe('BUY');
-    expect(mega.confidence).toBeGreaterThan(mid.confidence);
-    expect(mega.reason).toContain('+30');
-  });
-
-  it('SKIP when direction missing (fail-closed)', () => {
-    const ev = strat.evaluate({
-      domain: 'PERPS', symbol: 'BTC', priceUsd: 60000, liquidityUsd: 150_000_000,
-      openInterestUsd: 150_000_000, volume1hUsd: 50_000_000, socialHypeScore: 90, securityAuditPassed: true,
+  it('post saat total long/short berubah >= 30%', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
     });
-    expect(ev.recommendedAction).toBe('SKIP');
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    state.positions[traderA.address] = [{ ...longA, sizeUsd: 2_800_000 }]; // +40%
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
   });
 
-  it('SKIP when spread or funding exceeds gates', () => {
-    const base = {
-      domain: 'PERPS', symbol: 'BTC', priceUsd: 60000, liquidityUsd: 150_000_000,
-      openInterestUsd: 150_000_000, volume1hUsd: 50_000_000,
-      socialHypeScore: 90, securityAuditPassed: true, direction: 'LONG',
-    };
-    expect(strat.evaluate({ ...base, spreadPercent: 0.2 }).recommendedAction).toBe('SKIP');
-    expect(strat.evaluate({ ...base, fundingRate8h: 0.003 }).recommendedAction).toBe('SKIP');
+  it('tidak post saat perubahan di bawah 30% dan tidak ada posisi baru', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
+    });
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    state.positions[traderA.address] = [{ ...longA, sizeUsd: 2_100_000 }]; // +5%
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0);
+  });
+
+  it('post saat fill spot baru >= $100k muncul', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
+      fills: [],
+    });
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    await agent.runScreeningPass();
+    state.fills = [
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.0, usd: 120_000, side: 'BUY', user: '0x1', timestamp: 1 },
+    ];
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].signal.spotFlow).toHaveLength(1);
+    expect(reports[0].signal.spotFlow[0].buyUsd).toBe(120_000);
+  });
+
+  it('cooldown 10 menit mencegah double-post walau data berubah', async () => {
+    const { adapter, state } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
+    });
+    const agent = new PerpsScreeningAgent(adapter as never); // default cooldown 10m
+    await agent.runScreeningPass();
+    state.positions[traderA.address] = [{ ...longA, sizeUsd: 2_800_000 }];
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0);
+  });
+
+  it('leaderboard kosong → skip aset tanpa error', async () => {
+    const { adapter } = makeAdapter({ traders: { BTC: [] } });
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0);
+  });
+});
+
+// ── buildPayload ──────────────────────────────────────────────────────────
+
+describe('buildPayload — call card whale', () => {
+  it('mengisi whaleReport + domain WHALE', () => {
+    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
+    const sig = agent.buildSignal(
+      'BTC',
+      [{ address: traderA.address, pos: longA }],
+      new Map([[traderA.address, 12.5]]),
+      new Map([['BTC/USDC', { market: 'BTC/USDC', buyUsd: 150_000, sellUsd: 0, fillCount: 1 }]]),
+    );
+    const payload = agent.buildPayload(sig);
+    expect(payload.domain).toBe('WHALE');
+    expect(payload.title).toBe('WHALE WATCH: BTC');
+    expect(payload.whaleReport?.netUsd).toBe(2_000_000);
+    expect(payload.whaleReport?.longTraders[0].address).toBe(traderA.address);
+    expect(payload.whaleReport?.spotFlow[0].buyUsd).toBe(150_000);
   });
 });

@@ -11,7 +11,7 @@ describe('agent registry', () => {
   it('getAgentDomain resolves canonical id, aliases, and channel names', () => {
     expect(getAgentDomain('meme-solana')?.channel).toBe('call-meme-solana');
     expect(getAgentDomain('solana-meme')?.id).toBe('meme-solana');
-    expect(getAgentDomain('call-perps-futures')?.id).toBe('perps');
+    expect(getAgentDomain('call-whale-tracking')?.id).toBe('perps');
     expect(getAgentDomain('unknown-agent')).toBeUndefined();
   });
 

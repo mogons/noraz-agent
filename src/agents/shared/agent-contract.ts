@@ -1,4 +1,33 @@
-export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA';
+export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA' | 'WHALE';
+
+/** Whale tracking: satu entri posisi terbuka >= ambang milik seorang smart trader. */
+export interface WhaleTraderEntry {
+  address: string;
+  sizeUsd: number;
+  entryPx: number;
+  returnPct: number;
+}
+
+/** Whale tracking: aliran spot (fills >= ambang) per market dalam window 5 menit. */
+export interface WhaleSpotEntry {
+  market: string;
+  buyUsd: number;
+  sellUsd: number;
+  fillCount: number;
+}
+
+/** Whale tracking: laporan posisi smart trader per aset (BTC/GOLD/XYZ100). */
+export interface WhaleReport {
+  coin: string;
+  totalLongUsd: number;
+  totalShortUsd: number;
+  netUsd: number;
+  longCount: number;
+  shortCount: number;
+  longTraders: WhaleTraderEntry[];
+  shortTraders: WhaleTraderEntry[];
+  spotFlow: WhaleSpotEntry[];
+}
 
 export interface CallCardPayload {
   domain: CallDomain;
@@ -54,6 +83,8 @@ export interface CallCardPayload {
   socialHypeScore: number;
   liquidityUsd: number;
   volume1hUsd: number;
+  /** Whale tracking: laporan posisi smart trader (domain WHALE) — render embed khusus. */
+  whaleReport?: WhaleReport;
 }
 
 export interface AgentReport<TSignal = unknown> {

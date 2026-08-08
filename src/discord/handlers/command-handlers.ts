@@ -216,7 +216,7 @@ export async function handleChatInput(
     const channelDomainMap: Record<string, { agent: string; name: string }> = {
       'call-meme-solana': { agent: 'meme-solana', name: 'Solana Meme Agent' },
       'call-meme-robinhood': { agent: 'meme-robinhood', name: 'Robinhood Meme Agent' },
-      'call-perps-futures': { agent: 'perps', name: 'Perpetuals Agent' },
+      'call-whale-tracking': { agent: 'perps', name: 'Whale Tracking Agent' },
       'call-nft-sniping': { agent: 'nft', name: 'NFT Sniping Agent' },
       'call-lp-solana': { agent: 'lp-solana', name: 'Solana LP Agent' },
       'call-lp-robinhood': { agent: 'lp-robinhood', name: 'Robinhood LP Agent' },
@@ -275,7 +275,7 @@ export async function handleChatInput(
         { id: 'meme-robinhood', label: 'Robinhood Meme Agent',    emoji: '🔷' },
         { id: 'lp-solana',    label: 'Solana LP Agent',            emoji: '💧' },
         { id: 'lp-robinhood',       label: 'Robinhood LP Agent',               emoji: '🔷' },
-        { id: 'perps',        label: 'Perpetuals Agent',           emoji: '📈' },
+        { id: 'perps',        label: 'Whale Tracking Agent',       emoji: '🐋' },
         { id: 'nft',          label: 'NFT Sniping Agent',          emoji: '🖼️' },
         { id: 'prediction',   label: 'Polymarket Prediction Agent', emoji: '🎯' },
         { id: 'ct-alpha',     label: 'Smart CT & AI Alpha Agent',  emoji: '💡' },

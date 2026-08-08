@@ -68,8 +68,8 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   );
 
   const perpsId = await getOrCreateChannel(
-    'call-perps-futures',
-    '📈 Technical Leverage Trading Setup Calls (Hyperliquid, CEX)'
+    'call-whale-tracking',
+    '🐋 Smart Trader & Whale Positioning Tracking (Hyperliquid: BTC, GOLD, XYZ100)'
   );
 
   const nftId = await getOrCreateChannel(

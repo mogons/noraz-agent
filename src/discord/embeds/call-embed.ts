@@ -35,6 +35,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     LP_ROBINHOOD: 0x3498db,  // Royal Blue
     PREDICTION: 0x00ffaa,  // Cyan / Prediction
     CT_ALPHA: 0x1da1f2,    // Twitter / X Blue
+    WHALE: 0x5865f2,       // Discord Blurple
   };
 
   const confidenceStr = payload.confidenceScore ? `${payload.confidenceScore}% CONFIDENCE` : 'HIGH CONFIDENCE';
@@ -82,17 +83,50 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   }
 
   // ==========================================
-  // DOMAIN 2: PERPETUAL FUTURES (HYPERLIQUID)
+  // DOMAIN 2: WHALE TRACKING (HYPERLIQUID SMART MONEY)
   // ==========================================
-  if (payload.domain === 'PERPS') {
-    embed.setTitle(`📈 ATHENA PERPETUAL SETUP: ${payload.title} • [${confidenceStr}]`);
-    
-    embed.addFields(
-      { name: '📍 Asset & Exchange', value: `**$${payload.symbol}** (${payload.network})`, inline: true },
-      { name: '💵 Entry Price', value: payload.priceUsd || 'N/A', inline: true },
-      { name: '🎯 Risk / Reward Targets', value: payload.marketCap || 'N/A', inline: true },
-      { name: '💡 Technical AI Thesis', value: payload.aiThesis, inline: false }
-    );
+  if (payload.domain === 'WHALE') {
+    embed.setTitle(`🐋 ATHENA WHALE WATCH: ${sanitizeEmbedField(payload.symbol, 20)}`);
+
+    const report = payload.whaleReport;
+    const fmtM = (v: number) => (v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
+    const netStr = report ? `${report.netUsd >= 0 ? '🟢 +' : '🔴 '}${fmtM(Math.abs(report.netUsd))}` : 'N/A';
+
+    if (report) {
+      embed.addFields(
+        { name: '⚖️ Net Positioning', value: `${netStr} (${report.longCount} long vs ${report.shortCount} short trader)`, inline: true },
+        { name: '📊 Long / Short', value: `Long **${fmtM(report.totalLongUsd)}**\nShort **${fmtM(report.totalShortUsd)}**`, inline: true },
+        { name: '🔗 Source', value: 'Hyperliquid PvP Leaderboard (7d)', inline: true }
+      );
+
+      const traderLines = (entries: Array<{ address: string; sizeUsd: number; returnPct: number }>, dir: string) =>
+        entries.map((t) => {
+          const short = `${t.address.slice(0, 6)}…${t.address.slice(-4)}`;
+          const pct = t.returnPct ? ` (PvP ${t.returnPct.toFixed(1)}%)` : '';
+          return `${dir} **${fmtM(t.sizeUsd)}** — [${short}](https://app.hyperliquid.xyz/explorer/address/${t.address})${pct}`;
+        });
+
+      const longLines = traderLines(report.longTraders, '🟢');
+      const shortLines = traderLines(report.shortTraders, '🔴');
+
+      if (longLines.length > 0) {
+        embed.addFields({ name: `🧭 Long Positions (≥ $1M)`, value: longLines.join('\n'), inline: false });
+      }
+      if (shortLines.length > 0) {
+        embed.addFields({ name: `🧭 Short Positions (≥ $1M)`, value: shortLines.join('\n'), inline: false });
+      }
+      if (report.spotFlow.length > 0) {
+        embed.addFields({
+          name: '📈 Spot Flow (5m, ≥ $100k)',
+          value: report.spotFlow
+            .map((f) => `**${sanitizeEmbedField(f.market, 24)}**: Buy ${fmtM(f.buyUsd)} | Sell ${fmtM(f.sellUsd)} (${f.fillCount} fill)`)
+            .join('\n'),
+          inline: false,
+        });
+      }
+    }
+
+    embed.addFields({ name: '💡 Ringkasan', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
 
     const hyperliquidUrl = payload.dexScreenerUrl || `https://app.hyperliquid.xyz/trade/${payload.symbol}`;
     buttonsRow.addComponents(
@@ -102,7 +136,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         .setStyle(ButtonStyle.Link),
       new ButtonBuilder()
         .setCustomId('pause_channel_perps')
-        .setLabel('⏸️ Pause Perps Screening')
+        .setLabel('⏸️ Pause Whale Tracking')
         .setStyle(ButtonStyle.Secondary)
     );
 

@@ -90,7 +90,7 @@ export class KrystalCloudAdapter {
    * Fetch top pools for Robinhood Chain (4663) Uniswap v3, sorted by APR.
    * Server-side: tvl >= minTvl, volume24h >= minVol (keeps units cost low).
    */
-  public async fetchTopRobinhoodPools(minTvlUsd = 20000, minVol24hUsd = 10000, limit = 200): Promise<KrystalPoolSignal[]> {
+  public async fetchTopRobinhoodPools(minTvlUsd = 20000, minVol24hUsd = 100000, limit = 200): Promise<KrystalPoolSignal[]> {
     const qs = new URLSearchParams({
       chainId: '4663',
       protocol: 'uniswapv3',

@@ -127,10 +127,10 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     }
   });
 
-  it('channel name "call-perps-futures" resolves to perps', async () => {
+  it('channel name "call-whale-tracking" resolves to perps', async () => {
     const stub = mkStubAgent('perps', [mkReport('BTC')]);
     const hub = new AthenaHub({ agentFactories: { perps: () => stub } });
-    expect(await hub.triggerAgentPass('call-perps-futures')).toHaveLength(1);
+    expect(await hub.triggerAgentPass('call-whale-tracking')).toHaveLength(1);
   });
 
   it('ct-alpha runs the real agent with injected fake TwitterService (DI, zero network)', async () => {
