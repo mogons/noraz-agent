@@ -14,7 +14,6 @@ export default {
     minAgeHours: 0,
     maxRugRatio: 0.3,
     maxRatTraderRate: 0.3,
-    maxBundlerRate: 0.5,
     maxTop10HolderRate: 0.4,
     minVisitingCount: 200,
     maxTwitterRenameCount: 3,
@@ -32,7 +31,6 @@ export default {
     const isWash = g.is_wash_trading === true || g.is_wash_trading === 1;
     const rugRatio = typeof g.rug_ratio === 'number' ? g.rug_ratio : null;
     const ratTrader = typeof g.rat_trader_amount_rate === 'number' ? g.rat_trader_amount_rate : null;
-    const bundlerRate = typeof g.bundler_rate === 'number' ? g.bundler_rate : null;
     const top10Holder = typeof g.top_10_holder_rate === 'number' ? g.top_10_holder_rate : null;
 
     const reasons = [];
@@ -45,7 +43,6 @@ export default {
     if (isWash) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Wash trading terdeteksi (volume palsu).' };
     if (rugRatio !== null && rugRatio >= p.maxRugRatio) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Rug ratio ${rugRatio.toFixed(2)} >= ${p.maxRugRatio}.` };
     if (ratTrader !== null && ratTrader >= p.maxRatTraderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Insider/rat trader rate ${(ratTrader * 100).toFixed(1)}% >= ${p.maxRatTraderRate * 100}%.` };
-    if (bundlerRate !== null && bundlerRate >= p.maxBundlerRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Bundler rate ${(bundlerRate * 100).toFixed(1)}% >= ${p.maxBundlerRate * 100}%.` };
     if (top10Holder !== null && top10Holder >= p.maxTop10HolderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Top-10 holder ${(top10Holder * 100).toFixed(1)}% >= ${p.maxTop10HolderRate * 100}%.` };
 
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan (GoPlus) tidak lolos.' };
