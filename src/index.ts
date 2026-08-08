@@ -125,6 +125,8 @@ async function notifyControlRoom(client: any, key: string, content: string): Pro
 
 const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
+const { PositionScanner } = await import('./services/position-scanner.js');
+const positionScanner = new PositionScanner({ positionManager, walletService, stateStore });
 
 // Wallet auto-tracker: mirrors user's on-chain holdings into PositionManager lifecycle + exit alerts
 const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new GMGNAdapter(), walletService, tradeJournal: tradeJournalService });
@@ -527,14 +529,17 @@ if (discordToken && clientId) {
         // Wallet Auto-Tracking: detect user's own positions + exit alerts
         try {
           const alerts = await walletTracker.syncPositions();
-          if (alerts.length > 0) {
-            for (const a of alerts) {
+          // PositionScanner: perps (Hyperliquid), LP solana (Meteora), prediction (Polymarket)
+          const scannerAlerts = await positionScanner.scanAll();
+          const allAlerts = [...alerts, ...scannerAlerts];
+          if (allAlerts.length > 0) {
+            for (const a of allAlerts) {
               await notifyControlRoom(client, `position:${a.type}:${a.address}`, `🚨 **POSITION ALERT**\n${a.reason}`);
             }
           }
-          console.log(`[WALLET TRACKER] ${positionManager.getActivePositions().length} positions tracked, ${alerts.length} alert(s) fired this cycle.`);
+          console.log(`[POSITION MONITOR] ${positionManager.getActivePositions().length} spot + ${positionManager.getActiveLpPositions().length} LP + ${positionManager.getActiveNftPositions().length} NFT positions tracked, ${allAlerts.length} alert(s) fired this cycle.`);
         } catch (wtErr: any) {
-          console.warn(`[WALLET TRACKER] sync failed this cycle: ${wtErr.message}`);
+          console.warn(`[POSITION MONITOR] sync failed this cycle: ${wtErr.message}`);
         }
       } catch (err: any) {
         console.error('[SUB-AGENTS LOOP ERROR]', err.message);
