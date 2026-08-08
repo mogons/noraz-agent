@@ -32,7 +32,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     PERPS: 0xf39c12,       // Gold / Amber
     NFT: 0x9b59b6,         // Purple
     LP_METEORA: 0x2ecc71,  // Bright Emerald Green
-    LP_UNISWAP: 0x3498db,  // Royal Blue
+    LP_ROBINHOOD: 0x3498db,  // Royal Blue
     PREDICTION: 0x00ffaa,  // Cyan / Prediction
     CT_ALPHA: 0x1da1f2,    // Twitter / X Blue
   };
@@ -112,7 +112,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // ==========================================
   // DOMAIN 3 & 4: CONCENTRATED LIQUIDITY (LP)
   // ==========================================
-  if (payload.domain === 'LP_METEORA' || payload.domain === 'LP_UNISWAP') {
+  if (payload.domain === 'LP_METEORA' || payload.domain === 'LP_ROBINHOOD') {
     const isMeteora = payload.domain === 'LP_METEORA';
     embed.setTitle(`💧 ATHENA LP OPPORTUNITY: ${payload.title}`);
 
@@ -146,7 +146,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
         .setLabel(`💧 Add Liquidity (${isMeteora ? 'Meteora' : 'Uniswap'})`)
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(`pause_channel_${isMeteora ? 'lp-solana' : 'lp-evm'}`)
+        .setCustomId(`pause_channel_${isMeteora ? 'lp-solana' : 'lp-robinhood'}`)
         .setLabel('⏸️ Pause LP Screening')
         .setStyle(ButtonStyle.Secondary)
     );

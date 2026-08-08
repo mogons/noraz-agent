@@ -32,7 +32,7 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 3. **🐣 Solana Meme Agent (`#call-meme-solana`)**: Screens Solana DEX tokens, Pump.fun bonding curves, Community Takeovers (CTO), and 5m/1h volume surges (>300%).
 4. **🔷 EVM Meme Agent (`#call-meme-robinhood`)**: Screens EVM DEX tokens across **Base L2**, **Ethereum Mainnet**, and **Robinhood Chain L2** with GoPlus Anti-Honeypot security checks.
 5. **📈 Perpetual Futures Agent (`#call-perps-futures`)**: Screens Hyperliquid & CEX leverage setups via a 5-Role Swarm (Macro, Quant, Risk, Catalyst, H1/H4 Technical EMA/RSI).
-6. **💧 Trade + LP Velocity Engine (`#call-lp-solana` & `#call-lp-evm`)**: Fast-harvesting Concentrated Liquidity signals for Meteora DLMM & Uniswap v3 (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
+6. **💧 Trade + LP Velocity Engine (`#call-lp-solana` & `#call-lp-robinhood`)**: Fast-harvesting Concentrated Liquidity signals for Meteora DLMM & Robinhood Chain CLMM (Aerodrome/Uniswap) (>5% Fee/TVL 4h, >150% Volume/TVL 4h, >6x Active Velocity).
 7. **🖼️ EVM NFT Momentum Agent (`#call-nft-sniping`)**: Tracks collection floor pumps (>= +30% 4h), volume spikes (>= 3.0x 4h), sales velocity (>= 25 sales/h), and verified bear-market whale sweeps (>= $10k portfolio, >= 5 ETH PnL, active in last 14 days).
 8. **🎯 Polymarket Prediction Agent (`#call-prediction-markets`)**: Screens prediction event markets across Crypto, Macro, Politics, and Tech on Polymarket (Polygon L2) for implied odds arbitrage, whale bet inflows (>= $10k USDC), and high-probability resolution yields.
 9. **💡 Smart CT & AI Alpha Scraper Agent (`#call-ct-alpha`)**: Monitors X (Twitter) for AI Agent launches, airdrop threads, testnet guides, and Smart Money calls using TwexAPI.
@@ -77,7 +77,7 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
               |                               |
       +-------v--------+             +--------v-------+
       | LP Solana      |             | LP EVM         |
-      | (Meteora DLMM) |             | (Uniswap v3)   |
+      | (Meteora DLMM) |             | (Robinhood Chain CLMM (Aerodrome/Uniswap))   |
       +----------------+             +----------------+
                               |
                               v
@@ -93,7 +93,7 @@ Operated through a **Discord Command Center (`#athena-control-room`)**, **Intera
 | **Control Dashboard** | `/menu` / `/dashboard` | Direct Command | Opens the Master Interactive Control Center Embed with Action Buttons & Agent Select Dropdown |
 | **Trade Journal** | `/journal` | `summary`, `history`, `export` | View Win-Rate %, PnL summary, recent trades, & download `athena_trade_journal.csv` |
 | **Price Alerts** | `/alert` | `set`, `list`, `cancel` | Manage custom real-time price alerts & notifications |
-| **Sub-Agent Toggles** | `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-robinhood`, `lp-solana`, `lp-evm`, `perps`, `nft`, `prediction`, `ct-alpha`) |
+| **Sub-Agent Toggles** | `/screening` | `start`, `stop` | Toggle 24/7 background sub-agents (`meme-solana`, `meme-robinhood`, `lp-solana`, `lp-robinhood`, `perps`, `nft`, `prediction`, `ct-alpha`) |
 | **Burner Wallets** | `/wallet` | `setup`, `balance` | Manage burner wallets & view SOL/ETH balances |
 | **Token Audit** | `/analyze` | `contract:<CA>` | Force 12-point on-demand audit for Solana/EVM token |
 | **Quick Price Check** | `/price` | `token:<symbol/CA>` | Quick token price, 24h change, and market cap lookup |
@@ -219,7 +219,7 @@ Upon executing `athena run` or `athena deploy`, Athena automatically provisions 
 1. **Create Discord Server:** Click `+` (Add a Server) in Discord to create a server (takes 2 seconds).
 2. **Invite Bot:** Open this OAuth2 link in your browser to invite your bot:
    `https://discord.com/api/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&permissions=8&scope=bot%20applications.commands`
-3. **Automatic Channel Creation:** Launch `athena run` or `athena deploy`. Athena automatically creates Category **`🏛️ ATHENA COMMAND CENTER`**, 10 Text Channels (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-robinhood`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-evm`, `#call-prediction-markets`, `#call-ct-alpha`), and registers all 16 Slash Commands. Zero manual channel setup required!
+3. **Automatic Channel Creation:** Launch `athena run` or `athena deploy`. Athena automatically creates Category **`🏛️ ATHENA COMMAND CENTER`**, 10 Text Channels (`#athena-control-room`, `#audit-on-demand`, `#call-meme-solana`, `#call-meme-robinhood`, `#call-perps-futures`, `#call-nft-sniping`, `#call-lp-solana`, `#call-lp-robinhood`, `#call-prediction-markets`, `#call-ct-alpha`), and registers all 16 Slash Commands. Zero manual channel setup required!
 
 ---
 

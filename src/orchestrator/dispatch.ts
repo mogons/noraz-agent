@@ -1,6 +1,6 @@
 import type { CallCardPayload } from '../agents/shared/agent-contract.js';
 import type { MeteoraPoolSignal } from '../adapters/meteora-dlmm-adapter.js';
-import type { UniswapPoolSignal } from '../adapters/uniswap-lp-adapter.js';
+import type { RobinhoodLPPoolSignal } from '../adapters/uniswap-lp-adapter.js';
 
 export interface DispatchedSignal {
   channelName: string;
@@ -59,16 +59,16 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
  * this single helper builds the call-card payload for both domains so hub.ts
  * and index.ts never duplicate the mapping.
  */
-export type LPPoolSignal = MeteoraPoolSignal | UniswapPoolSignal;
+export type LPPoolSignal = MeteoraPoolSignal | RobinhoodLPPoolSignal;
 
-export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-evm'): CallCardPayload {
+export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana' | 'lp-robinhood'): CallCardPayload {
   const isSolana = domain === 'lp-solana';
   return {
-    domain: isSolana ? 'LP_METEORA' : 'LP_UNISWAP',
+    domain: isSolana ? 'LP_METEORA' : 'LP_ROBINHOOD',
     title: pool.pairName,
     symbol: pool.pairName.split(' ')[0],
     contractAddress: pool.poolAddress,
-    network: isSolana ? 'Solana' : (pool as UniswapPoolSignal).network,
+    network: isSolana ? 'Solana' : (pool as RobinhoodLPPoolSignal).network,
     liquidity: `$${(pool.tvlUsd / 1000).toFixed(1)}k`,
     devHoldingPct: `${pool.feeAprPercentage}% APR`,
     sniperPct: `${(pool.feesToTvlRatio1h * 100).toFixed(2)}% 1h`,

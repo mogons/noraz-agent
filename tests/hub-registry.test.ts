@@ -114,7 +114,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('all 8 registered domain ids are triggerable via factories', async () => {
-    const ids = ['meme-solana', 'meme-robinhood', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-evm'] as const;
+    const ids = ['meme-solana', 'meme-robinhood', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood'] as const;
     for (const id of ids) {
       const stub = mkStubAgent(id, [mkReport(id.toUpperCase())]);
       const hub = new AthenaHub({ agentFactories: { [id]: () => stub } });
@@ -157,20 +157,20 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(r.payload?.title).toBe('SOL-USDC');
   });
 
-  it('lp-evm wraps adapter flow into contract-shaped reports with payload', async () => {
+  it('lp-robinhood wraps adapter flow into contract-shaped reports with payload', async () => {
     const hub = new AthenaHub({ uniswapAdapter: mkUniswapStub([mkUniswapPool()]) });
-    const results = await hub.triggerAgentPass('lp-evm');
+    const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
     const r = results[0];
     expect(r.passed).toBe(true);
     expect(r.confidence).toBe(80);
     expect((r.signal as UniswapPoolSignal).network).toBe('Base');
-    expect(r.payload?.domain).toBe('LP_UNISWAP');
+    expect(r.payload?.domain).toBe('LP_ROBINHOOD');
     expect(r.payload?.network).toBe('Base');
     expect(r.payload?.title).toBe('WETH-USDC');
   });
 
-  it('alias "meteora" resolves to lp-solana and "uniswap" to lp-evm', async () => {
+  it('alias "meteora" resolves to lp-solana and "uniswap" to lp-robinhood', async () => {
     const hub = new AthenaHub({
       meteoraAdapter: mkMeteoraStub([mkMeteoraPool()]),
       uniswapAdapter: mkUniswapStub([mkUniswapPool()]),

@@ -1,7 +1,7 @@
-export interface UniswapPoolSignal {
+export interface RobinhoodLPPoolSignal {
   poolAddress: string;
   pairName: string;
-  network: 'Robinhood' | 'Base' | 'Ethereum';
+  network: 'Robinhood';
   feeTierPercentage: number;
   tvlUsd: number;
   activeTvlUsd: number;
@@ -30,22 +30,18 @@ interface DexScreenerPair {
   liquidity?: { usd?: number };
   volume?: { h24?: number };
   feeTier?: number;
+  pairCreatedAt?: number;
 }
 
-const CHAIN_MAP: Record<string, 'Base' | 'Ethereum' | 'Robinhood'> = {
-  base: 'Base',
-  ethereum: 'Ethereum',
-  robinhood: 'Robinhood',
-};
-
-// Uniswap v3 is scarce on Base; Aerodrome is the dominant concentrated-liquidity DEX there.
+// Robinhood Chain is Base-compatible; Aerodrome is the dominant
+// concentrated-liquidity DEX there (Uniswap v3 scarce on Robinhood).
 const EVM_LP_QUERIES: Array<{ q: string; dexIds: string[] }> = [
-  { q: 'uniswap v3', dexIds: ['uniswap'] },
   { q: 'aerodrome', dexIds: ['aerodrome', 'aerodrome_finance', 'aerodrome-v1'] },
+  { q: 'uniswap v3', dexIds: ['uniswap'] },
 ];
 
 export class UniswapLPAdapter {
-  public async fetchTopYieldEVMPools(minTvlUsd: number = 5000): Promise<UniswapPoolSignal[]> {
+  public async fetchTopYieldEVMPools(minTvlUsd: number = 5000): Promise<RobinhoodLPPoolSignal[]> {
     try {
       // Live ETH price for native-fee conversion (fail-closed: 0 → filter will reject)
       let ethPriceUsd = 0;
@@ -53,30 +49,27 @@ export class UniswapLPAdapter {
         const { globalPriceFeedService } = await import('../services/price-feed-service.js');
         ethPriceUsd = (await globalPriceFeedService.getPrice('ETH')) || 0;
       } catch { /* price fetch is best-effort */ }
-      const pools: UniswapPoolSignal[] = [];
-      for (const chainId of ['base', 'ethereum']) {
-        for (const query of EVM_LP_QUERIES) {
-          const url = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query.q)}`;
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const data = (await res.json()) as { pairs?: DexScreenerPair[] };
-          const pairs = (data.pairs || [])
-            .filter((p) => query.dexIds.includes(p.dexId) && p.chainId === chainId)
-            .slice(0, 10);
-          for (const p of pairs) {
+      const pools: RobinhoodLPPoolSignal[] = [];
+      for (const query of EVM_LP_QUERIES) {
+        const url = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query.q)}`;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = (await res.json()) as { pairs?: DexScreenerPair[] };
+        const pairs = (data.pairs || [])
+          .filter((p) => query.dexIds.includes(p.dexId) && p.chainId === 'robinhood')
+          .slice(0, 20);
+        for (const p of pairs) {
           const tvlUsd = Number(p.liquidity?.usd) || 0;
           const volume24hUsd = Number(p.volume?.h24) || 0;
           if (!p.pairAddress || !(tvlUsd > 0) || !(volume24hUsd > 0)) continue;
-          const network = CHAIN_MAP[chainId];
-          if (!network) continue;
           const feeTierPct = p.feeTier ? p.feeTier / 10000 : 0.3;
           const volume1hUsd = volume24hUsd / 24;
           const fee1hUsd = volume1hUsd * (feeTierPct / 100);
           const activeTvlUsd = tvlUsd * 0.3;
           pools.push({
             poolAddress: p.pairAddress,
-            pairName: `${p.baseToken.symbol}-${p.quoteToken.symbol} (${p.dexId} ${network})`,
-            network,
+            pairName: `${p.baseToken.symbol}-${p.quoteToken.symbol} (${p.dexId} Robinhood)`,
+            network: 'Robinhood',
             feeTierPercentage: feeTierPct,
             tvlUsd,
             activeTvlUsd,
@@ -90,20 +83,21 @@ export class UniswapLPAdapter {
             volumeToTvlRatio1h: volume1hUsd / tvlUsd,
             volumeToActiveTvlRatio1h: activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0,
             organicVolumeScore1h: Math.min(100, 40 + Math.round((volume1hUsd / tvlUsd) * 600)),
-            tokenAgeMinutes: undefined,
+            tokenAgeMinutes: p.pairCreatedAt
+              ? Math.floor((Date.now() / 1000 - Number(p.pairCreatedAt) / 1000) / 60)
+              : undefined,
             recommendedPriceRange: {
               minPrice: Number(p.priceUsd) * 0.95 || 0,
               maxPrice: Number(p.priceUsd) * 1.05 || 0,
             },
-            aiRecommendation: `Live ${p.dexId} pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on ${network}: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume1hUsd / 1000).toFixed(1)}k 1h volume.`,
+            aiRecommendation: `Live ${p.dexId} pool ${p.baseToken.symbol}-${p.quoteToken.symbol} on Robinhood Chain: $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume1hUsd / 1000).toFixed(1)}k 1h volume.`,
           });
-        }
         }
       }
       return pools.filter((p) => p.tvlUsd >= minTvlUsd);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[UNISWAP LP ADAPTER ERROR] ${message}`);
+      console.error(`[ROBINHOOD LP ADAPTER ERROR] ${message}`);
       return [];
     }
   }
@@ -116,8 +110,8 @@ export class UniswapLPAdapter {
    * - age >= 2h (pool mapan)
    * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
    */
-  public filterHighYieldEVMPools(pools: UniswapPoolSignal[]): UniswapPoolSignal[] {
-    const bestByPair = new Map<string, UniswapPoolSignal>();
+  public filterHighYieldEVMPools(pools: RobinhoodLPPoolSignal[]): RobinhoodLPPoolSignal[] {
+    const bestByPair = new Map<string, RobinhoodLPPoolSignal>();
     for (const pool of pools) {
       const passesFees = pool.fee1hUsd >= 7;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;

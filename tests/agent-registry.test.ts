@@ -4,7 +4,7 @@ import { getAgentDomain, normalizeDomainKey, AGENT_DOMAINS } from '../src/orches
 describe('agent registry', () => {
   it('contains all 8 agent domains with channels', () => {
     expect(AGENT_DOMAINS.map((d) => d.id).sort()).toEqual(
-      ['ct-alpha', 'lp-evm', 'lp-solana', 'meme-robinhood', 'meme-solana', 'nft', 'perps', 'prediction'].sort()
+      ['ct-alpha', 'lp-robinhood', 'lp-solana', 'meme-robinhood', 'meme-solana', 'nft', 'perps', 'prediction'].sort()
     );
   });
 

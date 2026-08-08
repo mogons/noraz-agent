@@ -16,7 +16,7 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
   - `#call-perps-futures` (Leverage trading setups / Hyperliquid / CEXs)
   - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea)
   - `#call-prediction-markets` (Polymarket prediction market arbitrage & whale bets)
-  - `#call-lp-solana` & `#call-lp-evm` (Trade + LP Velocity Concentrated Liquidity Signals)
+  - `#call-lp-solana` & `#call-lp-robinhood` (Trade + LP Velocity Concentrated Liquidity Signals)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops, and Out-of-Range LP Warnings).
 
 ---

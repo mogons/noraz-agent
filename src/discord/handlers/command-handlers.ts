@@ -219,7 +219,7 @@ export async function handleChatInput(
       'call-perps-futures': { agent: 'perps', name: 'Perpetuals Agent' },
       'call-nft-sniping': { agent: 'nft', name: 'NFT Sniping Agent' },
       'call-lp-solana': { agent: 'lp-solana', name: 'Solana LP Agent' },
-      'call-lp-evm': { agent: 'lp-evm', name: 'EVM LP Agent' },
+      'call-lp-robinhood': { agent: 'lp-robinhood', name: 'Robinhood LP Agent' },
       'call-prediction-markets': { agent: 'prediction', name: 'Polymarket Prediction Agent' },
       'call-ct-alpha': { agent: 'ct-alpha', name: 'Smart CT & AI Alpha Agent' },
     };
@@ -274,7 +274,7 @@ export async function handleChatInput(
         { id: 'meme-solana',  label: 'Solana Meme Agent',          emoji: '🚀' },
         { id: 'meme-robinhood', label: 'Robinhood Meme Agent',    emoji: '🔷' },
         { id: 'lp-solana',    label: 'Solana LP Agent',            emoji: '💧' },
-        { id: 'lp-evm',       label: 'EVM LP Agent',               emoji: '🔷' },
+        { id: 'lp-robinhood',       label: 'Robinhood LP Agent',               emoji: '🔷' },
         { id: 'perps',        label: 'Perpetuals Agent',           emoji: '📈' },
         { id: 'nft',          label: 'NFT Sniping Agent',          emoji: '🖼️' },
         { id: 'prediction',   label: 'Polymarket Prediction Agent', emoji: '🎯' },

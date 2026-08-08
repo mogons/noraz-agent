@@ -6,7 +6,7 @@ export type AgentDomainId =
   | 'prediction'
   | 'ct-alpha'
   | 'lp-solana'
-  | 'lp-evm';
+  | 'lp-robinhood';
 
 export type AgentCategory = 'MEME' | 'LP' | 'PERPS' | 'NFT' | 'PREDICTION' | 'CT_ALPHA';
 
@@ -85,10 +85,10 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     category: 'LP',
   },
   {
-    id: 'lp-evm',
+    id: 'lp-robinhood',
     displayName: 'LP-EVM',
     name: 'EVM Concentrated Liquidity Velocity (Uniswap)',
-    channel: 'call-lp-evm',
+    channel: 'call-lp-robinhood',
     aliases: ['uniswap', 'evm-lp'],
     requiredKeys: ['AI_API_KEY'],
     category: 'LP',

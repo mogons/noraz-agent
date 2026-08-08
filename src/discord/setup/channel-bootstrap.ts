@@ -83,7 +83,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   );
 
   const lpEvmId = await getOrCreateChannel(
-    'call-lp-evm',
+    'call-lp-robinhood',
     '🔷 High-Yield EVM Concentrated Liquidity Calls (Robinhood Chain Concentrated Pools)'
   );
 

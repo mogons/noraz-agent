@@ -246,7 +246,7 @@ export class AthenaHub {
       signal: p,
       reason: p.aiRecommendation,
       confidence: 80,
-      payload: buildLPPayload(p, 'lp-evm'),
+      payload: buildLPPayload(p, 'lp-robinhood'),
     }));
   }
 

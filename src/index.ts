@@ -371,10 +371,10 @@ if (discordToken && clientId) {
         dispatchedPayloads.push(...lpSolanaDispatched);
 
         const lpEvmDispatched = await dispatchDomain({
-          domain: 'lp-evm',
-          channelName: 'call-lp-evm',
-          isActive: () => hub.isAgentActive('lp-evm'),
-          runPass: () => withScreeningTimeout(hub.runLPPass('lp-evm'), 'lp-evm'),
+          domain: 'lp-robinhood',
+          channelName: 'call-lp-robinhood',
+          isActive: () => hub.isAgentActive('lp-robinhood'),
+          runPass: () => withScreeningTimeout(hub.runLPPass('lp-robinhood'), 'lp-robinhood'),
           keyReady: () => ({ ready: true, statusMessage: '' }),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });

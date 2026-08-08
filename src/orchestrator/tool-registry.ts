@@ -64,13 +64,13 @@ export class ToolRegistry {
     return [
       {
         name: 'pause_sub_agent',
-        description: 'Pause a specific background screening sub-agent (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-evm).',
+        description: 'Pause a specific background screening sub-agent (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood).',
         parameters: {
           type: 'object',
           properties: {
             agentId: {
               type: 'string',
-              description: 'The ID of the sub-agent to pause (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-evm, or all).',
+              description: 'The ID of the sub-agent to pause (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
             },
           },
           required: ['agentId'],
@@ -84,7 +84,7 @@ export class ToolRegistry {
           properties: {
             agentId: {
               type: 'string',
-              description: 'The ID of the sub-agent to resume (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-evm, or all).',
+              description: 'The ID of the sub-agent to resume (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
             },
           },
           required: ['agentId'],
@@ -98,7 +98,7 @@ export class ToolRegistry {
           properties: {
             agentId: {
               type: 'string',
-              description: 'The sub-agent to trigger immediately (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-evm, or all).',
+              description: 'The sub-agent to trigger immediately (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
             },
           },
           required: ['agentId'],
