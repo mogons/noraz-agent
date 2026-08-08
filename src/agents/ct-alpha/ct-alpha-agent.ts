@@ -99,7 +99,24 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
         : 'SMART_CT_CALL';
 
       const engagementFactor = Math.min(18, Math.floor(t.likes / 50) + Math.floor(t.retweets / 10));
-      const confidenceScore = Math.min(98, 80 + engagementFactor);
+      let confidenceScore = Math.min(98, 80 + engagementFactor);
+
+      // OpenTwitter bonus: kalau author akun ini di-follow banyak KOL (perhatian
+      // institusional), naikkan confidence. Fail-open — tanpa OpenTwitter / gagal,
+      // skor tetap seperti biasa.
+      const ot = this.twitterService as TwitterService & { isOpenTwitterConfigured?: () => boolean; openTwitterKOLFollowers?: (u: string) => Promise<string[]> };
+      if (typeof ot.isOpenTwitterConfigured === 'function' && ot.isOpenTwitterConfigured() && typeof ot.openTwitterKOLFollowers === 'function') {
+        try {
+          const kols = await ot.openTwitterKOLFollowers(t.authorUsername.replace(/^@/, ''));
+          if (kols.length > 0) {
+            confidenceScore = Math.min(98, confidenceScore + Math.min(10, kols.length * 2));
+            console.log(`[CT ALPHA AGENT] ⭐ @${t.authorUsername} di-follow ${kols.length} KOL (${kols.slice(0, 3).join(', ')}) — +${Math.min(10, kols.length * 2)}`);
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`[CT ALPHA AGENT] KOL check gagal untuk @${t.authorUsername}: ${message}`);
+        }
+      }
 
       signals.push({
         id: `ct_alpha_${t.id}`,

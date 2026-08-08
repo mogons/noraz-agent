@@ -238,6 +238,7 @@ async function runWizard() {
   let krystalApiKey = existingEnv.KRYSTAL_CLOUD_API_KEY || '';
   let openseaApiKey = existingEnv.OPENSEA_API_KEY || '';
   let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
+  let openTwitterToken = existingEnv.TWITTER_TOKEN || '';
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
   let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
   let uniswapApiKey = existingEnv.UNISWAP_API_KEY || '';
@@ -260,8 +261,12 @@ async function runWizard() {
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
   const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Mandatory for CT Alpha Agent]';
-  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter Sentiment & CT Alpha)${defaultTwex}: `);
+  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter — fallback ct-alpha)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
+
+  const defaultOpenTwitter = openTwitterToken ? ` [Default: ${openTwitterToken.slice(0, 8)}...]` : ' [Opsional — sumber utama Twitter (6551.io/mcp, gratis)]';
+  const inputOpenTwitter = await askQuestion(` 5b. TWITTER_TOKEN (OpenTwitter 6551 — profil, KOL followers, search engagement; dipakai ct-alpha)${defaultOpenTwitter}: `);
+  openTwitterToken = inputOpenTwitter.trim() || openTwitterToken;
 
   const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/LP Agents]';
   const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
@@ -383,6 +388,7 @@ async function runWizard() {
     OPENSEA_API_KEY: openseaApiKey.trim(),
     TWEX_API_KEY: twexApiKey.trim(),
     TWITTER_BEARER_TOKEN: twexApiKey.trim(),
+    TWITTER_TOKEN: openTwitterToken.trim(),
     GOPLUS_API_KEY: goplusApiKey.trim(),
     POLYMARKET_PRIVATE_KEY: polymarketPrivateKey.trim(),
     UNISWAP_API_KEY: uniswapApiKey.trim(),
