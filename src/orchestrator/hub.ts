@@ -296,9 +296,7 @@ export class AthenaHub {
           network: 'Robinhood Chain (Uniswap v3)',
           dexPaidStatus: 'Uniswap v3 • find pool on app.uniswap.org',
           dexScreenerUrl: `https://app.uniswap.org/explore/pools/robinhood`,
-          poolUrl: r.payload?.contractAddress
-            ? `https://app.uniswap.org/explore/pools/robinhood/${r.payload.contractAddress}`
-            : undefined,
+          poolUrl: `https://app.uniswap.org/explore/pools/robinhood/${r.payload?.contractAddress || (t as any)?.address || ''}`,
           liquidity: `$${(liquidityUsd / 1000).toFixed(1)}k`,
           securityAuditPassed: r.payload?.securityAuditPassed ?? true,
           socialHypeScore: r.payload?.socialHypeScore ?? r.confidence,
