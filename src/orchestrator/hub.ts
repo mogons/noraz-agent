@@ -236,15 +236,42 @@ export class AthenaHub {
   public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
     if (id === 'lp-solana') {
       const { MeteoraDLMMAdapter } = await import('../adapters/meteora-dlmm-adapter.js');
+      const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
       const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
       const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
-      return high.map((p) => ({
-        passed: true,
-        signal: p,
-        reason: p.aiRecommendation,
-        confidence: 80,
-        payload: buildLPPayload(p, 'lp-solana'),
-      }));
+      // Enrich token meme (tokenX) dengan GMGN: Meteora DLMM API tidak expose
+      // smart money/KOL/CTO — ambil dari GMGN token/info (fail-open).
+      const gmgn = new GMGNAdapter();
+      const enriched = new Map<string, any>();
+      const results: AgentReport[] = [];
+      for (const p of high) {
+        if (p.tokenXAddress && !enriched.has(p.tokenXAddress)) {
+          try {
+            const info = await gmgn.fetchTokenInfo('sol', p.tokenXAddress);
+            enriched.set(p.tokenXAddress, info);
+          } catch { enriched.set(p.tokenXAddress, null); }
+        }
+        const info = enriched.get(p.tokenXAddress) ?? null;
+        const payload = buildLPPayload(p, 'lp-solana');
+        if (info) {
+          payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
+          payload.token0MarketCapUsd = info.marketCapUsd || payload.token0MarketCapUsd;
+          payload.token0Volume24hUsd = info.volume24hUsd || payload.token0Volume24hUsd;
+          payload.token0Holders = info.holderCount || payload.token0Holders;
+          payload.token0AgeHours = info.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : payload.token0AgeHours;
+          const smart = (info.smartDegenCount ?? 0) + (info.renownedCount ?? 0);
+          if (smart > 0) payload.token0SmartDegenCount = smart;
+          payload.gmgnUrl = `https://gmgn.ai/sol/token/${p.tokenXAddress}`;
+        }
+        results.push({
+          passed: true,
+          signal: p,
+          reason: p.aiRecommendation,
+          confidence: 80,
+          payload,
+        });
+      }
+      return results;
     }
     // lp-robinhood: Krystal Cloud Data API (indexer pool robinhood chain yang
     // andal — subgraph unsupported, Uniswap Data API butuh akses khusus).
