@@ -1,0 +1,16 @@
+{
+  "openPositions": {},
+  "activeLpPositions": {},
+  "activeNftPositions": {},
+  "priceAlerts": {},
+  "tradeJournalEntries": {},
+  "walletKeys": {},
+  "agentStates": {},
+  "signalLedger": [],
+  "dedupEntries": {},
+  "trackedTokens": [],
+  "trackedNftCollections": [],
+  "screeningConfigs": {},
+  "lastUpdated": "2026-08-08T10:06:26.037Z",
+  "version": 2
+}

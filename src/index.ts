@@ -506,6 +506,10 @@ if (discordToken && clientId) {
             walletTracker.registerTrackedToken('sol', item.payload.contractAddress, item.payload.symbol);
           } else if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
+          } else if (item.channelName === 'call-nft-sniping' && item.payload.symbol) {
+            // NFT: register collection slug untuk monitoring posisi user (floor drop -20%, TP, dll)
+            stateStore.setTrackedNftCollection(item.payload.symbol.toLowerCase());
+            console.log(`[POSITION MONITOR] NFT collection di-track: ${item.payload.symbol}`);
           }
 
           // 4. Feed the Swarm Learning Engine — every posted call is recorded at its

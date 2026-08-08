@@ -37,12 +37,13 @@ export class PositionScanner {
    */
   public async scanAll(): Promise<PositionAlert[]> {
     const alerts: PositionAlert[] = [];
-    const [perps, lp, prediction] = await Promise.all([
+    const [perps, lp, prediction, nft] = await Promise.all([
       this.scanPerps(),
       this.scanLPSolana(),
       this.scanPrediction(),
+      this.scanNFT(),
     ]);
-    alerts.push(...perps, ...lp, ...prediction);
+    alerts.push(...perps, ...lp, ...prediction, ...nft);
     return alerts;
   }
 
@@ -178,8 +179,7 @@ export class PositionScanner {
 
   // ─── PREDICTION (Polymarket data-api) ───────────────────────────────────
 
-  private async scanPrediction(): Promise<PositionAlert[]> {
-    const alerts: PositionAlert[] = [];
+  private async scanPrediction(): Promise<PositionAlert[]> {    const alerts: PositionAlert[] = [];
     let evmAddress: string;
     try {
       evmAddress = this.walletService?.getEvmAddress() || '';
@@ -234,6 +234,91 @@ export class PositionScanner {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn(`[POSITION SCANNER] Prediction scan failed (fail-closed): ${message}`);
+    }
+    return alerts;
+  }
+
+  // ─── NFT (OpenSea owned NFTs vs tracked collections) ────────────────────
+
+  private async scanNFT(): Promise<PositionAlert[]> {
+    const alerts: PositionAlert[] = [];
+    let evmAddress: string;
+    try {
+      evmAddress = this.walletService?.getEvmAddress() || '';
+    } catch {
+      return alerts;
+    }
+    if (!evmAddress) return alerts;
+
+    const trackedSlugs = (this.stateStore?.getTrackedNftCollections() || []).map((s) => s.toLowerCase());
+    if (trackedSlugs.length === 0) return alerts; // tidak ada koleksi di-track → skip
+
+    try {
+      const apiKey = process.env.OPENSEA_API_KEY || '';
+      const res = await fetch(
+        `https://api.opensea.io/api/v2/chain/ethereum/account/${evmAddress}/nfts?limit=50`,
+        { headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' }, signal: AbortSignal.timeout(15000) }
+      );
+      if (!res.ok) return alerts;
+      const data = (await res.json()) as { nfts?: Array<{ identifier: string; collection: string; name?: string }> };
+      const owned = data.nfts || [];
+
+      // Kelompokkan NFT per collection yang di-track
+      const heldPerSlug = new Map<string, string[]>();
+      for (const n of owned) {
+        const slug = (n.collection || '').toLowerCase();
+        if (trackedSlugs.includes(slug)) {
+          const list = heldPerSlug.get(slug) || [];
+          list.push(n.identifier);
+          heldPerSlug.set(slug, list);
+        }
+      }
+
+      for (const slug of trackedSlugs) {
+        const tokenIds = heldPerSlug.get(slug) || [];
+        if (tokenIds.length === 0) continue;
+
+        // Ambil floor price collection (ETH) untuk entry/current price
+        const floorRes = await fetch(`https://api.opensea.io/api/v2/collections/${slug}`, {
+          headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(15000),
+        });
+        let floorEth = 0;
+        if (floorRes.ok) {
+          const coll = (await floorRes.json()) as { collection?: string; name?: string; stats?: { floor_price?: number; sales?: { velocity?: number } } };
+          floorEth = Number(coll?.stats?.floor_price) || 0;
+        }
+
+        const id = `nft:${slug}`;
+        const existing = this.positionManager.getActiveNftPositions().find((x) => x.id === id);
+        if (!existing) {
+          this.positionManager.addNftPosition({
+            id,
+            collectionSlug: slug,
+            collectionName: slug,
+            tokenId: tokenIds[0],
+            entryFloorEth: floorEth || 0,
+            currentFloorEth: floorEth || 0,
+            highestFloorEth: floorEth || 0,
+            salesVelocity1h: 0,
+          });
+        } else if (floorEth > 0) {
+          const res2 = this.positionManager.updateNftPosition(id, floorEth, 0);
+          if (res2.triggerAlert) {
+            alerts.push({ type: res2.type, reason: res2.reason || '', address: `nft:${slug}` });
+          }
+        }
+      }
+
+      // Hapus posisi NFT yang sudah tidak dimiliki
+      for (const tracked of this.positionManager.getActiveNftPositions()) {
+        if (tracked.id.startsWith('nft:') && !heldPerSlug.has(tracked.id.slice(4))) {
+          this.positionManager.removeNftPosition(tracked.id);
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[POSITION SCANNER] NFT scan failed (fail-closed): ${message}`);
     }
     return alerts;
   }

@@ -64,6 +64,9 @@ export interface AthenaPersistedState {
   // Wallet auto-tracking targets (survives restarts)
   trackedTokens: TrackedToken[];
 
+  // NFT collections to monitor for user positions (survives restarts)
+  trackedNftCollections: string[];
+
   // Per-domain runtime screening config overrides (set via chat tool; merged
   // over agent defaults at startup). Plain JSON-safe key/value — validation
   // happens in the agents (whitelist + clamps) before persisting.
@@ -108,6 +111,7 @@ export class StateStore {
       signalLedger: [],
       dedupEntries: {},
       trackedTokens: [],
+      trackedNftCollections: [],
       screeningConfigs: {},
       lastUpdated: new Date().toISOString(),
       version: CURRENT_VERSION,
@@ -157,6 +161,7 @@ export class StateStore {
         signalLedger: Array.isArray(data.signalLedger) ? data.signalLedger : [],
         dedupEntries: data.dedupEntries || {},
         trackedTokens: Array.isArray(data.trackedTokens) ? data.trackedTokens : [],
+        trackedNftCollections: Array.isArray(data.trackedNftCollections) ? data.trackedNftCollections : [],
         screeningConfigs: data.screeningConfigs || {},
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         version: CURRENT_VERSION,
@@ -380,6 +385,24 @@ export class StateStore {
       this.state.trackedTokens.push(tok);
     }
     this.scheduleSave();
+  }
+
+  // ==========================================
+  // TRACKED NFT COLLECTIONS (Wallet Auto-Tracking)
+  // ==========================================
+
+  public getTrackedNftCollections(): string[] {
+    return this.state.trackedNftCollections || [];
+  }
+
+  /** Add a collection slug to NFT position tracking (deduped). */
+  public setTrackedNftCollection(slug: string): void {
+    if (!this.state.trackedNftCollections) this.state.trackedNftCollections = [];
+    const key = slug.toLowerCase();
+    if (!this.state.trackedNftCollections.some((s) => s.toLowerCase() === key)) {
+      this.state.trackedNftCollections.push(slug);
+      this.scheduleSave();
+    }
   }
 
   // ==========================================
