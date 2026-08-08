@@ -19,8 +19,8 @@ export interface OpenSeaNFTSignal {
   chain: 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'robinhood';
   priceEth: number;
   floorPriceEth: number;
-  floorSurge4hPct: number;      // real: floor price history (time-series), 4 jam terakhir
-  volumeSpike4hRatio: number;   // real: volume 4h vs baseline 4h (events); fallback 24h vs baseline 6d
+  floorSurge1hPct: number;      // real: floor price history (time-series), 1 jam terakhir
+  volumeSpike1hRatio: number;   // real: volume 1h vs baseline 1h (events); fallback 24h vs baseline 6d
   salesVelocity1h: number;      // real: sales dalam 1 jam terakhir (events); fallback 24h/24
   isWhaleSweep: boolean;        // faktual: satu buyer membeli >= 3 dalam 1 jam
   whaleInfo?: OpenSeaWhaleInfo;
@@ -237,8 +237,8 @@ export class OpenSeaAdapter {
    * Fetch REAL floor-surge / volume-spike / sales-velocity / whale-sweep signals
    * per tracked collection, strictly from OpenSea API v2 endpoints:
    *   1. /collections/{slug}/stats            → floor sekarang, volume/sales 24h + baseline 6 hari
-   *   2. /collections/{slug}/floor_prices     → time-series floor (surge 4 jam REAL)
-   *   3. /events/collection/{slug}?event_type=sale → velocity 1h, volume 4h vs baseline 4h, whale sweep
+   *   2. /collections/{slug}/floor_prices     → time-series floor (surge 1 jam REAL)
+   *   3. /events/collection/{slug}?event_type=sale → velocity 1h, volume 1h vs baseline 1h, whale sweep
    * Fail-closed per endpoint: data yang tidak tersedia = 0/false (never fabricated).
    */
   public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins'): Promise<OpenSeaNFTSignal[]> {
@@ -267,8 +267,8 @@ export class OpenSeaAdapter {
       const baseSalesDaily = Math.max(0, (sales7d - sales24h) / 6);
       if (!(floorPriceEth > 0)) return [];
 
-      // ── 2. Floor price history: surge 4 jam terakhir (time-series REAL) ──
-      let floorSurge4hPct = 0;
+      // ── 2. Floor price history: surge 1 jam terakhir (time-series REAL) ──
+      let floorSurge1hPct = 0;
       try {
         const fpRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/floor_prices?timeframe=one_day&resolution=25`, { headers, signal: AbortSignal.timeout(15000) });
         if (fpRes.ok) {
@@ -277,7 +277,7 @@ export class OpenSeaAdapter {
           const latest = pts[pts.length - 1];
           if (latest && pts.length >= 2) {
             const tLatest = Number(latest.time) || 0;
-            const target = tLatest - 4 * 3600;
+            const target = tLatest - 3600;
             let prev = pts[0];
             for (const p of pts) {
               if ((Number(p.time) || 0) <= target) prev = p;
@@ -285,20 +285,20 @@ export class OpenSeaAdapter {
             }
             const fNow = Number(latest.token_unit ?? latest.usd_price) || 0;
             const fPrev = Number(prev.token_unit ?? prev.usd_price) || 0;
-            if (fNow > 0 && fPrev > 0) floorSurge4hPct = ((fNow - fPrev) / fPrev) * 100;
+            if (fNow > 0 && fPrev > 0) floorSurge1hPct = ((fNow - fPrev) / fPrev) * 100;
           }
         }
       } catch { /* best-effort — floor surge jadi 0 (tidak trigger) */ }
 
-      // ── 3. Events (sale): velocity 1h, volume 4h vs baseline 4h, whale sweep ──
+      // ── 3. Events (sale): velocity 1h, volume 1h vs baseline 1h, whale sweep ──
       let salesVelocity1h = 0;
-      let volume4hEth = 0;
-      let volumePrev4hEth = 0;
+      let volume1hEth = 0;
+      let volumePrev1hEth = 0;
       let isWhaleSweep = false;
       let whaleInfo: OpenSeaWhaleInfo | undefined;
       let eventsAvailable = false;
       try {
-        const after = Math.floor(Date.now() / 1000) - 8 * 3600;
+        const after = Math.floor(Date.now() / 1000) - 4 * 3600;
         const evRes = await fetch(`https://api.opensea.io/api/v2/events/collection/${collectionSlug}?event_type=sale&after=${after}&limit=200`, { headers, signal: AbortSignal.timeout(15000) });
         if (evRes.ok) {
           const evData: any = await evRes.json();
@@ -323,8 +323,8 @@ export class OpenSeaAdapter {
                 buysByBuyer.set(buyer, cur);
               }
             }
-            if (ts >= now - 4 * 3600) volume4hEth += eth;
-            else if (ts >= now - 8 * 3600) volumePrev4hEth += eth;
+            if (ts >= now - 3600) volume1hEth += eth;
+            else if (ts >= now - 2 * 3600) volumePrev1hEth += eth;
           }
           const top = [...buysByBuyer.entries()].sort((a, b) => b[1].count - a[1].count)[0];
           if (top && top[1].count >= 3) {
@@ -336,11 +336,11 @@ export class OpenSeaAdapter {
       } catch { /* best-effort */ }
 
       // Volume spike — jujur pakai sumber terbaik yang tersedia:
-      // events 8h (4h vs 4h sebelumnya) kalau ada; kalau events tidak bisa
+      // events 2h (1h vs 1h sebelumnya) kalau ada; kalau events tidak bisa
       // (key tanpa akses analytics), fallback ke volume 24h vs baseline 6 hari.
-      const spikeFromEvents = volumePrev4hEth > 0 ? volume4hEth / volumePrev4hEth : (volume4hEth > 0 ? 3.0 : 0);
+      const spikeFromEvents = volumePrev1hEth > 0 ? volume1hEth / volumePrev1hEth : (volume1hEth > 0 ? 3.0 : 0);
       const spikeFromStats = baseVolDailyEth > 0 ? vol24hEth / baseVolDailyEth : (vol24hEth > 0 ? 3.0 : 0);
-      const volumeSpike4hRatio = eventsAvailable ? spikeFromEvents : spikeFromStats;
+      const volumeSpike1hRatio = eventsAvailable ? spikeFromEvents : spikeFromStats;
       // Velocity: events 1h real kalau ada; kalau tidak → rata-rata 24h (jujur).
       const velocity = eventsAvailable && salesVelocity1h > 0 ? salesVelocity1h : (sales24h > 0 ? sales24h / 24 : 0);
 
@@ -354,13 +354,13 @@ export class OpenSeaAdapter {
           chain: tracked?.chain ?? 'ethereum',
           priceEth: floorPriceEth,
           floorPriceEth,
-          floorSurge4hPct,
-          volumeSpike4hRatio,
+          floorSurge1hPct,
+          volumeSpike1hRatio,
           salesVelocity1h: velocity,
           isWhaleSweep,
           whaleInfo,
           openseaUrl: `https://opensea.io/collection/${collectionSlug}`,
-          aiThesis: `OpenSea API v2 Live Signal: ${collectionSlug} floor ${floorPriceEth} ETH (+${floorSurge4hPct.toFixed(1)}% 4h), ${velocity.toFixed(1)} sales/h, vol ${volumeSpike4hRatio.toFixed(1)}x baseline.`,
+          aiThesis: `OpenSea API v2 Live Signal: ${collectionSlug} floor ${floorPriceEth} ETH (+${floorSurge1hPct.toFixed(1)}% 1h), ${velocity.toFixed(1)} sales/h, vol ${volumeSpike1hRatio.toFixed(1)}x baseline.`,
         },
       ];
     } catch (err: unknown) {

@@ -11,8 +11,8 @@ export interface NFTSnipingReport {
   chain: 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'robinhood';
   priceEth: number;
   floorPriceEth: number;
-  floorSurge4hPct: number;
-  volumeSpike4hRatio: number;
+  floorSurge1hPct: number;
+  volumeSpike1hRatio: number;
   salesVelocity1h: number;
   isFloorSurge: boolean;
   isVolumeSpike: boolean;
@@ -24,7 +24,7 @@ export interface NFTSnipingReport {
 }
 
 export interface NFTScreeningConfig {
-  floorSurgeThresholdPct: number;   // >= +30% floor pump in 4h
+  floorSurgeThresholdPct: number;   // >= +30% floor pump in 1h
   volSpikeThresholdRatio: number;   // >= 3.0x volume surge vs baseline
   minSalesVelocity1h: number;       // >= 1.0 sales/hour (koleksi aktif; 25/h mustahil untuk blue chip)
   passThreshold: number;            // Swarm consensus gate (>= 80)
@@ -41,7 +41,7 @@ const DEFAULT_CONFIG: NFTScreeningConfig = {
  * EVM NFT Floor & Rarity Sniping Agent (OpenSea)
  *
  * Momentum scoring (base 60 + trigger bonuses, capped at 100):
- *   +20 floor surge (>= +30% in 4h), +20 vol spike (>= 3.0x), +20 verified whale sweep,
+ *   +20 floor surge (>= +30% in 1h), +20 vol spike (>= 3.0x), +20 verified whale sweep,
  *   +10 sales velocity (>= 25/h).
  *
  * Calibration (2026-08-07, verified with realistic fixtures): a single real momentum
@@ -69,11 +69,11 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
    * Evaluates candidate NFT listings against Momentum (Floor Surge >= +30%, Vol Spike >= 3.0x, Sales Velocity >= 25/h) & Whale Sweep triggers
    */
   public evaluateListing(signal: OpenSeaNFTSignal): NFTSnipingReport | null {
-    // 1. Floor Price Pump Surge Check (>= +30% in 4h)
-    const isFloorSurge = signal.floorSurge4hPct >= this.config.floorSurgeThresholdPct;
+    // 1. Floor Price Pump Surge Check (>= +30% in 1h)
+    const isFloorSurge = signal.floorSurge1hPct >= this.config.floorSurgeThresholdPct;
 
-    // 2. Volume Explosion Spike Check (>= 3.0x 4h volume surge)
-    const isVolumeSpike = signal.volumeSpike4hRatio >= this.config.volSpikeThresholdRatio;
+    // 2. Volume Explosion Spike Check (>= 3.0x 1h volume surge)
+    const isVolumeSpike = signal.volumeSpike1hRatio >= this.config.volSpikeThresholdRatio;
 
     // 3. Sales Velocity Check (>= 25 sales/hour)
     const isHighVelocity = signal.salesVelocity1h >= this.config.minSalesVelocity1h;
@@ -95,11 +95,11 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
 
     let detectionReason = 'NFT Momentum Signal Detected';
     if (isFloorSurge && isWhaleSweep) {
-      detectionReason = `🚀 NFT PUMP & WHALE SWEEP: ${signal.collectionName} Floor surged +${signal.floorSurge4hPct.toFixed(1)}% in 4h with Sweep (${signal.whaleInfo?.address.slice(0, 8)}... bought ${signal.whaleInfo?.buyCount} items / ${signal.whaleInfo?.spentEth.toFixed(2)} ETH)!`;
+      detectionReason = `🚀 NFT PUMP & WHALE SWEEP: ${signal.collectionName} Floor surged +${signal.floorSurge1hPct.toFixed(1)}% in 1h with Sweep (${signal.whaleInfo?.address.slice(0, 8)}... bought ${signal.whaleInfo?.buyCount} items / ${signal.whaleInfo?.spentEth.toFixed(2)} ETH)!`;
     } else if (isFloorSurge) {
-      detectionReason = `📈 FLOOR PUMP SURGE: ${signal.collectionName} Floor price surged +${signal.floorSurge4hPct.toFixed(1)}% in 4 hours!`;
+      detectionReason = `📈 FLOOR PUMP SURGE: ${signal.collectionName} Floor price surged +${signal.floorSurge1hPct.toFixed(1)}% in 1 hour!`;
     } else if (isVolumeSpike) {
-      detectionReason = `🌊 VOLUME EXPLOSION SPIKE: ${signal.collectionName} trading volume surged ${signal.volumeSpike4hRatio.toFixed(1)}x above baseline!`;
+      detectionReason = `🌊 VOLUME EXPLOSION SPIKE: ${signal.collectionName} trading volume surged ${signal.volumeSpike1hRatio.toFixed(1)}x above baseline!`;
     } else if (isWhaleSweep) {
       detectionReason = `🐋 WHALE SWEEP: ${signal.whaleInfo?.address.slice(0, 8)}... membeli ${signal.whaleInfo?.buyCount} NFT dalam 1 jam (${signal.whaleInfo?.spentEth.toFixed(2)} ETH)!`;
     }
@@ -112,8 +112,8 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
       chain: signal.chain,
       priceEth: signal.priceEth,
       floorPriceEth: signal.floorPriceEth,
-      floorSurge4hPct: signal.floorSurge4hPct,
-      volumeSpike4hRatio: signal.volumeSpike4hRatio,
+      floorSurge1hPct: signal.floorSurge1hPct,
+      volumeSpike1hRatio: signal.volumeSpike1hRatio,
       salesVelocity1h: signal.salesVelocity1h,
       isFloorSurge,
       isVolumeSpike,
@@ -202,7 +202,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
       contractAddress: 'N/A', // OpenSea signals carry no contract address — never fabricated
       network: report.chain.toUpperCase(),
       priceUsd: `${report.priceEth} ETH`, // NFT prices are quoted in ETH — real data, honest denomination
-      marketCap: `Floor: ${report.floorPriceEth} ETH (+${report.floorSurge4hPct.toFixed(1)}% 4h)`,
+      marketCap: `Floor: ${report.floorPriceEth} ETH (+${report.floorSurge1hPct.toFixed(1)}% 1h)`,
       confidenceScore: report.confidenceScore,
       aiThesis: thesis,
       dexScreenerUrl: report.openseaUrl,
@@ -228,8 +228,8 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
       socialHypeScore: report.confidenceScore,
       floorPriceEth: report.floorPriceEth,
       priceEth: report.priceEth,
-      floorSurge4hPct: report.floorSurge4hPct,
-      volumeSpike4hRatio: report.volumeSpike4hRatio,
+      floorSurge1hPct: report.floorSurge1hPct,
+      volumeSpike1hRatio: report.volumeSpike1hRatio,
       salesVelocity1h: report.salesVelocity1h,
       isFloorSurge: report.isFloorSurge,
       isVolumeSpike: report.isVolumeSpike,
@@ -238,8 +238,8 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
         slug: report.collectionSlug,
         floor_price_eth: report.floorPriceEth,
         price_eth: report.priceEth,
-        floor_surge_4h_pct: report.floorSurge4hPct,
-        volume_spike_4h_ratio: report.volumeSpike4hRatio,
+        floor_surge_1h_pct: report.floorSurge1hPct,
+        volume_spike_1h_ratio: report.volumeSpike1hRatio,
         sales_velocity_1h: report.salesVelocity1h,
         is_floor_surge: report.isFloorSurge,
         is_volume_spike: report.isVolumeSpike,

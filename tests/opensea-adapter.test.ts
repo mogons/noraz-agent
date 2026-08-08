@@ -19,12 +19,12 @@ const mkStats = (over: any = {}) => ({
   ...over,
 });
 
-const mkFloorPrices = (now: number, nowEth: number, fourHAgoEth: number) => {
+const mkFloorPrices = (now: number, nowEth: number, oneHAgoEth: number) => {
   const points = [];
   for (let i = 24; i >= 0; i--) {
     const t = now - i * HOUR;
-    // naik dari fourHAgoEth → nowEth dalam 3 jam terakhir: titik 4 jam lalu masih fourHAgoEth
-    const eth = i <= 3 ? nowEth : fourHAgoEth;
+    // naik dari oneHAgoEth → nowEth dalam 1 jam terakhir: hanya titik sekarang (i=0) yang nowEth
+    const eth = i === 0 ? nowEth : oneHAgoEth;
     points.push({ time: t, token_unit: eth, usd_price: String(eth * 3000), symbol: 'ETH', chain: 'ethereum' });
   }
   return { floor_prices: points };
@@ -51,18 +51,18 @@ describe('OpenSeaAdapter', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })                                     // stats
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 6.0) })                 // floor_prices: 8.0 vs 6.0 = +33.3%
       .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
-        mkSaleEvent({ event_timestamp: now - 600 }),   // dalam 1 jam
-        mkSaleEvent({ event_timestamp: now - 1800 }),  // dalam 1 jam
-        mkSaleEvent({ event_timestamp: now - 5 * HOUR }), // 5h lalu → baseline 4-8h
+        mkSaleEvent({ event_timestamp: now - 600 }),    // dalam 1 jam (volume 1h)
+        mkSaleEvent({ event_timestamp: now - 1800 }),   // dalam 1 jam (volume 1h)
+        mkSaleEvent({ event_timestamp: now - 1.5 * HOUR }), // 1.5h lalu → baseline 1-2h
       ] }) }));                                                                                             // events sale
     const adapter = new OpenSeaAdapter();
     const signals = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(signals.length).toBe(1);
     const s = signals[0];
     expect(s.floorPriceEth).toBe(8.0);
-    expect(s.floorSurge4hPct).toBeGreaterThan(30);   // floor naik 8 vs 6 = +33%
+    expect(s.floorSurge1hPct).toBeGreaterThan(30);   // floor naik 8 vs 6 = +33%
     expect(s.salesVelocity1h).toBe(2);               // 2 sale dalam 1 jam terakhir
-    expect(s.volumeSpike4hRatio).toBe(2);            // 8 ETH (4h) vs 4 ETH (4-8h baseline)
+    expect(s.volumeSpike1hRatio).toBe(2);            // 8 ETH (1h) vs 4 ETH (1-2h baseline)
     expect(s.chain).toBe('ethereum');
   });
 
@@ -96,7 +96,7 @@ describe('OpenSeaAdapter', () => {
     const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(s.isWhaleSweep).toBe(false);
     // one_day vol 50 vs baseline 6 hari ((200-50)/6=25) → 2.0x; velocity 12/24 = 0.5
-    expect(s.volumeSpike4hRatio).toBeCloseTo(2.0, 5);
+    expect(s.volumeSpike1hRatio).toBeCloseTo(2.0, 5);
     expect(s.salesVelocity1h).toBeCloseTo(0.5, 5);
   });
 

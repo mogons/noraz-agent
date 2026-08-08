@@ -16,8 +16,8 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
   chain: 'ethereum',
   priceEth: 8.2,
   floorPriceEth: 8.0,
-  floorSurge4hPct: 35,
-  volumeSpike4hRatio: 3.5,
+  floorSurge1hPct: 35,
+  volumeSpike1hRatio: 3.5,
   salesVelocity1h: 2,
   isWhaleSweep: true,
   whaleInfo: {
@@ -72,7 +72,7 @@ describe('NFTScreeningAgent', () => {
 
   it('runScreeningPass drops sub-80 signals (velocity-only = 70)', async () => {
     const agent = new NFTScreeningAgent(
-      mkFakeAdapter([mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })])
+      mkFakeAdapter([mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })])
     );
     (agent as any).strategyEngine = { getActiveStrategy: () => null };
     const reports = await agent.runScreeningPass();
@@ -113,7 +113,7 @@ describe('NFTScreeningAgent', () => {
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ floorPriceEth: 0.005, priceEth: 0.006 }))!)).toBe(false);
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ salesVelocity1h: 0 }))!)).toBe(false);
     const volOnly = agent.evaluateListing(
-      mkSignal({ floorSurge4hPct: 0, isWhaleSweep: false, whaleInfo: undefined, volumeSpike4hRatio: 4.0 })
+      mkSignal({ floorSurge1hPct: 0, isWhaleSweep: false, whaleInfo: undefined, volumeSpike1hRatio: 4.0 })
     )!;
     expect(volOnly.isVolumeSpike).toBe(true);
     expect(volOnly.isFloorSurge).toBe(false);
@@ -122,10 +122,10 @@ describe('NFTScreeningAgent', () => {
 
   it('deriveCollectionSafety: whale sweep OR floor surge alone can pass (with floor + velocity)', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
-    const surgeOnly = agent.evaluateListing(mkSignal({ isWhaleSweep: false, whaleInfo: undefined, volumeSpike4hRatio: 1.0 }))!;
+    const surgeOnly = agent.evaluateListing(mkSignal({ isWhaleSweep: false, whaleInfo: undefined, volumeSpike1hRatio: 1.0 }))!;
     expect(agent.deriveCollectionSafety(surgeOnly)).toBe(true);
     const whaleOnly = agent.evaluateListing(
-      mkSignal({ floorSurge4hPct: 0, volumeSpike4hRatio: 1.0, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
+      mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
     )!;
     expect(agent.deriveCollectionSafety(whaleOnly)).toBe(true);
   });
@@ -191,8 +191,8 @@ describe('nft-default strategy', () => {
     socialHypeScore: 90,
     floorPriceEth: 8.0,
     priceEth: 8.2,
-    floorSurge4hPct: 35,
-    volumeSpike4hRatio: 3.5,
+    floorSurge1hPct: 35,
+    volumeSpike1hRatio: 3.5,
     salesVelocity1h: 2,
     isFloorSurge: true,
     isVolumeSpike: true,
@@ -209,8 +209,8 @@ describe('nft-default strategy', () => {
     const ev = strat.evaluate({
       domain: 'NFT', symbol: 'PUDGYPENGUINS', securityAuditPassed: true,
       nft: {
-        floor_price_eth: 8.0, price_eth: 8.2, floor_surge_4h_pct: 35,
-        volume_spike_4h_ratio: 3.5, sales_velocity_1h: 30,
+        floor_price_eth: 8.0, price_eth: 8.2, floor_surge_1h_pct: 35,
+        volume_spike_1h_ratio: 3.5, sales_velocity_1h: 30,
         is_floor_surge: true, is_volume_spike: true, is_whale_sweep: true,
       },
     });
@@ -235,8 +235,8 @@ describe('nft-default strategy', () => {
     expect(strat.evaluate({ ...healthy, salesVelocity1h: 0.5 }).recommendedAction).toBe('SKIP');
   });
 
-  it('SKIP when volumeSpike4hRatio missing (fail-closed)', () => {
-    const ev = strat.evaluate({ ...healthy, volumeSpike4hRatio: undefined });
+  it('SKIP when volumeSpike1hRatio missing (fail-closed)', () => {
+    const ev = strat.evaluate({ ...healthy, volumeSpike1hRatio: undefined });
     expect(ev.recommendedAction).toBe('SKIP');
   });
 

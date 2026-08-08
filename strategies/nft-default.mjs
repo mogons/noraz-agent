@@ -21,8 +21,8 @@ export default {
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
     const floor = num(ctx.floorPriceEth ?? nft.floor_price_eth);
     const price = num(ctx.priceEth ?? nft.price_eth);
-    const surge = num(ctx.floorSurge4hPct ?? nft.floor_surge_4h_pct);
-    const volSpike = num(ctx.volumeSpike4hRatio ?? nft.volume_spike_4h_ratio);
+    const surge = num(ctx.floorSurge1hPct ?? nft.floor_surge_1h_pct);
+    const volSpike = num(ctx.volumeSpike1hRatio ?? nft.volume_spike_1h_ratio);
     const velocity = num(ctx.salesVelocity1h ?? nft.sales_velocity_1h);
     const isWhaleSweep = Boolean(ctx.isWhaleSweep ?? nft.is_whale_sweep);
 
@@ -42,16 +42,16 @@ export default {
 
     // ── Floor surge (35) — real price discovery ──
     if (surge !== null) {
-      if (surge >= 30) { score += 35; reasons.push(`📈 Floor +${surge.toFixed(1)}% 4h (+35)`); }
-      else if (surge >= 15) { score += 25; reasons.push(`📈 Floor +${surge.toFixed(1)}% 4h (+25)`); }
-      else if (surge >= 5) { score += 15; reasons.push(`📈 Floor +${surge.toFixed(1)}% 4h (+15)`); }
-      else { score += 5; reasons.push(`📈 Floor +${surge.toFixed(1)}% 4h (+5)`); }
+      if (surge >= 30) { score += 35; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+35)`); }
+      else if (surge >= 15) { score += 25; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+25)`); }
+      else if (surge >= 5) { score += 15; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+15)`); }
+      else { score += 5; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+5)`); }
     }
 
     // ── Volume spike (25) — demand explosion ──
-    if (volSpike >= 3) { score += 25; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 4h (+25)`); }
-    else if (volSpike >= 2) { score += 15; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 4h (+15)`); }
-    else { score += 8; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 4h (+8)`); }
+    if (volSpike >= 3) { score += 25; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+25)`); }
+    else if (volSpike >= 2) { score += 15; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+15)`); }
+    else { score += 8; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+8)`); }
 
     // ── Sales velocity (20) — actual trading activity ──
     if (velocity >= 2) { score += 20; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+20)`); }
