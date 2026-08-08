@@ -14,7 +14,7 @@ export interface SolanaSignal {
 }
 
 export interface SolanaScreeningConfig {
-  minVolume24hUsd: number;   // 25000
+  minVolume24hUsd: number;   // 100000
   minLiquidityUsd: number;   // 10000
   minAgeHours: number;       // 2 — < 2h masih rawan rug
   maxRugRatio: number;       // 0.3
@@ -31,7 +31,7 @@ export interface SolanaScreeningConfig {
 }
 
 const DEFAULT_CONFIG: SolanaScreeningConfig = {
-  minVolume24hUsd: 25000,
+  minVolume24hUsd: 100000,
   minLiquidityUsd: 10000,
   minAgeHours: 2,
   maxRugRatio: 0.3,
