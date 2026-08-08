@@ -104,7 +104,7 @@ export class MeteoraDLMMAdapter {
    * Fetch top pools by fee-to-TVL ratio (real yield), skipping blacklisted ones.
    * Server-side: page_size up to 1000, sort_by + filter_by supported.
    */
-  public async fetchTopYieldPools(minTvlUsd: number = 5000, limit = 200): Promise<MeteoraPoolSignal[]> {
+  public async fetchTopYieldPools(minTvlUsd: number = 20000, limit = 200): Promise<MeteoraPoolSignal[]> {
     try {
       const qs = new URLSearchParams({
         page: '1',
@@ -195,11 +195,12 @@ export class MeteoraDLMMAdapter {
   public filterHighYieldPools(pools: MeteoraPoolSignal[]): MeteoraPoolSignal[] {
     const bestByPair = new Map<string, MeteoraPoolSignal>();
     for (const pool of pools) {
+      const passesTvl = pool.tvlUsd >= 20000;
       const passesFees = pool.fee1hUsd >= 7;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.01;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;
       const passesAge = pool.tokenAgeMinutes ? pool.tokenAgeMinutes >= 120 : true;
-      if (!(passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
+      if (!(passesTvl && passesFees && passesFeeYield24h && passesVelocity && passesAge)) continue;
 
       const pairKey = `${pool.tokenXSymbol}-${pool.tokenYSymbol}`.toUpperCase();
       const existing = bestByPair.get(pairKey);

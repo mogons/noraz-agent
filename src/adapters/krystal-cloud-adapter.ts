@@ -90,7 +90,7 @@ export class KrystalCloudAdapter {
    * Fetch top pools for Robinhood Chain (4663) Uniswap v3, sorted by APR.
    * Server-side: tvl >= minTvl, volume24h >= minVol (keeps units cost low).
    */
-  public async fetchTopRobinhoodPools(minTvlUsd = 10000, minVol24hUsd = 10000, limit = 200): Promise<KrystalPoolSignal[]> {
+  public async fetchTopRobinhoodPools(minTvlUsd = 20000, minVol24hUsd = 10000, limit = 200): Promise<KrystalPoolSignal[]> {
     const qs = new URLSearchParams({
       chainId: '4663',
       protocol: 'uniswapv3',
@@ -157,14 +157,14 @@ export class KrystalCloudAdapter {
    * - fee1h >= $7 (real)
    * - 24h Fee/TVL > 1% (real)
    * - volume/activeTvl >= 100% per 1h (velocity, fee_rate real)
-   * - tvl >= $10k (sudah difilter server-side, tetap dicek di sini)
+   * - tvl >= $20k (sudah difilter server-side, tetap dicek di sini)
    * - dedupe per pair (1 pool terbaik per pasangan token)
    * Umur pool & token verified tidak tersedia di Krystal — dilewati.
    */
   public filterHighYieldPools(pools: KrystalPoolSignal[]): KrystalPoolSignal[] {
     const bestByPair = new Map<string, KrystalPoolSignal>();
     for (const pool of pools) {
-      if (pool.tvlUsd < 10000) continue;
+      if (pool.tvlUsd < 20000) continue;
       if (pool.fee1hUsd < 7) continue;
       if (pool.feesToTvlRatio24h <= 0.01) continue;
       if (pool.volumeToActiveTvlRatio1h < 1.0) continue;
