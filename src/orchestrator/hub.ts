@@ -330,14 +330,14 @@ export class AthenaHub {
         } catch { enriched.set(memeToken.addr, null); }
       }
       const info = enriched.get(memeToken.addr) ?? null;
-      // Market cap token meme WAJIB > $100k (fail-closed: token tidak ditemukan
+      // Market cap token meme WAJIB > $200k (fail-closed: token tidak ditemukan
       // di GMGN / MC tidak diketahui = pool ditolak).
       if (!info) {
         console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — token tidak ditemukan di GMGN (MC tidak bisa diverifikasi).`);
         continue;
       }
-      if (info.marketCapUsd < 100000) {
-        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym} MC $${(info.marketCapUsd / 1000).toFixed(0)}k < $100k.`);
+      if (info.marketCapUsd < 200000) {
+        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym} MC $${(info.marketCapUsd / 1000).toFixed(0)}k < $200k.`);
         continue;
       }
       if (info) {

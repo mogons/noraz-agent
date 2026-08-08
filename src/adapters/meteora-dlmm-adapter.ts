@@ -201,8 +201,8 @@ export class MeteoraDLMMAdapter {
     for (const pool of pools) {
       const passesTvl = pool.tvlUsd >= 20000;
       const passesVol24h = pool.volume24hUsd >= 200000;
-      // Market cap tokenX wajib > $100k (fail-closed: 0/tidak diketahui = tolak).
-      const passesMc = pool.tokenXMarketCapUsd >= 100000;
+      // Market cap tokenX wajib > $200k (fail-closed: 0/tidak diketahui = tolak).
+      const passesMc = pool.tokenXMarketCapUsd >= 200000;
       const passesFees = pool.fee1hUsd >= 7;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.02;
       const passesVelocity = pool.volumeToActiveTvlRatio1h >= 1.0;

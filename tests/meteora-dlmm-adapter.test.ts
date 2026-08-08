@@ -133,9 +133,9 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     expect(passed.length).toBe(2);
   });
 
-  it('filterHighYieldPools menolak tokenX market cap < $100k (fail-closed)', () => {
+  it('filterHighYieldPools menolak tokenX market cap < $200k (fail-closed)', () => {
     const adapter = new MeteoraDLMMAdapter();
-    const lowMc = mkSignal({ poolAddress: 'poolLowMc', tokenXMarketCapUsd: 50000 });
+    const lowMc = mkSignal({ poolAddress: 'poolLowMc', tokenXMarketCapUsd: 150000 }); // < 200k
     const zeroMc = mkSignal({ poolAddress: 'poolZeroMc', tokenXMarketCapUsd: 0 }); // tidak diketahui
     const passed = adapter.filterHighYieldPools([lowMc, zeroMc]);
     expect(passed.length).toBe(0);

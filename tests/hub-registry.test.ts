@@ -360,7 +360,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: market cap token meme < $100k → pool DITOLAK', async () => {
+  it('lp-robinhood: market cap token meme < $200k → pool DITOLAK', async () => {
     const hub = new AthenaHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -369,7 +369,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
         token0Address: '0xweth',
         token1Address: '0xpepe',
       })]),
-      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ marketCapUsd: 50000 }) }),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ marketCapUsd: 150000 }) }),
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(0);
