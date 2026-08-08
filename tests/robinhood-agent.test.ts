@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RobinhoodScreeningAgent, RobinhoodSignal } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
-import { createDedupe } from '../src/agents/shared/gmgn-meme-helpers.js';
+import { createDedupe, volume24hOf } from '../src/agents/shared/gmgn-meme-helpers.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 
 const ETH_PRICE = 1929.03;
@@ -41,6 +41,25 @@ describe('RobinhoodScreeningAgent', () => {
     const agent = new RobinhoodScreeningAgent();
     expect(agent.preFilter(mkToken({ isWashTrading: true }), ETH_PRICE).ok).toBe(false);
     expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), ETH_PRICE).ok).toBe(false);
+  });
+
+  it('volume24hOf uses real 24h when present, else estimates 1h×24, else 0', () => {
+    expect(volume24hOf(mkToken({ volume24hUsd: 50000, volume1hUsd: 0 }))).toBe(50000);
+    expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 30000 }))).toBe(720000);
+    expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 0 }))).toBe(0);
+  });
+
+  it('preFilter passes a rank-1h-style token (only 1h volume, est 24h > 25k)', () => {
+    const agent = new RobinhoodScreeningAgent();
+    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 15000 }), ETH_PRICE);
+    expect(res.ok).toBe(true); // 15k × 24 = 360k ≥ 25k
+  });
+
+  it('preFilter rejects 1h-only token whose est 24h is below the gate', () => {
+    const agent = new RobinhoodScreeningAgent();
+    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 500 }), ETH_PRICE);
+    expect(res.ok).toBe(false);
+    expect(res.reason).toContain('volume 24h');
   });
 
   it('preFilter passes a healthy token', () => {

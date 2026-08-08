@@ -3,7 +3,7 @@ import { GoPlusSecurityService, GoPlusTokenSecurity } from '../../services/goplu
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
 
 export interface RobinhoodSignal {
   token: GMGNRawToken;
@@ -158,7 +158,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       // Honest card: we have no real 5m/1h volume breakdown — price-change data lives in reasons/thesis
       volume5m: 'N/A',
       volume1h: 'N/A',
-      volume24h: t.volume24hUsd > 0 ? `$${(t.volume24hUsd/1000).toFixed(1)}k` : 'N/A',
+      volume24h: (() => { const v = volume24hOf(t); return v > 0 ? `$${(v/1000).toFixed(1)}k` : 'N/A'; })(),
       txRatio,
       top10Pct: top10Str,
       devHoldingPct: devStr,

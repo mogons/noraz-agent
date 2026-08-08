@@ -33,6 +33,59 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(t.source).toBe('gmgn');
   });
 
+  it('rank interval=1h maps bare volume to volume1hUsd, not volume24hUsd', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: { data: { rank: [{
+        chain: 'robinhood', address: 'abc', symbol: 'PURR', name: 'Purr',
+        price: '0.001', market_cap: 100000, volume: 28000, liquidity: 30000,
+        creation_timestamp: 1786000000, price_change_percent1h: 55,
+      }] } } }),
+    }));
+    const adapter = new GMGNAdapter();
+    const [t] = await adapter.fetchRank('robinhood', { interval: '1h' });
+    expect(t.volume1hUsd).toBe(28000);
+    expect(t.volume24hUsd).toBe(0); // unknown — never fabricate 24h from a 1h window
+  });
+
+  it('rank interval=24h maps bare volume to volume24hUsd', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: { data: { rank: [{
+        chain: 'robinhood', address: 'abc', symbol: 'PURR', name: 'Purr',
+        price: '0.001', market_cap: 100000, volume: 12310400, liquidity: 30000,
+        creation_timestamp: 1786000000, price_change_percent1h: 55,
+      }] } } }),
+    }));
+    const adapter = new GMGNAdapter();
+    const [t] = await adapter.fetchRank('robinhood', { interval: '24h' });
+    expect(t.volume24hUsd).toBe(12310400);
+    expect(t.volume1hUsd).toBe(0);
+  });
+
+  it('trenches keeps explicit volume_1h and volume_24h real values', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: {
+        new_creation: [], pump: [], completed: [{
+          chain: 'robinhood', address: 'abc', symbol: 'FRESH', name: 'Fresh',
+          price: '0.001', market_cap: 100000, volume_1h: 3000, volume_24h: 50000, liquidity: 30000,
+          creation_timestamp: 1786000000, price_change_percent1h: 10,
+        }],
+      } }),
+    }));
+    const adapter = new GMGNAdapter();
+    const { completed } = await adapter.fetchTrenches('robinhood', { types: ['completed'] });
+    expect(completed[0].volume1hUsd).toBe(3000);
+    expect(completed[0].volume24hUsd).toBe(50000);
+  });
+
   it('normalizes missing optional fields to null/0 (never fabricates)', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

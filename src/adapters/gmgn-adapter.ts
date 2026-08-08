@@ -133,7 +133,33 @@ export class GMGNAdapter {
     }
   }
 
-  private normalizeToken(raw: any, chain: SolChain, source: 'gmgn' | 'dexscreener' = 'gmgn'): GMGNRawToken {
+  /**
+   * Map a rank/hot_searches interval to the window of the bare `volume` field:
+   * intervals <= 1h report 1h volume; 6h/24h intervals report 24h volume.
+   */
+  private volumeWindowForInterval(interval: RankInterval): '1h' | '24h' {
+    return interval === '6h' || interval === '24h' ? '24h' : '1h';
+  }
+
+  /**
+   * Normalize a raw GMGN token. `raw.volume` semantics depend on the API
+   * context:
+   *  - /v1/market/rank & /v1/market/hot_searches: `volume` = volume in the
+   *    QUERIED INTERVAL (1h when interval=1h, 24h when interval=24h).
+   *  - /v1/trenches & token_signal: explicit `volume_1h` / `volume_24h`.
+   * Pass `bareVolumeWindow` so bare `volume` is mapped to the right field.
+   */
+  private normalizeToken(
+    raw: any,
+    chain: SolChain,
+    source: 'gmgn' | 'dexscreener' = 'gmgn',
+    bareVolumeWindow: '1h' | '24h' = '24h'
+  ): GMGNRawToken {
+    const has24h = raw.volume_24h !== undefined && raw.volume_24h !== null;
+    const has1h = raw.volume_1h !== undefined && raw.volume_1h !== null;
+    const bareVolume = Number(raw.volume ?? 0);
+    const volume24hUsd = has24h ? Number(raw.volume_24h) : (bareVolumeWindow === '24h' ? bareVolume : 0);
+    const volume1hUsd = has1h ? Number(raw.volume_1h) : (bareVolumeWindow === '1h' ? bareVolume : 0);
     return {
       chain,
       address: raw.address || raw.contract_address || '',
@@ -141,8 +167,8 @@ export class GMGNAdapter {
       name: raw.name || raw.symbol || 'Token',
       priceUsd: Number(raw.price || raw.price_usd || 0),
       marketCapUsd: Number(raw.market_cap ?? raw.usd_market_cap ?? 0),
-      volume24hUsd: Number(raw.volume ?? raw.volume_24h ?? 0),
-      volume1hUsd: Number(raw.volume_1h ?? 0), // real 1h volume (trenches/signal); 0 bila sumber tidak menyediakan
+      volume24hUsd,
+      volume1hUsd, // real 1h (trenches/signal) atau volume interval-1h (rank/hot); 0 = tidak diketahui
       liquidityUsd: Number(raw.liquidity ?? 0),
       buys: Number(raw.buys ?? raw.buys_24h ?? 0),
       sells: Number(raw.sells ?? raw.sells_24h ?? 0),
@@ -211,10 +237,13 @@ export class GMGNAdapter {
       return base !== null && base > 0 ? ((priceUsd / base - 1) * 100) : null;
     };
     const totalFee = numOrNull(data?.total_fee);
+    const hasVol1h = price.volume_1h !== undefined && price.volume_1h !== null;
+    const hasVol24h = price.volume_24h !== undefined && price.volume_24h !== null;
     return {
       ...data,
       price: priceUsd,
-      volume: price.volume_24h ?? data?.volume,
+      volume_1h: hasVol1h ? price.volume_1h : undefined,
+      volume_24h: hasVol24h ? price.volume_24h : (data?.volume !== undefined ? data.volume : undefined),
       buys: price.buys_24h ?? data?.buys,
       sells: price.sells_24h ?? data?.sells,
       swaps: price.swaps_24h ?? data?.swaps,
@@ -278,7 +307,7 @@ export class GMGNAdapter {
     if (!res) return [];
     const rank: any[] = res?.data?.data?.rank || res?.data?.rank || res?.rank || [];
     if (!Array.isArray(rank)) return [];
-    return rank.map((t) => this.normalizeToken(t, chain));
+    return rank.map((t) => this.normalizeToken(t, chain, 'gmgn', this.volumeWindowForInterval(opts.interval || '1h')));
   }
 
   /**
@@ -372,7 +401,7 @@ export class GMGNAdapter {
     if (!Array.isArray(data) || data.length === 0) return [];
     const tokens = data[0]?.tokens;
     if (!Array.isArray(tokens)) return [];
-    return tokens.map((t: any) => this.normalizeToken(t, chain));
+    return tokens.map((t: any) => this.normalizeToken(t, chain, 'gmgn', this.volumeWindowForInterval(opts.interval || '1h')));
   }
 
   /**

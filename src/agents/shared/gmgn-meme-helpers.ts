@@ -18,6 +18,17 @@ export interface MemePreFilterConfig {
   minTotalFeeUsd: number;
 }
 
+/**
+ * Volume 24 jam yang jujur: pakai volume_24h real bila tersedia; kalau tidak
+ * (sumber rank/hot cuma kasih volume interval-1h), estimasi ×24. 0 bila tidak
+ * diketahui sama sekali (fail-closed).
+ */
+export function volume24hOf(t: GMGNRawToken): number {
+  if (t.volume24hUsd > 0) return t.volume24hUsd;
+  if (t.volume1hUsd > 0) return t.volume1hUsd * 24;
+  return 0;
+}
+
 export interface MemeSignalResult {
   type: 'CTO' | 'REVIVAL' | 'MOMENTUM' | 'NONE';
   confidence: number;
@@ -76,14 +87,16 @@ export function preFilterToken(
     if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
     const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
     if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
-    if (t.volume24hUsd < config.minVolume24hUsd) return fail(`volume 24h $${(t.volume24hUsd/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
+    const vol24 = volume24hOf(t);
+    if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
     if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
     return { ok: true, reason: 'ok' };
   }
   if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
   const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
   if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
-  if (t.volume24hUsd < config.minVolume24hUsd) return fail(`volume 24h $${(t.volume24hUsd/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
+  const vol24 = volume24hOf(t);
+  if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
   if (t.isWashTrading) return fail('wash trading terdeteksi.');
   if (t.rugRatio !== null && t.rugRatio >= config.maxRugRatio) return fail(`rug ratio ${(t.rugRatio*100).toFixed(0)}% >= ${config.maxRugRatio*100}%.`);
@@ -103,6 +116,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
   const reasons: string[] = [];
   const smartDegen = t.smartDegenCount;
   const renowned = t.renownedCount;
+  const vol24 = volume24hOf(t);
 
   // CTO (GMGN source only)
   if (t.ctoFlag && t.source === 'gmgn') {
@@ -111,7 +125,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     if (t.creatorClose || (t.devTeamHoldRate !== null && t.devTeamHoldRate <= 5)) { score += 20; reasons.push('👨‍💻 Dev sudah close/burn (+20)'); }
     if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallet (+15)`); }
     if (renowned >= 1) { score += 10; reasons.push(`⭐ KOL ${renowned} (+10)`); }
-    if (t.volume24hUsd >= 100000) { score += 15; reasons.push(`🔥 Volume $${(t.volume24hUsd/1000).toFixed(0)}k (+15)`); }
+    if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
     return { type: 'CTO', confidence: Math.min(100, score), reasons };
   }
 
@@ -120,7 +134,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     let score = 15;
     reasons.push('🕐 Umur > 4h (+15)');
     score += 30; reasons.push(`📈 Harga +${t.priceChange1h.toFixed(0)}% 1h (+30)`);
-    if (t.volume24hUsd >= 100000) { score += 15; reasons.push(`🔥 Volume $${(t.volume24hUsd/1000).toFixed(0)}k (+15)`); }
+    if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
     if (smartDegen >= 2) { score += 20; reasons.push(`🧠 Smart money ${smartDegen} wallet (+20)`); }
     if (t.creatorClose) { score += 20; reasons.push('👨‍💻 Dev sudah close/burn (+20)'); }
     return { type: 'REVIVAL', confidence: Math.min(100, score), reasons };
@@ -133,7 +147,7 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     if (t.priceChange1h !== null && t.priceChange1h > 30) { score += 25; reasons.push(`🚀 1h +${t.priceChange1h.toFixed(0)}% (+25)`); }
     const total = t.buys + t.sells;
     if (total > 0 && t.buys / total > 0.6) { score += 20; reasons.push(`⚖️ Buy ${((t.buys/total)*100).toFixed(0)}% / Sell ${((t.sells/total)*100).toFixed(0)}% (+20)`); }
-    if (t.volume24hUsd >= 100000) { score += 15; reasons.push(`🔥 Volume $${(t.volume24hUsd/1000).toFixed(0)}k (+15)`); }
+    if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
     if (smartDegen >= 1) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} (+15)`); }
     if (t.top10HolderRate !== null && t.top10HolderRate < 0.3) { score += 10; reasons.push(`👥 Top-10 ${(t.top10HolderRate*100).toFixed(1)}% (+10)`); }
     const visitingBonus = t.visitingCount >= 200 ? 5 : 0;

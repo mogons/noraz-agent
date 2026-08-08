@@ -3,7 +3,7 @@ import { RugCheckService, RugCheckResult } from '../../services/security-service
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
   token: GMGNRawToken;
@@ -158,7 +158,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       // Honest card: we have no real 5m/1h volume breakdown — price-change data lives in reasons/thesis
       volume5m: 'N/A',
       volume1h: 'N/A',
-      volume24h: t.volume24hUsd > 0 ? `$${(t.volume24hUsd/1000).toFixed(1)}k` : 'N/A',
+      volume24h: (() => { const v = volume24hOf(t); return v > 0 ? `$${(v/1000).toFixed(1)}k` : 'N/A'; })(),
       txRatio,
       top10Pct: top10Str,
       devHoldingPct: devStr,
@@ -175,7 +175,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       securityAuditPassed: true, // set after RugCheck passes (see runScreeningPass)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
-      volume1hUsd: t.volume24hUsd / 24,
+      volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t) / 24,
     };
   }
 
@@ -228,7 +228,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
           const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', {
             domain: 'MEME_SOLANA', symbol: t.symbol, contractAddress: t.address,
             priceUsd: t.priceUsd, liquidityUsd: t.liquidityUsd,
-            volume24hUsd: t.volume24hUsd, volume1hUsd: t.volume24hUsd/24,
+            volume24hUsd: volume24hOf(t), volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t)/24,
             smartMoneyCount: t.smartDegenCount, securityAuditPassed: true,
             socialHypeScore: confidence,
             gmgn: { ...toStrategyGmgn(t), native_price_usd: nativePriceUsd },
