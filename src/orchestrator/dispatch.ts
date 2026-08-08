@@ -59,7 +59,7 @@ export async function dispatchDomain(opts: DispatchDomainOptions): Promise<Dispa
  */
 export type LPPoolSignal = MeteoraPoolSignal;
 
-export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana'): CallCardPayload {
+export function buildLPPayload(pool: LPPoolSignal): CallCardPayload {
   return {
     domain: 'LP_METEORA',
     title: pool.pairName,
@@ -88,7 +88,6 @@ export function buildLPPayload(pool: LPPoolSignal, domain: 'lp-solana'): CallCar
     token0Volume24hUsd: pool.volume24hUsd,
     token0Holders: pool.tokenXHolders,
     token0AgeHours: pool.tokenXAgeHours,
-    token0SmartDegenCount: undefined, // not exposed by Meteora DLMM API
     token0Verified: pool.tokenXVerified,
     liquidityUsd: pool.tvlUsd || 0,
     volume1hUsd: pool.volume1hUsd || 0,

@@ -35,7 +35,6 @@ const mkMeteoraPool = (): MeteoraPoolSignal => ({
   volumeToTvlRatio1h: 0.067,
   volumeToActiveTvlRatio1h: 0.083,
   organicVolumeScore1h: 80,
-  recommendedDistribution: 'Spot',
   aiRecommendation: 'Live Meteora DLMM pool (official API): SOL-USDC',
 });
 
@@ -47,7 +46,6 @@ const mkMeteoraStub = (pools: MeteoraPoolSignal[]) => ({
 const mkKrystalPool = (over: Partial<KrystalPoolSignal> = {}): KrystalPoolSignal => ({
   poolAddress: '0xpool1',
   pairName: 'WETH-USDC',
-  network: 'Robinhood',
   feeTier: 3000,
   tvlUsd: 150000,
   activeTvlUsd: 3000,

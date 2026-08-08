@@ -252,7 +252,7 @@ export class AthenaHub {
           } catch { enriched.set(p.tokenXAddress, null); }
         }
         const info = enriched.get(p.tokenXAddress) ?? null;
-        const payload = buildLPPayload(p, 'lp-solana');
+        const payload = buildLPPayload(p);
         if (info) {
           payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
           payload.token0MarketCapUsd = info.marketCapUsd || payload.token0MarketCapUsd;

@@ -1,5 +1,4 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
-import { RugCheckService, RugCheckResult } from '../../services/security-service.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
@@ -23,11 +22,10 @@ export interface SolanaScreeningConfig {
   maxTop10HolderRate: number;// 0.4
   minTotalFeeUsd: number;    // 500 — gate fee aktif: token tanpa aktivitas organik (fee tak tercatat) ditolak
   passThreshold: number;     // 80
-  signalTypes: number[];     // smart-money/KOL/CTO/price events (graduated focus)
+  signalTypes: number[];     // smart-money/KOL/CTO/price events (overlay boost)
   rankLimit: number;         // 100 (trending, 1h)
   trenchesLimit: number;     // 80 (completed only)
   hotSearchesLimit: number;  // 100 (hot searches, migrated)
-  signalLimit: number;       // 50 per group
 }
 
 const DEFAULT_CONFIG: SolanaScreeningConfig = {
@@ -45,13 +43,11 @@ const DEFAULT_CONFIG: SolanaScreeningConfig = {
   rankLimit: 100,
   trenchesLimit: 80,
   hotSearchesLimit: 100,
-  signalLimit: 50,
 };
 
 export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   readonly domain = 'meme-solana';
   private gmgn: GMGNAdapter;
-  private rugCheck: RugCheckService;
   private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: SolanaScreeningConfig;
@@ -59,7 +55,6 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
 
   constructor(config?: Partial<SolanaScreeningConfig>) {
     this.gmgn = new GMGNAdapter();
-    this.rugCheck = new RugCheckService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -115,12 +110,6 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     return this.dedupeTokens.dedupe(candidates);
   }
 
-  /** Signal feed events (1-min cadence; legacy alias used by tests/TUI) */
-  public async collectSignalEvents(): Promise<GMGNRawToken[]> {
-    const events = await this.gmgn.fetchTokenSignals('sol', this.config.signalTypes);
-    return events.map((e) => e.data).filter((t) => t.address);
-  }
-
   /**
    * Signal booster map (analytical overlay, NOT a candidate source): GMGN
    * token_signal never fills volume/swaps (any chain), so its events are used
@@ -137,15 +126,9 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     }
   }
 
-  /** Trenches (3-min cadence; legacy alias used by tests/TUI) */
-  public async collectTrenches(): Promise<GMGNRawToken[]> {
-    const trenches = await this.gmgn.fetchTrenches('sol', { types: ['completed'], limit: this.config.trenchesLimit });
-    return [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed].filter((t) => t.address);
-  }
-
   /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
   public preFilter(t: GMGNRawToken, nativePriceUsd: number | null = null): { ok: boolean; reason: string } {
-    return preFilterToken(t, this.config, nativePriceUsd, 'SOLANA');
+    return preFilterToken(t, this.config, nativePriceUsd);
   }
 
   /** Detect signal type + deterministic confidence (0-100) */
@@ -190,14 +173,14 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       gmgnUrl: `https://gmgn.ai/sol/token/${t.address}`,
       dexScreenerUrl: `https://dexscreener.com/solana/${t.address}`,
       rugcheckUrl: `https://rugcheck.xyz/tokens/${t.address}`,
-      securityAuditPassed: true, // set after RugCheck passes (see runScreeningPass)
+      securityAuditPassed: true, // audit keamanan via GMGN di preFilter (rug/honeypot/tax/insider/bundler/top10)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
       volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t) / 24,
     };
   }
 
-  /** Full pass: collect -> prefilter -> rugcheck -> detect -> report */
+  /** Full pass: collect -> prefilter (audit GMGN) -> detect -> report */
   public async runScreeningPass(): Promise<AgentReport<SolanaSignal>[]> {
     console.log('[SOLANA AGENT] Screening pass started (GMGN OpenAPI)...');
     const reports: AgentReport<SolanaSignal>[] = [];
@@ -282,18 +265,8 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     return reports;
   }
 
-  /** Dedupe by contract address (case-insensitive), 60s cooldown via internal map */
-  public dedupe(tokens: GMGNRawToken[]): GMGNRawToken[] {
-    return this.dedupeTokens.dedupe(tokens);
-  }
-
   /** Map GMGNRawToken -> snake_case GMGN field contract consumed by strategy .mjs modules */
   public toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
     return toStrategyGmgn(t);
-  }
-
-  /** Deterministic thesis text (no LLM) */
-  public buildThesis(t: GMGNRawToken, type: string, confidence: number, reasons: string[], strategyReason: string): string {
-    return buildMemeThesis(t, type, confidence, reasons, strategyReason);
   }
 }

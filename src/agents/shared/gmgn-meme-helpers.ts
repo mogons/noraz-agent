@@ -123,8 +123,7 @@ export function applySignalBoost(
 export function preFilterToken(
   t: GMGNRawToken,
   config: MemePreFilterConfig,
-  nativePriceUsd: number | null = null,
-  tag: string
+  nativePriceUsd: number | null = null
 ): { ok: boolean; reason: string } {
   const fail = (reason: string) => ({ ok: false as const, reason: `⛔ ${t.symbol}: ${reason}` });
   if (t.source === 'dexscreener') {
@@ -291,7 +290,6 @@ const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   rankLimit: { min: 10, max: 100 },
   trenchesLimit: { min: 10, max: 80 },
   hotSearchesLimit: { min: 10, max: 500 },
-  signalLimit: { min: 10, max: 50 },
 };
 
 export interface MemeConfigUpdateResult {

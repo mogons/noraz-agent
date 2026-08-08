@@ -94,7 +94,6 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     volumeToActiveTvlRatio1h: 1.67, // >= 1.0 (100%+ active TVL per jam)
     organicVolumeScore1h: 60,
     tokenAgeMinutes: 240, // >= 2h
-    recommendedDistribution: 'Spot' as const,
     aiRecommendation: 'test',
     volume24hUsd: 120000,
     fee24hUsd: 500,
@@ -105,7 +104,6 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     tokenXMarketCapUsd: 1000000,
     aprDecimal: 0.5,
     apyDecimal: 2.5,
-    isBlacklisted: false,
     ...over,
   });
 

@@ -12,7 +12,6 @@
 export interface KrystalPoolSignal {
   poolAddress: string;
   pairName: string;
-  network: 'Robinhood';
   feeTier: number; // bps (3000 = 0.3%)
   tvlUsd: number;
   activeTvlUsd: number;
@@ -130,7 +129,6 @@ export class KrystalCloudAdapter {
       pools.push({
         poolAddress: p.poolAddress,
         pairName: `${t0.symbol}-${t1.symbol}`,
-        network: 'Robinhood',
         feeTier: p.feeTier || 0,
         tvlUsd,
         activeTvlUsd,

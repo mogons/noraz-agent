@@ -27,7 +27,6 @@ export interface MeteoraPoolSignal {
   volumeToActiveTvlRatio1h: number;
   organicVolumeScore1h: number;
   tokenAgeMinutes?: number;
-  recommendedDistribution: 'Spot' | 'Curve' | 'Bid-Ask';
   aiRecommendation: string;
   /** Extra real fields surfaced for the call card / filters. */
   volume24hUsd: number;
@@ -43,7 +42,6 @@ export interface MeteoraPoolSignal {
   tokenXAgeHours: number;
   aprDecimal: number;
   apyDecimal: number;
-  isBlacklisted: boolean;
 }
 
 interface DlmmTimeWindow {
@@ -162,7 +160,6 @@ export class MeteoraDLMMAdapter {
           volumeToActiveTvlRatio1h,
           organicVolumeScore1h,
           tokenAgeMinutes: tokenAgeSec > 0 ? Math.floor(tokenAgeSec / 60) : undefined,
-          recommendedDistribution: 'Spot' as const,
           aiRecommendation: `Live Meteora DLMM pool: ${p.name} — $${(tvlUsd / 1000).toFixed(1)}k TVL, $${(volume1hUsd / 1000).toFixed(1)}k 1h volume, $${(fee1hUsd / 1000).toFixed(2)}k 1h fees (${feeTvlRatioPct1h.toFixed(2)}%/1h).`,
           volume24hUsd: Number(p.volume?.['24h']) || 0,
           fee24hUsd: fees24hUsd,
@@ -177,7 +174,6 @@ export class MeteoraDLMMAdapter {
           tokenXAgeHours: tokenAgeSec > 0 ? Math.floor(tokenAgeSec / 3600 * 10) / 10 : 0,
           aprDecimal: Number(p.apr) || 0,
           apyDecimal: Number(p.apy) || 0,
-          isBlacklisted: Boolean(p.is_blacklisted),
         });
       }
       return pools;

@@ -1,5 +1,4 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
-import { GoPlusSecurityService, GoPlusTokenSecurity } from '../../services/goplus-security-service.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
@@ -23,11 +22,10 @@ export interface RobinhoodScreeningConfig {
   maxTop10HolderRate: number;// 0.4
   minTotalFeeUsd: number;    // 500 — gate fee aktif: token tanpa aktivitas organik (fee tak tercatat) ditolak
   passThreshold: number;     // 80
-  signalTypes: number[];     // smart-money/KOL/CTO/price events (graduated focus)
+  signalTypes: number[];     // smart-money/KOL/CTO/price events (overlay boost)
   rankLimit: number;         // 100 (trending, 1h)
   trenchesLimit: number;     // 80 (completed only)
   hotSearchesLimit: number;  // 100 (hot searches, migrated)
-  signalLimit: number;       // 50 per group
 }
 
 const DEFAULT_CONFIG: RobinhoodScreeningConfig = {
@@ -45,13 +43,11 @@ const DEFAULT_CONFIG: RobinhoodScreeningConfig = {
   rankLimit: 100,
   trenchesLimit: 80,
   hotSearchesLimit: 100,
-  signalLimit: 50,
 };
 
 export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> {
   readonly domain = 'meme-robinhood';
   private gmgn: GMGNAdapter;
-  private goplus: GoPlusSecurityService;
   private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: RobinhoodScreeningConfig;
@@ -61,7 +57,6 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     // Key GMGN terpisah untuk robinhood (rate limit per key): fallback ke
     // GMGN_API_KEY kalau GMGN_API_KEY_ROBINHOOD belum di-set.
     this.gmgn = new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
-    this.goplus = new GoPlusSecurityService();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -116,12 +111,6 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     return this.dedupeTokens.dedupe(candidates);
   }
 
-  /** Signal feed events (1-min cadence; legacy alias used by tests/TUI) */
-  public async collectSignalEvents(): Promise<GMGNRawToken[]> {
-    const events = await this.gmgn.fetchTokenSignals('robinhood', this.config.signalTypes);
-    return events.map((e) => e.data).filter((t) => t.address);
-  }
-
   /**
    * Signal booster map (analytical overlay, NOT a candidate source): GMGN
    * token_signal never fills volume/swaps (any chain), so its events are used
@@ -138,15 +127,9 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     }
   }
 
-  /** Trenches (3-min cadence; legacy alias used by tests/TUI) */
-  public async collectTrenches(): Promise<GMGNRawToken[]> {
-    const trenches = await this.gmgn.fetchTrenches('robinhood', { types: ['completed'], limit: this.config.trenchesLimit });
-    return [...trenches.newCreation, ...trenches.nearCompletion, ...trenches.completed].filter((t) => t.address);
-  }
-
   /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
   public preFilter(t: GMGNRawToken, nativePriceUsd: number | null = null): { ok: boolean; reason: string } {
-    return preFilterToken(t, this.config, nativePriceUsd, 'ROBINHOOD');
+    return preFilterToken(t, this.config, nativePriceUsd);
   }
 
   /** Detect signal type + deterministic confidence (0-100) */
@@ -190,15 +173,15 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       aiThesis: thesis,
       gmgnUrl: `https://gmgn.ai/robinhood/token/${t.address}`,
       dexScreenerUrl: `https://dexscreener.com/robinhood/${t.address}`,
-      rugcheckUrl: `https://gopluslabs.io/token-security/5318008/${t.address}`,
-      securityAuditPassed: true, // set after GoPlus passes (see runScreeningPass)
+      rugcheckUrl: `https://gopluslabs.io/token-security/4663/${t.address}`,
+      securityAuditPassed: true, // audit keamanan via GMGN di preFilter (rug/honeypot/tax/insider/bundler/top10)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
       volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t) / 24,
     };
   }
 
-  /** Full pass: collect -> prefilter -> goplus audit + tax gate -> detect -> report */
+  /** Full pass: collect -> prefilter (audit GMGN) -> detect -> report */
   public async runScreeningPass(): Promise<AgentReport<RobinhoodSignal>[]> {
     console.log('[ROBINHOOD AGENT] Screening pass started (GMGN OpenAPI)...');
     const reports: AgentReport<RobinhoodSignal>[] = [];
@@ -221,7 +204,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       console.log(`[ROBINHOOD AGENT] Signal overlay: ${signalBoostMap.size} token punya event smart-money/KOL/CTO.`);
     }
 
-    // 2. Pre-filter (cheap) then GoPlus audit (expensive) then detect
+    // 2. Pre-filter (cheap, termasuk audit GMGN) then detect
     for (const t of candidates) {
       // Graduated-only: reject tokens still on the bonding curve (exchange='pump')
       if (!isGraduatedToken(t)) {
@@ -283,18 +266,8 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     return reports;
   }
 
-  /** Dedupe by contract address (case-insensitive), 60s cooldown via internal map */
-  public dedupe(tokens: GMGNRawToken[]): GMGNRawToken[] {
-    return this.dedupeTokens.dedupe(tokens);
-  }
-
   /** Map GMGNRawToken -> snake_case GMGN field contract consumed by strategy .mjs modules */
   public toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
     return toStrategyGmgn(t);
-  }
-
-  /** Deterministic thesis text (no LLM) */
-  public buildThesis(t: GMGNRawToken, type: string, confidence: number, reasons: string[], strategyReason: string): string {
-    return buildMemeThesis(t, type, confidence, reasons, strategyReason);
   }
 }

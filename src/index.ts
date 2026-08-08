@@ -5,7 +5,7 @@ import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
 import type { CallCardPayload as CallSignalPayload } from './agents/shared/agent-contract.js';
 import { AthenaHub } from './orchestrator/hub.js';
-import { dispatchDomain, buildLPPayload } from './orchestrator/dispatch.js';
+import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
 import { PositionManager } from './position/position-manager.js';

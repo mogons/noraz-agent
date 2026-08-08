@@ -48,7 +48,6 @@ describe('KrystalCloudAdapter', () => {
     expect(p.fee1hUsd).toBe(20);
     expect(p.volume24hUsd).toBe(120000);
     expect(p.feesToTvlRatio24h).toBeCloseTo(0.0024, 5);
-    expect(p.network).toBe('Robinhood');
     expect(p.token0Address).toBe('0xweth');
     expect(p.token1Address).toBe('0xusdc');
     // activeTvl proxy = fee_rate × tvl = (20/5000) × 150000 = 600
@@ -105,7 +104,7 @@ describe('KrystalCloudAdapter', () => {
     // filter bekerja pada KrystalPoolSignal — buat via fetchTopRobinhoodPools
     const filtered = adapter.filterHighYieldPools([
       {
-        poolAddress: '0xa', pairName: 'WETH-USDC', network: 'Robinhood', feeTier: 3000,
+        poolAddress: '0xa', pairName: 'WETH-USDC', feeTier: 3000,
         tvlUsd: 150000, activeTvlUsd: 450, volume1hUsd: 50000, fee1hUsd: 150,
         volume24hUsd: 500000, fee24hUsd: 5000, feesToTvlRatio24h: 0.0333,
         volumeToTvlRatio1h: 0.33, volumeToActiveTvlRatio1h: 111, feeAprPercentage: 100,
@@ -113,7 +112,7 @@ describe('KrystalCloudAdapter', () => {
         token0Address: '0xweth', aiRecommendation: 'x',
       },
       {
-        poolAddress: '0xb', pairName: 'WETH-USDC', network: 'Robinhood', feeTier: 3000,
+        poolAddress: '0xb', pairName: 'WETH-USDC', feeTier: 3000,
         tvlUsd: 150000, activeTvlUsd: 450, volume1hUsd: 50000, fee1hUsd: 150,
         volume24hUsd: 500000, fee24hUsd: 500, feesToTvlRatio24h: 0.0033,
         volumeToTvlRatio1h: 0.33, volumeToActiveTvlRatio1h: 111, feeAprPercentage: 100,
@@ -121,7 +120,7 @@ describe('KrystalCloudAdapter', () => {
         token0Address: '0xweth', aiRecommendation: 'x',
       },
       {
-        poolAddress: '0xc', pairName: 'WETH-USDC', network: 'Robinhood', feeTier: 3000,
+        poolAddress: '0xc', pairName: 'WETH-USDC', feeTier: 3000,
         tvlUsd: 300000, activeTvlUsd: 900, volume1hUsd: 50000, fee1hUsd: 150,
         volume24hUsd: 800000, fee24hUsd: 8000, feesToTvlRatio24h: 0.0267,
         volumeToTvlRatio1h: 0.17, volumeToActiveTvlRatio1h: 55, feeAprPercentage: 100,
