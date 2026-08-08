@@ -16,6 +16,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -93,6 +94,28 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   }
 
   const allOk = pullOk && installOk && buildOk;
+
+  // Tulis laporan ke file agar proses yang baru (setelah restart) bisa
+  // mengirim laporan update ke Discord — karena restart membunuh proses lama
+  // sebelum sempat membalas interaction.
+  try {
+    const reportPath = path.join(REPO_ROOT, 'database', 'last_update_report.json');
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    fs.writeFileSync(
+      reportPath,
+      JSON.stringify({
+        ok: allOk,
+        restartOk,
+        steps: log,
+        finishedAt: new Date().toISOString(),
+      }, null, 2),
+      'utf-8'
+    );
+    console.log('📄 Laporan update ditulis ke database/last_update_report.json');
+  } catch (reportErr) {
+    console.warn(`⚠ Gagal menulis laporan update: ${reportErr.message}`);
+  }
+
   console.log(`\n${allOk ? '✅' : '❌'} SELF-UPDATE ${allOk ? 'SELESAI' : 'DENGAN KEGAGALAN'}`);
   return { ok: allOk, restartOk, log };
 }

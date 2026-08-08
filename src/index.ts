@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import { isDryRun as isDryRunMode } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
@@ -185,6 +186,35 @@ if (discordToken && clientId) {
 
   client.once('ready', async () => {
     console.log(`[DISCORD BOT] Logged in as ${client.user?.tag}!`);
+
+    // Post-update report: if a self-update just ran (fire-and-forget killed the
+    // old process before it could reply), forward the saved report to the
+    // control room so the user sees the update result after restart.
+    try {
+      const fs = await import('fs');
+      const reportPath = path.join(process.cwd(), 'database', 'last_update_report.json');
+      if (fs.existsSync(reportPath)) {
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        fs.unlinkSync(reportPath); // one-shot: hapus setelah dibaca
+        const stepLines = (report.steps || []).map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
+        const restartLine = report.restartOk
+          ? '🔄 **PM2 agent restarted — kode baru aktif.**'
+          : '⚠ **PM2 restart gagal** — jalankan `athena deploy` manual.';
+        const controlRoomId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
+        const channel = controlRoomId
+          ? client.channels.cache.get(controlRoomId)
+          : client.channels.cache.find((c: any) => c.name === 'athena-control-room');
+        if (channel && 'send' in channel) {
+          await channel.send(
+            `${report.ok ? '✅' : '❌'} **Athena Self-Update ${report.ok ? 'Complete' : 'GAGAL'}**\n\n` +
+            `${stepLines}\n${restartLine}`
+          );
+          console.log('[UPDATE REPORT] Laporan update dikirim ke control room.');
+        }
+      }
+    } catch (reportErr: any) {
+      console.warn(`[UPDATE REPORT] Gagal kirim laporan: ${reportErr.message}`);
+    }
 
     // Auto-Bootstrap Discord Category & Channels if bot is in a server
     const firstGuild = client.guilds.cache.first();

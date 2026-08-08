@@ -68,8 +68,31 @@ export async function runAgent(
     }
   }
 
+  // Max tool rounds reached: give the LLM ONE final non-tool round to compose
+  // a real summary from everything gathered (instead of returning the last
+  // mid-process text). If even that fails, fall back gracefully.
+  try {
+    const summary = await options.aiService.generateWithTools(
+      [
+        ...messages,
+        {
+          role: 'system',
+          content:
+            'Kamu sudah memakai semua tool rounds yang tersedia. Sekarang TULIS JAWABAN FINAL untuk user berdasarkan hasil tool di atas. Jangan panggil tool lagi — langsung jawab dalam bahasa Indonesia, ringkas dan informatif, sertakan data yang relevan. Jika ada hasil yang gagal, katakan jujur.',
+        },
+      ],
+      [], // no tools → forces a plain text answer
+      1200
+    );
+    if (summary.content && summary.content.trim()) {
+      return { text: summary.content.trim(), toolResults };
+    }
+  } catch (err: any) {
+    console.warn(`[AGENT RUNNER] Summary round gagal: ${err.message}`);
+  }
+
   return {
-    text: lastText || 'Terlalu banyak tool rounds — selesaikan dengan ringkasan singkat.',
+    text: lastText || 'Tool rounds habis sebelum jawaban selesai — coba persempit pertanyaannya.',
     toolResults,
   };
 }

@@ -119,23 +119,6 @@ export async function handleButtonPress(interaction: ButtonInteraction, hub: Ath
   } else if (customId === 'btn_refresh_dashboard') {
     const dash = createDashboardComponents(hub, await buildDashboardOptions());
     await interaction.update(dash);
-  } else if (customId.startsWith('execute_buy_')) {
-    const parts = customId.split('_');
-    const amount = parts[2] === '05' ? '0.5' : '1.0';
-    const symbol = parts[3] || 'TOKEN';
-    await interaction.reply({ content: `🛒 **BUY Order Triggered:** Buying \`${amount} SOL/ETH\` worth of $${symbol} via Athena Hub... (DRY_RUN Simulated)`, ephemeral: true });
-  } else if (customId.startsWith('execute_lp_add_')) {
-    const symbol = customId.replace('execute_lp_add_', '');
-    await interaction.reply({ content: `💧 **Concentrated LP Deposit Triggered:** Deploying 0.5 SOL/ETH Liquidity for **$${symbol}** Range... (DRY_RUN Simulated)`, ephemeral: true });
-  } else if (customId.startsWith('execute_nft_buy_')) {
-    const symbol = customId.replace('execute_nft_buy_', '');
-    await interaction.reply({ content: `🖼️ **NFT Snipe Order Triggered:** Executing Seaport Fulfill Order for **${symbol}**... (DRY_RUN Simulated)`, ephemeral: true });
-  } else if (customId.startsWith('execute_prediction_yes_')) {
-    const symbol = customId.replace('execute_prediction_yes_', '');
-    await interaction.reply({ content: `🎯 **Polymarket Order Triggered:** Placing **50 USDC YES Bet** on event: **${symbol}** (Polygon L2)... (DRY_RUN Simulated)`, ephemeral: true });
-  } else if (customId.startsWith('execute_prediction_no_')) {
-    const symbol = customId.replace('execute_prediction_no_', '');
-    await interaction.reply({ content: `🛑 **Polymarket Order Triggered:** Placing **50 USDC NO Bet** on event: **${symbol}** (Polygon L2)... (DRY_RUN Simulated)`, ephemeral: true });
   } else if (customId.startsWith('start_channel_')) {
     const domain = customId.replace('start_channel_', '');
     hub.toggleChannelScreening(interaction.channelId, domain, true);

@@ -37,10 +37,13 @@ describe('AgentRunner', () => {
   it('caps at maxRounds to prevent infinite loops', async () => {
     const registry = makeToolRegistry();
     const aiService = {
-      generateWithTools: vi.fn().mockResolvedValue({
-        content: '',
-        toolCalls: [{ id: 'c', name: 'ping', arguments: {} }],
-      }),
+      generateWithTools: vi.fn()
+        // 3 tool rounds, semua minta tool
+        .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
+        .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
+        .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
+        // round summary: tanpa tools → jawaban final
+        .mockResolvedValueOnce({ content: 'Ringkasan final.', toolCalls: [] }),
     } as any;
 
     const result = await runAgent(
@@ -48,8 +51,27 @@ describe('AgentRunner', () => {
       'loop'
     );
 
-    expect(aiService.generateWithTools).toHaveBeenCalledTimes(3);
+    // 3 round tool + 1 round summary ekstra (bukan jawaban perantara polos)
+    expect(aiService.generateWithTools).toHaveBeenCalledTimes(4);
+    expect(registry.executeToolCall).toHaveBeenCalledTimes(3);
     expect(result.toolResults.length).toBe(3);
+    expect(result.text).toBe('Ringkasan final.');
+  });
+
+  it('falls back gracefully when the summary round fails', async () => {
+    const registry = makeToolRegistry();
+    const aiService = {
+      generateWithTools: vi.fn()
+        .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
+        .mockRejectedValueOnce(new Error('summary down')),
+    } as any;
+
+    const result = await runAgent(
+      { aiService, toolRegistry: registry, systemPrompt: 'sys', maxRounds: 1 },
+      'loop'
+    );
+
     expect(typeof result.text).toBe('string');
+    expect(result.text.length).toBeGreaterThan(0);
   });
 });

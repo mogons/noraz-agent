@@ -142,10 +142,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`execute_lp_add_${payload.symbol}`)
-        .setLabel(`💧 Add Liquidity (${isMeteora ? 'Meteora' : 'Uniswap'})`)
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
         .setCustomId(`pause_channel_${isMeteora ? 'lp-solana' : 'lp-robinhood'}`)
         .setLabel('⏸️ Pause LP Screening')
         .setStyle(ButtonStyle.Secondary)
@@ -184,16 +180,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     );
 
     const polyUrl = payload.dexScreenerUrl || 'https://polymarket.com';
-    const safePolySymbol = sanitizeEmbedField(payload.symbol, 20);
     buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`execute_prediction_yes_${safePolySymbol}`)
-        .setLabel('🎯 Bet YES (50 USDC)')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`execute_prediction_no_${safePolySymbol}`)
-        .setLabel('🛑 Bet NO (50 USDC)')
-        .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId('pause_channel_prediction')
         .setLabel('⏸️ Pause Polymarket Screening')
@@ -223,10 +210,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
     const openseaUrl = payload.dexScreenerUrl || 'https://opensea.io';
     buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`execute_nft_buy_${safeNftSymbol}`)
-        .setLabel('🖼️ Snipe NFT (Seaport Fulfill)')
-        .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId('pause_channel_nft')
         .setLabel('⏸️ Pause NFT Screening')
@@ -311,32 +294,33 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
   embed.addFields({ name: '💡 AI Thesis & Signal Reasoning', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
 
-  // Custom Buttons for Solana vs EVM
+  // Manual-execution mode: call cards carry LINKS to the trading platform,
+  // never execute buttons. Auto-execution is locked off (AUTO_EXECUTE_ENABLED=false).
   if (isSolana) {
+    // Solana: Jupiter swap prefilled with the token CA
+    const jupiterUrl = payload.contractAddress
+      ? `https://jup.ag/swap/SOL-${encodeSymbolForUrl(payload.contractAddress)}`
+      : 'https://jup.ag';
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`execute_buy_05_${payload.symbol}`)
-        .setLabel('🛒 Buy (0.5 SOL)')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`execute_buy_10_${payload.symbol}`)
-        .setLabel('🛒 Buy (1.0 SOL)')
-        .setStyle(ButtonStyle.Primary),
+        .setLabel('🚀 Trade on Jupiter')
+        .setURL(jupiterUrl)
+        .setStyle(ButtonStyle.Link),
       new ButtonBuilder()
         .setCustomId('pause_channel_meme-solana')
         .setLabel('⏸️ Pause Solana Screening')
         .setStyle(ButtonStyle.Secondary)
     );
   } else {
+    // Robinhood chain: Uniswap explore pools (token CA)
+    const uniswapUrl = payload.contractAddress
+      ? `https://app.uniswap.org/explore/pools/robinhood/${payload.contractAddress}`
+      : 'https://app.uniswap.org/explore/pools/robinhood';
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`execute_buy_01_${payload.symbol}`)
-        .setLabel('🛒 Buy (0.1 ETH)')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`execute_buy_05_${payload.symbol}`)
-        .setLabel('🛒 Buy (0.5 ETH)')
-        .setStyle(ButtonStyle.Primary),
+        .setLabel('🌐 Trade on Uniswap')
+        .setURL(uniswapUrl)
+        .setStyle(ButtonStyle.Link),
       new ButtonBuilder()
         .setCustomId('pause_channel_meme-robinhood')
         .setLabel('⏸️ Pause Robinhood Screening')
