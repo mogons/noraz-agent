@@ -325,9 +325,10 @@ export class GMGNAdapter {
   ): Promise<{ newCreation: GMGNRawToken[]; nearCompletion: GMGNRawToken[]; completed: GMGNRawToken[] }> {
     const types = opts.types?.length ? opts.types : ['new_creation', 'near_completion', 'completed'];
     const actualLimit = opts.limit || 80;
+    // launchpad_platform_v2 breaks robinhood (returns 0 tokens); only SOL supports it
     const section: Record<string, unknown> = {
       filters: ['offchain', 'onchain'],
-      launchpad_platform_v2: true,
+      ...(chain === 'sol' ? { launchpad_platform_v2: true } : {}),
       limit: actualLimit,
       ...(opts.filters || {}),
     };

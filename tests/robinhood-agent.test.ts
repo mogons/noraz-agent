@@ -139,16 +139,17 @@ describe('RobinhoodScreeningAgent', () => {
       total_fee: t.totalFeeNative, dexscr_boost_fee: t.dexscrBoostFee, dexscr_ad: t.dexscrAd,
     });
     const healthy = mkToken(); // passes preFilter: 6h old, $300k vol, $50k liq, 1 ETH fee
-    const signalResponse = {
+    const rankResponse = {
       code: 0,
-      data: [{ token_address: healthy.address, signal_type: 1, trigger_at: 0, trigger_mc: 0, data: mkWire(healthy) }],
+      data: { data: { rank: [mkWire(healthy)] } },
     };
     const emptyTrenches = { code: 0, data: { new_creation: [], pump: [], near_completion: [], completed: [] } };
     const priceResponse = { ethereum: { usd: ETH_PRICE, usd_24h_change: 1.5 } };
     const goplusNullish = { code: 1, result: {} }; // no security data for the token
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes('openapi.gmgn.ai/v1/market/token_signal')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => signalResponse };
+      if (url.includes('openapi.gmgn.ai/v1/market/rank')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => rankResponse };
+      if (url.includes('openapi.gmgn.ai/v1/market/hot_searches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: [{ tokens: [] }] }) };
       if (url.includes('openapi.gmgn.ai/v1/trenches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => emptyTrenches };
       if (url.includes('coingecko')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => priceResponse };
       if (url.includes('gopluslabs')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => goplusNullish };

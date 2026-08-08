@@ -81,15 +81,17 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
   }
 
   /**
-   * 4 data sources, all focused on GRADUATED tokens (sudah di DEX, bukan
+   * 3 data sources, all focused on GRADUATED tokens (sudah di DEX, bukan
    * bonding curve) dengan timeframe 1H:
    * 1. Trending rank (interval 1h, filter is_out_market) — yang lagi naik
    * 2. Trenches completed — baru selesai bonding curve -> DEX
-   * 3. Token signals — smart money/KOL/CTO/price events
-   * 4. Hot searches (migrated) — yang paling dicari orang
+   * 3. Hot searches (migrated) — yang paling dicari orang
+   * NOTE: token_signal (smart-money/KOL/CTO events) di-drop: GMGN tidak
+   * pernah mengisi volume/swap di event robinhood & semua fee-nya < $100 —
+   * source itu selalu mati di gate volume/fee (investigasi 2026-08-08).
    */
   public async collectCandidates(): Promise<GMGNRawToken[]> {
-    const [rank, trenches, signals, hotSearches] = await Promise.all([
+    const [rank, trenches, hotSearches] = await Promise.all([
       this.gmgn.fetchRank('robinhood', {
         interval: '1h',
         limit: this.config.rankLimit,
@@ -100,14 +102,12 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
         limit: this.config.trenchesLimit,
         filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3, max_insider_ratio: 0.3 },
       }),
-      this.gmgn.fetchTokenSignals('robinhood', this.config.signalTypes, { groups: [{ signal_type: this.config.signalTypes }] }),
       this.gmgn.fetchHotSearches({ chain: 'robinhood', interval: '1h', limit: this.config.hotSearchesLimit, filters: ['migrated', 'not_honeypot', 'verified', 'renounced'] }),
     ]);
 
     const candidates = [
       ...rank,
       ...trenches.completed,
-      ...signals.map((e) => e.data),
       ...hotSearches,
     ];
     return this.dedupeTokens.dedupe(candidates);
