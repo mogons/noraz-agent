@@ -15,8 +15,8 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
    - Whale Tracking Agent (#call-whale-tracking): Smart trader PvP leaderboard positioning di Hyperliquid (BTC, ETH, SOL, HYPE) — long/short + spot flow, top 50 trader, plus CEX Radar (OI/funding/L-S/whale prints dari Binance, Bybit, OKX).
    - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-robinhood): Meteora DLMM & Uniswap v3 aggressive fee harvesting (24h Fee/TVL > 4%, Fee 1h >= $50, TVL >= $20k, Velocity volume/active TVL >= 1.0).
    - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.
-   - Polymarket Prediction Agent (#call-prediction-markets): Polygon L2 odds arbitrage, implied mispricings, & $10k+ USDC whale bet inflows.
-   - Smart CT & AI Alpha Agent (#call-ct-alpha): X/Twitter AI Agent launches, airdrop threads, & Smart Money calls.
+   - Polymarket Prediction Agent (#call-prediction-markets): Polygon L2 odds arbitrage, implied mispricings, & $10k+ USDC whale bet inflows. **No-call mode sementara (emitCalls=false)** — toggle & pipeline utuh, tinggal diaktifkan.
+   - Smart CT & AI Alpha Agent (#call-ct-alpha): X/Twitter AI Agent launches, airdrop threads, & Smart Money calls. **No-call mode sementara (emitCalls=false)** — screening jalan, output ditekan.
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Direct On-Chain Execution: Intent-based /bridge, /swap, and /send via Relay.link and OpenSea API v2.
 `;

@@ -24,6 +24,8 @@ export interface PolymarketScreeningConfig {
   minVolume24hUsd: number;   // audit gate: >= $25k
   maxSpread: number;         // audit gate: <= 0.05 when book data available
   passThreshold: number;     // Swarm consensus gate (>= 80)
+  /** false = NO-CALL MODE: pass tidak dijalankan (0 request API, 0 call). */
+  emitCalls: boolean;
 }
 
 const DEFAULT_CONFIG: PolymarketScreeningConfig = {
@@ -31,6 +33,7 @@ const DEFAULT_CONFIG: PolymarketScreeningConfig = {
   minVolume24hUsd: 25000,
   maxSpread: 0.05,
   passThreshold: 80,
+  emitCalls: false,
 };
 
 /**
@@ -127,18 +130,63 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
   }
 
   /**
-   * Contract wrapper: fetch top markets per category, evaluate, run the strategy
-   * extension layer (0.7/0.3 blend, SKIP vetoes) and emit AgentReport[] with
-   * real-data payloads. The >= 80 gate must hold on the FINAL blended confidence
-   * (fail-closed). Never fabricates data.
+   * Contract wrapper — NO-CALL MODE default (emitCalls=false): pass tidak
+   * dijalankan, 0 request API, 0 call. Channel, toggle & health tetap normal.
    *
-   * NOTE (2026-08-09): screening sengaja di-NO-OP — prediction market tidak
-   * diprioritaskan (arsitektur & evaluasi tetap ada untuk diaktifkan lagi).
-   * Tidak ada request API sama sekali; channel & agent tetap terdaftar.
+   * Saat emitCalls=true: fetch top markets per kategori → evaluateMarket →
+   * strategy extension (0.7/0.3 blend, SKIP vetoes) → gate >= 80 (fail-closed)
+   * → AgentReport[] dengan payload data real. Arsitektur tetap utuh untuk
+   * diaktifkan kembali nanti — cukup flip DEFAULT_CONFIG.emitCalls.
    */
   public async runScreeningPass(): Promise<AgentReport<PredictionSignalReport>[]> {
-    console.log('[POLYMARKET AGENT] Screening dinonaktifkan sementara (no-op) — tidak ada request API.');
-    return [];
+    if (!this.config.emitCalls) {
+      console.log('[POLYMARKET AGENT] No-call mode aktif (emitCalls=false) — screening tidak dijalankan, 0 call.');
+      return [];
+    }
+
+    console.log('[POLYMARKET AGENT] Running prediction market screening pass...');
+    const reports: AgentReport<PredictionSignalReport>[] = [];
+    const categories = ['Crypto', 'Macro', 'Politics', 'Tech', 'Trending'] as const;
+
+    for (const category of categories) {
+      const markets = await this.adapter.fetchTopMarkets(category);
+      for (const m of markets) {
+        const report = this.evaluateMarket(m);
+        if (!report || report.confidenceScore < this.config.passThreshold) continue;
+
+        let confidence = report.confidenceScore;
+        try {
+          const strat = this.strategyEngine.getActiveStrategy('prediction');
+          if (strat?.evaluate) {
+            const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
+            if (ev?.recommendedAction === 'SKIP') {
+              console.log(`[POLYMARKET AGENT] ⛔ ${report.marketId}: strategi menolak (${ev.reason})`);
+              continue;
+            }
+            if (ev && typeof ev.confidence === 'number') {
+              confidence = Math.round(report.confidenceScore * 0.7 + Math.max(0, Math.min(100, ev.confidence)) * 0.3);
+            }
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`[POLYMARKET AGENT] Strategi gagal: ${message}`);
+        }
+
+        if (confidence < this.config.passThreshold) continue;
+
+        reports.push({
+          passed: true,
+          signal: report,
+          reason: report.aiThesis,
+          confidence,
+          payload: this.buildPayload(report, report.aiThesis),
+        });
+        console.log(`[POLYMARKET AGENT] 🎯 ${report.signalType} ${report.marketId} (${confidence}%)`);
+      }
+    }
+
+    console.log(`[POLYMARKET AGENT] Pass selesai. ${reports.length} sinyal lolos.`);
+    return reports;
   }
 
   /**

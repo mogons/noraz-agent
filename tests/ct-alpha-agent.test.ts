@@ -63,7 +63,7 @@ describe('CTAlphaAgent', () => {
   });
 
   it('runScreeningPass returns AgentReport[] with payload for a healthy tweet (real default strategy)', async () => {
-    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]));
+    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]), { emitCalls: true });
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(1);
     const r = reports[0];
@@ -77,10 +77,18 @@ describe('CTAlphaAgent', () => {
     expect(r.payload?.dexScreenerUrl).toBe('https://x.com/ct_whale/status/t1');
   });
 
+  it('runScreeningPass NO-CALL MODE default: screening jalan tapi output ditekan (0 call)', async () => {
+    const twitter = mkFakeTwitter([mkTweet()]);
+    const agent = new CTAlphaAgent(twitter); // emitCalls default false
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0); // output ditekan
+    expect(twitter.searchTweets).toHaveBeenCalled(); // screening tetap jalan
+  });
+
   it('runScreeningPass skips stale tweets (> 1h freshness gate)', async () => {
     const fresh = mkTweet({ id: 't_fresh' });
     const stale = mkTweet({ id: 't_stale', createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() });
-    const agent = new CTAlphaAgent(mkFakeTwitter([fresh, stale]));
+    const agent = new CTAlphaAgent(mkFakeTwitter([fresh, stale]), { emitCalls: true });
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(1);
     expect(reports[0].signal.id).toBe('ct_alpha_t_fresh');
@@ -101,7 +109,7 @@ describe('CTAlphaAgent', () => {
   });
 
   it('strategy extension: SKIP vetoes the signal', async () => {
-    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]));
+    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]), { emitCalls: true });
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 0, recommendedAction: 'SKIP', reason: 'veto' }) }),
       runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),
@@ -111,7 +119,7 @@ describe('CTAlphaAgent', () => {
   });
 
   it('strategy extension: BUY blends 0.7/0.3 and keeps the 80 gate', async () => {
-    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]));
+    const agent = new CTAlphaAgent(mkFakeTwitter([mkTweet()]), { emitCalls: true });
     (agent as any).strategyEngine = {
       getActiveStrategy: () => ({ evaluate: () => ({ confidence: 90, recommendedAction: 'BUY', reason: 'ok' }) }),
       runStrategySafely: (s: { [k: string]: any }, kind: 'evaluate' | 'calculate', arg: any) => s[kind]?.(arg),

@@ -190,18 +190,13 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(await hub.triggerAgentPass('call-whale-tracking')).toHaveLength(1);
   });
 
-  it('ct-alpha runs the real agent with injected fake TwitterService (DI, zero network)', async () => {
+  it('ct-alpha runs the real agent with injected fake TwitterService (DI, zero network) — NO-CALL MODE default', async () => {
     const hub = new AthenaHub({
       agentFactories: { 'ct-alpha': () => new CTAlphaAgent(mkFakeTwitter([mkTweet()])) },
     });
     const results = await hub.triggerAgentPass('ct-alpha');
-    expect(results).toHaveLength(1);
-    const r = results[0];
-    expect(r.passed).toBe(true);
-    expect(r.confidence).toBeGreaterThanOrEqual(80);
-    expect(r.payload?.domain).toBe('CT_ALPHA');
-    expect(r.payload?.network).toBe('X (Twitter)');
-    expect(r.payload?.securityAuditPassed).toBe(true);
+    // emitCalls default false: screening tetap jalan tapi output ditekan (0 call)
+    expect(results).toHaveLength(0);
   });
 
   it('lp-solana wraps adapter flow into contract-shaped reports with payload', async () => {

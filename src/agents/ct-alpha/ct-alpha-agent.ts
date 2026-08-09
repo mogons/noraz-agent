@@ -30,11 +30,14 @@ export interface CTAlphaSignal {
 export interface CTAlphaConfig {
   passThreshold: number; // 80 — swarm consensus gate (>= 80% posted)
   maxResults: number;    // 10
+  /** false = NO-CALL MODE: screening tetap jalan (fetch+evaluasi), output ditekan (0 call). */
+  emitCalls: boolean;
 }
 
 const DEFAULT_CONFIG: CTAlphaConfig = {
   passThreshold: 80,
   maxResults: 10,
+  emitCalls: false,
 };
 
 /**
@@ -184,6 +187,15 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
     }
 
     console.log(`[CT ALPHA AGENT] Pass selesai. ${reports.length} sinyal lolos.`);
+
+    // NO-CALL MODE (emitCalls=false): screening & evaluasi tetap jalan (heartbeat,
+    // toggle, health tetap normal) tapi output ditekan — 0 call ke Discord.
+    // Hidupkan lagi nanti: set emitCalls=true di DEFAULT_CONFIG.
+    if (!this.config.emitCalls) {
+      console.log(`[CT ALPHA AGENT] No-call mode aktif (emitCalls=false) — ${reports.length} sinyal ditekan, 0 call dipublikasikan.`);
+      return [];
+    }
+
     return reports;
   }
 
