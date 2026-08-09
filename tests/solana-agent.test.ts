@@ -103,6 +103,68 @@ describe('SolanaScreeningAgent', () => {
     expect(reports[0].payload?.domain).toBe('MEME_SOLANA');
   });
 
+  it('cluster smart money (>= 3 wallet) memberi boost +20 & label di card', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const agent = new SolanaScreeningAgent();
+    const healthy = mkToken();
+    const now = Math.floor(Date.now() / 1000);
+    const trackTrades = [
+      { tokenAddress: healthy.address.toLowerCase(), tokenSymbol: 'TEST', side: 'buy', amountUsd: 5000, isFullClose: false, maker: '0xw1', makerTags: [], timestamp: now - 120, kind: 'smartmoney' },
+      { tokenAddress: healthy.address.toLowerCase(), tokenSymbol: 'TEST', side: 'buy', amountUsd: 8000, isFullClose: false, maker: '0xw2', makerTags: [], timestamp: now - 200, kind: 'smartmoney' },
+      { tokenAddress: healthy.address.toLowerCase(), tokenSymbol: 'TEST', side: 'buy', amountUsd: 9000, isFullClose: false, maker: '0xw3', makerTags: [], timestamp: now - 300, kind: 'smartmoney' },
+    ];
+    (agent as any).gmgn = {
+      fetchRank: async () => [healthy],
+      fetchTrenches: async () => ({ completed: [] }),
+      fetchHotSearches: async () => [],
+      fetchTokenSignals: async () => [],
+      fetchTrackTrades: async () => trackTrades,
+      fetchTokenSecurity: async () => ({
+        chain: 'sol', address: healthy.address,
+        isHoneypot: false, isBlacklist: false, isRenounced: true,
+        renouncedMint: false, renouncedFreeze: false, canNotSell: false,
+        buyTaxPct: 0, sellTaxPct: 0, averageTaxPct: 0, highTaxPct: 0,
+        isOpenSource: true, burnRatioPct: 0, isLocked: false, isShowAlert: false, flags: [],
+      }),
+    };
+    (agent as any).priceFeed = { getPrice: async () => 73.65 };
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].reason).toContain('Cluster 3 wallet');
+    expect(reports[0].payload?.smartMoneyInfo).toContain('Smart Money');
+    expect(reports[0].payload?.smartMoneyInfo).toContain('3 wallet beli');
+  });
+
+  it('track kandidat baru (tidak ada di rank) ikut pipeline penuh', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const agent = new SolanaScreeningAgent();
+    const healthy = mkToken(); // dari track (bukan rank)
+    const now = Math.floor(Date.now() / 1000);
+    const trackTrades = [
+      { tokenAddress: healthy.address.toLowerCase(), tokenSymbol: 'TEST', side: 'buy', amountUsd: 5000, isFullClose: false, maker: '0xw1', makerTags: [], timestamp: now - 120, kind: 'smartmoney' },
+      { tokenAddress: healthy.address.toLowerCase(), tokenSymbol: 'TEST', side: 'buy', amountUsd: 8000, isFullClose: false, maker: '0xw2', makerTags: [], timestamp: now - 200, kind: 'smartmoney' },
+    ];
+    (agent as any).gmgn = {
+      fetchRank: async () => [], // rank kosong — hanya track feed
+      fetchTrenches: async () => ({ completed: [] }),
+      fetchHotSearches: async () => [],
+      fetchTokenSignals: async () => [],
+      fetchTrackTrades: async () => trackTrades,
+      fetchTokenInfo: async () => healthy, // validasi volume untuk kandidat track
+      fetchTokenSecurity: async () => ({
+        chain: 'sol', address: healthy.address,
+        isHoneypot: false, isBlacklist: false, isRenounced: true,
+        renouncedMint: false, renouncedFreeze: false, canNotSell: false,
+        buyTaxPct: 0, sellTaxPct: 0, averageTaxPct: 0, highTaxPct: 0,
+        isOpenSource: true, burnRatioPct: 0, isLocked: false, isShowAlert: false, flags: [],
+      }),
+    };
+    (agent as any).priceFeed = { getPrice: async () => 73.65 };
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1); // track candidate lolos pipeline penuh
+    expect(reports[0].payload?.domain).toBe('MEME_SOLANA');
+  });
+
   it('preFilter re-enables age & fee gates when thresholds > 0', () => {
     const agent = new SolanaScreeningAgent();
     agent.updateConfig({ minAgeHours: 2, minTotalFeeUsd: 500 });

@@ -2,8 +2,8 @@ import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate, securityAuditGate } from '../shared/gmgn-meme-helpers.js';
-import type { SignalBoostMap } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate, securityAuditGate, buildTrackAccumulation, trackAccumulationLabel } from '../shared/gmgn-meme-helpers.js';
+import type { SignalBoostMap, TrackAccumulation } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
   token: GMGNRawToken;
@@ -26,6 +26,10 @@ export interface SolanaScreeningConfig {
   rankLimit: number;         // 100 (trending, 1h)
   trenchesLimit: number;     // 80 (completed only)
   hotSearchesLimit: number;  // 100 (hot searches, migrated)
+  trackFeedEnabled: boolean; // true — trade feed smart money = kandidat tambahan (booster, bukan pengganti)
+  minTrackWallets: number;   // 2 — minimal wallet smart-money beli token sama
+  minTrackBuyUsd: number;    // 10000 — minimal total beli USD
+  trackFreshMinutes: number; // 30 — window fresh akumulasi
 }
 
 const DEFAULT_CONFIG: SolanaScreeningConfig = {
@@ -43,6 +47,10 @@ const DEFAULT_CONFIG: SolanaScreeningConfig = {
   rankLimit: 100,
   trenchesLimit: 80,
   hotSearchesLimit: 100,
+  trackFeedEnabled: true,
+  minTrackWallets: 2,
+  minTrackBuyUsd: 10000,
+  trackFreshMinutes: 30,
 };
 
 export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
@@ -126,6 +134,53 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     }
   }
 
+  /**
+   * Trade feed smart-money/KOL per token (akumulasi) — overlay analitis:
+   * kandidat tambahan (akumulasi kuat) + cluster boost + label card.
+   * Fail-open: error → map kosong, screening berjalan seperti biasa.
+   */
+  public async collectTrackAccumulation(): Promise<Map<string, TrackAccumulation>> {
+    if (!this.config.trackFeedEnabled) return new Map();
+    try {
+      const [sm, kol] = await Promise.all([
+        this.gmgn.fetchTrackTrades('sol', 'smartmoney'),
+        this.gmgn.fetchTrackTrades('sol', 'kol'),
+      ]);
+      const acc = buildTrackAccumulation([...sm, ...kol]);
+      if (acc.size > 0) console.log(`[SOLANA AGENT] Track feed: ${acc.size} token dengan aktivitas smart-money/KOL.`);
+      return acc;
+    } catch (err: any) {
+      console.warn(`[SOLANA AGENT] Track feed gagal (dilewati): ${err.message}`);
+      return new Map();
+    }
+  }
+
+  /**
+   * Kandidat tambahan dari track feed (BOOSTER, bukan pengganti): token yang
+   * baru diakumulasi smart money (>= minTrackWallets wallet beli, total >=
+   * minTrackBuyUsd, fresh <= trackFreshMinutes) tapi belum muncul di
+   * rank/trenches/hot. Data lengkap via fetchTokenInfo — tetap lewat SEMUA
+   * gate pipeline (graduated, preFilter, audit, detect, strategi, 80).
+   */
+  public async collectTrackCandidates(acc: Map<string, TrackAccumulation>): Promise<GMGNRawToken[]> {
+    if (!this.config.trackFeedEnabled || acc.size === 0) return [];
+    const nowSec = Date.now() / 1000;
+    const out: GMGNRawToken[] = [];
+    for (const a of acc.values()) {
+      if (a.buyWalletCount < this.config.minTrackWallets) continue;
+      if (a.totalBuyUsd < this.config.minTrackBuyUsd) continue;
+      if (nowSec - a.lastBuyAt > this.config.trackFreshMinutes * 60) continue;
+      try {
+        const info = await this.gmgn.fetchTokenInfo('sol', a.address);
+        if (info) out.push(info);
+      } catch { /* token ini di-skip — tidak mengganggu yang lain */ }
+    }
+    if (out.length > 0) {
+      console.log(`[SOLANA AGENT] Track kandidat baru: ${out.length} token (akumulasi smart money, lolos ambang).`);
+    }
+    return out;
+  }
+
   /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
   public preFilter(t: GMGNRawToken, nativePriceUsd: number | null = null): { ok: boolean; reason: string } {
     return preFilterToken(t, this.config, nativePriceUsd);
@@ -137,7 +192,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
   }
 
   /** Build call-card payload from real data (or 'N/A') */
-  public buildPayload(t: GMGNRawToken, confidence: number, thesis: string): CallCardPayload {
+  public buildPayload(t: GMGNRawToken, confidence: number, thesis: string, trackLabel?: string): CallCardPayload {
     const ageHours = t.creationTimestamp !== null ? (Date.now()/1000 - t.creationTimestamp)/3600 : null;
     const total = t.buys + t.sells;
     const txRatio = total > 0 ? `Buy ${((t.buys/total)*100).toFixed(0)}% / Sell ${((t.sells/total)*100).toFixed(0)}%` : 'N/A';
@@ -145,6 +200,9 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
     const rugStr = t.rugRatio !== null ? `${(t.rugRatio*100).toFixed(1)}%` : 'N/A';
     const bundlerStr = t.bundlerRate !== null ? `${(t.bundlerRate*100).toFixed(1)}%` : 'N/A';
     const top10Str = t.top10HolderRate !== null ? `${(t.top10HolderRate*100).toFixed(1)}%` : 'N/A';
+    const smStr = trackLabel
+      ? `🧠 **Smart Money:** ${trackLabel}`
+      : `🧠 **Smart Traders:** ${t.smartDegenCount} wallets (+${t.creatorClose ? 'dev closed' : 'monitoring'})`;
 
     return {
       domain: 'MEME_SOLANA',
@@ -166,7 +224,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       sniperPct: 'N/A', // not exposed by rank; keep honest
       bundlerPct: bundlerStr,
       dexPaidStatus: t.dexscrBoostFee > 0 ? `✅ $${t.dexscrBoostFee} boost` : (t.dexscrAd ? '✅ DexScreener ad' : 'None'),
-      smartMoneyInfo: `🧠 **Smart Traders:** ${t.smartDegenCount} wallets (+${t.creatorClose ? 'dev closed' : 'monitoring'})`,
+      smartMoneyInfo: smStr,
       confidenceScore: confidence,
       securityScore: rugStr,
       aiThesis: thesis,
@@ -194,17 +252,24 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       console.warn(`[SOLANA AGENT] Gagal ambil harga SOL: ${err.message}`);
     }
 
-    // 1. Collect candidates from 3 sources + signal booster overlay (all graduated-focused)
-    const [candidates, signalBoostMap] = await Promise.all([
+    // 1. Collect candidates from 3 sources + signal booster overlay + track feed
+    const [candidates, signalBoostMap, trackAcc] = await Promise.all([
       this.collectCandidates(),
       this.collectSignalBoostMap(),
+      this.collectTrackAccumulation(),
     ]);
+    const trackCandidates = await this.collectTrackCandidates(trackAcc);
+    // Merge by address (candidates sudah di-dedupe di collectCandidates; merge
+    // ini tidak boleh kena cooldown 60s dedupe — cukup dedupe by-address).
+    const merged = new Map<string, GMGNRawToken>();
+    for (const t of [...candidates, ...trackCandidates]) merged.set(t.address.toLowerCase(), t);
+    const allCandidates = [...merged.values()];
     if (signalBoostMap.size > 0) {
       console.log(`[SOLANA AGENT] Signal overlay: ${signalBoostMap.size} token punya event smart-money/KOL/CTO.`);
     }
 
     // 2. Pre-filter (cheap) then detect
-    for (const t of candidates) {
+    for (const t of allCandidates) {
       // Graduated-only: reject tokens still on the bonding curve (exchange='pump')
       if (!isGraduatedToken(t)) {
         console.log(`[SOLANA AGENT] ⛔ ${t.symbol}: belum graduated (bonding curve).`);
@@ -222,7 +287,17 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
         continue;
       }
 
-      const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
+      let det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
+      // Cluster smart money (>= 3 wallet beli token sama, fresh) = boost +20
+      const trackEntry = trackAcc.get(t.address.toLowerCase());
+      const trackLabel = trackEntry ? trackAccumulationLabel(trackEntry) : undefined;
+      if (trackEntry && trackEntry.buyWalletCount >= 3 && det.type !== 'NONE') {
+        det = {
+          ...det,
+          confidence: Math.min(100, det.confidence + 20),
+          reasons: [...det.reasons, `⚡ Cluster ${trackEntry.buyWalletCount} wallet smart-money beli $${(trackEntry.totalBuyUsd / 1000).toFixed(0)}k (+20)`],
+        };
+      }
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {
         console.log(`[SOLANA AGENT] ⚪ ${t.symbol}: ${det.type} ${det.confidence}% < ${this.config.passThreshold}% (${det.reasons.join(' | ')})`);
         continue;
@@ -260,7 +335,7 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
       }
 
       const thesis = buildMemeThesis(t, det.type, confidence, det.reasons, strategyReason);
-      const payload = this.buildPayload(t, confidence, thesis);
+      const payload = this.buildPayload(t, confidence, thesis, trackLabel);
       const signal: SolanaSignal = { token: t, signalType: det.type, confidence, reasons: det.reasons };
       reports.push({ passed: true, signal, reason: thesis, confidence, payload });
       console.log(`[SOLANA AGENT] 🎯 ${det.type} ${t.symbol} ${confidence}%`);

@@ -22,6 +22,14 @@ export interface WalletTrackerDeps {
   walletService?: WalletService;
   tradeJournal?: TradeJournalService;
   evmBalanceReader?: EvmBalanceReader;
+  /** Smart Money Exit alert: minimal wallet full-close (default 2). */
+  exitMinWallets?: number;
+  /** Smart Money Exit alert: minimal total keluar USD (default $20k). */
+  exitMinUsd?: number;
+  /** Smart Money Exit alert: window deteksi (default 2 jam). */
+  exitWindowMs?: number;
+  /** Toggle alert exit (default true). */
+  exitAlertsEnabled?: boolean;
 }
 
 export interface WalletHolding {
@@ -77,6 +85,10 @@ export class WalletTracker {
   private walletService?: WalletService;
   private tradeJournal?: TradeJournalService;
   private evmBalanceReader: EvmBalanceReader;
+  private exitMinWallets: number;
+  private exitMinUsd: number;
+  private exitWindowMs: number;
+  private exitAlertsEnabled: boolean;
 
   constructor(deps: WalletTrackerDeps) {
     this.positionManager = deps.positionManager;
@@ -87,6 +99,10 @@ export class WalletTracker {
     this.walletService = deps.walletService;
     this.tradeJournal = deps.tradeJournal;
     this.evmBalanceReader = deps.evmBalanceReader ?? this.defaultEvmBalanceReader;
+    this.exitMinWallets = deps.exitMinWallets ?? 2;
+    this.exitMinUsd = deps.exitMinUsd ?? 20_000;
+    this.exitWindowMs = deps.exitWindowMs ?? 2 * 60 * 60 * 1000;
+    this.exitAlertsEnabled = deps.exitAlertsEnabled ?? true;
   }
 
   private defaultEvmBalanceReader: EvmBalanceReader = async (_chain, token, owner) => {
@@ -272,6 +288,68 @@ export class WalletTracker {
       }
     }
 
+    // Smart Money Exit alert: hanya untuk token yang KAMU masih hold. Tanpa
+    // posisi = tanpa trigger (sinyal exit tidak pernah jadi call).
+    if (this.exitAlertsEnabled) {
+      try {
+        const exitAlerts = await this.checkSmartMoneyExit(active);
+        alerts.push(...exitAlerts);
+      } catch (exitErr: any) {
+        console.warn(`[WALLET TRACKER] Smart money exit check failed (dilewati): ${exitErr.message}`);
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Deteksi Smart Money Exit pada posisi yang masih di-hold:
+   * >= exitMinWallets smart wallet melakukan full-close (side=sell +
+   * is_open_or_close=1) dalam exitWindowMs, total keluar >= exitMinUsd.
+   * Data dari GMGN `/v1/user/smartmoney` (cache 60s, fail-open []).
+   * Hanya alert — tidak pernah mempengaruhi screening/call.
+   */
+  public async checkSmartMoneyExit(activePositions: Array<{ contractAddress: string; symbol?: string }>): Promise<WalletAlert[]> {
+    if (!this.gmgn) return [];
+    const heldByChain: Record<'sol' | 'robinhood', Set<string>> = { sol: new Set(), robinhood: new Set() };
+    for (const p of activePositions) {
+      const addr = String(p.contractAddress || '');
+      if (!addr) continue;
+      const chain = addr.toLowerCase().startsWith('0x') ? 'robinhood' : 'sol';
+      heldByChain[chain].add(addr.toLowerCase());
+    }
+    if (heldByChain.sol.size === 0 && heldByChain.robinhood.size === 0) return [];
+
+    const alerts: WalletAlert[] = [];
+    const nowSec = Date.now() / 1000;
+    for (const chain of ['sol', 'robinhood'] as const) {
+      if (heldByChain[chain].size === 0) continue;
+      let trades = [];
+      try {
+        trades = await this.gmgn.fetchTrackTrades(chain, 'smartmoney');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[WALLET TRACKER] Track feed ${chain} gagal (dilewati): ${message}`);
+        continue;
+      }
+      if (trades.length === 0) continue;
+      const { buildTrackAccumulation } = await import('../agents/shared/gmgn-meme-helpers.js');
+      const acc = buildTrackAccumulation(trades);
+      for (const heldAddr of heldByChain[chain]) {
+        const a = acc.get(heldAddr);
+        if (!a) continue;
+        if (a.fullCloseWallets.size < this.exitMinWallets) continue;
+        if (a.fullCloseTotalUsd < this.exitMinUsd) continue;
+        if (nowSec - a.lastFullCloseAt > this.exitWindowMs / 1000) continue;
+        const mins = Math.max(0, Math.round((nowSec - a.lastFullCloseAt) / 60));
+        alerts.push({
+          type: 'sm-exit',
+          reason: `⚠️ **Smart Money Exit:** $${a.symbol || heldAddr.slice(0, 8)} — ${a.fullCloseWallets.size} smart wallet full-close $${(a.fullCloseTotalUsd / 1000).toFixed(1)}k dalam ${mins}m terakhir. Kamu masih hold posisi ini — pertimbangkan keluar.`,
+          address: heldAddr,
+        });
+        console.log(`[WALLET TRACKER] 🚨 SM Exit: ${a.symbol || heldAddr} — ${a.fullCloseWallets.size} wallet full-close $${(a.fullCloseTotalUsd / 1000).toFixed(1)}k`);
+      }
+    }
     return alerts;
   }
 }

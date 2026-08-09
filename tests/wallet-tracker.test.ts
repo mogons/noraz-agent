@@ -47,6 +47,26 @@ function makeGmgn(token: GMGNRawToken | null = null): GMGNAdapter {
   return { fetchTokenInfo: vi.fn(async () => token) } as unknown as GMGNAdapter;
 }
 
+const mkTrackTrade = (over: Partial<import('../src/adapters/gmgn-adapter.js').GMGNTrackTrade> = {}) => ({
+  tokenAddress: 'mintx',
+  tokenSymbol: 'TOKX',
+  side: 'buy' as const,
+  amountUsd: 5000,
+  isFullClose: false,
+  maker: '0xwallet1',
+  makerTags: ['smart_degen'],
+  timestamp: Math.floor(Date.now() / 1000) - 300,
+  kind: 'smartmoney' as const,
+  ...over,
+});
+
+function makeExitGmgn(trades: import('../src/adapters/gmgn-adapter.js').GMGNTrackTrade[] = []): GMGNAdapter {
+  return {
+    fetchTokenInfo: vi.fn(async () => sampleToken),
+    fetchTrackTrades: vi.fn(async (_chain: string) => trades),
+  } as unknown as GMGNAdapter;
+}
+
 function makeConnection(accounts: unknown[] = [], fail: boolean = false): Connection {
   return {
     getTokenAccountsByOwner: vi.fn(
@@ -361,6 +381,102 @@ describe('WalletTracker.syncPositions', () => {
     expect(alerts).toEqual([]);
     expect(pm.getActivePositions()).toHaveLength(1);
     expect(pm.getActivePositions()[0].id).toBe('DUP');
+  });
+});
+
+describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
+  it('ada posisi + >= 2 smart wallet full-close >= $20k dalam 2 jam → alert', async () => {
+    const pm = new PositionManager();
+    pm.addPosition({
+      id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',
+      entryPriceUsd: 0.5, currentPriceUsd: 0.4, amount: 1000, highWaterMarkUsd: 0.9,
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const gmgn = makeExitGmgn([
+      mkTrackTrade({ side: 'sell', amountUsd: 12_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 }),
+      mkTrackTrade({ side: 'sell', amountUsd: 11_000, isFullClose: true, maker: '0xw2', timestamp: now - 1200 }),
+      mkTrackTrade({ side: 'buy', amountUsd: 30_000, isFullClose: false, maker: '0xw3', timestamp: now - 3000 }),
+    ]);
+    const tracker = makeTracker({
+      positionManager: pm,
+      gmgn,
+      walletService: makeWalletService(),
+      solanaConnection: makeConnection([]),
+      stateStore: newStore(),
+    });
+    const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].type).toBe('sm-exit');
+    expect(alerts[0].address).toBe('mintx'); // lowercase — konsisten dengan dedupe alert
+    expect(alerts[0].reason).toContain('2 smart wallet full-close');
+    expect(alerts[0].reason).toContain('$23.0k');
+  });
+
+  it('tanpa posisi → TIDAK ada alert (sinyal exit tidak pernah jadi call)', async () => {
+    const pm = new PositionManager();
+    const now = Math.floor(Date.now() / 1000);
+    const gmgn = makeExitGmgn([
+      mkTrackTrade({ side: 'sell', amountUsd: 50_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 }),
+      mkTrackTrade({ side: 'sell', amountUsd: 50_000, isFullClose: true, maker: '0xw2', timestamp: now - 1200 }),
+    ]);
+    const tracker = makeTracker({
+      positionManager: pm,
+      gmgn,
+      walletService: makeWalletService(),
+      solanaConnection: makeConnection([]),
+      stateStore: newStore(),
+    });
+    const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
+    expect(alerts).toHaveLength(0);
+  });
+
+  it('posisi ada tapi ambang di bawah (1 wallet / < $20k / > 2 jam) → TIDAK ada alert', async () => {
+    const pm = new PositionManager();
+    pm.addPosition({
+      id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',
+      entryPriceUsd: 0.5, currentPriceUsd: 0.4, amount: 1000, highWaterMarkUsd: 0.9,
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const cases: Array<import('../src/adapters/gmgn-adapter.js').GMGNTrackTrade[]> = [
+      [mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 })], // 1 wallet saja
+      [
+        mkTrackTrade({ side: 'sell', amountUsd: 9_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 }),
+        mkTrackTrade({ side: 'sell', amountUsd: 9_000, isFullClose: true, maker: '0xw2', timestamp: now - 1200 }),
+      ], // total $18k < $20k
+      [
+        mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw1', timestamp: now - 3 * 3600 }),
+        mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw2', timestamp: now - 3 * 3600 }),
+      ], // > 2 jam lalu
+    ];
+    for (const trades of cases) {
+      const tracker = makeTracker({
+        positionManager: pm,
+        gmgn: makeExitGmgn(trades),
+        walletService: makeWalletService(),
+        solanaConnection: makeConnection([]),
+        stateStore: newStore(),
+      });
+      const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
+      expect(alerts, JSON.stringify(trades.map((t) => [t.amountUsd, t.isFullClose, t.timestamp]))).toHaveLength(0);
+    }
+  });
+
+  it('track feed gagal/error → fail-open tanpa alert', async () => {
+    const pm = new PositionManager();
+    pm.addPosition({
+      id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',
+      entryPriceUsd: 0.5, currentPriceUsd: 0.4, amount: 1000, highWaterMarkUsd: 0.9,
+    });
+    const gmgn = { fetchTrackTrades: vi.fn(async () => { throw new Error('rate limited'); }) } as unknown as GMGNAdapter;
+    const tracker = makeTracker({
+      positionManager: pm,
+      gmgn,
+      walletService: makeWalletService(),
+      solanaConnection: makeConnection([]),
+      stateStore: newStore(),
+    });
+    const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
+    expect(alerts).toHaveLength(0);
   });
 });
 

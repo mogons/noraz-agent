@@ -67,6 +67,24 @@ export interface TokenSignalEvent {
 }
 
 /**
+ * Trade feed wallet-level dari GMGN (`/v1/user/smartmoney` & `/v1/user/kol`):
+ * real-time buy/sell per smart-money / KOL wallet. Dipakai sebagai candidate
+ * source (akumulasi smart money) dan position alerts (smart money exit).
+ */
+export interface GMGNTrackTrade {
+  tokenAddress: string;
+  tokenSymbol: string;
+  side: 'buy' | 'sell';
+  amountUsd: number;
+  /** 1 = posisi dibuka penuh / ditutup penuh (konteks bergantung sumber: kol/smartmoney 1 = close/reduce). */
+  isFullClose: boolean;
+  maker: string;
+  makerTags: string[];
+  timestamp: number;
+  kind: 'smartmoney' | 'kol';
+}
+
+/**
  * Audit keamanan token dari GMGN `/v1/token/security` — endpoint audit
  * per-token (panel "Token Audit" di UI GMGN): honeypot, blacklist, renounced,
  * tax, burn, lock, open source. Normalized; semua nilai real dari API.
@@ -112,6 +130,10 @@ export class GMGNAdapter {
   /** Cache audit security — module-level, dibagi SEMUA instansi adapter. */
   private static securityCache = new Map<string, { audit: GMGNSecurityAudit; at: number }>();
   private static readonly SECURITY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+  /** Cache trade feed — module-level (semua instansi berbagi), TTL 60 detik. */
+  private static trackCache = new Map<string, { trades: GMGNTrackTrade[]; at: number }>();
+  private static readonly TRACK_CACHE_TTL_MS = 60 * 1000;
 
   /**
    * Global pacing queue — ALL GMGN requests (every adapter instance: meme
@@ -401,6 +423,44 @@ export class GMGNAdapter {
     };
     GMGNAdapter.securityCache.set(key, { audit, at: Date.now() });
     return audit;
+  }
+
+  /**
+   * Trade feed real-time dari smart-money / KOL wallets (`/v1/user/smartmoney`
+   * & `/v1/user/kol`). Public keyless (exist auth), weight 1. Cache module-level
+   * 60 detik — dipakai meme agents (kandidat akumulasi) & wallet-tracker (exit
+   * alert) tanpa duplikasi request. Fail-open: error → [].
+   */
+  public async fetchTrackTrades(chain: SolChain, kind: 'smartmoney' | 'kol'): Promise<GMGNTrackTrade[]> {
+    const key = `track:${chain}:${kind}`;
+    const cached = GMGNAdapter.trackCache.get(key);
+    if (cached && Date.now() - cached.at < GMGNAdapter.TRACK_CACHE_TTL_MS) {
+      return cached.trades;
+    }
+    const res = await this.gmgnRequest<any>('GET', `/v1/user/${kind}`, { chain, limit: 100 });
+    if (!res) return [];
+    const list: any[] = Array.isArray(res?.data?.list) ? res.data.list : (Array.isArray(res?.list) ? res.list : []);
+    const trades: GMGNTrackTrade[] = list
+      .map((t: any) => {
+        const addr = String(t?.base_address || '');
+        if (!addr) return null;
+        const side: 'buy' | 'sell' = String(t?.side || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
+        return {
+          tokenAddress: addr.toLowerCase(),
+          tokenSymbol: String(t?.base_token?.symbol || ''),
+          side,
+          amountUsd: Number(t?.amount_usd ?? 0) || 0,
+          isFullClose: t?.is_open_or_close === 1 || t?.is_open_or_close === '1',
+          maker: String(t?.maker || ''),
+          makerTags: Array.isArray(t?.maker_info?.tags) ? t.maker_info.tags.map((x: unknown) => String(x)) : [],
+          timestamp: Number(t?.timestamp ?? 0) || 0,
+          kind,
+        };
+      })
+      .filter((t: GMGNTrackTrade | null): t is GMGNTrackTrade => t !== null)
+      .sort((a, b) => b.timestamp - a.timestamp);
+    GMGNAdapter.trackCache.set(key, { trades, at: Date.now() });
+    return trades;
   }
 
   /**

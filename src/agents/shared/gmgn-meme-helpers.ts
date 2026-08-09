@@ -5,7 +5,7 @@
  * lives here so thresholds, dedup and the strategy context contract stay in
  * ONE place. No scoring logic changes — this is pure de-duplication.
  */
-import type { GMGNRawToken, GMGNSecurityAudit } from '../../adapters/gmgn-adapter.js';
+import type { GMGNRawToken, GMGNSecurityAudit, GMGNTrackTrade } from '../../adapters/gmgn-adapter.js';
 
 export interface MemePreFilterConfig {
   /** Volume 1 JAM real (GMGN rank/hot interval=1h, trenches volume_1h, DexScreener h1) — wajib. */
@@ -211,7 +211,82 @@ export function tokenSecurityAuditLabel(audit: GMGNSecurityAudit | null): string
 }
 
 /**
- * Security gate dari data GMGN (fail-open per field: null = tidak dilaporkan,
+ * Akumulasi trade feed smart-money/KOL per token: berapa wallet beli/jual,
+ * total USD, full-close. Basis untuk candidate source (akumulasi bullish) dan
+ * exit alert (full-close bearish).
+ */
+export interface TrackAccumulation {
+  address: string;
+  symbol: string;
+  buyWalletCount: number;
+  buyWallets: Set<string>;
+  totalBuyUsd: number;
+  sellWalletCount: number;
+  totalSellUsd: number;
+  fullCloseCount: number;
+  /** Wallet yang melakukan full-close (jual habis posisi) — dasar deteksi exit. */
+  fullCloseWallets: Set<string>;
+  fullCloseTotalUsd: number;
+  lastFullCloseAt: number;
+  lastBuyAt: number;
+  lastSellAt: number;
+  kinds: Set<'smartmoney' | 'kol'>;
+}
+
+export function buildTrackAccumulation(trades: GMGNTrackTrade[]): Map<string, TrackAccumulation> {
+  const map = new Map<string, TrackAccumulation>();
+  for (const t of trades) {
+    let acc = map.get(t.tokenAddress);
+    if (!acc) {
+      acc = {
+        address: t.tokenAddress,
+        symbol: t.tokenSymbol,
+        buyWalletCount: 0,
+        buyWallets: new Set(),
+        totalBuyUsd: 0,
+        sellWalletCount: 0,
+        totalSellUsd: 0,
+        fullCloseCount: 0,
+        fullCloseWallets: new Set(),
+        fullCloseTotalUsd: 0,
+        lastFullCloseAt: 0,
+        lastBuyAt: 0,
+        lastSellAt: 0,
+        kinds: new Set(),
+      };
+      map.set(t.tokenAddress, acc);
+    }
+    acc.kinds.add(t.kind);
+    if (t.side === 'buy') {
+      if (!acc.buyWallets.has(t.maker)) {
+        acc.buyWallets.add(t.maker);
+        acc.buyWalletCount += 1;
+      }
+      acc.totalBuyUsd += t.amountUsd;
+      acc.lastBuyAt = Math.max(acc.lastBuyAt, t.timestamp);
+    } else {
+      if (t.maker && !acc.buyWallets.has(t.maker)) acc.sellWalletCount += 1;
+      acc.totalSellUsd += t.amountUsd;
+      acc.lastSellAt = Math.max(acc.lastSellAt, t.timestamp);
+      if (t.isFullClose) {
+        acc.fullCloseCount += 1;
+        if (t.maker) acc.fullCloseWallets.add(t.maker);
+        acc.fullCloseTotalUsd += t.amountUsd;
+        acc.lastFullCloseAt = Math.max(acc.lastFullCloseAt, t.timestamp);
+      }
+    }
+  }
+  return map;
+}
+
+/** Ringkasan akumulasi untuk card: "🧠 3 smart wallet beli $45k dalam 20m". */
+export function trackAccumulationLabel(acc: TrackAccumulation, now = Date.now()): string {
+  const mins = acc.lastBuyAt > 0 ? Math.max(0, Math.round((now / 1000 - acc.lastBuyAt) / 60)) : 0;
+  return `${acc.buyWalletCount} wallet beli $${(acc.totalBuyUsd / 1000).toFixed(1)}k ${mins <= 0 ? 'baru saja' : `${mins}m lalu`}`;
+}
+
+/**
+ * Gate keamanan dari data GMGN (fail-open per field: null = tidak dilaporkan,
  * dilewati) — dipakai meme agent DAN LP agent (token meme di pool).
  * Ambang default identik dengan meme config: rug < 0.3, insider < 0.3,
  * top-10 < 0.4, tax <= 10%, honeypot & wash = tolak. Bundler TIDAK digate
@@ -391,7 +466,13 @@ const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   rankLimit: { min: 10, max: 100 },
   trenchesLimit: { min: 10, max: 80 },
   hotSearchesLimit: { min: 10, max: 500 },
+  minTrackWallets: { min: 1, max: 50 },
+  minTrackBuyUsd: { min: 1000, max: 100_000_000 },
+  trackFreshMinutes: { min: 1, max: 1440 },
 };
+
+/** Key boolean yang boleh di-set via chat (track feed toggle). */
+const MEME_BOOL_KEYS = new Set(['trackFeedEnabled']);
 
 export interface MemeConfigUpdateResult {
   applied: Record<string, unknown>;
@@ -407,6 +488,14 @@ export function validateMemeConfigUpdate(partial: Record<string, unknown>): Meme
         applied.signalTypes = value;
       } else {
         rejected.push(`signalTypes: harus array integer 1-21 (mis. [6,7,11,12])`);
+      }
+      continue;
+    }
+    if (MEME_BOOL_KEYS.has(key)) {
+      if (typeof value === 'boolean') {
+        applied[key] = value;
+      } else {
+        rejected.push(`${key}: harus boolean true/false`);
       }
       continue;
     }

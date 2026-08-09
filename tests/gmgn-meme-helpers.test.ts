@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { securityGateToken, tokenSecurityLabel, securityAuditGate, tokenSecurityAuditLabel } from '../src/agents/shared/gmgn-meme-helpers.js';
-import type { GMGNRawToken, GMGNSecurityAudit } from '../src/adapters/gmgn-adapter.js';
+import { securityGateToken, tokenSecurityLabel, securityAuditGate, tokenSecurityAuditLabel, buildTrackAccumulation, trackAccumulationLabel } from '../src/agents/shared/gmgn-meme-helpers.js';
+import type { GMGNRawToken, GMGNSecurityAudit, GMGNTrackTrade } from '../src/adapters/gmgn-adapter.js';
 
 const mkAudit = (over: Partial<GMGNSecurityAudit> = {}): GMGNSecurityAudit => ({
   chain: 'sol', address: 'tok1',
@@ -141,6 +141,53 @@ describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', ()
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Renounced');
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Locked');
     expect(tokenSecurityAuditLabel(null)).toContain('Tidak teraudit');
+  });
+});
+
+describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const mkTrade = (over: Partial<GMGNTrackTrade> = {}): GMGNTrackTrade => ({
+    tokenAddress: 'tok1', tokenSymbol: 'TOK1', side: 'buy', amountUsd: 5000,
+    isFullClose: false, maker: '0xw1', makerTags: ['smart_degen'],
+    timestamp: now - 300, kind: 'smartmoney', ...over,
+  });
+
+  it('agregat buy per wallet (dedupe maker) + total USD + fresh timestamp', () => {
+    const acc = buildTrackAccumulation([
+      mkTrade({ maker: '0xw1', amountUsd: 5000 }),
+      mkTrade({ maker: '0xw1', amountUsd: 3000 }), // maker sama → 1 wallet
+      mkTrade({ maker: '0xw2', amountUsd: 9000 }),
+      mkTrade({ side: 'sell', maker: '0xw3', amountUsd: 2000 }),
+    ]);
+    const a = acc.get('tok1')!;
+    expect(a.buyWalletCount).toBe(2);
+    expect(a.totalBuyUsd).toBe(17000);
+    expect(a.sellWalletCount).toBe(1);
+    expect(a.totalSellUsd).toBe(2000);
+  });
+
+  it('full-close terdeteksi: wallet unik + total USD + timestamp terbaru', () => {
+    const acc = buildTrackAccumulation([
+      mkTrade({ side: 'sell', isFullClose: true, maker: '0xw1', amountUsd: 12_000, timestamp: now - 600 }),
+      mkTrade({ side: 'sell', isFullClose: true, maker: '0xw2', amountUsd: 11_000, timestamp: now - 1200 }),
+      mkTrade({ side: 'sell', isFullClose: true, maker: '0xw1', amountUsd: 5000, timestamp: now - 300 }), // wallet sama
+      mkTrade({ side: 'sell', isFullClose: false, maker: '0xw3', amountUsd: 9000, timestamp: now - 100 }), // bukan full-close
+    ]);
+    const a = acc.get('tok1')!;
+    expect(a.fullCloseWallets.size).toBe(2);
+    expect(a.fullCloseCount).toBe(3);
+    expect(a.fullCloseTotalUsd).toBe(28_000);
+    expect(a.lastFullCloseAt).toBe(now - 300);
+  });
+
+  it('trackAccumulationLabel: ringkas untuk card', () => {
+    const acc = buildTrackAccumulation([
+      mkTrade({ maker: '0xw1', amountUsd: 12_000, timestamp: now - 1200 }),
+      mkTrade({ maker: '0xw2', amountUsd: 18_000, timestamp: now - 1200 }),
+    ]);
+    const label = trackAccumulationLabel(acc.get('tok1')!, now * 1000);
+    expect(label).toContain('2 wallet beli');
+    expect(label).toContain('$30.0k');
   });
 });
 

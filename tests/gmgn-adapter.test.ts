@@ -328,4 +328,40 @@ describe('GMGNAdapter (OpenAPI)', () => {
     await b.fetchTokenSecurity('robinhood', '0xabc'); // lowercase → key sama
     expect(fn).toHaveBeenCalledTimes(1);
   });
+
+  it('fetchTrackTrades parses smart money feed (side/full-close/amount/tags) + cache 60s', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        code: 0,
+        data: { list: [
+          { base_address: '0xAAA', base_token: { symbol: 'PEPE' }, side: 'sell', amount_usd: '25000', is_open_or_close: 1, maker: '0xw1', maker_info: { tags: ['smart_degen', 'photon'] }, timestamp: 1786000000 },
+          { base_address: '0xAAA', base_token: { symbol: 'PEPE' }, side: 'buy', amount_usd: '30000', is_open_or_close: 0, maker: '0xw2', timestamp: 1785990000 },
+        ] },
+      }),
+    });
+    vi.stubGlobal('fetch', fn);
+    const a = new GMGNAdapter();
+    const b = new GMGNAdapter();
+    const trades = await a.fetchTrackTrades('sol', 'smartmoney');
+    expect(trades).toHaveLength(2);
+    expect(trades[0].tokenAddress).toBe('0xaaa'); // lowercase
+    expect(trades[0].side).toBe('sell');
+    expect(trades[0].amountUsd).toBe(25000);
+    expect(trades[0].isFullClose).toBe(true);
+    expect(trades[0].makerTags).toEqual(['smart_degen', 'photon']);
+    expect(trades[0].kind).toBe('smartmoney');
+    expect(trades[1].isFullClose).toBe(false);
+    await b.fetchTrackTrades('sol', 'smartmoney'); // cache shared → tidak fetch ulang
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetchTrackTrades fail-closed: error → []', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    const adapter = new GMGNAdapter();
+    expect(await adapter.fetchTrackTrades('sol', 'kol')).toEqual([]);
+  });
 });
