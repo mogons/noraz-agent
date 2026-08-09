@@ -12,7 +12,7 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 3. Specialist Screening Sub-Agents:
    - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib.
    - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib.
-   - Whale Tracking Agent (#call-whale-tracking): Smart trader PvP leaderboard positioning di Hyperliquid (BTC, ETH, SOL, HYPE) — long/short + spot flow, top 50 trader.
+   - Whale Tracking Agent (#call-whale-tracking): Smart trader PvP leaderboard positioning di Hyperliquid (BTC, ETH, SOL, HYPE) — long/short + spot flow, top 50 trader, plus CEX Radar (OI/funding/L-S/whale prints dari Binance, Bybit, OKX).
    - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-robinhood): Meteora DLMM & Uniswap v3 aggressive fee harvesting (24h Fee/TVL > 4%, Fee 1h >= $50, TVL >= $20k, Velocity volume/active TVL >= 1.0).
    - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.
    - Polymarket Prediction Agent (#call-prediction-markets): Polygon L2 odds arbitrage, implied mispricings, & $10k+ USDC whale bet inflows.

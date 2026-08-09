@@ -14,6 +14,7 @@
  */
 
 import { HyperliquidAdapter, HyperliquidPosition, HyperliquidTradeFill } from '../../adapters/hyperliquid-adapter.js';
+import { CexRadarAdapter, CexRadarEntry } from '../../adapters/cex-radar-adapter.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 
 export interface WhaleTraderPosition {
@@ -74,11 +75,13 @@ interface AssetSnapshot {
 export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> {
   readonly domain = 'perps';
   private adapter: HyperliquidAdapter;
+  private cexRadarAdapter: CexRadarAdapter | null;
   private config: WhaleTrackConfig;
   private snapshots = new Map<string, AssetSnapshot>();
 
-  constructor(adapter: HyperliquidAdapter, config?: Partial<WhaleTrackConfig>) {
+  constructor(adapter: HyperliquidAdapter, config?: Partial<WhaleTrackConfig>, cexRadarAdapter?: CexRadarAdapter) {
     this.adapter = adapter;
+    this.cexRadarAdapter = cexRadarAdapter ?? null;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -123,7 +126,18 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
       }
 
       this.storeSnapshot(coin, signal);
-      const payload = this.buildPayload(signal);
+      // CEX Radar — konteks tambahan (bukan filter), fetch hanya saat post.
+      let cexRadar: CexRadarEntry[] | undefined;
+      if (this.cexRadarAdapter) {
+        try {
+          const radar = await this.cexRadarAdapter.fetchRadar(coin);
+          cexRadar = radar.entries.length > 0 ? radar.entries : undefined;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`[WHALE AGENT] CEX Radar gagal untuk ${coin} (fail-open): ${message}`);
+        }
+      }
+      const payload = this.buildPayload(signal, cexRadar);
       reports.push({
         passed: true,
         signal,
@@ -305,7 +319,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
   }
 
   /** Build call-card payload for the WHALE embed. */
-  public buildPayload(signal: WhalePositionSignal): CallCardPayload {
+  public buildPayload(signal: WhalePositionSignal, cexRadar?: CexRadarEntry[]): CallCardPayload {
     const fmtUsd = (v: number) => `$${(v / 1e6).toFixed(2)}M`;
     const lines: string[] = [
       `${signal.coin}: net ${fmtUsd(signal.netUsd)} (${signal.longCount} long vs ${signal.shortCount} short trader)`,
@@ -313,6 +327,16 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     ];
     for (const flow of signal.spotFlow) {
       lines.push(`Spot ${flow.market}: buy ${fmtUsd(flow.buyUsd)} / sell ${fmtUsd(flow.sellUsd)} (${flow.fillCount} fill)`);
+    }
+    // Ringkasan CEX Radar di aiThesis (1 baris singkat per exchange)
+    if (cexRadar && cexRadar.length > 0) {
+      const radarSummary = cexRadar.map((e) => {
+        const prints = e.prints.count > 0
+          ? `prints ${e.prints.count}x net ${e.prints.netBuyUsd >= e.prints.netSellUsd ? '+' : '-'}${fmtUsd(Math.abs(e.prints.netBuyUsd - e.prints.netSellUsd))}`
+          : 'no big prints';
+        return `${e.exchange}: ${e.fundingRatePct !== null ? `funding ${e.fundingRatePct.toFixed(3)}%` : 'funding n/a'} | ${prints}`;
+      }).join(' • ');
+      lines.push(`CEX: ${radarSummary}`);
     }
 
     return {
@@ -329,6 +353,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
       liquidityUsd: signal.totalLongUsd + signal.totalShortUsd,
       volume1hUsd: signal.totalLongUsd + signal.totalShortUsd,
       dexScreenerUrl: `https://app.hyperliquid.xyz/trade/${signal.coin}`,
+      cexRadar,
       whaleReport: {
         coin: signal.coin,
         totalLongUsd: signal.totalLongUsd,

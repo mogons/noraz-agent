@@ -1,3 +1,5 @@
+import type { CexRadarEntry } from '../../adapters/cex-radar-adapter.js';
+
 export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA' | 'WHALE';
 
 /** Whale tracking: satu entri posisi terbuka >= ambang milik seorang smart trader. */
@@ -85,6 +87,8 @@ export interface CallCardPayload {
   volume1hUsd: number;
   /** Whale tracking: laporan posisi smart trader (domain WHALE) — render embed khusus. */
   whaleReport?: WhaleReport;
+  /** CEX Radar: konteks OI/funding/L-S/whale prints dari Binance/Bybit/OKX (info card saja, bukan filter). */
+  cexRadar?: CexRadarEntry[];
 }
 
 export interface AgentReport<TSignal = unknown> {

@@ -97,6 +97,31 @@ describe('isMaterialChange & runScreeningPass — event detection', () => {
     expect(reports[0].payload?.whaleReport?.totalLongUsd).toBe(2_000_000);
   });
 
+  it('payload menyertakan CEX Radar saat adapter radar terpasang (info card, bukan filter)', async () => {
+    const { adapter } = makeAdapter({
+      traders: { BTC: [traderA] },
+      positions: { [traderA.address]: [longA] },
+    });
+    const radar = {
+      fetchRadar: vi.fn(async () => ({
+        symbol: 'BTC',
+        fetchedAt: Date.now(),
+        entries: [
+          { exchange: 'binance', oiUsd: 12_400_000_000, oiChange24hPct: 3.3, fundingRatePct: 0.012, topTraderLongRatio: 1.8, accountLongShortRatio: null, liq24hUsd: 12_000_000, prints: { count: 2, netBuyUsd: 1_500_000, netSellUsd: 2_000_000 } },
+        ],
+      })),
+    };
+    const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 }, radar as never);
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].payload?.cexRadar).toHaveLength(1);
+    expect(reports[0].payload?.cexRadar?.[0].exchange).toBe('binance');
+    expect(radar.fetchRadar).toHaveBeenCalledWith('BTC');
+    // Radar hanya di-fetch saat ada post — pass kedua tanpa perubahan tidak memanggil radar lagi
+    await agent.runScreeningPass();
+    expect(radar.fetchRadar).toHaveBeenCalledTimes(1);
+  });
+
   it('tidak post ulang saat tidak ada perubahan material', async () => {
     const { adapter } = makeAdapter({
       traders: { BTC: [traderA] },

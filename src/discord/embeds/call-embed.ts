@@ -126,6 +126,27 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       }
     }
 
+    if (payload.cexRadar && payload.cexRadar.length > 0) {
+      const fmtUsd = (v: number) => (v >= 1_000_000_000 ? `$${(v / 1e9).toFixed(2)}B` : v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
+      const fmtOi = (v: number) => (v >= 1_000_000_000 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(1)}M`);
+      const radarLines = payload.cexRadar.map((e) => {
+        const parts: string[] = [];
+        parts.push(`OI ${fmtOi(e.oiUsd)}${e.oiChange24hPct !== null ? ` (${e.oiChange24hPct >= 0 ? '+' : ''}${e.oiChange24hPct.toFixed(1)}%)` : ''}`);
+        if (e.fundingRatePct !== null) parts.push(`Funding ${e.fundingRatePct.toFixed(3)}%`);
+        if (e.topTraderLongRatio !== null && e.topTraderLongRatio !== undefined) parts.push(`TopTrader L/S ${e.topTraderLongRatio.toFixed(1)}x`);
+        if (e.accountLongShortRatio !== null && e.accountLongShortRatio !== undefined) parts.push(`Akun L/S ${e.accountLongShortRatio.toFixed(1)}x`);
+        if (e.prints.count > 0) {
+          const net = e.prints.netBuyUsd - e.prints.netSellUsd;
+          parts.push(`Prints ${e.prints.count}×≥$1M (net ${net >= 0 ? '+' : '-'}${fmtUsd(Math.abs(net))})`);
+        } else {
+          parts.push('Prints 0');
+        }
+        if (e.liq24hUsd !== null && e.liq24hUsd !== undefined) parts.push(`Liq 24h ${fmtUsd(e.liq24hUsd)}`);
+        return `**${e.exchange === 'binance' ? 'Binance' : e.exchange === 'bybit' ? 'Bybit' : 'OKX'}**: ${parts.join(' | ')}`;
+      });
+      embed.addFields({ name: '🌐 CEX Radar (OI · Funding · L/S · Whale Prints)', value: radarLines.join('\n'), inline: false });
+    }
+
     embed.addFields({ name: '💡 Ringkasan', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
 
     const hyperliquidUrl = payload.dexScreenerUrl || `https://app.hyperliquid.xyz/trade/${payload.symbol}`;

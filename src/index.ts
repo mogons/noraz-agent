@@ -27,6 +27,7 @@ import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-scree
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
 import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
+import { CexRadarAdapter } from './adapters/cex-radar-adapter.js';
 import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
 import { PerpsScreeningAgent } from './agents/perps/perps-screening-agent.js';
 import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
@@ -42,7 +43,7 @@ dotenv.config();
 const telegramService = new TelegramService();
 const apiKeyGuard = new ApiKeyGuardService();
 const ctAlphaAgent = new CTAlphaAgent();
-const perpsScreeningAgent = new PerpsScreeningAgent(new HyperliquidAdapter());
+const perpsScreeningAgent = new PerpsScreeningAgent(new HyperliquidAdapter(), undefined, new CexRadarAdapter());
 
 console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
