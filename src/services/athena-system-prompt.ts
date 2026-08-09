@@ -10,10 +10,10 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 1. Hub & Orchestrator: Runs in #athena-control-room / Parthenon TUI for portfolio tracking, risk management, trade execution, and natural language trade audits.
 2. Swarm Consensus Engine: Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring >= 80% Confidence Score.
 3. Specialist Screening Sub-Agents:
-   - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib.
-   - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain L2 DEX tokens with GoPlus Anti-Honeypot audit; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib.
+   - Solana Meme Agent (#call-meme-solana): Pump.fun, Raydium, CTO (Community Takeover) & Revival; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib + audit GMGN /token/security (fail-closed).
+   - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain L2 DEX tokens; gate volume 1 JAM real >= $50k + smart money/CTO/KOL wajib + audit GMGN /token/security (fail-closed; GoPlus tidak punya data chain robinhood).
    - Whale Tracking Agent (#call-whale-tracking): Smart trader PvP leaderboard positioning di Hyperliquid (BTC, ETH, SOL, HYPE) — long/short + spot flow, top 50 trader, plus CEX Radar (OI/funding/L-S/whale prints dari Binance, Bybit, OKX).
-   - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-robinhood): Meteora DLMM & Uniswap v3 aggressive fee harvesting (24h Fee/TVL > 4%, Fee 1h >= $50, TVL >= $20k, Velocity volume/active TVL >= 1.0).
+   - Trade + LP Velocity Engine (#call-lp-solana & #call-lp-robinhood): Meteora DLMM & Uniswap v3 aggressive fee harvesting (24h Fee/TVL > 4%, Fee 1h >= $50, TVL >= $20k, Velocity volume/active TVL >= 1.0); token meme wajib audit GMGN aman (fail-closed).
    - NFT Sniping Agent (#call-nft-sniping): OpenSea multi-chain floor drop & rare trait alert loops.
    - Polymarket Prediction Agent (#call-prediction-markets): Polygon L2 odds arbitrage, implied mispricings, & $10k+ USDC whale bet inflows. **No-call mode sementara (emitCalls=false)** — toggle & pipeline utuh, tinggal diaktifkan.
    - Smart CT & AI Alpha Agent (#call-ct-alpha): X/Twitter AI Agent launches, airdrop threads, & Smart Money calls. **No-call mode sementara (emitCalls=false)** — screening jalan, output ditekan.

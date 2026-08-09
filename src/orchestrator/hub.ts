@@ -6,7 +6,7 @@ import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contrac
 import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
 import type { KrystalCloudAdapter } from '../adapters/krystal-cloud-adapter.js';
 import type { GMGNAdapter } from '../adapters/gmgn-adapter.js';
-import { securityGateToken, tokenSecurityLabel } from '../agents/shared/gmgn-meme-helpers.js';
+import { securityGateToken, tokenSecurityLabel, securityAuditGate, tokenSecurityAuditLabel } from '../agents/shared/gmgn-meme-helpers.js';
 import { buildLPPayload } from './dispatch.js';
 
 export interface ChannelStatus {
@@ -245,9 +245,10 @@ export class AthenaHub {
       const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
       const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
       // Enrich token meme (tokenX) dengan GMGN: Meteora DLMM API tidak expose
-      // smart money/KOL/CTO — ambil dari GMGN token/info (fail-open). Security
-      // gate token (honeypot/tax/rug/insider/bundler/top-10) dipakai sebagai
-      // FILTER: token berbahaya menolak pool-nya (fail-open bila tidak ditemukan).
+      // smart money/KOL/CTO — ambil dari GMGN token/info. Security gate token
+      // (honeypot/tax/rug/insider/bundler/top-10) + audit GMGN /token/security
+      // dipakai sebagai FILTER — FAIL-CLOSED: token tidak ditemukan / audit
+      // tidak tersedia = pool ditolak.
       const gmgn = this.gmgnAdapter ?? new GMGNAdapter();
       const enriched = new Map<string, any>();
       const results: AgentReport[] = [];
@@ -259,29 +260,35 @@ export class AthenaHub {
           } catch { enriched.set(p.tokenXAddress, null); }
         }
         const info = enriched.get(p.tokenXAddress) ?? null;
-        if (info) {
-          // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
-          const sec = securityGateToken(info, { enableTaxGate: false });
-          if (!sec.ok) {
-            console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — ${sec.reasons.join(' ')}`);
-            continue;
-          }
+        // FAIL-CLOSED: token tidak ditemukan di GMGN → audit tidak bisa diverifikasi.
+        if (!info) {
+          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — token tidak ditemukan di GMGN (audit tidak bisa diverifikasi).`);
+          continue;
+        }
+        // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
+        const sec = securityGateToken(info, { enableTaxGate: false });
+        if (!sec.ok) {
+          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — ${sec.reasons.join(' ')}`);
+          continue;
+        }
+        // Audit keamanan per-token (honeypot/blacklist/sell-lock) — fail-closed.
+        const audit = await gmgn.fetchTokenSecurity('sol', p.tokenXAddress);
+        const secAudit = securityAuditGate(audit, { enableTaxGate: false });
+        if (!secAudit.ok) {
+          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
+          continue;
         }
         const payload = buildLPPayload(p);
-        if (info) {
-          payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
-          payload.token0MarketCapUsd = info.marketCapUsd || payload.token0MarketCapUsd;
-          payload.token0Volume24hUsd = info.volume24hUsd || payload.token0Volume24hUsd;
-          payload.token0Holders = info.holderCount || payload.token0Holders;
-          payload.token0AgeHours = info.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : payload.token0AgeHours;
-          const smart = (info.smartDegenCount ?? 0) + (info.renownedCount ?? 0);
-          if (smart > 0) payload.token0SmartDegenCount = smart;
-          payload.gmgnUrl = `https://gmgn.ai/sol/token/${p.tokenXAddress}`;
-          payload.securityAuditPassed = true;
-          payload.securityScore = tokenSecurityLabel(info);
-        } else {
-          payload.securityScore = '⚠️ Tidak diaudit (GMGN)';
-        }
+        payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
+        payload.token0MarketCapUsd = info.marketCapUsd || payload.token0MarketCapUsd;
+        payload.token0Volume24hUsd = info.volume24hUsd || payload.token0Volume24hUsd;
+        payload.token0Holders = info.holderCount || payload.token0Holders;
+        payload.token0AgeHours = info.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : payload.token0AgeHours;
+        const smart = (info.smartDegenCount ?? 0) + (info.renownedCount ?? 0);
+        if (smart > 0) payload.token0SmartDegenCount = smart;
+        payload.gmgnUrl = `https://gmgn.ai/sol/token/${p.tokenXAddress}`;
+        payload.securityAuditPassed = true;
+        payload.securityScore = tokenSecurityAuditLabel(audit);
         results.push({
           passed: true,
           signal: p,
@@ -348,6 +355,13 @@ export class AthenaHub {
           continue;
         }
       }
+      // Audit keamanan per-token (honeypot/blacklist/sell-lock) — fail-closed.
+      const audit = await gmgn.fetchTokenSecurity('robinhood', memeToken.addr);
+      const secAudit = securityAuditGate(audit, { enableTaxGate: false });
+      if (!secAudit.ok) {
+        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
+        continue;
+      }
       const ageHours = info?.creationTimestamp !== null && info?.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : undefined;
       const smart = (info?.smartDegenCount ?? 0) + (info?.renownedCount ?? 0);
       results.push({
@@ -385,7 +399,7 @@ export class AthenaHub {
           aiThesis: p.aiRecommendation,
           confidenceScore: 80,
           securityAuditPassed: true,
-          securityScore: tokenSecurityLabel(info),
+          securityScore: tokenSecurityAuditLabel(audit),
           socialHypeScore: Math.min(100, Math.round(60 + p.volumeToActiveTvlRatio1h * 5)),
           liquidityUsd: p.tvlUsd,
           volume1hUsd: p.volume1hUsd,

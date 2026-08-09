@@ -167,11 +167,22 @@ describe('RobinhoodScreeningAgent', () => {
     };
     const emptyTrenches = { code: 0, data: { new_creation: [], pump: [], near_completion: [], completed: [] } };
     const priceResponse = { ethereum: { usd: ETH_PRICE, usd_24h_change: 1.5 } };
+    const securityResponse = {
+      code: 0,
+      data: {
+        is_honeypot: false, is_blacklist: false, is_renounced: true,
+        renounced_mint: false, renounced_freeze_account: false, can_not_sell: false,
+        buy_tax: '0', sell_tax: '0', average_tax: '0', high_tax: '0',
+        is_open_source: true, burn_ratio: '0', lock_summary: { is_locked: false },
+        is_show_alert: false, flags: [],
+      },
+    };
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('openapi.gmgn.ai/v1/market/rank')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => rankResponse };
       if (url.includes('openapi.gmgn.ai/v1/market/hot_searches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: [{ tokens: [] }] }) };
       if (url.includes('openapi.gmgn.ai/v1/trenches')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => emptyTrenches };
+      if (url.includes('openapi.gmgn.ai/v1/token/security')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => securityResponse };
       if (url.includes('coingecko')) return { ok: true, status: 200, headers: { get: () => null }, json: async () => priceResponse };
       throw new Error(`unexpected fetch: ${url}`);
     }));

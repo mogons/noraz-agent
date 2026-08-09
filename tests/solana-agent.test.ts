@@ -64,6 +64,45 @@ describe('SolanaScreeningAgent', () => {
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
   });
 
+  it('runScreeningPass menolak token saat audit GMGN security gagal (fail-closed)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const agent = new SolanaScreeningAgent();
+    const healthy = mkToken(); // lolos preFilter (CTO + smart money, fee $3.6k)
+    (agent as any).gmgn = {
+      fetchRank: async () => [healthy],
+      fetchTrenches: async () => ({ completed: [] }),
+      fetchHotSearches: async () => [],
+      fetchTokenSignals: async () => [],
+      fetchTokenSecurity: async () => null, // audit tidak tersedia → TOLAK
+    };
+    (agent as any).priceFeed = { getPrice: async () => 73.65 };
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(0);
+  });
+
+  it('runScreeningPass meloloskan token dengan audit GMGN security aman', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const agent = new SolanaScreeningAgent();
+    const healthy = mkToken();
+    (agent as any).gmgn = {
+      fetchRank: async () => [healthy],
+      fetchTrenches: async () => ({ completed: [] }),
+      fetchHotSearches: async () => [],
+      fetchTokenSignals: async () => [],
+      fetchTokenSecurity: async () => ({
+        chain: 'sol', address: healthy.address,
+        isHoneypot: false, isBlacklist: false, isRenounced: true,
+        renouncedMint: false, renouncedFreeze: false, canNotSell: false,
+        buyTaxPct: 0, sellTaxPct: 0, averageTaxPct: 0, highTaxPct: 0,
+        isOpenSource: true, burnRatioPct: 0, isLocked: false, isShowAlert: false, flags: [],
+      }),
+    };
+    (agent as any).priceFeed = { getPrice: async () => 73.65 };
+    const reports = await agent.runScreeningPass();
+    expect(reports).toHaveLength(1);
+    expect(reports[0].payload?.domain).toBe('MEME_SOLANA');
+  });
+
   it('preFilter re-enables age & fee gates when thresholds > 0', () => {
     const agent = new SolanaScreeningAgent();
     agent.updateConfig({ minAgeHours: 2, minTotalFeeUsd: 500 });

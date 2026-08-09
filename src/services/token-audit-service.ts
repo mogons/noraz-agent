@@ -1,6 +1,6 @@
 import { RugCheckService } from './security-service.js';
 import { GoPlusSecurityService } from './goplus-security-service.js';
-import { GMGNAdapter, type GMGNRawToken } from '../adapters/gmgn-adapter.js';
+import { GMGNAdapter, type GMGNRawToken, type GMGNSecurityAudit } from '../adapters/gmgn-adapter.js';
 
 export interface TokenAuditResult {
   success: boolean;
@@ -70,6 +70,22 @@ function marketLines(token: GMGNRawToken | null): string[] {
   ];
 }
 
+/** Baris audit keamanan GMGN `/v1/token/security` (panel Token Audit UI GMGN). */
+function gmgnAuditLine(audit: GMGNSecurityAudit | null): string {
+  if (!audit) return '🛡️ **GMGN Audit:** ⚠️ tidak tersedia (fail-closed)';
+  const parts: string[] = [];
+  parts.push(`Honeypot: ${yesNo(audit.isHoneypot)}`);
+  parts.push(`Blacklist: ${yesNo(audit.isBlacklist)}`);
+  parts.push(`Renounced: ${yesNo(audit.isRenounced, false)}`);
+  parts.push(`CanSell: ${audit.canNotSell ? '⚠️ TIDAK' : 'Ya'}`);
+  parts.push(`Tax avg ${audit.averageTaxPct.toFixed(1)}%${audit.highTaxPct > 0 ? ` / high ${audit.highTaxPct.toFixed(1)}%` : ''}`);
+  if (audit.burnRatioPct > 0) parts.push(`Burn ${audit.burnRatioPct.toFixed(1)}%`);
+  if (audit.isOpenSource) parts.push('Open Source');
+  if (audit.isLocked) parts.push('Locked');
+  if (audit.flags.length > 0) parts.push(`Flags: ${audit.flags.join(',')}`);
+  return `🛡️ **GMGN Audit:** ${parts.join(' | ')}`;
+}
+
 /**
  * On-demand token audit (used when a contract address is pasted into Discord).
  * Data lengkap: GMGN (market, holder, aktivitas, sinyal creator/anti-rug) +
@@ -83,10 +99,13 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
       const security = new RugCheckService();
       const audit = await security.auditSolanaToken(contract);
       const gmgn = new GMGNAdapter();
-      const token = await gmgn.fetchTokenInfo('sol', contract);
+      const [token, secAudit] = await Promise.all([
+        gmgn.fetchTokenInfo('sol', contract),
+        gmgn.fetchTokenSecurity('sol', contract),
+      ]);
       const apiError = audit.risks[0]?.name === 'RugCheck API Error';
 
-      if (apiError && !token) {
+      if (apiError && !token && !secAudit) {
         return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
       }
 
@@ -106,6 +125,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
         ...marketLines(token),
         auditLine,
         authorityLine,
+        gmgnAuditLine(secAudit),
         riskLines.length > 0 ? `⚠️ **Risks:** ${riskLines.join(' • ')}` : '🟢 **Risks:** Tidak ada risk tercatat',
         `🧠 **Creator:** ${token ? creatorSignals(token) : '—'}`,
         `🔗 [DexScreener](https://dexscreener.com/solana/${contract}) | [RugCheck](https://rugcheck.xyz/tokens/${contract})`,
@@ -116,15 +136,18 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
     const goplus = new GoPlusSecurityService();
     const security = await goplus.auditTokenFull('robinhood', contract);
     const gmgn = new GMGNAdapter();
-    const token = await gmgn.fetchTokenInfo('robinhood', contract);
+    const [token, secAudit] = await Promise.all([
+      gmgn.fetchTokenInfo('robinhood', contract),
+      gmgn.fetchTokenSecurity('robinhood', contract),
+    ]);
 
-    if (!security && !token) {
+    if (!security && !token && !secAudit) {
       return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
     }
 
     const securityLine = security
       ? `🛡️ **GoPlus:** Honeypot: ${yesNo(security.isHoneypot)} | BuyTax ${security.buyTaxPct}% | SellTax ${security.sellTaxPct}% | Blacklist: ${yesNo(security.isBlacklisted)} | Open Source: ${yesNo(security.isOpenSource, false)} | Holder ${fmtInt(security.holderCount)}${security.lpHolderCount ? ` | LP Holders ${fmtInt(security.lpHolderCount)}` : ''}`
-      : '🛡️ **Audit:** —';
+      : '🛡️ **GoPlus:** ⚠️ tidak ada data untuk chain robinhood (4663)';
     const ownerLine = security
       ? `🔏 **Owner:** ${security.isOwnerRenounced ? 'Renounced ✅' : security.canTakeBackOwnership ? '⚠️ BISA AMBIL KEMBALI' : security.ownerAddress ? 'Aktif (bukan renounced)' : '—'} | Mintable: ${yesNo(security.isMintable)} | Proxy: ${yesNo(security.isProxy)} | Transfer Pausable: ${yesNo(security.isTransferPausable)} | Paused: ${yesNo(security.isPaused)} | Airdrop Scam: ${yesNo(security.isAirdropScam)}`
       : '🔏 **Owner:** —';
@@ -134,6 +157,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
       ...marketLines(token),
       securityLine,
       ownerLine,
+      gmgnAuditLine(secAudit),
       `🧠 **Creator:** ${token ? creatorSignals(token) : '—'}`,
       `🔗 [DexScreener](https://dexscreener.com/robinhood/${contract}) | [GoPlus](https://gopluslabs.io/token-security/4663/${contract})`,
     ];

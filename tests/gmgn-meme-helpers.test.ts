@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { securityGateToken, tokenSecurityLabel } from '../src/agents/shared/gmgn-meme-helpers.js';
-import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
+import { securityGateToken, tokenSecurityLabel, securityAuditGate, tokenSecurityAuditLabel } from '../src/agents/shared/gmgn-meme-helpers.js';
+import type { GMGNRawToken, GMGNSecurityAudit } from '../src/adapters/gmgn-adapter.js';
+
+const mkAudit = (over: Partial<GMGNSecurityAudit> = {}): GMGNSecurityAudit => ({
+  chain: 'sol', address: 'tok1',
+  isHoneypot: false, isBlacklist: false, isRenounced: true,
+  renouncedMint: false, renouncedFreeze: false, canNotSell: false,
+  buyTaxPct: 0, sellTaxPct: 0, averageTaxPct: 0, highTaxPct: 0,
+  isOpenSource: true, burnRatioPct: 0, isLocked: false, isShowAlert: false, flags: [],
+  ...over,
+});
 
 const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   chain: 'sol', address: 'addr1', symbol: 'TEST', name: 'Test Token',
@@ -85,6 +94,53 @@ describe('securityGateToken — gate keamanan GMGN (meme & LP shared)', () => {
 
   it('opsi ambang kustom dapat diperketat', () => {
     expect(securityGateToken(mkToken({ rugRatio: 0.2 }), { maxRugRatio: 0.15 }).ok).toBe(false);
+  });
+});
+
+describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', () => {
+  it('audit null/tidak tersedia → TOLAK (tidak bisa diverifikasi)', () => {
+    const r = securityAuditGate(null);
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join(' ')).toContain('fail-closed');
+  });
+
+  it('token aman → lolos', () => {
+    expect(securityAuditGate(mkAudit()).ok).toBe(true);
+  });
+
+  it('honeypot → tolak', () => {
+    const r = securityAuditGate(mkAudit({ isHoneypot: true }));
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join(' ')).toContain('honeypot');
+  });
+
+  it('blacklist → tolak', () => {
+    expect(securityAuditGate(mkAudit({ isBlacklist: true })).ok).toBe(false);
+  });
+
+  it('tidak bisa dijual (canNotSell/sell-locked) → tolak', () => {
+    const r = securityAuditGate(mkAudit({ canNotSell: true }));
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join(' ')).toContain('dijual');
+  });
+
+  it('tax tinggi (> 10%) → tolak saat enableTaxGate', () => {
+    expect(securityAuditGate(mkAudit({ sellTaxPct: 15 })).ok).toBe(false);
+    expect(securityAuditGate(mkAudit({ highTaxPct: 12 })).ok).toBe(false);
+    expect(securityAuditGate(mkAudit({ averageTaxPct: 5, sellTaxPct: 3 })).ok).toBe(true);
+  });
+
+  it('enableTaxGate: false → tax besar lolos (mode LP), honeypot tetap tolak', () => {
+    const taxOk = securityAuditGate(mkAudit({ sellTaxPct: 25 }), { enableTaxGate: false });
+    expect(taxOk.ok).toBe(true);
+    const hp = securityAuditGate(mkAudit({ isHoneypot: true, sellTaxPct: 25 }), { enableTaxGate: false });
+    expect(hp.ok).toBe(false);
+  });
+
+  it('tokenSecurityAuditLabel: hanya field yang tersedia yang ditampilkan', () => {
+    expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Renounced');
+    expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Locked');
+    expect(tokenSecurityAuditLabel(null)).toContain('Tidak teraudit');
   });
 });
 

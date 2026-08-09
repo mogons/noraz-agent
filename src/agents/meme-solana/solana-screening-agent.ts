@@ -2,7 +2,7 @@ import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate, securityAuditGate } from '../shared/gmgn-meme-helpers.js';
 import type { SignalBoostMap } from '../shared/gmgn-meme-helpers.js';
 
 export interface SolanaSignal {
@@ -213,9 +213,14 @@ export class SolanaScreeningAgent implements ScreeningAgent<SolanaSignal> {
 
       const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[SOLANA AGENT] ${filter.reason}`); continue; }
-      // Audit keamanan kini dari data GMGN di preFilter (rug_ratio, is_honeypot,
-      // buy/sell tax, insider, bundler, top-10, wash, renounced) — RugCheck API
-      // eksternal dihapus (rate-limit & biaya; data GMGN sudah selengkap itu).
+      // Audit keamanan GMGN /v1/token/security (fail-closed): honeypot, blacklist,
+      // sell-lock, tax — lapisan kedua di atas data rank (konsisten dgn robinhood).
+      const audit = await this.gmgn.fetchTokenSecurity('sol', t.address);
+      const sec = securityAuditGate(audit);
+      if (!sec.ok) {
+        console.log(`[SOLANA AGENT] ⛔ ${t.symbol}: AUDIT FAIL — ${sec.reasons.join(' ')}`);
+        continue;
+      }
 
       const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {

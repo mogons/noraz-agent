@@ -272,4 +272,60 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(tokens[1].exchange).toBe('pump');
     expect(tokens[1].progress).toBe(0.4);
   });
+
+  it('fetchTokenSecurity parses audit fields dari /v1/token/security', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        code: 0,
+        data: {
+          address: 'tok1',
+          is_honeypot: false, is_blacklist: true, is_renounced: true,
+          renounced_mint: false, renounced_freeze_account: false, can_not_sell: '1',
+          buy_tax: '0', sell_tax: '2.5', average_tax: '1.2', high_tax: '8',
+          is_open_source: true, burn_ratio: '3.5', lock_summary: { is_locked: true },
+          is_show_alert: false, flags: ['fake_volume'],
+        },
+      }),
+    }));
+    const adapter = new GMGNAdapter();
+    const a = await adapter.fetchTokenSecurity('sol', 'tok1');
+    expect(a).not.toBeNull();
+    expect(a!.isBlacklist).toBe(true);
+    expect(a!.isRenounced).toBe(true);
+    expect(a!.canNotSell).toBe(true);
+    expect(a!.sellTaxPct).toBe(2.5);
+    expect(a!.highTaxPct).toBe(8);
+    expect(a!.burnRatioPct).toBe(3.5);
+    expect(a!.isLocked).toBe(true);
+    expect(a!.flags).toEqual(['fake_volume']);
+  });
+
+  it('fetchTokenSecurity fail-closed: error/API code != 0 → null', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 401, message: 'rate limited' }),
+    }));
+    const adapter = new GMGNAdapter();
+    expect(await adapter.fetchTokenSecurity('sol', 'tok_fail_closed')).toBeNull();
+  });
+
+  it('fetchTokenSecurity cache module-level: call kedua tidak fetch ulang (TTL 10m)', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const fn = vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      headers: { get: () => null },
+      json: async () => ({ code: 0, data: { is_honeypot: false } }),
+    });
+    vi.stubGlobal('fetch', fn);
+    const a = new GMGNAdapter();
+    const b = new GMGNAdapter(); // instansi berbeda — cache tetap dibagi
+    await a.fetchTokenSecurity('robinhood', '0xABC');
+    await b.fetchTokenSecurity('robinhood', '0xabc'); // lowercase → key sama
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
 });

@@ -2,7 +2,7 @@ import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
-import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate } from '../shared/gmgn-meme-helpers.js';
+import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate, securityAuditGate } from '../shared/gmgn-meme-helpers.js';
 import type { SignalBoostMap } from '../shared/gmgn-meme-helpers.js';
 
 export interface RobinhoodSignal {
@@ -214,9 +214,15 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
 
       const filter = this.preFilter(t, nativePriceUsd);
       if (!filter.ok) { console.log(`[ROBINHOOD AGENT] ${filter.reason}`); continue; }
-      // Audit keamanan kini dari data GMGN di preFilter (rug_ratio, is_honeypot,
-      // buy/sell tax, insider, bundler, top-10, wash) — GoPlus tidak punya data
-      // untuk sebagian besar token robinhood (4663) & gagal null → hilangkan.
+      // Audit keamanan GMGN /v1/token/security (fail-closed): honeypot, blacklist,
+      // sell-lock, tax. Endpoint audit per-token — data rank (is_honeypot) blind
+      // di chain robinhood, jadi wajib pakai audit khusus ini.
+      const audit = await this.gmgn.fetchTokenSecurity('robinhood', t.address);
+      const sec = securityAuditGate(audit);
+      if (!sec.ok) {
+        console.log(`[ROBINHOOD AGENT] ⛔ ${t.symbol}: AUDIT FAIL — ${sec.reasons.join(' ')}`);
+        continue;
+      }
 
       const det = applySignalBoost(this.detectSignal(t), signalBoostMap, t.address);
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {

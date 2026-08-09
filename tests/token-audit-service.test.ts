@@ -31,6 +31,26 @@ const mkGmgnInfo = (address: string, chain: string) => ({
   },
 });
 
+const mkGmgnSecurity = (over: Record<string, unknown> = {}) => ({
+  code: 0,
+  data: {
+    is_honeypot: false,
+    is_blacklist: false,
+    is_renounced: true,
+    can_not_sell: false,
+    buy_tax: '0',
+    sell_tax: '0',
+    average_tax: '1.2',
+    high_tax: '5',
+    is_open_source: true,
+    burn_ratio: '3.5',
+    lock_summary: { is_locked: true },
+    is_show_alert: false,
+    flags: [],
+    ...over,
+  },
+});
+
 const mkRugCheckReport = () => ({
   mint: SOL_MINT,
   score: 850,
@@ -88,7 +108,8 @@ describe('runTokenAudit', () => {
     process.env.GMGN_API_KEY = 'test';
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkRugCheckReport() })               // RugCheck
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') }));     // GMGN token info
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') })       // GMGN token info
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity() }));                // GMGN /token/security
     const res = await runTokenAudit(SOL_MINT);
     expect(res.success).toBe(true);
     expect(res.content).toContain('(Solana)');
@@ -105,6 +126,10 @@ describe('runTokenAudit', () => {
     expect(res.content).toContain('85%');
     expect(res.content).toContain('Mint Auth');
     expect(res.content).toContain('Freeze Auth');
+    expect(res.content).toContain('GMGN Audit');
+    expect(res.content).toContain('Renounced');
+    expect(res.content).toContain('Burn 3.5%');
+    expect(res.content).toContain('Locked');
     expect(res.content).toContain('Low Liquidity (400)');
     expect(res.content).toContain('Dev hold 3.2%');
     expect(res.content).toContain('Bundler 1.1%');
@@ -117,7 +142,8 @@ describe('runTokenAudit', () => {
     process.env.GMGN_API_KEY = 'test';
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkRugCheckReport() })
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') }));
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') })
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity() }));
     const res = await runTokenAudit(SOL_MINT);
     expect(res.success).toBe(true);
   });
@@ -126,7 +152,8 @@ describe('runTokenAudit', () => {
     process.env.GMGN_API_KEY = 'test';
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkGoPlusRobinhood() })              // GoPlus robinhood
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(EVM_CA, 'robinhood') })); // GMGN robinhood
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(EVM_CA, 'robinhood') })   // GMGN robinhood
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity() }));                // GMGN /token/security
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
     expect(res.content).toContain('(EVM/Robinhood)');
@@ -140,6 +167,8 @@ describe('runTokenAudit', () => {
     expect(res.content).toContain('Mintable: Tidak');
     expect(res.content).toContain('Proxy: Tidak');
     expect(res.content).toContain('LP Holders 89');
+    expect(res.content).toContain('GMGN Audit');
+    expect(res.content).toContain('Burn 3.5%');
     expect(res.content).toContain('Dev hold 3.2%');
     expect(res.content).toContain('dexscreener.com/robinhood/');
     expect(res.content).toContain('gopluslabs.io/token-security/4663/');
@@ -151,15 +180,17 @@ describe('runTokenAudit', () => {
     goPlusHoneypot.result[EVM_CA].is_honeypot = '1';
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => goPlusHoneypot })
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(EVM_CA, 'robinhood') }));
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(EVM_CA, 'robinhood') })
+      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity({ is_honeypot: true }) }));
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
     expect(res.content).toContain('Honeypot: ⚠️ YA');
+    expect(res.content).toContain('GMGN Audit');
   });
 
   it('EVM: keduanya gagal → pesan tidak tersedia (fail-closed)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-    const res = await runTokenAudit(EVM_CA);
+    const res = await runTokenAudit('0xffffffffffffffffffffffffffffffffffffffff');
     expect(res.success).toBe(false);
     expect(res.content).toContain('tidak tersedia');
   });

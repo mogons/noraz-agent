@@ -67,6 +67,32 @@ export interface TokenSignalEvent {
 }
 
 /**
+ * Audit keamanan token dari GMGN `/v1/token/security` — endpoint audit
+ * per-token (panel "Token Audit" di UI GMGN): honeypot, blacklist, renounced,
+ * tax, burn, lock, open source. Normalized; semua nilai real dari API.
+ */
+export interface GMGNSecurityAudit {
+  chain: string;
+  address: string;
+  isHoneypot: boolean;
+  isBlacklist: boolean;
+  isRenounced: boolean;
+  renouncedMint: boolean;
+  renouncedFreeze: boolean;
+  /** 1 = token TIDAK bisa dijual (sell-locked honeypot). 0/tidak diketahui = 0. */
+  canNotSell: boolean;
+  buyTaxPct: number;
+  sellTaxPct: number;
+  averageTaxPct: number;
+  highTaxPct: number;
+  isOpenSource: boolean;
+  burnRatioPct: number;
+  isLocked: boolean;
+  isShowAlert: boolean;
+  flags: string[];
+}
+
+/**
  * Legacy compatibility alias: GMGNRawToken is the canonical type. Older callers
  * (screening agents, audit service, TUI, hub) rely on the previous
  * GMGNTokenSignal shape — the extra members keep them compiling unchanged.
@@ -82,6 +108,10 @@ export type GMGNTokenSignal = GMGNRawToken & {
 export class GMGNAdapter {
   private baseUrl = 'https://openapi.gmgn.ai';
   private apiKey?: string;
+
+  /** Cache audit security — module-level, dibagi SEMUA instansi adapter. */
+  private static securityCache = new Map<string, { audit: GMGNSecurityAudit; at: number }>();
+  private static readonly SECURITY_CACHE_TTL_MS = 10 * 60 * 1000;
 
   /**
    * Global pacing queue — ALL GMGN requests (every adapter instance: meme
@@ -331,6 +361,46 @@ export class GMGNAdapter {
     const data = res?.data;
     if (!data || typeof data !== 'object') return null;
     return this.normalizeToken(this.flattenTokenInfo(data), chain);
+  }
+
+  /**
+   * Audit keamanan per-token dari `/v1/token/security` (panel "Token Audit"
+   * UI GMGN): honeypot, blacklist, renounced, can_sell, tax (avg/high), burn,
+   * lock, open source. Cache MODULE-LEVEL 10 menit — dibagi semua instansi
+   * (meme agent, hub LP, on-demand audit) supaya token yang sama tidak
+   * di-audit berulang dalam jendela yang sama. Fail-closed: error → null.
+   */
+  public async fetchTokenSecurity(chain: SolChain, address: string): Promise<GMGNSecurityAudit | null> {
+    const key = `${chain}:${address.toLowerCase()}`;
+    const cached = GMGNAdapter.securityCache.get(key);
+    if (cached && Date.now() - cached.at < GMGNAdapter.SECURITY_CACHE_TTL_MS) {
+      return cached.audit;
+    }
+    const res = await this.gmgnRequest<any>('GET', '/v1/token/security', { chain, address });
+    if (!res) return null;
+    const d = res?.data;
+    if (!d || typeof d !== 'object') return null;
+    const audit: GMGNSecurityAudit = {
+      chain,
+      address,
+      isHoneypot: d.is_honeypot === true || d.is_honeypot === 1 || d.is_honeypot === '1',
+      isBlacklist: d.is_blacklist === true || d.is_blacklist === 1 || d.is_blacklist === '1',
+      isRenounced: d.is_renounced === true || d.is_renounced === 1 || d.is_renounced === '1',
+      renouncedMint: d.renounced_mint === true || d.renounced_mint === 1 || d.renounced_mint === '1',
+      renouncedFreeze: d.renounced_freeze_account === true || d.renounced_freeze_account === 1 || d.renounced_freeze_account === '1',
+      canNotSell: d.can_not_sell === true || d.can_not_sell === 1 || d.can_not_sell === '1',
+      buyTaxPct: parseFloat(String(d.buy_tax ?? '0')) || 0,
+      sellTaxPct: parseFloat(String(d.sell_tax ?? '0')) || 0,
+      averageTaxPct: parseFloat(String(d.average_tax ?? '0')) || 0,
+      highTaxPct: parseFloat(String(d.high_tax ?? '0')) || 0,
+      isOpenSource: d.is_open_source === true || d.is_open_source === 1 || d.is_open_source === '1',
+      burnRatioPct: parseFloat(String(d.burn_ratio ?? '0')) || 0,
+      isLocked: Boolean(d.lock_summary?.is_locked),
+      isShowAlert: d.is_show_alert === true || d.is_show_alert === 1 || d.is_show_alert === '1',
+      flags: Array.isArray(d.flags) ? d.flags.map((f: unknown) => String(f)) : [],
+    };
+    GMGNAdapter.securityCache.set(key, { audit, at: Date.now() });
+    return audit;
   }
 
   /**

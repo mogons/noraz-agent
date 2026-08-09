@@ -5,7 +5,7 @@
  * lives here so thresholds, dedup and the strategy context contract stay in
  * ONE place. No scoring logic changes — this is pure de-duplication.
  */
-import type { GMGNRawToken } from '../../adapters/gmgn-adapter.js';
+import type { GMGNRawToken, GMGNSecurityAudit } from '../../adapters/gmgn-adapter.js';
 
 export interface MemePreFilterConfig {
   /** Volume 1 JAM real (GMGN rank/hot interval=1h, trenches volume_1h, DexScreener h1) — wajib. */
@@ -159,6 +159,55 @@ export function preFilterToken(
     if (totalFeeUsd < config.minTotalFeeUsd) return fail(`total fee $${totalFeeUsd.toFixed(0)} < $${config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).`);
   }
   return { ok: true, reason: 'ok' };
+}
+
+/**
+ * Gate audit keamanan dari GMGN `/v1/token/security` (endpoint audit per-token
+ * — panel "Token Audit" UI GMGN). FAIL-CLOSED: audit null/tidak tersedia = TOLAK
+ * (tidak bisa diverifikasi, jangan pernah lolos). Honeypot/blacklist/sell-lock
+ * = TOLAK; tax digate sesuai opsi (meme: > 10% tolak; LP: dimatikan).
+ */
+export interface SecurityAuditGateOptions {
+  maxTaxPct?: number;
+  /** Gate buy/sell/average tax (default true). LP agent mematikan ini. */
+  enableTaxGate?: boolean;
+}
+
+const SECURITY_AUDIT_GATE_DEFAULTS: Required<SecurityAuditGateOptions> = {
+  maxTaxPct: 10,
+  enableTaxGate: true,
+};
+
+export function securityAuditGate(
+  audit: GMGNSecurityAudit | null,
+  opts: SecurityAuditGateOptions = {}
+): { ok: boolean; reasons: string[] } {
+  const o = { ...SECURITY_AUDIT_GATE_DEFAULTS, ...opts };
+  if (!audit) {
+    return { ok: false, reasons: ['audit GMGN tidak tersedia (fail-closed).'] };
+  }
+  const reasons: string[] = [];
+  if (audit.isHoneypot) reasons.push('honeypot terdeteksi.');
+  if (audit.isBlacklist) reasons.push('blacklist.');
+  if (audit.canNotSell) reasons.push('tidak bisa dijual (sell-locked).');
+  if (o.enableTaxGate) {
+    if (audit.buyTaxPct > o.maxTaxPct) reasons.push(`buy tax ${audit.buyTaxPct}% > ${o.maxTaxPct}%.`);
+    if (audit.sellTaxPct > o.maxTaxPct) reasons.push(`sell tax ${audit.sellTaxPct}% > ${o.maxTaxPct}%.`);
+    if (audit.highTaxPct > o.maxTaxPct) reasons.push(`high tax ${audit.highTaxPct}% > ${o.maxTaxPct}%.`);
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+
+/** Label ringkas audit GMGN untuk card (field yang tersedia saja). */
+export function tokenSecurityAuditLabel(audit: GMGNSecurityAudit | null): string {
+  if (!audit) return '⚠️ Tidak teraudit (GMGN)';
+  const parts: string[] = [];
+  if (audit.isRenounced) parts.push('Renounced');
+  if (audit.isBlacklist) parts.push('No Blacklist');
+  parts.push(`Tax ${audit.averageTaxPct.toFixed(1)}%${audit.highTaxPct > 0 ? `/H ${audit.highTaxPct.toFixed(1)}%` : ''}`);
+  if (audit.burnRatioPct > 0) parts.push(`Burn ${audit.burnRatioPct.toFixed(1)}%`);
+  if (audit.isLocked) parts.push('Locked');
+  return parts.length > 0 ? `✅ GMGN audit — ${parts.join(' • ')}` : '✅ GMGN audit';
 }
 
 /**
