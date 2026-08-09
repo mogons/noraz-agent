@@ -2,21 +2,23 @@
  * Hyperliquid Adapter — Whale Positioning Tracker
  *
  * Reads Hyperliquid L1 DEX data for smart-money tracking:
- * - leaderboard (PvP, 7d) → top trader addresses per asset
+ * - stats-data leaderboard (PvP, 7d, cached 1 jam) → top trader addresses
+ *   (endpoint /info "leaderboard" sudah dihapus Hyperliquid — 422; yang hidup
+ *   adalah https://stats-data.hyperliquid.xyz/Mainnet/leaderboard)
  * - clearinghouseState per address → open positions (signed size, USD value)
- * - leaderboardTrades (5m) → recent fills from leaderboard participants (incl. spot)
+ * - userFills per address → recent fills (incl. spot) untuk deteksi aliran whale
  *
  * API Docs: https://hyperliquid.gitbook.io/hyperliquid-docs
  */
 
 export interface HyperliquidTrader {
   address: string;
-  returnPct: number;   // PvP 7d return %
-  pnlUsd: number;
+  returnPct: number;   // PvP 7d return % (week ROI * 100)
+  pnlUsd: number;      // PvP 7d PnL USD
 }
 
 export interface HyperliquidPosition {
-  coin: string;           // e.g. "BTC", "GOLD", "XYZ100"
+  coin: string;           // e.g. "BTC", "ETH", "SOL"
   side: 'LONG' | 'SHORT'; // derived from signed size
   sizeUsd: number;        // position notional value in USD
   entryPx: number;
@@ -35,96 +37,62 @@ export interface HyperliquidTradeFill {
   timestamp: number;
 }
 
-export interface HyperliquidLeaderboardTrades {
-  fills: HyperliquidTradeFill[];
-  fetchedAt: number;
-}
-
 export class HyperliquidAdapter {
   private infoApiUrl = 'https://api.hyperliquid.xyz/info';
+  private statsDataUrl = 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard?window=7d&asset=0';
 
-  // Assets tracked by the whale agent (perps indices live on Hyperliquid).
-  public readonly trackedAssets: string[] = ['BTC', 'GOLD', 'XYZ100'];
+  // Assets tracked by the whale agent (perps indices live on Hyperliquid main dex).
+  // GOLD & XYZ100 sudah tidak ada di main dex universe (XYZ100 pindah ke dex "xyz").
+  public readonly trackedAssets: string[] = ['BTC', 'ETH', 'SOL'];
 
-  // Live name → index resolution cache (from meta.universe), refreshed per fetch.
-  // Indices MUST come from the live meta() response so perps never reads the
-  // wrong coin's leaderboard/positions.
-  private universeByName: Map<string, number> | null = null;
-  private universeFetchedAt = 0;
-  private static readonly UNIVERSE_TTL_MS = 5 * 60 * 1000; // refresh every 5 min
-
-  /**
-   * Resolve a coin's current asset index from the live meta() universe.
-   * meta.universe is an array where position = asset index. Cached for TTL.
-   * Returns null when the coin is not listed (fail-closed — never fall back to a stale map).
-   */
-  private async resolveAssetIndex(coin: string): Promise<number | null> {
-    const upper = coin.toUpperCase();
-    if (this.universeByName && Date.now() - this.universeFetchedAt < HyperliquidAdapter.UNIVERSE_TTL_MS) {
-      return this.universeByName.get(upper) ?? null;
-    }
-    try {
-      const res = await fetch(this.infoApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'meta' }),
-      });
-      if (!res.ok) {
-        console.error(`[HYPERLIQUID] meta() HTTP ${res.status} — cannot resolve indices`);
-        return this.universeByName?.get(upper) ?? null;
-      }
-      const meta: any = await res.json();
-      if (Array.isArray(meta?.universe)) {
-        const map = new Map<string, number>();
-        meta.universe.forEach((u: any, idx: number) => {
-          if (typeof u?.name === 'string') map.set(u.name.toUpperCase(), idx);
-        });
-        this.universeByName = map;
-        this.universeFetchedAt = Date.now();
-        return map.get(upper) ?? null;
-      }
-      console.error('[HYPERLIQUID] meta() response missing universe array');
-      return this.universeByName?.get(upper) ?? null;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[HYPERLIQUID] meta() fetch failed (${message}) — using cached universe if available`);
-      return this.universeByName?.get(upper) ?? null;
-    }
-  }
+  // PvP leaderboard cache (stats-data response besar: ~41k trader / puluhan MB) —
+  // diambil maksimal 1x/jam, bukan tiap pass. Server mengabaikan param asset/size.
+  private leaderboardCache: HyperliquidTrader[] | null = null;
+  private leaderboardCachedAt = 0;
+  private static readonly LEADERBOARD_TTL_MS = 60 * 60 * 1000;
 
   /**
-   * Top PvP leaderboard traders for one asset (7d window).
-   * `asset` 0 = all assets; a specific index = that perps market.
-   * Returns the top `topN` traders sorted by PvP PnL.
+   * Top PvP leaderboard traders (7d window) — dari stats-data.hyperliquid.xyz
+   * (endpoint /info "leaderboard" sudah dihapus Hyperliquid, selalu HTTP 422).
+   * Server mengabaikan param coin/asset — daftar global di-sort by account value
+   * (whale terbesar), di-cache 1 jam (payload besar), lalu slice top N. Posisi
+   * per coin difilter saat agregasi (clearinghouseState).
    */
   public async fetchLeaderboardTraders(
     coin: string,
     topN: number,
-    timeWindow: '7d' = '7d',
+    _timeWindow: '7d' = '7d',
   ): Promise<HyperliquidTrader[]> {
-    const assetIndex = await this.resolveAssetIndex(coin);
-    if (assetIndex === null) return [];
     try {
-      const res = await fetch(this.infoApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'leaderboard', timeWindow, asset: assetIndex }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) {
-        console.error(`[HYPERLIQUID] leaderboard(${coin}) HTTP ${res.status}`);
-        return [];
+      if (!this.leaderboardCache || Date.now() - this.leaderboardCachedAt >= HyperliquidAdapter.LEADERBOARD_TTL_MS) {
+        const res = await fetch(this.statsDataUrl, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok) {
+          console.error(`[HYPERLIQUID] leaderboard stats-data HTTP ${res.status}`);
+          return [];
+        }
+        const data: any = await res.json();
+        const rows: any[] = Array.isArray(data?.leaderboardRows) ? data.leaderboardRows : [];
+        this.leaderboardCache = rows
+          .map((e: any) => {
+            const wp: any[] = Array.isArray(e?.windowPerformances) ? e.windowPerformances : [];
+            const week = wp.find((x) => Array.isArray(x) && x[0] === 'week' && x[1]);
+            // stats-data mengirim roi/pnl/accountValue sebagai STRING — konversi eksplisit
+            const roi = Number(week?.[1]?.roi ?? 0);
+            const pnl = Number(week?.[1]?.pnl ?? 0);
+            return {
+              address: String(e?.ethAddress || ''),
+              returnPct: Number((roi * 100).toFixed(2)) || 0,
+              pnlUsd: Number.isFinite(pnl) ? pnl : 0,
+              accountValue: Number(e?.accountValue ?? 0),
+            };
+          })
+          .filter((t: HyperliquidTrader & { accountValue: number }) => t.address.length > 0)
+          .sort((a, b) => b.accountValue - a.accountValue)
+          .map((t) => ({ address: t.address, returnPct: t.returnPct, pnlUsd: t.pnlUsd }));
+        this.leaderboardCachedAt = Date.now();
+        console.log(`[HYPERLIQUID] leaderboard cached: ${this.leaderboardCache.length} traders (stats-data, 7d, TTL 1h)`);
       }
-      const data: any = await res.json();
-      if (!Array.isArray(data)) return [];
-      return data
-        .slice(0, topN)
-        .map((t: any) => ({
-          address: String(t.address || ''),
-          returnPct: Number(t.returnPct) || 0,
-          pnlUsd: Number(t.pnl) || 0,
-        }))
-        .filter((t: HyperliquidTrader) => t.address.length > 0);
+      return this.leaderboardCache.slice(0, topN);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn(`[HYPERLIQUID] leaderboard(${coin}) failed: ${message}`);
@@ -176,49 +144,47 @@ export class HyperliquidAdapter {
   }
 
   /**
-   * Recent fills from all leaderboard participants (perps + spot) within the
-   * window. Spot coins come back as "BTC/USDC" style with isSpot=true.
+   * Recent fills (perps + spot) untuk satu wallet sejak `sinceMs`.
+   * Menggantikan endpoint "leaderboardTrades" yang sudah dihapus Hyperliquid (422).
+   * Spot coins kembali sebagai "BTC/USDC" style (isSpot = coin mengandung '/').
    */
-  public async fetchLeaderboardTrades(
-    timeWindow: '5m' = '5m',
-  ): Promise<HyperliquidLeaderboardTrades> {
+  public async fetchUserFills(user: string, sinceMs: number): Promise<HyperliquidTradeFill[]> {
     try {
       const res = await fetch(this.infoApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'leaderboardTrades', timeWindow }),
+        body: JSON.stringify({ type: 'userFills', user, startTime: sinceMs }),
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) {
-        console.error(`[HYPERLIQUID] leaderboardTrades HTTP ${res.status}`);
-        return { fills: [], fetchedAt: Date.now() };
+        console.error(`[HYPERLIQUID] userFills HTTP ${res.status} (${user.slice(0, 6)}…)`);
+        return [];
       }
       const data: any = await res.json();
-      const raw: any[] = Array.isArray(data?.trades) ? data.trades : [];
-      const fills: HyperliquidTradeFill[] = raw
-        .map((t) => {
+      if (!Array.isArray(data)) return [];
+      return data
+        .map((t: any) => {
           const coin = String(t.coin || '');
           const px = Number(t.px) || 0;
           const sz = Number(t.sz) || 0;
-          const side = t.side === 'B' ? 'BUY' : t.side === 'A' ? 'SELL' : null;
+          const side: 'BUY' | 'SELL' | null = t.side === 'B' ? 'BUY' : t.side === 'A' ? 'SELL' : null;
           if (!coin || px <= 0 || sz <= 0 || !side) return null;
           return {
             coin,
-            isSpot: Boolean(t.isSpot),
+            isSpot: coin.includes('/'),
             px,
             sz,
             usd: px * sz,
             side,
-            user: String(t.user || ''),
-            timestamp: Number(t.t) || 0,
+            user,
+            timestamp: Number(t.time) || 0,
           };
         })
-        .filter((f): f is HyperliquidTradeFill => f !== null);
-      return { fills, fetchedAt: Date.now() };
+        .filter((f: HyperliquidTradeFill | null): f is HyperliquidTradeFill => f !== null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[HYPERLIQUID] leaderboardTrades failed: ${message}`);
-      return { fills: [], fetchedAt: Date.now() };
+      console.warn(`[HYPERLIQUID] userFills(${user.slice(0, 6)}…) failed: ${message}`);
+      return [];
     }
   }
 }

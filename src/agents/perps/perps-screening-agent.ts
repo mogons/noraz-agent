@@ -1,10 +1,10 @@
 /**
  * Whale Tracking Agent (Hyperliquid) — replaces the old perps call agent.
  *
- * Tracks smart-money positioning on BTC / GOLD / XYZ100:
- * - PvP leaderboard (7d) per asset → top trader addresses
+ * Tracks smart-money positioning on BTC / ETH / SOL:
+ * - PvP leaderboard (7d, stats-data, cached 1 jam) → top trader addresses
  * - clearinghouseState per address → actual OPEN positions (long/short + USD size)
- * - leaderboardTrades (5m) → spot order flow (buy vs sell), fills >= $100k
+ * - userFills per address (5 menit) → spot order flow (buy vs sell), fills >= $100k
  *
  * Posts to #call-whale-tracking ONLY on material change (new/closed >= $1M
  * position, net direction flip, >= 30% long/short shift, or new >= $100k spot
@@ -48,14 +48,16 @@ export interface WhaleTrackConfig {
   topTraderCount: number;     // leaderboard depth per asset
   minPerpsUsd: number;        // only perps positions >= this are detailed (per trader)
   minSpotUsd: number;         // only spot fills >= this are reported
+  spotFillTraderLimit: number; // max trader per coin yang dibaca userFills-nya (hemat API call)
   changeThresholdPct: number; // total long OR short shift that triggers a post
   postCooldownMs: number;     // min interval between posts per asset
 }
 
 const DEFAULT_CONFIG: WhaleTrackConfig = {
-  topTraderCount: 10,
+  topTraderCount: 25,
   minPerpsUsd: 1_000_000,
   minSpotUsd: 100_000,
+  spotFillTraderLimit: 5,
   changeThresholdPct: 30,
   postCooldownMs: 10 * 60 * 1000,
 };
@@ -88,23 +90,29 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     console.log('[WHALE AGENT] Starting smart-money positioning pass...');
     const reports: AgentReport<WhalePositionSignal>[] = [];
 
-    // Spot flow (shared across assets — fetch once per pass)
-    const { fills } = await this.adapter.fetchLeaderboardTrades('5m');
-    const spotFlowByMarket = this.aggregateSpotFlow(fills.filter((f) => f.isSpot));
+    // Spot flow (shared across assets — aggregate dari userFills per trader)
+    const spotFlowByMarket = new Map<string, WhaleSpotFlow>();
 
-    // Perps: leaderboard per asset -> top addresses -> open positions
+    // Perps: leaderboard per asset -> top addresses -> open positions + fills
     for (const coin of this.adapter.trackedAssets) {
       const traders = await this.adapter.fetchLeaderboardTraders(coin, this.config.topTraderCount);
       if (traders.length === 0) {
-        console.log(`[WHALE AGENT] ⚪ ${coin}: leaderboard kosong (pasar sepi), skip.`);
+        console.log(`[WHALE AGENT] ⚪ ${coin}: leaderboard kosong (data tidak tersedia), skip.`);
         continue;
       }
 
       const returnByAddress = new Map(traders.map((t) => [t.address, t.returnPct]));
       const positions: Array<{ address: string; pos: HyperliquidPosition }> = [];
+      const fillsSince = Date.now() - 5 * 60 * 1000;
+      let fillReadCount = 0;
       for (const trader of traders) {
         const pos = await this.adapter.fetchClearinghouseState(trader.address);
         for (const p of pos) positions.push({ address: trader.address, pos: p });
+        if (fillReadCount < this.config.spotFillTraderLimit) {
+          const fills = await this.adapter.fetchUserFills(trader.address, fillsSince);
+          this.mergeSpotFlow(spotFlowByMarket, this.aggregateSpotFlow(fills));
+          fillReadCount += 1;
+        }
         await this.sleep(30); // be gentle: ~30ms between wallet reads
       }
 
@@ -127,6 +135,20 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     }
 
     return reports;
+  }
+
+  /** Merge hasil aggregateSpotFlow per trader ke peta spot flow global (per market). */
+  private mergeSpotFlow(target: Map<string, WhaleSpotFlow>, incoming: Map<string, WhaleSpotFlow>): void {
+    for (const [market, flow] of incoming) {
+      const cur = target.get(market);
+      if (!cur) {
+        target.set(market, flow);
+        continue;
+      }
+      cur.buyUsd += flow.buyUsd;
+      cur.sellUsd += flow.sellUsd;
+      cur.fillCount += flow.fillCount;
+    }
   }
 
   /**

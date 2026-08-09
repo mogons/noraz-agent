@@ -8,20 +8,20 @@ interface MockAdapterOverrides {
   trackedAssets?: string[];
   traders?: Record<string, HyperliquidTrader[]>;
   positions?: Record<string, HyperliquidPosition[]>;
-  fills?: HyperliquidTradeFill[];
+  fills?: Record<string, HyperliquidTradeFill[]>;
 }
 
 function makeAdapter(over: MockAdapterOverrides = {}) {
   const state = {
     traders: over.traders ?? {},
     positions: over.positions ?? {},
-    fills: over.fills ?? [],
+    fills: over.fills ?? {},
   };
   const adapter = {
     trackedAssets: over.trackedAssets ?? ['BTC'],
     fetchLeaderboardTraders: vi.fn(async (coin: string): Promise<HyperliquidTrader[]> => state.traders[coin] ?? []),
     fetchClearinghouseState: vi.fn(async (user: string): Promise<HyperliquidPosition[]> => state.positions[user] ?? []),
-    fetchLeaderboardTrades: vi.fn(async (): Promise<{ fills: HyperliquidTradeFill[]; fetchedAt: number }> => ({ fills: state.fills, fetchedAt: Date.now() })),
+    fetchUserFills: vi.fn(async (user: string): Promise<HyperliquidTradeFill[]> => state.fills[user] ?? []),
   };
   return { adapter, state };
 }
@@ -78,23 +78,6 @@ describe('buildSignal — agregasi posisi per aset', () => {
     expect(sig.totalLongUsd).toBe(2_800_000);
     expect(sig.longTraders).toHaveLength(1);
     expect(sig.longTraders[0].sizeUsd).toBe(2_800_000);
-  });
-});
-
-// ── aggregateSpotFlow ─────────────────────────────────────────────────────
-
-describe('aggregateSpotFlow — aliran spot', () => {
-  it('menolak fill < $100k dan mengagregat buy/sell per market', () => {
-    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
-    const fills: HyperliquidTradeFill[] = [
-      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.5, usd: 150_000, side: 'BUY', user: '0xa', timestamp: 1 },
-      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 0.8, usd: 48_000, side: 'BUY', user: '0xb', timestamp: 2 }, // < 100k → ditolak
-      { coin: 'BTC/USDC', isSpot: true, px: 61000, sz: 2.0, usd: 122_000, side: 'SELL', user: '0xc', timestamp: 3 },
-      { coin: 'ETH/USDC', isSpot: true, px: 3000, sz: 40, usd: 120_000, side: 'BUY', user: '0xd', timestamp: 4 },
-    ];
-    const map = agent.aggregateSpotFlow(fills);
-    expect(map.get('BTC/USDC')).toEqual({ market: 'BTC/USDC', buyUsd: 150_000, sellUsd: 122_000, fillCount: 2 });
-    expect(map.get('ETH/USDC')).toEqual({ market: 'ETH/USDC', buyUsd: 120_000, sellUsd: 0, fillCount: 1 });
   });
 });
 
@@ -175,21 +158,33 @@ describe('isMaterialChange & runScreeningPass — event detection', () => {
     expect(reports).toHaveLength(0);
   });
 
-  it('post saat fill spot baru >= $100k muncul', async () => {
+  it('post saat fill spot baru >= $100k muncul (via userFills trader)', async () => {
     const { adapter, state } = makeAdapter({
       traders: { BTC: [traderA] },
       positions: { [traderA.address]: [longA] },
-      fills: [],
     });
     const agent = new PerpsScreeningAgent(adapter as never, { postCooldownMs: 0 });
     await agent.runScreeningPass();
-    state.fills = [
-      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.0, usd: 120_000, side: 'BUY', user: '0x1', timestamp: 1 },
+    state.fills[traderA.address] = [
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.0, usd: 120_000, side: 'BUY', user: traderA.address, timestamp: 1 },
     ];
     const reports = await agent.runScreeningPass();
     expect(reports).toHaveLength(1);
     expect(reports[0].signal.spotFlow).toHaveLength(1);
     expect(reports[0].signal.spotFlow[0].buyUsd).toBe(120_000);
+  });
+
+  it('aggregateSpotFlow menolak fill < $100k dan mengagregat buy/sell per market', () => {
+    const agent = new PerpsScreeningAgent(makeAdapter().adapter as never);
+    const fills: HyperliquidTradeFill[] = [
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 2.5, usd: 150_000, side: 'BUY', user: '0xa', timestamp: 1 },
+      { coin: 'BTC/USDC', isSpot: true, px: 60000, sz: 0.8, usd: 48_000, side: 'BUY', user: '0xb', timestamp: 2 }, // < 100k → ditolak
+      { coin: 'BTC/USDC', isSpot: true, px: 61000, sz: 2.0, usd: 122_000, side: 'SELL', user: '0xc', timestamp: 3 },
+      { coin: 'ETH/USDC', isSpot: true, px: 3000, sz: 40, usd: 120_000, side: 'BUY', user: '0xd', timestamp: 4 },
+    ];
+    const map = agent.aggregateSpotFlow(fills);
+    expect(map.get('BTC/USDC')).toEqual({ market: 'BTC/USDC', buyUsd: 150_000, sellUsd: 122_000, fillCount: 2 });
+    expect(map.get('ETH/USDC')).toEqual({ market: 'ETH/USDC', buyUsd: 120_000, sellUsd: 0, fillCount: 1 });
   });
 
   it('cooldown 10 menit mencegah double-post walau data berubah', async () => {
