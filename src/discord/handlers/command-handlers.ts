@@ -100,7 +100,7 @@ export async function handleChatInput(
         content: `📋 **REGISTERED ATHENA BURNER WALLETS**\n\n` +
           `• **Solana Wallet:** ${solAddr}\n` +
           `• **EVM Wallet:** ${evmAddr}\n\n` +
-          `💡 *Gunakan \`/wallet replace\` untuk mengganti private key, atau \`/wallet remove\` untuk menghapus wallet.*`,
+          `💡 *Use \`/wallet replace\` to swap the private key, or \`/wallet remove\` to delete a wallet.*`,
         ephemeral: true,
       });
     } else if (subcommand === 'remove') {
@@ -109,8 +109,8 @@ export async function handleChatInput(
 
       await interaction.reply({
         content: `🗑️ **WALLET REMOVED SUCCESSFULLY!**\n\n` +
-          `Burner wallet untuk network \`${chain.toUpperCase()}\` telah berhasil dihapus dari memori bot.\n` +
-          `Gunakan \`/wallet setup\` jika ingin mendaftarkan wallet baru di masa mendatang.`,
+          `The \`${chain.toUpperCase()}\` burner wallet has been removed from the bot's memory.\n` +
+          `Use \`/wallet setup\` to register a new wallet at any time.`,
         ephemeral: true,
       });
     } else if (subcommand === 'balance') {
@@ -297,6 +297,14 @@ export async function handleChatInput(
         `## 📡 Athena Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
         `> 💡 Use \`/screening start\` or \`/screening stop\` in a dedicated channel to toggle individual agents.`
       );
+    } else if (subcommand === 'trigger') {
+      const target = interaction.options.getString('agent', true);
+      try {
+        const signals = await hub.triggerAgentPass(target);
+        await interaction.editReply(`⚡ **On-demand screening pass executed** for domain: \`${target}\` — **${signals.length} signal(s)** found.`);
+      } catch (err: any) {
+        await interaction.editReply(`❌ **Trigger failed** for \`${target}\`: ${err.message}`);
+      }
     }
   } else if (commandName === 'cancel') {
     await interaction.reply({
@@ -304,10 +312,71 @@ export async function handleChatInput(
       ephemeral: false,
     });
   } else if (commandName === 'config') {
+    const subcommand = interaction.options.getSubcommand();
+    if (subcommand === 'risk') {
+      const risk = hub.getRiskManager().getRiskState();
+      const fmtUsd = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      await interaction.reply({
+        content:
+          `⚙️ **ATHENA LIVE RISK SETTINGS**\n` +
+          `• **Max Drawdown Limit:** \`${risk.maxDrawdownLimitPct}%\` (current drawdown: \`${risk.currentDrawdownPct ?? 0}%\`)\n` +
+          `• **Max Position Size:** \`${fmtUsd(risk.maxPositionSizeUsd)}\` per trade\n` +
+          `• **Trading Paused:** \`${risk.paused ? 'YES 🚨' : 'No'}\` | Max Sector Exposure: \`${risk.maxSectorExposurePercent}%\`\n\n` +
+          `> 💡 Adjust via chat: *"Athena, set max drawdown 30%"* or *"Athena, set position size 500"*.`,
+        ephemeral: true,
+      });
+    } else if (subcommand === 'status') {
+      const dryRun = isDryRunMode();
+      const autoExecute = process.env.AUTO_EXECUTE_ENABLED === 'true';
+      const active = hub.getActiveDomains();
+      const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY'];
+      const keys = keyNames.map((k) => {
+        const v = process.env[k];
+        return `• \`${k}\`: ${v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock') ? '✅ SET' : '❌ not set'}`;
+      }).join('\n');
+      await interaction.reply({
+        content:
+          `🖥️ **ATHENA RUNTIME CONFIGURATION**\n\n` +
+          `**Mode:** \`${autoExecute ? 'AUTO_EXECUTE' : 'MANUAL_EXECUTION'}\` | Dry-Run: \`${dryRun ? 'ON (safe)' : 'OFF (live)'}\`\n` +
+          `**Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
+          `**API Keys:**\n${keys}\n\n` +
+          `> 💡 Set keys via chat: *"Athena, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
+        ephemeral: true,
+      });
+    }
+  } else if (commandName === 'health') {
+    const { globalHealthWatcher } = await import('../../services/health-watcher.js');
+    const health = globalHealthWatcher.auditSystemHealth();
+    const lines = Object.entries(health.report)
+      .map(([domain, h]: [string, any]) => `• **${domain}:** \`${h?.status || 'UNKNOWN'}\` (last ping ${h?.lastPingAt ? `${Math.max(0, Math.round((Date.now() - h.lastPingAt) / 60000))}m ago` : 'n/a'})`)
+      .join('\n');
     await interaction.reply({
-      content: '⚙️ **Athena Current Risk Settings:**\n• Max Daily Drawdown: `50%` \n• Position Size: `0.5 SOL / 0.1 ETH` per trade\n• Auto TP: `+100% (50%), +200% (25%)`\n• Auto SL: `-20%` (Dynamic Trailing Enabled)',
-      ephemeral: true,
+      content:
+        `🩺 **ATHENA SYSTEM HEALTH**\n\n${lines}\n\n` +
+        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs athena-agent`.'),
+      ephemeral: false,
     });
+  } else if (commandName === 'strategy') {
+    const subcommand = interaction.options.getSubcommand();
+    const { StrategyEngine } = await import('../../orchestrator/strategy-engine.js');
+    const engine = new StrategyEngine();
+    if (subcommand === 'list') {
+      const list = engine.listStrategies();
+      const lines = list.map((s: any) => `• **${s.id}** — ${s.name}${s.active ? ' `🟢 ACTIVE`' : ''}`).join('\n');
+      await interaction.reply({
+        content: `🧠 **ATHENA STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"Athena, create strategy X"*.`,
+        ephemeral: true,
+      });
+    } else if (subcommand === 'view') {
+      const res = engine.readStrategy(interaction.options.getString('name', true));
+      await interaction.reply({ content: res.success ? `📄 **${interaction.options.getString('name', true)}**\n\`\`\`js\n${String(res.data?.content || '').slice(0, 1800)}\`\`\`` : `❌ ${res.message}`, ephemeral: true });
+    } else if (subcommand === 'activate') {
+      const res = engine.setActiveStrategy(interaction.options.getString('domain', true), interaction.options.getString('strategy', true));
+      await interaction.reply({ content: res.success ? `✅ ${res.message}` : `❌ ${res.message}`, ephemeral: true });
+    } else if (subcommand === 'rollback') {
+      const res = engine.rollbackStrategy(interaction.options.getString('name', true));
+      await interaction.reply({ content: res.success ? `↩️ ${res.message}` : `❌ ${res.message}`, ephemeral: true });
+    }
   } else if (commandName === 'channel') {
     const subcommand = interaction.options.getSubcommand();
     const guild = interaction.guild;
@@ -332,7 +401,7 @@ export async function handleChatInput(
     const cleanToken = token.toUpperCase().trim();
     const price = await priceFeedService.getPrice(cleanToken);
     if (price === null) {
-      await interaction.reply({ content: `⚠️ Data harga real-time tidak tersedia untuk **\`${token}\`** saat ini.` });
+      await interaction.reply({ content: `⚠️ Real-time price data is unavailable for **\`${token}\`** right now.` });
       return;
     }
     await interaction.reply(`📊 **Token Price Query (\`${cleanToken}\`):**\n• Price: **$${price.toLocaleString()} USD** (CoinGecko real-time)`);
@@ -356,7 +425,7 @@ export async function handleChatInput(
     const symbol = interaction.options.getString('symbol', true).toUpperCase();
     const tokenPrice = await priceFeedService.getPrice(symbol);
     if (tokenPrice === null) {
-      await interaction.reply({ content: `⚠️ Tidak ada data harga real-time untuk **${symbol}**.` });
+      await interaction.reply({ content: `⚠️ No real-time price data for **${symbol}**.` });
       return;
     }
     const estUsd = amount * tokenPrice;
@@ -455,7 +524,7 @@ export async function handleChatInput(
       runAthenaUpdate({ noRestart: false });
     } catch (err: any) {
       await interaction.followUp({
-        content: `❌ **Update Exception (sebelum restart):** ${err.message}\n⚠ Bot akan restart sendiri — laporan lengkap cek ` + '`pm2 logs athena-agent`' + `.`,
+        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs athena-agent`' + `.`,
         ephemeral: true,
       });
     }

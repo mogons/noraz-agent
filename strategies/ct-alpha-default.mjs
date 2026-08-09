@@ -26,13 +26,13 @@ export default {
     const reasons = [];
 
     // ── Hard fail-closed gates (missing data = reject, never fake-pass) ──
-    if (likes === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Jumlah likes tidak diketahui (fail-closed).' };
-    if (retweets === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Jumlah retweets tidak diketahui (fail-closed).' };
+    if (likes === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Likes count unknown (fail-closed).' };
+    if (retweets === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Retweets count unknown (fail-closed).' };
     if (likes < p.minLikes) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ ${likes} likes < ${p.minLikes} minimum.` };
     if (retweets < p.minRetweets) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ ${retweets} retweets < ${p.minRetweets} minimum.` };
-    if (ageMs === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Umur tweet tidak diketahui (fail-closed).' };
+    if (ageMs === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Tweet age unknown (fail-closed).' };
     if (ageMs > p.maxAgeMs) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Tweet berumur ${(ageMs / 60000).toFixed(0)}m > 60m batas maksimum.` };
-    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan CT tidak lolos (author/engagement proxy).' };
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ CT security audit failed (author/engagement proxy).' };
 
     let score = 0;
 

@@ -85,8 +85,8 @@ export const slashCommands = [
               { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
               { name: 'Solana LP Agent', value: 'lp-solana' },
-              { name: 'Robinhood LP Agent (Robinhood)', value: 'lp-robinhood' },
-              { name: 'Perpetuals Agent', value: 'perps' },
+              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
+              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
               { name: 'NFT Sniping Agent', value: 'nft' },
               { name: 'Polymarket Prediction Agent', value: 'prediction' },
               { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
@@ -104,8 +104,8 @@ export const slashCommands = [
               { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
               { name: 'Solana LP Agent', value: 'lp-solana' },
-              { name: 'Robinhood LP Agent (Robinhood)', value: 'lp-robinhood' },
-              { name: 'Perpetuals Agent', value: 'perps' },
+              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
+              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
               { name: 'NFT Sniping Agent', value: 'nft' },
               { name: 'Polymarket Prediction Agent', value: 'prediction' },
               { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
@@ -115,6 +115,25 @@ export const slashCommands = [
     .addSubcommand(sub =>
       sub.setName('status')
         .setDescription('View real-time status of all 8 sub-agents (active / paused)')
+    )
+    .addSubcommand(sub =>
+      sub.setName('trigger')
+        .setDescription('Run an immediate on-demand screening pass for an agent')
+        .addStringOption(opt =>
+          opt.setName('agent')
+            .setDescription('Domain agent to trigger (e.g. meme-solana, perps, lp-solana)')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Solana Meme Agent', value: 'meme-solana' },
+              { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
+              { name: 'Solana LP Agent', value: 'lp-solana' },
+              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
+              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
+              { name: 'NFT Sniping Agent', value: 'nft' },
+              { name: 'Polymarket Prediction Agent', value: 'prediction' },
+              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
+            )
+        )
     ),
 
   new SlashCommandBuilder()
@@ -127,10 +146,46 @@ export const slashCommands = [
 
   new SlashCommandBuilder()
     .setName('config')
-    .setDescription('Update dynamic risk limits, AI providers, or screening thresholds')
+    .setDescription('Inspect runtime configuration, risk limits, or screening thresholds')
     .addSubcommand(sub =>
       sub.setName('risk')
-        .setDescription('View & update drawdown limits and position sizes')
+        .setDescription('View live risk limits (drawdown, position size) and risk state')
+    )
+    .addSubcommand(sub =>
+      sub.setName('status')
+        .setDescription('View runtime config: mode (dry-run/auto-execute), API keys set, AI model, active agents')
+    ),
+
+  new SlashCommandBuilder()
+    .setName('health')
+    .setDescription('System health check: per-agent heartbeat (HEALTHY / DEGRADED / UNRESPONSIVE)'),
+
+  new SlashCommandBuilder()
+    .setName('strategy')
+    .setDescription('Manage screening strategy modules (list / view / activate / rollback)')
+    .addSubcommand(sub =>
+      sub.setName('list')
+        .setDescription('List available strategy modules and their active flag')
+    )
+    .addSubcommand(sub =>
+      sub.setName('view')
+        .setDescription('View a strategy module source code')
+        .addStringOption(opt => opt.setName('name').setDescription('Strategy file name without extension (e.g. nft-default)').setRequired(true))
+    )
+    .addSubcommand(sub =>
+      sub.setName('activate')
+        .setDescription('Activate a strategy for a screening domain')
+        .addStringOption(opt => opt.setName('strategy').setDescription('Strategy id').setRequired(true))
+        .addStringOption(opt =>
+          opt.setName('domain')
+            .setDescription('Screening domain (e.g. meme-solana, meme-robinhood, nft, perps)')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand(sub =>
+      sub.setName('rollback')
+        .setDescription('Restore the previous backup of a strategy module')
+        .addStringOption(opt => opt.setName('name').setDescription('Strategy file name without extension').setRequired(true))
     ),
 
   new SlashCommandBuilder()

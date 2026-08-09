@@ -2,13 +2,13 @@ import type { WalletService } from '../services/wallet-service.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 
 /**
- * Whale sweep info — FAKTUAL dari events API (bukan estimasi):
- * satu buyer yang membeli >= 3 NFT dalam 1 jam terakhir.
+ * Whale sweep info — FACTUAL from the events API (not an estimate):
+ * a single buyer who bought >= 3 NFTs in the last 1 hour.
  */
 export interface OpenSeaWhaleInfo {
   address: string;
-  buyCount: number;   // NFT yang dibeli buyer ini dalam 1 jam terakhir
-  spentEth: number;   // total ETH yang dibelanjakan (dari payment.quantity)
+  buyCount: number;   // NFTs this buyer bought in the last 1 hour
+  spentEth: number;   // total ETH spent (from payment.quantity)
 }
 
 export interface OpenSeaNFTSignal {
@@ -19,10 +19,10 @@ export interface OpenSeaNFTSignal {
   chain: 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'robinhood';
   priceEth: number;
   floorPriceEth: number;
-  floorSurge1hPct: number;      // real: floor price history (time-series), 1 jam terakhir
-  volumeSpike1hRatio: number;   // real: volume 1h vs baseline 1h (events); fallback 24h vs baseline 6d
-  salesVelocity1h: number;      // real: sales dalam 1 jam terakhir (events); fallback 24h/24
-  isWhaleSweep: boolean;        // faktual: satu buyer membeli >= 3 dalam 1 jam
+  floorSurge1hPct: number;      // real: floor price history (time-series), last 1 hour
+  volumeSpike1hRatio: number;   // real: 1h volume vs 1h baseline (events); fallback 24h vs 6d baseline
+  salesVelocity1h: number;      // real: sales in the last 1 hour (events); fallback 24h/24
+  isWhaleSweep: boolean;        // factual: one buyer bought >= 3 within 1 hour
   whaleInfo?: OpenSeaWhaleInfo;
   /** Verified badge OpenSea (safelist_request_status === 'verified'); fail-closed false. */
   isVerified: boolean;
@@ -80,7 +80,7 @@ export class OpenSeaAdapter {
   private apiKey?: string;
   private isDryRun: boolean;
 
-  /** Chain yang di-screen (OpenSea ChainIdentifier, termasuk robinhood). */
+  /** Chains being screened (OpenSea ChainIdentifier, including robinhood). */
   public readonly supportedChains = ['ethereum', 'base', 'robinhood'] as const;
 
   constructor(apiKey?: string) {
@@ -89,10 +89,10 @@ export class OpenSeaAdapter {
   }
 
   /**
-   * Trending collections per chains (satu request untuk semua chain — param
-   * `chains` comma-separated). Screening menyeluruh: daftar dinamis dari
-   * sales activity OpenSea, bukan list statis. Timeframe one_hour = aktivitas
-   * terkini. Fail-closed: [] kalau API gagal / tanpa key.
+   * Trending collections per chains (one request for all chains — the
+   * `chains` comma-separated param). Thorough screening: a dynamic list from
+   * OpenSea sales activity, not a static list. Timeframe one_hour = current
+   * activity. Fail-closed: [] if the API fails / no key.
    */
   public async fetchTrendingCollections(
     chains: readonly string[] = this.supportedChains,
@@ -269,10 +269,10 @@ export class OpenSeaAdapter {
   /**
    * Fetch REAL floor-surge / volume-spike / sales-velocity / whale-sweep signals
    * per tracked collection, strictly from OpenSea API v2 endpoints:
-   *   1. /collections/{slug}/stats            → floor sekarang, volume/sales 24h + baseline 6 hari
-   *   2. /collections/{slug}/floor_prices     → time-series floor (surge 1 jam REAL)
-   *   3. /events/collection/{slug}?event_type=sale → velocity 1h, volume 1h vs baseline 1h, whale sweep
-   * Fail-closed per endpoint: data yang tidak tersedia = 0/false (never fabricated).
+   *   1. /collections/{slug}/stats            → current floor, 24h volume/sales + 6-day baseline
+   *   2. /collections/{slug}/floor_prices     → time-series floor (REAL 1-hour surge)
+   *   3. /events/collection/{slug}?event_type=sale → 1h velocity, 1h volume vs 1h baseline, whale sweep
+   * Fail-closed per endpoint: unavailable data = 0/false (never fabricated).
    */
   public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins', chain: string = 'ethereum'): Promise<OpenSeaNFTSignal[]> {
     if (!this.apiKey) {
@@ -281,7 +281,7 @@ export class OpenSeaAdapter {
     }
     const headers = { 'accept': 'application/json', 'x-api-key': this.apiKey };
     try {
-      // ── 1. Stats: floor + volume/sales 24h + baseline 6 hari (data REAL dari intervals) ──
+      // ── 1. Stats: floor + 24h volume/sales + 6-day baseline (REAL data from intervals) ──
       const statsRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`, { headers, signal: AbortSignal.timeout(15000) });
       if (!statsRes.ok) throw new Error(`OpenSea stats HTTP ${statsRes.status}`);
       const statsData: any = await statsRes.json();
@@ -295,12 +295,12 @@ export class OpenSeaAdapter {
       const sales24h = Number(oneDay?.sales) || 0;
       const vol7dEth = Number(sevenDay?.volume) || 0;
       const sales7d = Number(sevenDay?.sales) || 0;
-      // Baseline 6 hari = rata-rata harian SELAIN hari ini (jujur, dari data yang tersedia)
+      // 6-day baseline = daily average EXCLUDING today (honest, from available data)
       const baseVolDailyEth = Math.max(0, (vol7dEth - vol24hEth) / 6);
       const baseSalesDaily = Math.max(0, (sales7d - sales24h) / 6);
       if (!(floorPriceEth > 0)) return [];
 
-      // ── 2. Floor price history: surge 1 jam terakhir (time-series REAL) ──
+      // ── 2. Floor price history: last 1-hour surge (REAL time-series) ──
       let floorSurge1hPct = 0;
       try {
         const fpRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/floor_prices?timeframe=one_day&resolution=25`, { headers, signal: AbortSignal.timeout(15000) });
@@ -321,7 +321,7 @@ export class OpenSeaAdapter {
             if (fNow > 0 && fPrev > 0) floorSurge1hPct = ((fNow - fPrev) / fPrev) * 100;
           }
         }
-      } catch { /* best-effort — floor surge jadi 0 (tidak trigger) */ }
+      } catch { /* best-effort — floor surge becomes 0 (does not trigger) */ }
 
       // ── 2b. Verified badge: safelist_request_status === 'verified' (fail-closed false) ──
       let isVerified = false;
@@ -331,9 +331,9 @@ export class OpenSeaAdapter {
           const colData: any = await colRes.json();
           isVerified = colData?.safelist_request_status === 'verified';
         }
-      } catch { /* best-effort — verified jadi false (tidak bisa dipastikan) */ }
+      } catch { /* best-effort — verified becomes false (cannot be confirmed) */ }
 
-      // ── 3. Events (sale): velocity 1h, volume 1h vs baseline 1h, whale sweep ──
+      // ── 3. Events (sale): 1h velocity, 1h volume vs 1h baseline, whale sweep ──
       let salesVelocity1h = 0;
       let volume1hEth = 0;
       let volumePrev1hEth = 0;
@@ -378,13 +378,13 @@ export class OpenSeaAdapter {
         }
       } catch { /* best-effort */ }
 
-      // Volume spike — jujur pakai sumber terbaik yang tersedia:
-      // events 2h (1h vs 1h sebelumnya) kalau ada; kalau events tidak bisa
-      // (key tanpa akses analytics), fallback ke volume 24h vs baseline 6 hari.
+      // Volume spike — honestly use the best available source:
+      // 2h of events (1h vs the previous 1h) if available; if events cannot
+      // (key without analytics access), fall back to 24h volume vs 6-day baseline.
       const spikeFromEvents = volumePrev1hEth > 0 ? volume1hEth / volumePrev1hEth : (volume1hEth > 0 ? 3.0 : 0);
       const spikeFromStats = baseVolDailyEth > 0 ? vol24hEth / baseVolDailyEth : (vol24hEth > 0 ? 3.0 : 0);
       const volumeSpike1hRatio = eventsAvailable ? spikeFromEvents : spikeFromStats;
-      // Velocity: events 1h real kalau ada; kalau tidak → rata-rata 24h (jujur).
+      // Velocity: real 1h events if available; otherwise → 24h average (honest).
       const velocity = eventsAvailable && salesVelocity1h > 0 ? salesVelocity1h : (sales24h > 0 ? sales24h / 24 : 0);
 
       const tracked = undefined;

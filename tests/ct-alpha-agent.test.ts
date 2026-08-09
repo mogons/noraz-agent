@@ -241,6 +241,6 @@ describe('ct-alpha-default strategy', () => {
   it('SKIP when securityAuditPassed is false (author/engagement proxy failed)', () => {
     const ev = strat.evaluate(mkCtx({ securityAuditPassed: false }));
     expect(ev.recommendedAction).toBe('SKIP');
-    expect(ev.reason).toContain('Audit');
+    expect(ev.reason).toMatch(/audit/i);
   });
 });

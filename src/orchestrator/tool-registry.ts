@@ -313,7 +313,7 @@ export class ToolRegistry {
       },
       {
         name: 'set_screening_config',
-        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume1hUsd (1000-100000000; volume 1 JAM real, default 50000), minLiquidityUsd (1000-100000000), minMarketCapUsd (1000-1000000000), minAgeHours (0-168; 0 = degen early, token baru lolos), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (0-1000000; 500 = default, 0 = gate fee mati), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalTypes (array of ints 1-21, e.g. [6,7,11,12]), trackFeedEnabled (boolean; trade feed smart-money sebagai kandidat booster), minTrackWallets (1-50; default 2), minTrackBuyUsd (1000-100000000; default 10000), trackFreshMinutes (1-1440; default 30). Persisted across restarts.',
+        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume1hUsd (1000-100000000; real 1H volume, default 50000), minLiquidityUsd (1000-100000000), minMarketCapUsd (1000-1000000000), minAgeHours (0-168; 0 = degen early, new tokens pass), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (0-1000000; 500 = default, 0 = fee gate off), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalTypes (array of ints 1-21, e.g. [6,7,11,12]), trackFeedEnabled (boolean; smart-money trade feed as candidate booster), minTrackWallets (1-50; default 2), minTrackBuyUsd (1000-100000000; default 10000), trackFreshMinutes (1-1440; default 30). Persisted across restarts.',
         parameters: {
           type: 'object',
           properties: {
@@ -459,13 +459,13 @@ export class ToolRegistry {
           if (PROTECTED_ENV_KEYS.includes(keyName)) {
             return {
               success: false,
-              message: `⛔ ${keyName} tidak bisa diubah via chat (protected key). Edit .env langsung di VPS.`,
+              message: `⛔ ${keyName} cannot be changed via chat (protected key). Edit .env directly on the VPS.`,
             };
           }
           if (!SETTABLE_ENV_KEYS.includes(keyName)) {
             return {
               success: false,
-              message: `⛔ ${keyName} tidak ada di allowlist key yang bisa di-set via chat.`,
+              message: `⛔ ${keyName} is not in the allowlist of keys settable via chat.`,
             };
           }
 
@@ -551,7 +551,7 @@ export class ToolRegistry {
           const health = globalHealthWatcher.auditSystemHealth();
           return {
             success: true,
-            message: health.allHealthy ? 'Semua agent HEALTHY.' : 'Ada agent yang tidak merespons.',
+            message: health.allHealthy ? 'All agents HEALTHY.' : 'Some agents are not responding.',
             data: health.report,
           };
         }
@@ -610,11 +610,11 @@ export class ToolRegistry {
           const agentId = String(args.agentId || '').toLowerCase().trim();
           const config = (args.config && typeof args.config === 'object' ? args.config : {}) as Record<string, unknown>;
           if (Object.keys(config).length === 0) {
-            return { success: false, message: `Tidak ada config untuk diubah untuk ${agentId}.` };
+            return { success: false, message: `No config to update for ${agentId}.` };
           }
           const agent = await this.orchestrator.getScreeningAgent(agentId);
           if (!agent || typeof (agent as any).updateConfig !== 'function') {
-            return { success: false, message: `Agent ${agentId} tidak mendukung set_screening_config (domain LP tidak punya config).` };
+            return { success: false, message: `Agent ${agentId} does not support set_screening_config (LP domains have no config).` };
           }
           const { applied, rejected } = (agent as any).updateConfig(config);
           // Persist overrides so they survive restarts (validated already by the agent).
@@ -625,7 +625,7 @@ export class ToolRegistry {
           const rejectedStr = rejected.length > 0 ? `\n❌ Ditolak: ${rejected.join('; ')}` : '';
           return {
             success: rejected.length === 0,
-            message: `Config ${agentId} diperbarui.${appliedStr}${rejectedStr}`,
+            message: `Config ${agentId} updated.${appliedStr}${rejectedStr}`,
             data: { applied, rejected },
           };
         }

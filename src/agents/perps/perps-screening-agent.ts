@@ -4,7 +4,7 @@
  * Tracks smart-money positioning on BTC / ETH / SOL:
  * - PvP leaderboard (30d, stats-data, cached 1 jam) → top trader addresses
  * - clearinghouseState per address → actual OPEN positions (long/short + USD size)
- * - userFills per address (5 menit) → spot order flow (buy vs sell), fills >= $100k
+ * - userFills per address (5 minutes) → spot order flow (buy vs sell), fills >= $100k
  *
  * Posts to #call-whale-tracking ONLY on material change (new/closed >= $1M
  * position, net direction flip, >= 30% long/short shift, or new >= $100k spot
@@ -49,7 +49,7 @@ export interface WhaleTrackConfig {
   topTraderCount: number;     // leaderboard depth per asset
   minPerpsUsd: number;        // only perps positions >= this are detailed (per trader)
   minSpotUsd: number;         // only spot fills >= this are reported
-  spotFillTraderLimit: number; // max trader per coin yang dibaca userFills-nya (hemat API call)
+  spotFillTraderLimit: number; // max traders per coin whose userFills are read (saves API calls)
   changeThresholdPct: number; // total long OR short shift that triggers a post
   postCooldownMs: number;     // min interval between posts per asset
 }
@@ -68,7 +68,7 @@ interface AssetSnapshot {
   totalShortUsd: number;
   longs: Map<string, number>;   // address -> sizeUsd
   shorts: Map<string, number>;  // address -> sizeUsd
-  spot: Map<string, WhaleSpotFlow>; // market -> flow (untuk deteksi fill baru)
+  spot: Map<string, WhaleSpotFlow>; // market -> flow (for new-fill detection)
   lastPostAt: number;
 }
 
@@ -93,14 +93,14 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     console.log('[WHALE AGENT] Starting smart-money positioning pass...');
     const reports: AgentReport<WhalePositionSignal>[] = [];
 
-    // Spot flow (shared across assets — aggregate dari userFills per trader)
+    // Spot flow (shared across assets — aggregated from userFills per trader)
     const spotFlowByMarket = new Map<string, WhaleSpotFlow>();
 
     // Perps: leaderboard per asset -> top addresses -> open positions + fills
     for (const coin of this.adapter.trackedAssets) {
       const traders = await this.adapter.fetchLeaderboardTraders(coin, this.config.topTraderCount);
       if (traders.length === 0) {
-        console.log(`[WHALE AGENT] ⚪ ${coin}: leaderboard kosong (data tidak tersedia), skip.`);
+        console.log(`[WHALE AGENT] ⚪ ${coin}: empty leaderboard (data unavailable), skip.`);
         continue;
       }
 
@@ -121,12 +121,12 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
 
       const signal = this.buildSignal(coin, positions, returnByAddress, spotFlowByMarket);
       if (!this.isMaterialChange(coin, signal)) {
-        console.log(`[WHALE AGENT] ⚪ ${coin}: tidak ada perubahan material, skip post.`);
+        console.log(`[WHALE AGENT] ⚪ ${coin}: no material change, skipping post.`);
         continue;
       }
 
       this.storeSnapshot(coin, signal);
-      // CEX Radar — konteks tambahan (bukan filter), fetch hanya saat post.
+      // CEX Radar — additional context (not a filter), fetched only when posting.
       let cexRadar: CexRadarEntry[] | undefined;
       if (this.cexRadarAdapter) {
         try {
@@ -134,7 +134,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
           cexRadar = radar.entries.length > 0 ? radar.entries : undefined;
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[WHALE AGENT] CEX Radar gagal untuk ${coin} (fail-open): ${message}`);
+          console.warn(`[WHALE AGENT] CEX Radar failed for ${coin} (fail-open): ${message}`);
         }
       }
       const payload = this.buildPayload(signal, cexRadar);
@@ -151,7 +151,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     return reports;
   }
 
-  /** Merge hasil aggregateSpotFlow per trader ke peta spot flow global (per market). */
+  /** Merge each trader's aggregateSpotFlow result into the global spot flow map (per market). */
   private mergeSpotFlow(target: Map<string, WhaleSpotFlow>, incoming: Map<string, WhaleSpotFlow>): void {
     for (const [market, flow] of incoming) {
       const cur = target.get(market);
@@ -328,7 +328,7 @@ export class PerpsScreeningAgent implements ScreeningAgent<WhalePositionSignal> 
     for (const flow of signal.spotFlow) {
       lines.push(`Spot ${flow.market}: buy ${fmtUsd(flow.buyUsd)} / sell ${fmtUsd(flow.sellUsd)} (${flow.fillCount} fill)`);
     }
-    // Ringkasan CEX Radar di aiThesis (1 baris singkat per exchange)
+    // CEX Radar summary in aiThesis (one short line per exchange)
     if (cexRadar && cexRadar.length > 0) {
       const radarSummary = cexRadar.map((e) => {
         const prints = e.prints.count > 0

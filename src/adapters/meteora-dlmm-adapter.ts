@@ -132,7 +132,7 @@ export class MeteoraDLMMAdapter {
         const feeTvlRatioPct24h = Number(p.fee_tvl_ratio?.['24h']) || 0;
         const feesToTvlRatio24h = feeTvlRatioPct24h / 100; // decimal 0-1 (24h)
         const volumeToTvlRatio1h = tvlUsd > 0 ? volume1hUsd / tvlUsd : 0;
-        // Active-TVL proxy: TVL yang efektif menghasilkan fee (fee_rate × tvl).
+        // Active-TVL proxy: TVL effectively earning fees (fee_rate × tvl).
         const feeRate = volume1hUsd > 0 ? fee1hUsd / volume1hUsd : 0;
         const activeTvlUsd = feeRate > 0 ? feeRate * tvlUsd : tvlUsd * 0.3;
         const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
@@ -186,22 +186,22 @@ export class MeteoraDLMMAdapter {
 
   /**
    * High-yield filter on REAL metrics. Thresholds:
-   * - fees >= $50 in 1h (real fee income — kalibrasi 2026-08-09: $7 terlalu kecil)
-   * - 24h Fee/TVL > 4% (yield fee NYATA 24 jam terakhir — lebih cocok untuk
-   *   trader harian daripada APR annualized yang mengasumsikan kondisi 24 jam
-   *   berulang setahun penuh)
-   * - volume/ACTIVE TVL >= 100% per 1h (velocity: capital aktif berputar penuh)
-   * Token verified TIDAK difilter (DLMM = likuiditas komunitas; verified-only
-   * terlalu mengecilkan pool) — hanya di-surface sebagai info di call card.
-   * Umur pool TIDAK digate (2026-08-09: pool baru bisa langsung likuid & aktif).
-   * Dedupe per pair: satu pool terbaik per pasangan token (anti-spam call).
+   * - fees >= $50 in 1h (real fee income — calibrated 2026-08-09: $7 was too low)
+   * - 24h Fee/TVL > 4% (real fee yield over the last 24 hours — more suitable
+   *   for day traders than annualized APR that assumes 24h conditions
+   *   repeat for a full year)
+   * - volume/ACTIVE TVL >= 100% per 1h (velocity: active capital turns over fully)
+   * Token verified is NOT filtered (DLMM = community liquidity; verified-only
+   * shrinks the pool too much) — only surfaced as info on the call card.
+   * Pool age is NOT gated (2026-08-09: new pools can be liquid & active right away).
+   * Dedupe per pair: one best pool per token pair (anti-spam call).
    */
   public filterHighYieldPools(pools: MeteoraPoolSignal[]): MeteoraPoolSignal[] {
     const bestByPair = new Map<string, MeteoraPoolSignal>();
     for (const pool of pools) {
       const passesTvl = pool.tvlUsd >= 20000;
       const passesVol24h = pool.volume24hUsd >= 200000;
-      // Market cap tokenX wajib > $200k (fail-closed: 0/tidak diketahui = tolak).
+      // TokenX market cap must be > $200k (fail-closed: 0/unknown = rejected).
       const passesMc = pool.tokenXMarketCapUsd >= 200000;
       const passesFees = pool.fee1hUsd >= 50;
       const passesFeeYield24h = pool.feesToTvlRatio24h > 0.04;

@@ -52,7 +52,7 @@ export async function launchTUI(): Promise<void> {
     console.clear();
     console.log(ATHENA_PARTHENON_ASCII);
     console.log(`${C.cyan}${C.bright}========================================================================${C.reset}`);
-    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, eksekusi via link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
     console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
@@ -226,15 +226,16 @@ export async function launchTUI(): Promise<void> {
             toolRegistry.attachWalletService(globalWalletService);
             const activeDomains = hub.getActiveDomains();
             const activeAgentsLine = activeDomains.length > 0
-              ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
-              : 'Active Sub-Agents saat ini: NONE (semua paused)';
+              ? `Active Sub-Agents right now: ${activeDomains.join(', ')}`
+              : 'Active Sub-Agents right now: NONE (all paused)';
+            const risk = hub.getRiskManager().getRiskState();
             const memoryContext = new SessionMemoryService().buildMemoryContextLine();
             const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
-- Execution Mode: MANUAL EXECUTION — bot hanya screener/caller, eksekusi dilakukan user via link di call card.
-- Global Portfolio Drawdown Limit: 50.0%.
-- Current Portfolio Drawdown: 0.0%.${memoryContext}`;
+- Execution Mode: MANUAL EXECUTION — bot is screener/caller only, execution done by the user via the call-card link.
+- Global Portfolio Drawdown Limit: ${risk.maxDrawdownLimitPct}%.
+- Current Portfolio Drawdown: ${risk.currentDrawdownPct ?? 0}%.${memoryContext}`;
 
             const agentResult = await runAgent(
               { aiService, toolRegistry, systemPrompt },
@@ -242,7 +243,7 @@ Current Operating Parameters:
             );
             const aiRes = agentResult.text || (agentResult.toolResults.length > 0
               ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
-              : '[Tidak ada respons dari AI.]');
+              : '[No response from AI.]');
             console.log(`${C.cyan}Athena Oracle:${C.reset} ${aiRes}\n`);
           } catch (err: any) {
             console.log(`${C.cyan}Athena Oracle:${C.reset} Order acknowledged: "${chatMsg}". Operating in DRY_RUN safe simulation.\n`);
@@ -250,25 +251,31 @@ Current Operating Parameters:
         }
         break;
 
-      case '5':
+      case '5': {
         console.clear();
+        const risk = hub.getRiskManager().getRiskState();
         console.log(`${C.cyan}=== ⚙️ GLOBAL RISK MANAGEMENT & SAFEGUARDS ===${C.reset}`);
-        console.log(`• Max Daily Drawdown: 50%`);
-        console.log(`• Default Position Size: 0.5 SOL / 0.1 ETH`);
-        console.log(`• Auto Take Profit Targets: +100% (50%), +200% (25%)`);
-        console.log(`• Auto Stop Loss Target: -20% (Dynamic Trailing Enabled)`);
+        console.log(`• Max Portfolio Drawdown Limit: ${risk.maxDrawdownLimitPct}% (current: ${risk.currentDrawdownPct ?? 0}%)`);
+        console.log(`• Max Position Size: $${risk.maxPositionSizeUsd} per trade`);
+        console.log(`• Max Sector Exposure: ${risk.maxSectorExposurePercent}% | Max Correlated Positions: ${risk.maxCorrelatedPositions}`);
+        console.log(`• Trading Paused: ${risk.paused ? 'YES (circuit breaker active)' : 'No'}`);
+        console.log(`• Position Manager: Auto TP (2x/3x), Stop Loss (-20%), Dynamic Trailing Stops`);
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
+      }
 
-      case '6':
+      case '6': {
         console.clear();
         console.log(`${C.cyan}=== 📊 TRADE JOURNAL & PNL ANALYTICS ===${C.reset}`);
-        console.log(`• Total Logged Trades: ${C.green}2 Trades${C.reset}`);
-        console.log(`• Win Rate: ${C.green}100.0%${C.reset} (2 Wins / 0 Losses)`);
-        console.log(`• Total Realized PnL: ${C.green}+$10,695.00 USD${C.reset}`);
-        console.log(`• Best Trade: ${C.green}+$10,395.00 USD${C.reset} (PUDGY NFT Snipe)`);
+        const { TradeJournalService } = await import('../services/trade-journal-service.js');
+        const stats = new TradeJournalService().getSummaryStats();
+        console.log(`• Total Logged Trades: ${C.green}${stats.totalTrades}${C.reset} (${stats.openTradesCount} Open, ${stats.winCount + stats.lossCount} Closed)`);
+        console.log(`• Win Rate: ${C.green}${stats.winRatePct.toFixed(1)}%${C.reset} (${stats.winCount} Wins / ${stats.lossCount} Losses)`);
+        console.log(`• Total Realized PnL: ${C.green}$${stats.totalRealizedPnlUsd.toFixed(2)} USD${C.reset}`);
+        console.log(`• Best Trade: ${C.green}+$${stats.bestTradeUsd.toFixed(2)} USD${C.reset} | Worst: ${C.red}-$${Math.abs(stats.worstTradeUsd).toFixed(2)} USD${C.reset}`);
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
+      }
 
       case '7':
         console.clear();

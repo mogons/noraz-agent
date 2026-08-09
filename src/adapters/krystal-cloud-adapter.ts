@@ -115,15 +115,15 @@ export class KrystalCloudAdapter {
       const t1 = p.token1?.token;
       if (!p.poolAddress || !t0 || !t1) continue;
 
-      // Active-TVL proxy (sama seperti LP solana Meteora): TVL yang efektif
-      // menghasilkan fee = fee_rate × tvl, fee_rate real dari data 1h.
+      // Active-TVL proxy (same as the Solana LP Meteora): TVL effectively
+      // generating fees = fee_rate × tvl, fee_rate real from 1h data.
       const feeRate = volume1hUsd > 0 ? fee1hUsd / volume1hUsd : 0;
       const activeTvlUsd = feeRate > 0 ? feeRate * tvlUsd : tvlUsd * 0.3;
       const feesToTvlRatio24h = tvlUsd > 0 ? fee24hUsd / tvlUsd : 0;
       const volumeToTvlRatio1h = tvlUsd > 0 ? volume1hUsd / tvlUsd : 0;
       const volumeToActiveTvlRatio1h = activeTvlUsd > 0 ? volume1hUsd / activeTvlUsd : 0;
 
-      // Farm rewards (incentives) APR 24h — tambahan yield
+      // Farm rewards (incentives) APR 24h — additional yield
       const farmApr24h = (p.incentives || []).reduce((s, i) => s + (Number(i.apr24h) || 0), 0);
 
       pools.push({
@@ -153,13 +153,13 @@ export class KrystalCloudAdapter {
   }
 
   /**
-   * High-yield filter — mirror LP solana (Meteora) dengan data NYATA:
-   * - fee1h >= $50 (real — kalibrasi 2026-08-09: $7 terlalu kecil)
+   * High-yield filter — mirrors the Solana LP (Meteora) with REAL data:
+   * - fee1h >= $50 (real — calibrated 2026-08-09: $7 was too low)
    * - 24h Fee/TVL > 4% (real)
-   * - volume/activeTvl >= 100% per 1h (velocity, fee_rate real)
-   * - tvl >= $20k (sudah difilter server-side, tetap dicek di sini)
-   * - dedupe per pair (1 pool terbaik per pasangan token)
-   * Umur pool & token verified tidak tersedia di Krystal — dilewati.
+   * - volume/activeTvl >= 100% per 1h (velocity, real fee_rate)
+   * - tvl >= $20k (already filtered server-side, still checked here)
+   * - dedupe per pair (1 best pool per token pair)
+   * Pool age & token verified are unavailable on Krystal — skipped.
    */
   public filterHighYieldPools(pools: KrystalPoolSignal[]): KrystalPoolSignal[] {
     const bestByPair = new Map<string, KrystalPoolSignal>();

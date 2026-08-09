@@ -130,9 +130,9 @@ describe('SolanaScreeningAgent', () => {
     (agent as any).priceFeed = { getPrice: async () => 73.65 };
     const reports = await agent.runScreeningPass();
     expect(reports).toHaveLength(1);
-    expect(reports[0].reason).toContain('Cluster 3 wallet');
+    expect(reports[0].reason).toContain('Cluster of 3 smart-money wallets');
     expect(reports[0].payload?.smartMoneyInfo).toContain('Smart Money');
-    expect(reports[0].payload?.smartMoneyInfo).toContain('3 wallet beli');
+    expect(reports[0].payload?.smartMoneyInfo).toContain('3 wallets bought');
   });
 
   it('track kandidat baru (tidak ada di rank) ikut pipeline penuh', async () => {

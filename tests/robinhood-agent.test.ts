@@ -115,12 +115,12 @@ describe('RobinhoodScreeningAgent', () => {
     expect(det.type).not.toBe('CTO');
   });
 
-  it('detectSignal rejects "kosongan" tokens — butuh minimal 1 dari 3 (smart wallet/CTO/KOL)', () => {
+  it('detectSignal rejects empty tokens — at least 1 of 3 required (smart wallet/CTO/KOL)', () => {
     const agent = new RobinhoodScreeningAgent();
     // 0/3 sinyal: cuma volume pump, tanpa smart wallet/CTO/KOL → NONE
     const empty = agent.detectSignal(mkToken({ smartDegenCount: 0, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3, volume24hUsd: 300000 }));
     expect(empty.type).toBe('NONE');
-    expect(empty.reasons.some((r) => r.includes('Kosongan'))).toBe(true);
+    expect(empty.reasons.some((r) => r.includes('Empty'))).toBe(true);
     // 1/3 sinyal: cuma smart wallet → MOMENTUM (lolos gate)
     const one = agent.detectSignal(mkToken({ smartDegenCount: 1, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3 }));
     expect(one.type).toBe('MOMENTUM');
@@ -279,7 +279,7 @@ describe('RobinhoodScreeningAgent', () => {
     const det = { type: 'MOMENTUM' as const, confidence: 70, reasons: ['base'] };
     const boosted = applySignalBoost(det, map, '0xABC');
     expect(boosted.confidence).toBe(85); // +15 fresh (<=30m)
-    expect(boosted.reasons.some((r) => r.includes('📡 Signal GMGN'))).toBe(true);
+    expect(boosted.reasons.some((r) => r.includes('📡 GMGN signal'))).toBe(true);
     // NONE stays NONE even with fresh signal
     const none = applySignalBoost({ type: 'NONE', confidence: 0, reasons: [] }, map, '0xABC');
     expect(none.type).toBe('NONE');

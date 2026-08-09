@@ -2,7 +2,7 @@ import type { CexRadarEntry } from '../../adapters/cex-radar-adapter.js';
 
 export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA' | 'WHALE';
 
-/** Whale tracking: satu entri posisi terbuka >= ambang milik seorang smart trader. */
+/** Whale tracking: a single open position >= threshold belonging to one smart trader. */
 export interface WhaleTraderEntry {
   address: string;
   sizeUsd: number;
@@ -10,7 +10,7 @@ export interface WhaleTraderEntry {
   returnPct: number;
 }
 
-/** Whale tracking: aliran spot (fills >= ambang) per market dalam window 5 menit. */
+/** Whale tracking: spot flow (fills >= threshold) per market within a 5-minute window. */
 export interface WhaleSpotEntry {
   market: string;
   buyUsd: number;
@@ -18,7 +18,7 @@ export interface WhaleSpotEntry {
   fillCount: number;
 }
 
-/** Whale tracking: laporan posisi smart trader per aset (BTC/ETH/SOL). */
+/** Whale tracking: smart trader position report per asset (BTC/ETH/SOL/HYPE). */
 export interface WhaleReport {
   coin: string;
   totalLongUsd: number;
@@ -85,9 +85,9 @@ export interface CallCardPayload {
   socialHypeScore: number;
   liquidityUsd: number;
   volume1hUsd: number;
-  /** Whale tracking: laporan posisi smart trader (domain WHALE) — render embed khusus. */
+  /** Whale tracking: smart trader position report (domain WHALE) — custom embed render. */
   whaleReport?: WhaleReport;
-  /** CEX Radar: konteks OI/funding/L-S/whale prints dari Binance/Bybit/OKX (info card saja, bukan filter). */
+  /** CEX Radar: OI/funding/L-S/whale prints context from Binance/Bybit/OKX (card info only, never a filter). */
   cexRadar?: CexRadarEntry[];
 }
 

@@ -22,13 +22,13 @@ export interface WalletTrackerDeps {
   walletService?: WalletService;
   tradeJournal?: TradeJournalService;
   evmBalanceReader?: EvmBalanceReader;
-  /** Smart Money Exit alert: minimal wallet full-close (default 2). */
+  /** Smart Money Exit alert: minimum wallet full-closes (default 2). */
   exitMinWallets?: number;
-  /** Smart Money Exit alert: minimal total keluar USD (default $20k). */
+  /** Smart Money Exit alert: minimum total exit USD (default $20k). */
   exitMinUsd?: number;
-  /** Smart Money Exit alert: window deteksi (default 2 jam). */
+  /** Smart Money Exit alert: detection window (default 2 hours). */
   exitWindowMs?: number;
-  /** Toggle alert exit (default true). */
+  /** Exit alert toggle (default true). */
   exitAlertsEnabled?: boolean;
 }
 
@@ -288,14 +288,14 @@ export class WalletTracker {
       }
     }
 
-    // Smart Money Exit alert: hanya untuk token yang KAMU masih hold. Tanpa
-    // posisi = tanpa trigger (sinyal exit tidak pernah jadi call).
+    // Smart Money Exit alert: only for tokens YOU still hold. Without
+    // a position = no trigger (exit signals never become calls).
     if (this.exitAlertsEnabled) {
       try {
         const exitAlerts = await this.checkSmartMoneyExit(active);
         alerts.push(...exitAlerts);
       } catch (exitErr: any) {
-        console.warn(`[WALLET TRACKER] Smart money exit check failed (dilewati): ${exitErr.message}`);
+        console.warn(`[WALLET TRACKER] Smart money exit check failed (skipped): ${exitErr.message}`);
       }
     }
 
@@ -303,11 +303,11 @@ export class WalletTracker {
   }
 
   /**
-   * Deteksi Smart Money Exit pada posisi yang masih di-hold:
-   * >= exitMinWallets smart wallet melakukan full-close (side=sell +
-   * is_open_or_close=1) dalam exitWindowMs, total keluar >= exitMinUsd.
-   * Data dari GMGN `/v1/user/smartmoney` (cache 60s, fail-open []).
-   * Hanya alert — tidak pernah mempengaruhi screening/call.
+   * Detect Smart Money Exit on positions still being held:
+   * >= exitMinWallets smart wallets performing a full-close (side=sell +
+   * is_open_or_close=1) within exitWindowMs, total exit >= exitMinUsd.
+   * Data from GMGN `/v1/user/smartmoney` (60s cache, fail-open []).
+   * Alert only — never affects screening/calls.
    */
   public async checkSmartMoneyExit(activePositions: Array<{ contractAddress: string; symbol?: string }>): Promise<WalletAlert[]> {
     if (!this.gmgn) return [];
@@ -329,7 +329,7 @@ export class WalletTracker {
         trades = await this.gmgn.fetchTrackTrades(chain, 'smartmoney');
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.warn(`[WALLET TRACKER] Track feed ${chain} gagal (dilewati): ${message}`);
+        console.warn(`[WALLET TRACKER] Track feed ${chain} failed (skipped): ${message}`);
         continue;
       }
       if (trades.length === 0) continue;
@@ -344,7 +344,7 @@ export class WalletTracker {
         const mins = Math.max(0, Math.round((nowSec - a.lastFullCloseAt) / 60));
         alerts.push({
           type: 'sm-exit',
-          reason: `⚠️ **Smart Money Exit:** $${a.symbol || heldAddr.slice(0, 8)} — ${a.fullCloseWallets.size} smart wallet full-close $${(a.fullCloseTotalUsd / 1000).toFixed(1)}k dalam ${mins}m terakhir. Kamu masih hold posisi ini — pertimbangkan keluar.`,
+          reason: `⚠️ **Smart Money Exit:** $${a.symbol || heldAddr.slice(0, 8)} — ${a.fullCloseWallets.size} smart wallets full-closed $${(a.fullCloseTotalUsd / 1000).toFixed(1)}k in the last ${mins}m. You still hold this position — consider exiting.`,
           address: heldAddr,
         });
         console.log(`[WALLET TRACKER] 🚨 SM Exit: ${a.symbol || heldAddr} — ${a.fullCloseWallets.size} wallet full-close $${(a.fullCloseTotalUsd / 1000).toFixed(1)}k`);

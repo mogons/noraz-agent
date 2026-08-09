@@ -100,7 +100,7 @@ describe('runTokenAudit', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
     const res = await runTokenAudit(SOL_MINT);
     expect(res.success).toBe(false);
-    expect(res.content).toContain('tidak tersedia');
+    expect(res.content).toContain('unavailable');
     expect(res.content).not.toContain('$0.0035');
   });
 
@@ -116,8 +116,8 @@ describe('runTokenAudit', () => {
     expect(res.content).toContain('**Price:** $0.0034');
     expect(res.content).toContain('**MC:** $34.0k');
     expect(res.content).toContain('**Buys/Sells:** 123/45');
-    expect(res.content).toContain('**Holder:** 1.2k');
-    expect(res.content).toContain('**Umur:**');
+    expect(res.content).toContain('**Holders:** 1.2k');
+    expect(res.content).toContain('**Age:**');
     expect(res.content).toContain('RugCheck Score');
     expect(res.content).toContain('850');
     expect(res.content).toContain('Top 10 Holders');
@@ -158,14 +158,14 @@ describe('runTokenAudit', () => {
     expect(res.success).toBe(true);
     expect(res.content).toContain('(EVM/Robinhood)');
     expect(res.content).toContain('**Price:** $0.0034');
-    expect(res.content).toContain('Honeypot: Tidak');
+    expect(res.content).toContain('Honeypot: No');
     expect(res.content).toContain('BuyTax 0%');
     expect(res.content).toContain('SellTax 0%');
-    expect(res.content).toContain('Open Source: YA');
+    expect(res.content).toContain('Open Source: YES');
     expect(res.content).toContain('Owner');
     expect(res.content).toContain('Renounced');
-    expect(res.content).toContain('Mintable: Tidak');
-    expect(res.content).toContain('Proxy: Tidak');
+    expect(res.content).toContain('Mintable: No');
+    expect(res.content).toContain('Proxy: No');
     expect(res.content).toContain('LP Holders 89');
     expect(res.content).toContain('GMGN Audit');
     expect(res.content).toContain('Burn 3.5%');
@@ -184,14 +184,14 @@ describe('runTokenAudit', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity({ is_honeypot: true }) }));
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
-    expect(res.content).toContain('Honeypot: ⚠️ YA');
+    expect(res.content).toContain('Honeypot: ⚠️ YES');
     expect(res.content).toContain('GMGN Audit');
   });
 
-  it('EVM: keduanya gagal → pesan tidak tersedia (fail-closed)', async () => {
+  it('EVM: all sources fail → unavailable message (fail-closed)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
     const res = await runTokenAudit('0xffffffffffffffffffffffffffffffffffffffff');
     expect(res.success).toBe(false);
-    expect(res.content).toContain('tidak tersedia');
+    expect(res.content).toContain('unavailable');
   });
 });

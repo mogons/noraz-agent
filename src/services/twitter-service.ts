@@ -35,10 +35,10 @@ const INFLUENCERS = ['ansem', 'machibigbrother', 'beanie', 'pranksy'];
 
 /**
  * Multi-source Twitter/X service:
- *  1. OpenTwitter (6551.io) — sumber utama: profil, search + engagement filter,
- *     KOL followers, follower events, deleted tweets. Butuh TWITTER_TOKEN (6551).
- *  2. TwexAPI — fallback klasik (TWEX_API_KEY).
- *  Fail-closed: tanpa token & tanpa key -> hasil kosong (tidak pernah fabricate).
+ *  1. OpenTwitter (6551.io) — primary source: profiles, search + engagement filter,
+ *     KOL followers, follower events, deleted tweets. Requires TWITTER_TOKEN (6551).
+ *  2. TwexAPI — classic fallback (TWEX_API_KEY).
+ *  Fail-closed: without a token & without a key -> empty results (never fabricates).
  */
 export class TwitterService {
   private twexApiKey?: string;
@@ -86,7 +86,7 @@ export class TwitterService {
     }
   }
 
-  /** Cari tweet via OpenTwitter (keywords/hashtag + engagement filter). */
+  /** Search tweets via OpenTwitter (keywords/hashtag + engagement filter). */
   public async openTwitterSearch(
     query: string,
     opts: {
@@ -113,7 +113,7 @@ export class TwitterService {
     return data.map((t: any) => this.mapOpenTwitterTweet(t)).filter((t: TweetItem) => t.id !== '');
   }
 
-  /** Profil user via OpenTwitter. */
+  /** User profile via OpenTwitter. */
   public async openTwitterUser(username: string): Promise<TwitterUserProfile | null> {
     const d = await this.openTwitter<any>('/open/twitter_user_info', { username });
     if (!d) return null;
@@ -129,7 +129,7 @@ export class TwitterService {
     };
   }
 
-  /** KOL (influencer) followers dari sebuah akun — alpha signal: KOL mulai follow = perhatian. */
+  /** KOL (influencer) followers of an account — alpha signal: a KOL starting to follow = attention. */
   public async openTwitterKOLFollowers(username: string): Promise<string[]> {
     const data = await this.openTwitter<any[]>('/open/twitter_kol_followers', { username });
     if (!Array.isArray(data)) return [];
@@ -139,7 +139,7 @@ export class TwitterService {
       .slice(0, 20);
   }
 
-  /** Follower/unfollower events baru. */
+  /** New follower/unfollower events. */
   public async openTwitterFollowerEvents(username: string, isFollow = true, maxResults = 20): Promise<Array<Record<string, unknown>>> {
     const data = await this.openTwitter<any[]>('/open/twitter_follower_events', {
       username, isFollow, maxResults: Math.min(Math.max(maxResults, 1), 100),
@@ -213,13 +213,13 @@ export class TwitterService {
     }
   }
 
-  // ── Unified API (OpenTwitter dulu, fallback TwexAPI) ───────────────
+  // ── Unified API (OpenTwitter first, TwexAPI fallback) ───────────────
 
   public async searchTweets(query: string, maxResults: number = 10): Promise<TweetItem[]> {
     if (this.isOpenTwitterConfigured()) {
       const tweets = await this.openTwitterSearch(query, { maxResults, product: 'Latest' });
       if (tweets.length > 0) return tweets;
-      console.warn(`[TWITTER SERVICE] OpenTwitter kosong untuk "${query}" — fallback TwexAPI.`);
+      console.warn(`[TWITTER SERVICE] OpenTwitter empty for "${query}" — falling back to TwexAPI.`);
     }
     return this.twexSearchTweets(query, maxResults);
   }

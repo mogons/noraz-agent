@@ -385,7 +385,7 @@ describe('WalletTracker.syncPositions', () => {
 });
 
 describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
-  it('ada posisi + >= 2 smart wallet full-close >= $20k dalam 2 jam → alert', async () => {
+  it('position held + >= 2 smart wallets full-close >= $20k within 2h → alert', async () => {
     const pm = new PositionManager();
     pm.addPosition({
       id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',
@@ -408,7 +408,7 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
     expect(alerts).toHaveLength(1);
     expect(alerts[0].type).toBe('sm-exit');
     expect(alerts[0].address).toBe('mintx'); // lowercase — konsisten dengan dedupe alert
-    expect(alerts[0].reason).toContain('2 smart wallet full-close');
+    expect(alerts[0].reason).toContain('2 smart wallets full-close');
     expect(alerts[0].reason).toContain('$23.0k');
   });
 

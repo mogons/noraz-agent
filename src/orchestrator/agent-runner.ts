@@ -34,7 +34,7 @@ export async function runAgent(
 
     if (resp.toolCalls.length === 0) {
       lastText = resp.content;
-      return { text: lastText || 'Tidak ada respons.', toolResults };
+      return { text: lastText || 'No response.', toolResults };
     }
 
     lastText = resp.content;
@@ -78,7 +78,7 @@ export async function runAgent(
         {
           role: 'system',
           content:
-            'Kamu sudah memakai semua tool rounds yang tersedia. Sekarang TULIS JAWABAN FINAL untuk user berdasarkan hasil tool di atas. Jangan panggil tool lagi — langsung jawab dalam bahasa Indonesia, ringkas dan informatif, sertakan data yang relevan. Jika ada hasil yang gagal, katakan jujur.',
+            'You have used all available tool rounds. Now WRITE THE FINAL ANSWER for the user based on the tool results above. Do not call tools again — answer directly in English, concise and informative, including the relevant data. If any result failed, say so honestly.',
         },
       ],
       [], // no tools → forces a plain text answer
@@ -88,11 +88,11 @@ export async function runAgent(
       return { text: summary.content.trim(), toolResults };
     }
   } catch (err: any) {
-    console.warn(`[AGENT RUNNER] Summary round gagal: ${err.message}`);
+    console.warn(`[AGENT RUNNER] Summary round failed: ${err.message}`);
   }
 
   return {
-    text: lastText || 'Tool rounds habis sebelum jawaban selesai — coba persempit pertanyaannya.',
+    text: lastText || 'Tool rounds ran out before the answer was completed — try narrowing your question.',
     toolResults,
   };
 }

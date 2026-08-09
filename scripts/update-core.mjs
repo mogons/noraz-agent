@@ -5,14 +5,14 @@
  *   - Discord: `/update` (interaction-handler)
  *
  * Steps:
- *   1. git stash (kalau working tree kotor, supaya `git pull` tidak ditolak)
+ *   1. git stash (if the working tree is dirty, so `git pull` is not rejected)
  *   2. git pull --ff-only
- *   3. git stash pop (kembalikan perubahan lokal; konflik tidak mematikan)
+ *   3. git stash pop (restore local changes; conflicts are non-fatal)
  *   4. npm install
  *   5. npm run build
- *   6. pm2 restart athena-agent (kecuali --no-restart)
+ *   6. pm2 restart athena-agent (unless --no-restart)
  *
- * Fail-closed: pull/build gagal => exit code != 0 (Discord menampilkan error).
+ * Fail-closed: pull/build failure => exit code != 0 (Discord shows the error).
  */
 
 import { execSync, spawn } from 'node:child_process';
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SELF_DIR, '..');
-const EXEC_TIMEOUT_MS = 10 * 60 * 1000; // 10 menit per step (npm install bisa lama)
+const EXEC_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per step (npm install can be slow)
 
 export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   const log = [];
@@ -37,7 +37,7 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
       log.push({ label, command, ok: false });
       if (!ignore) {
         const status = err?.status ?? 'unknown';
-        console.error(`✖ ${label} gagal (exit ${status})`);
+        console.error(`✖ ${label} failed (exit ${status})`);
       }
       return false;
     }
@@ -45,28 +45,28 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
 
   console.log('🔄 ATHENA SELF-UPDATE');
   console.log(`   repo: ${cwd} | node: ${process.version}`);
-  console.log(`   mode: ${noRestart ? 'tanpa restart (--no-restart)' : 'dengan restart pm2'}`);
+  console.log(`   mode: ${noRestart ? 'without restart (--no-restart)' : 'with pm2 restart'}`);
 
-  // 1. Stash perubahan lokal supaya git pull tidak ditolak
+  // 1. Stash local changes so git pull is not rejected
   let stashed = false;
   try {
     const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8' }).trim();
     if (status.length > 0) {
-      console.log('\n⚠ Working tree tidak bersih — me-stash perubahan lokal dulu...');
-      stashed = step('Stash perubahan lokal', 'git stash push -m athena-update', { ignore: true });
+      console.log('\n⚠ Working tree is dirty — stashing local changes first...');
+      stashed = step('Stash local changes', 'git stash push -m athena-update', { ignore: true });
     } else {
-      console.log('\n✓ Working tree bersih — tanpa stash.');
+      console.log('\n✓ Working tree is clean — no stash needed.');
     }
   } catch {
-    console.log('\n⚠ Tidak bisa membaca git status — lanjut pull.');
+    console.log('\n⚠ Could not read git status — proceeding with pull.');
   }
 
   // 2. Pull
   const pullOk = step('git pull', 'git pull --ff-only');
 
-  // 3. Kembalikan stash (konflik dibiarkan, user bisa selesaikan manual)
+  // 3. Restore the stash (conflicts are left for the user to resolve manually)
   if (stashed) {
-    step('Kembalikan stash', 'git stash pop', { ignore: true });
+    step('Restore stash', 'git stash pop', { ignore: true });
   }
 
   // 4. Install dependencies
@@ -77,17 +77,17 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
 
   const allOk = pullOk && installOk && buildOk;
 
-  // 6. Restart pm2 (kecuali --no-restart)
-  // Penting: restart dijalankan DETACHED + delay (proses terpisah). Kalau
-  // dieksekusi sinkron dari dalam proses bot, pm2 akan menghentikan proses
-  // bot ini di tengah execSync → execSync terputus → restart "dilaporkan"
-  // gagal padahal sebenarnya berhasil (bot online). Detached + unref membuat
-  // restart jalan mandiri di pm2 daemon tanpa membunuh proses update dulu.
-  // Delay 3s memberi waktu proses update menulis laporan & return sebelum
-  // pm2 restart menghentikan proses ini.
+  // 6. Restart pm2 (unless --no-restart)
+  // Important: the restart runs DETACHED + delayed (separate process). If
+  // executed synchronously from inside the bot process, pm2 would kill the
+  // bot process mid-execSync, the restart is "reported" as
+  // failed even though it actually succeeded (bot online). Detached + unref
+  // lets the restart run independently in the pm2 daemon without killing the
+  // update process first. The 3s delay gives the update process time to write
+  // the report and return before pm2 restart stops this process.
   let restartOk = true;
   if (!noRestart) {
-    console.log('\n▶ Restart PM2 agent (detached — proses update tidak dimatikan sendiri)');
+    console.log('\n▶ Restart PM2 agent (detached — the update process is not killed by itself)');
     const pm2Cmd = 'pm2 restart athena-agent --update-env || npx pm2 restart athena-agent --update-env';
     try {
       const child = spawn('sh', ['-c', `sleep 3 && ${pm2Cmd}`], {
@@ -95,14 +95,14 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
         stdio: 'ignore',
         cwd,
       });
-      // spawn error adalah async event — tanpa handler ini proses bisa crash
-      // (mis. di Windows yang tidak punya `sh`). VPS Linux selalu punya `sh`.
+      // spawn errors are async events — without this handler the process could crash
+      // (e.g. on Windows without `sh`). A Linux VPS always has `sh`.
       child.on('error', (err) => {
         restartOk = false;
         console.warn(`⚠ Gagal spawn restart: ${err.message}`);
       });
       child.unref();
-      console.log('✅ PM2 restart dijadwalkan (detached, +3s).');
+      console.log('✅ PM2 restart scheduled (detached, +3s).');
       log.push({ label: 'pm2 restart (detached)', command: pm2Cmd, ok: true });
     } catch (err) {
       restartOk = false;
@@ -113,8 +113,8 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
     console.log('\n⏭ Skip pm2 restart (--no-restart).');
   }
 
-  // Tulis laporan ke file agar proses yang baru (setelah restart) bisa
-  // mengirim laporan update ke Discord — restart akan membunuh proses lama.
+  // Write the report to a file so the new process (after restart) can
+  // send the update report to Discord — the restart kills the old process.
   try {
     const reportPath = path.join(REPO_ROOT, 'database', 'last_update_report.json');
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
@@ -130,14 +130,14 @@ export function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
     );
     console.log('📄 Laporan update ditulis ke database/last_update_report.json');
   } catch (reportErr) {
-    console.warn(`⚠ Gagal menulis laporan update: ${reportErr.message}`);
+    console.warn(`⚠ Failed to write update report: ${reportErr.message}`);
   }
 
   console.log(`\n${allOk ? '✅' : '❌'} SELF-UPDATE ${allOk ? 'SELESAI' : 'DENGAN KEGAGALAN'}`);
   return { ok: allOk, restartOk, log };
 }
 
-// CLI entry: hanya dijalankan saat dieksekusi langsung (bukan di-import)
+// CLI entry: only runs when executed directly (not when imported)
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const noRestart = process.argv.includes('--no-restart');

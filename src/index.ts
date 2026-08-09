@@ -204,8 +204,8 @@ if (discordToken && clientId) {
         fs.unlinkSync(reportPath); // one-shot: hapus setelah dibaca
         const stepLines = (report.steps || []).map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
         const restartLine = report.restartOk
-          ? '🔄 **PM2 agent restarted — kode baru aktif.**'
-          : '⚠ **PM2 restart gagal** — jalankan `athena deploy` manual.';
+          ? '🔄 **PM2 agent restarted — new code is live.**'
+          : '⚠ **PM2 restart failed** — run `athena deploy` manually.';
         const controlRoomId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
         const channel = controlRoomId
           ? client.channels.cache.get(controlRoomId)
@@ -543,7 +543,7 @@ if (discordToken && clientId) {
           } else if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
           } else if (item.channelName === 'call-nft-sniping' && item.payload.symbol) {
-            // NFT: register collection slug untuk monitoring posisi user (floor drop -20%, TP, dll)
+            // NFT: register collection slug for user position monitoring (floor drop -20%, TP, etc.)
             stateStore.setTrackedNftCollection(item.payload.symbol.toLowerCase());
             console.log(`[POSITION MONITOR] NFT collection di-track: ${item.payload.symbol}`);
           }

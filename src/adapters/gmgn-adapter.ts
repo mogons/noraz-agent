@@ -11,7 +11,7 @@ export interface GMGNRawToken {
   priceUsd: number;
   marketCapUsd: number;
   volume24hUsd: number;
-  volume1hUsd: number; // real 1h volume bila tersedia (trenches/signal); 0 = tidak diketahui
+  volume1hUsd: number; // real 1h volume when available (trenches/signal); 0 = unknown
   liquidityUsd: number;
   buys: number;
   sells: number;
@@ -27,7 +27,7 @@ export interface GMGNRawToken {
   ratTraderAmountRate: number | null;
   rugRatio: number | null;
   isWashTrading: boolean;
-  /** Honeypot flag dari GMGN (EVM: '1' = tidak bisa dijual). null = tidak dilaporkan. */
+  /** Honeypot flag from GMGN (EVM: '1' = cannot be sold). null = not reported. */
   isHoneypot: boolean | null;
   ctoFlag: boolean;
   renouncedMint: boolean;
@@ -47,11 +47,11 @@ export interface GMGNRawToken {
   dexscrBoostFee: number;
   dexscrAd: number;
   totalFeeNative: number | null;
-  /** Current exchange/venue: 'pump' = masih bonding curve; 'pump_amm'/'raydium'/dll = sudah graduated ke DEX. */
+  /** Current exchange/venue: 'pump' = still on the bonding curve; 'pump_amm'/'raydium'/etc = already graduated to a DEX. */
   exchange: string | null;
-  /** Launchpad asal (Pump.fun, letsbonk, moonshot_app, ...). */
+  /** Originating launchpad (Pump.fun, letsbonk, moonshot_app, ...). */
   launchpadPlatform: string | null;
-  /** '0' = launching (bonding curve), '1' = migrated/graduated ke DEX. */
+  /** '0' = launching (bonding curve), '1' = migrated/graduated to a DEX. */
   launchpadStatus: string | null;
   /** Bonding curve progress 0-1 (trenches/signal snapshot). */
   progress: number | null;
@@ -67,16 +67,16 @@ export interface TokenSignalEvent {
 }
 
 /**
- * Trade feed wallet-level dari GMGN (`/v1/user/smartmoney` & `/v1/user/kol`):
- * real-time buy/sell per smart-money / KOL wallet. Dipakai sebagai candidate
- * source (akumulasi smart money) dan position alerts (smart money exit).
+ * Wallet-level trade feed from GMGN (`/v1/user/smartmoney` & `/v1/user/kol`):
+ * real-time buy/sell per smart-money / KOL wallet. Used as a candidate
+ * source (smart money accumulation) and position alerts (smart money exit).
  */
 export interface GMGNTrackTrade {
   tokenAddress: string;
   tokenSymbol: string;
   side: 'buy' | 'sell';
   amountUsd: number;
-  /** 1 = posisi dibuka penuh / ditutup penuh (konteks bergantung sumber: kol/smartmoney 1 = close/reduce). */
+  /** 1 = position fully opened / fully closed (context depends on source: kol/smartmoney 1 = close/reduce). */
   isFullClose: boolean;
   maker: string;
   makerTags: string[];
@@ -85,9 +85,9 @@ export interface GMGNTrackTrade {
 }
 
 /**
- * Audit keamanan token dari GMGN `/v1/token/security` — endpoint audit
- * per-token (panel "Token Audit" di UI GMGN): honeypot, blacklist, renounced,
- * tax, burn, lock, open source. Normalized; semua nilai real dari API.
+ * Token security audit from GMGN `/v1/token/security` — the per-token audit
+ * endpoint (the "Token Audit" panel in the GMGN UI): honeypot, blacklist, renounced,
+ * tax, burn, lock, open source. Normalized; all values are real from the API.
  */
 export interface GMGNSecurityAudit {
   chain: string;
@@ -97,7 +97,7 @@ export interface GMGNSecurityAudit {
   isRenounced: boolean;
   renouncedMint: boolean;
   renouncedFreeze: boolean;
-  /** 1 = token TIDAK bisa dijual (sell-locked honeypot). 0/tidak diketahui = 0. */
+  /** 1 = token CANNOT be sold (sell-locked honeypot). 0/unknown = 0. */
   canNotSell: boolean;
   buyTaxPct: number;
   sellTaxPct: number;
@@ -127,20 +127,20 @@ export class GMGNAdapter {
   private baseUrl = 'https://openapi.gmgn.ai';
   private apiKey?: string;
 
-  /** Cache audit security — module-level, dibagi SEMUA instansi adapter. */
+  /** Security audit cache — module-level, shared across ALL adapter instances. */
   private static securityCache = new Map<string, { audit: GMGNSecurityAudit; at: number }>();
   private static readonly SECURITY_CACHE_TTL_MS = 10 * 60 * 1000;
 
-  /** Cache trade feed — module-level (semua instansi berbagi), TTL 60 detik. */
+  /** Trade feed cache — module-level (all instances share), TTL 60 seconds. */
   private static trackCache = new Map<string, { trades: GMGNTrackTrade[]; at: number }>();
   private static readonly TRACK_CACHE_TTL_MS = 60 * 1000;
 
   /**
    * Global pacing queue — ALL GMGN requests (every adapter instance: meme
-   * solana/robinhood, LP enrich, dll) antri di sini dengan spacing minimal
-   * agar request tidak bertabrakan dalam satu sesi 5 menit. GMGN memakai
-   * leaky bucket rate=20/capacity=20 per key — dengan spacing ini burst
-   * (mis. 30 request enrich LP sekaligus) otomatis tersebar.
+   * solana/robinhood, LP enrich, etc.) queue here with minimal spacing
+   * so requests do not collide within a 5-minute session. GMGN uses
+   * a leaky bucket rate=20/capacity=20 per key — with this spacing, bursts
+   * (e.g. 30 simultaneous LP enrich requests) spread out automatically.
    */
   private static requestQueue: Promise<void> = Promise.resolve();
   private static lastRequestAt = 0;
@@ -198,10 +198,10 @@ export class GMGNAdapter {
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
         if (res.status === 429) {
-          // Retry santun (docs GMGN): baca waktu reset, tunggu sampai reset + buffer,
-          // lalu retry MAKSIMAL sekali. Jangan spam: setiap retry saat cooldown
-          // memperpanjang ban 5 detik (sampai 5 menit). Ban panjang (>30s) di-skip —
-          // scan berikutnya (5 menit lagi) yang coba ulang.
+          // Polite retry (GMGN docs): read the reset time, wait until reset + buffer,
+          // then retry AT MOST once. Do not spam: each retry during cooldown
+          // extends the ban by 5 seconds (up to 5 minutes). Long bans (>30s) are skipped —
+          // the next scan (5 minutes later) retries.
           let resetSec = Number(res.headers.get('X-RateLimit-Reset') || 0);
           let banned = false;
           if (!resetSec) {
@@ -209,15 +209,15 @@ export class GMGNAdapter {
               const errBody: any = await res.json();
               resetSec = Number(errBody?.reset_at || 0);
               banned = errBody?.error === 'RATE_LIMIT_BANNED';
-            } catch { /* body bukan JSON — pakai header saja */ }
+            } catch { /* body not JSON — use headers only */ }
           }
           const waitMs = resetSec > 0 ? Math.max(resetSec * 1000 - Date.now(), 0) + 1000 : 5000;
           if (!banned && attemptsLeft > 0 && waitMs <= 30_000) {
-            console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s, lalu retry sekali (attempt tersisa: ${attemptsLeft}).`);
+            console.warn(`[GMGN] Rate limited. Waiting ${Math.floor(waitMs / 1000)}s, then retrying once (attempts left: ${attemptsLeft}).`);
             await new Promise((r) => setTimeout(r, waitMs));
             return doRequest(attemptsLeft - 1);
           }
-          console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, coba lagi di pass berikutnya (~5m).`);
+          console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, retry on the next pass (~5m).`);
           return null;
         }
         if (!res.ok) { console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`); return null; }
@@ -270,7 +270,7 @@ export class GMGNAdapter {
       priceUsd: Number(raw.price || raw.price_usd || 0),
       marketCapUsd: Number(raw.market_cap ?? raw.usd_market_cap ?? 0),
       volume24hUsd,
-      volume1hUsd, // real 1h (trenches/signal) atau volume interval-1h (rank/hot); 0 = tidak diketahui
+      volume1hUsd, // real 1h (trenches/signal) or interval-1h volume (rank/hot); 0 = unknown
       liquidityUsd: Number(raw.liquidity ?? 0),
       buys: Number(raw.buys ?? raw.buys_24h ?? 0),
       sells: Number(raw.sells ?? raw.sells_24h ?? 0),
@@ -386,11 +386,11 @@ export class GMGNAdapter {
   }
 
   /**
-   * Audit keamanan per-token dari `/v1/token/security` (panel "Token Audit"
-   * UI GMGN): honeypot, blacklist, renounced, can_sell, tax (avg/high), burn,
-   * lock, open source. Cache MODULE-LEVEL 10 menit — dibagi semua instansi
-   * (meme agent, hub LP, on-demand audit) supaya token yang sama tidak
-   * di-audit berulang dalam jendela yang sama. Fail-closed: error → null.
+   * Per-token security audit from `/v1/token/security` (the "Token Audit"
+   * panel in the GMGN UI): honeypot, blacklist, renounced, can_sell, tax (avg/high), burn,
+   * lock, open source. MODULE-LEVEL cache of 10 minutes — shared by all instances
+   * (meme agent, LP hub, on-demand audit) so the same token is not
+   * audited repeatedly within the same window. Fail-closed: error → null.
    */
   public async fetchTokenSecurity(chain: SolChain, address: string): Promise<GMGNSecurityAudit | null> {
     const key = `${chain}:${address.toLowerCase()}`;
@@ -426,10 +426,10 @@ export class GMGNAdapter {
   }
 
   /**
-   * Trade feed real-time dari smart-money / KOL wallets (`/v1/user/smartmoney`
-   * & `/v1/user/kol`). Public keyless (exist auth), weight 1. Cache module-level
-   * 60 detik — dipakai meme agents (kandidat akumulasi) & wallet-tracker (exit
-   * alert) tanpa duplikasi request. Fail-open: error → [].
+   * Real-time trade feed from smart-money / KOL wallets (`/v1/user/smartmoney`
+   * & `/v1/user/kol`). Public keyless (exist auth), weight 1. Module-level cache
+   * of 60 seconds — used by meme agents (accumulation candidates) & wallet-tracker (exit
+   * alerts) without duplicate requests. Fail-open: error → [].
    */
   public async fetchTrackTrades(chain: SolChain, kind: 'smartmoney' | 'kol'): Promise<GMGNTrackTrade[]> {
     const key = `track:${chain}:${kind}`;

@@ -3,11 +3,11 @@ export default {
   name: 'NFT Floor Momentum + Whale Sweep',
   version: '2.0.0',
   description:
-    'Default NFT strategy: hard filters (bukan scoring) untuk koleksi EVM di OpenSea. ' +
-    'Semua wajib lolos: min floor 0.01 ETH (fail-closed jika missing), floor surge >= 20% 1h, ' +
+    'Default NFT strategy: hard filters (not scoring) for EVM collections on OpenSea. ' +
+    'All mandatory: min floor 0.01 ETH (fail-closed if missing), floor surge >= 20% 1h, ' +
     'volume spike >= 2.0x baseline, sales velocity >= 5/h, collection security audit harus pass. ' +
     'Whale sweep & verified = bonus info di card. ' +
-    'Confidence deterministik: 80 (lolos semua filter) + 10 whale sweep + 10 verified, cap 100. ' +
+    'Deterministic confidence: 80 (all filters passed) + 10 whale sweep + 10 verified, cap 100. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
     passThreshold: 80,
@@ -32,19 +32,19 @@ export default {
     const reasons = [];
 
     // ── Hard fail-closed gates (missing data = reject, never fake-pass) ──
-    if (floor === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor price tidak diketahui (fail-closed).' };
+    if (floor === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor price unknown (fail-closed).' };
     if (floor < p.minFloorEth) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Floor ${floor} ETH < ${p.minFloorEth} ETH minimum.` };
-    if (price === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga listing tidak diketahui (fail-closed).' };
-    if (surge === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor surge tidak diketahui (fail-closed).' };
+    if (price === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Listing price unknown (fail-closed).' };
+    if (surge === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor surge unknown (fail-closed).' };
     if (surge < p.minSurgePct) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Floor surge +${surge.toFixed(1)}% < ${p.minSurgePct}% minimum.` };
-    if (velocity === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Sales velocity tidak diketahui (fail-closed).' };
+    if (velocity === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Sales velocity unknown (fail-closed).' };
     if (velocity < p.minVelocity1h) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Velocity ${velocity}/h < ${p.minVelocity1h}/h minimum.` };
-    if (volSpike === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Volume spike ratio tidak diketahui (fail-closed).' };
+    if (volSpike === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Volume spike ratio unknown (fail-closed).' };
     if (volSpike < p.minVolSpike) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Vol spike ${volSpike.toFixed(2)}x < ${p.minVolSpike}x minimum.` };
-    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan koleksi tidak lolos (floor/velocity/momentum).' };
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Collection security audit failed (floor/velocity/momentum).' };
 
     // Confidence deterministik — konsisten dengan agent evaluateListing:
-    // 80 (semua hard filter lolos) + 10 whale sweep + 10 verified, cap 100.
+    // 80 (all hard filters passed) + 10 whale sweep + 10 verified, cap 100.
     let score = 80;
     reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h ✓`);
     reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h ✓`);

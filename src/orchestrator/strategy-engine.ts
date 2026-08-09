@@ -44,8 +44,8 @@ export class StrategyEngine {
   public readStrategy(name: string): { success: boolean; message: string; data?: { content: string } } {
     if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Invalid strategy name (use alphanumeric, dash, underscore).' };
     const file = path.join(STRATEGIES_DIR, `${name}.mjs`);
-    if (!fs.existsSync(file)) return { success: false, message: `Strategy ${name} tidak ditemukan.` };
-    return { success: true, message: `Isi strategi ${name}.`, data: { content: fs.readFileSync(file, 'utf-8') } };
+    if (!fs.existsSync(file)) return { success: false, message: `Strategy ${name} not found.` };
+    return { success: true, message: `Contents of strategy ${name}.`, data: { content: fs.readFileSync(file, 'utf-8') } };
   }
 
   // ─── Validation (subprocess import — reliable in dist & test envs) ───
@@ -75,7 +75,7 @@ export class StrategyEngine {
       );
       return { ok: true };
     } catch (err: any) {
-      const stderr = typeof err?.stderr === 'string' ? err.stderr.trim() : (err?.message || 'Validasi gagal.');
+      const stderr = typeof err?.stderr === 'string' ? err.stderr.trim() : (err?.message || 'Validation failed.');
       return { ok: false, error: stderr };
     }
   }
@@ -92,8 +92,8 @@ export class StrategyEngine {
 
   private writeSandboxed(dir: string, backupDir: string, name: string, code: string, kind: 'strategy' | 'indicator'): { success: boolean; message: string } {
     ensureDirs();
-    if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Nama file tidak valid (hanya alfanumerik, dash, underscore).' };
-    if (!code || !code.trim()) return { success: false, message: 'Kode kosong.' };
+    if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Invalid file name (alphanumeric, dash, underscore only).' };
+    if (!code || !code.trim()) return { success: false, message: 'Empty code.' };
 
     const file = path.join(dir, `${name}.mjs`);
     const existed = fs.existsSync(file);
@@ -104,7 +104,7 @@ export class StrategyEngine {
       try {
         fs.copyFileSync(file, backupPath);
       } catch (err: any) {
-        return { success: false, message: `Gagal backup versi lama: ${err.message}` };
+        return { success: false, message: `Failed to back up the previous version: ${err.message}` };
       }
     }
 
@@ -112,7 +112,7 @@ export class StrategyEngine {
     try {
       fs.writeFileSync(file, code, 'utf-8');
     } catch (err: any) {
-      return { success: false, message: `Gagal menulis file: ${err.message}` };
+      return { success: false, message: `Failed to write file: ${err.message}` };
     }
 
     // 3. Validate (subprocess import + shape check)
@@ -122,15 +122,15 @@ export class StrategyEngine {
       const backupPath = path.join(backupDir, `${name}.mjs.bak`);
       if (existed && fs.existsSync(backupPath)) {
         try { fs.copyFileSync(backupPath, file); } catch { /* ignore */ }
-        return { success: false, message: `Validasi gagal: ${validation.error}. Versi lama sudah dipulihkan.` };
+        return { success: false, message: `Validation failed: ${validation.error}. The previous version has been restored.` };
       }
       if (!existed) {
         try { fs.unlinkSync(file); } catch { /* ignore */ }
       }
-      return { success: false, message: `Validasi gagal: ${validation.error}. File baru dihapus.` };
+      return { success: false, message: `Validation failed: ${validation.error}. The new file has been removed.` };
     }
 
-    return { success: true, message: `✅ ${name} berhasil disimpan & tervalidasi.${existed ? ' Versi lama di-backup.' : ''}` };
+    return { success: true, message: `✅ ${name} saved & validated successfully.${existed ? ' The previous version was backed up.' : ''}` };
   }
 
   public rollbackStrategy(name: string): { success: boolean; message: string } {
@@ -138,14 +138,14 @@ export class StrategyEngine {
   }
 
   private rollbackFile(dir: string, backupDir: string, name: string): { success: boolean; message: string } {
-    if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Nama file tidak valid.' };
+    if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Invalid file name.' };
     const backupPath = path.join(backupDir, `${name}.mjs.bak`);
-    if (!fs.existsSync(backupPath)) return { success: false, message: `Tidak ada backup untuk ${name}.` };
+    if (!fs.existsSync(backupPath)) return { success: false, message: `No backup for ${name}.` };
     try {
       fs.copyFileSync(backupPath, path.join(dir, `${name}.mjs`));
-      return { success: true, message: `✅ ${name} berhasil di-rollback ke versi backup.` };
+      return { success: true, message: `✅ ${name} rolled back to the backup version.` };
     } catch (err: any) {
-      return { success: false, message: `Rollback gagal: ${err.message}` };
+      return { success: false, message: `Rollback failed: ${err.message}` };
     }
   }
 
@@ -164,19 +164,19 @@ export class StrategyEngine {
     try {
       fs.writeFileSync(ACTIVE_FILE, JSON.stringify(map, null, 2), 'utf-8');
     } catch (err: any) {
-      console.warn(`[STRATEGY ENGINE] Gagal persist active map: ${err.message}`);
+      console.warn(`[STRATEGY ENGINE] Failed to persist the active map: ${err.message}`);
     }
   }
 
   public setActiveStrategy(domain: string, strategyId: string): { success: boolean; message: string } {
     const strategies = this.listStrategies();
     if (!strategies.some((s) => s.id === strategyId)) {
-      return { success: false, message: `Strategi ${strategyId} tidak ditemukan di strategies/.` };
+      return { success: false, message: `Strategy ${strategyId} not found in strategies/.` };
     }
     const map = this.readActiveMap();
     for (const s of strategies) map[s.id] = s.id === strategyId;
     this.writeActiveMap(map);
-    return { success: true, message: `✅ Strategi ${strategyId} aktif untuk domain ${domain}.` };
+    return { success: true, message: `✅ Strategy ${strategyId} is now active for domain ${domain}.` };
   }
 
   public getActiveStrategy(domain: string): AthenaStrategy | null {
@@ -189,7 +189,7 @@ export class StrategyEngine {
           const mod = this.loadModule(file);
           return mod.default || mod;
         } catch (err: any) {
-          console.warn(`[STRATEGY ENGINE] Gagal load strategi aktif ${activeId}: ${err.message}`);
+          console.warn(`[STRATEGY ENGINE] Failed to load the active strategy ${activeId}: ${err.message}`);
         }
       }
     }
@@ -202,7 +202,7 @@ export class StrategyEngine {
         const mod = this.loadModule(defaultFile);
         return mod.default || mod;
       } catch (err: any) {
-        console.warn(`[STRATEGY ENGINE] Gagal load strategi default ${defaultId}: ${err.message}`);
+        console.warn(`[STRATEGY ENGINE] Failed to load the default strategy ${defaultId}: ${err.message}`);
       }
     }
     return null;
@@ -215,7 +215,7 @@ export class StrategyEngine {
       const mod = this.loadModule(file);
       return mod.default || mod;
     } catch (err: any) {
-      console.warn(`[STRATEGY ENGINE] Gagal load indicator ${id}: ${err.message}`);
+      console.warn(`[STRATEGY ENGINE] Failed to load indicator ${id}: ${err.message}`);
       return null;
     }
   }

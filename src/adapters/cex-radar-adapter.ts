@@ -1,14 +1,14 @@
 /**
- * CEX Radar Adapter — konteks market per token dari Binance / Bybit / OKX.
+ * CEX Radar Adapter — per-token market context from Binance / Bybit / OKX.
  *
- * Melengkapi card whale Hyperliquid dengan arah aliran besar di CEX:
- * - ccxt: Open Interest (+ change 24h), funding rate, whale prints (fill besar)
- * - REST publik keyless: TopTrader L/S ratio (Binance), akun L/S ratio
- *   (Bybit/OKX), likuidasi 24h (Binance)
+ * Complements the Hyperliquid whale card with the direction of large CEX flows:
+ * - ccxt: Open Interest (+ 24h change), funding rate, whale prints (large fills)
+ * - keyless public REST: TopTrader L/S ratio (Binance), account L/S ratio
+ *   (Bybit/OKX), 24h liquidations (Binance)
  *
- * Semua endpoint publik tanpa API key. Fail-open per exchange: error,
- * geoblock, atau rate limit → entry di-skip + warn, sisanya tetap dipakai.
- * Bukan filter — murni informasi tambahan di call card.
+ * All endpoints are public without an API key. Fail-open per exchange: error,
+ * geoblock, or rate limit → entry is skipped + warn, the rest are still used.
+ * Not a filter — purely additional information on the call card.
  */
 
 import ccxt from 'ccxt';
@@ -16,9 +16,9 @@ import ccxt from 'ccxt';
 export type CexExchangeId = 'binance' | 'bybit' | 'okx';
 
 export interface CexWhalePrints {
-  count: number;       // jumlah fill >= minPrintUsd
-  netBuyUsd: number;   // total USD sisi buy
-  netSellUsd: number;  // total USD sisi sell
+  count: number;       // number of fills >= minPrintUsd
+  netBuyUsd: number;   // total USD on the buy side
+  netSellUsd: number;  // total USD on the sell side
 }
 
 export interface CexRadarEntry {
@@ -26,9 +26,9 @@ export interface CexRadarEntry {
   oiUsd: number;
   oiChange24hPct: number | null;
   fundingRatePct: number | null;
-  /** Binance: rasio posisi long/short top trader (dari /futures/data). */
+  /** Binance: top trader long/short position ratio (from /futures/data). */
   topTraderLongRatio?: number | null;
-  /** Binance (global) / Bybit / OKX: rasio akun long vs short. */
+  /** Binance (global) / Bybit / OKX: account long vs short ratio. */
   accountLongShortRatio?: number | null;
   /** Binance: total likuidasi 24h (USD). */
   liq24hUsd?: number | null;
@@ -42,12 +42,12 @@ export interface CexRadarReport {
 }
 
 export interface CexRadarOptions {
-  /** Fill dianggap "whale print" kalau nilai (price × qty) >= ini. */
+  /** A fill counts as a "whale print" if the value (price × qty) >= this. */
   minPrintUsd?: number;
   timeoutMs?: number;
-  /** DI untuk test: instance ccxt per exchange (menggantikan instance asli). */
+  /** DI for tests: ccxt instance per exchange (replaces the real instance). */
   exchanges?: Partial<Record<CexExchangeId, unknown>>;
-  /** DI untuk test: impl fetch REST (default global fetch). */
+  /** DI for tests: REST fetch impl (defaults to global fetch). */
   fetchImpl?: typeof fetch;
 }
 
@@ -74,9 +74,9 @@ export class CexRadarAdapter {
     this.fetchImpl = opts.fetchImpl ?? globalThis.fetch;
   }
 
-  /** ccxt instance per exchange — pakai DI kalau ada, kalau tidak buat asli. */
+  /** ccxt instance per exchange — use DI if present, otherwise create a real one. */
   private ccxtFor(id: CexExchangeId): any {
-    // Key yang ter-inject (termasuk null = mati/tidak tersedia) dihormati.
+    // Injected keys (including null = dead/unavailable) are respected.
     if (id in this.exchanges) return this.exchanges[id] ?? null;
     const Ex = (ccxt as any)?.[id];
     if (!Ex) return null;
@@ -90,7 +90,7 @@ export class CexRadarAdapter {
       return await res.json();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[CEX RADAR] REST gagal ${url} — ${message}`);
+      console.warn(`[CEX RADAR] REST failed ${url} — ${message}`);
       return null;
     }
   }
@@ -106,8 +106,8 @@ export class CexRadarAdapter {
   }
 
   /**
-   * Radar per token. Fail-open per exchange: setiap kegagalan sub-endpoint
-   * mengisi field null/skip — tidak pernah melempar error ke pemanggil.
+   * Radar per token. Fail-open per exchange: each sub-endpoint failure
+   * fills the field with null/skips — never throws an error to the caller.
    */
   public async fetchRadar(symbol: string): Promise<CexRadarReport> {
     const map = SYMBOL_MAP[symbol.toUpperCase()];
@@ -137,7 +137,7 @@ export class CexRadarAdapter {
           oiUsd = Number(oi.openInterestAmount) * (this.numOrZero(ticker?.last) || 0);
         }
       } catch (err: unknown) {
-        console.warn(`[CEX RADAR] ${id} OI gagal: ${err instanceof Error ? err.message : err}`);
+        console.warn(`[CEX RADAR] ${id} OI failed: ${err instanceof Error ? err.message : err}`);
       }
       try {
         const hist = await ex.fetchOpenInterestHistory(map.ccxt, '1h', undefined, 25);
@@ -148,7 +148,7 @@ export class CexRadarAdapter {
           const prevV = this.numOrZero(prev?.openInterestValue ?? prev?.openInterestAmount);
           if (nowV > 0 && prevV > 0) oiChange24hPct = ((nowV - prevV) / prevV) * 100;
         }
-      } catch { /* change 24h tidak tersedia → null */ }
+      } catch { /* 24h change unavailable → null */ }
 
       // ── Funding rate (ccxt) ──
       let fundingRatePct: number | null = null;
@@ -156,9 +156,9 @@ export class CexRadarAdapter {
         const fr = await ex.fetchFundingRate(map.ccxt);
         const f = Number(fr?.fundingRate);
         if (Number.isFinite(f)) fundingRatePct = f * 100;
-      } catch { /* funding tidak tersedia → null */ }
+      } catch { /* funding unavailable → null */ }
 
-      // ── Whale prints: fill >= minPrintUsd dari public trades (ccxt) ──
+      // ── Whale prints: fills >= minPrintUsd from public trades (ccxt) ──
       const prints: CexWhalePrints = { count: 0, netBuyUsd: 0, netSellUsd: 0 };
       try {
         const trades = await ex.fetchTrades(map.ccxt, undefined, 1000);
@@ -169,9 +169,9 @@ export class CexRadarAdapter {
           if (String(t?.side).toLowerCase() === 'sell') prints.netSellUsd += cost;
           else prints.netBuyUsd += cost;
         }
-      } catch { /* prints tidak tersedia → 0 */ }
+      } catch { /* prints unavailable → 0 */ }
 
-      // ── REST: ratio & likuidasi ──
+      // ── REST: ratios & liquidations ──
       let topTraderLongRatio: number | null = null;
       let accountLongShortRatio: number | null = null;
       let liq24hUsd: number | null = null;
@@ -216,8 +216,8 @@ export class CexRadarAdapter {
         liq24hUsd,
         prints,
       };
-      // Heuristik exchange "mati total": tanpa data apa pun → buang entry
-      // (baris kosong di card = noise, bukan informasi).
+      // "Completely dead" exchange heuristic: with no data at all → drop the entry
+      // (an empty row on the card = noise, not information).
       const hasAnyData = entry.oiUsd > 0
         || entry.fundingRatePct !== null
         || entry.topTraderLongRatio !== null
@@ -227,7 +227,7 @@ export class CexRadarAdapter {
       return hasAnyData ? entry : null;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[CEX RADAR] ${id} gagal total (fail-open skip): ${message}`);
+      console.warn(`[CEX RADAR] ${id} completely failed (fail-open skip): ${message}`);
       return null;
     }
   }

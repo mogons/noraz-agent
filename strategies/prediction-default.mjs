@@ -29,13 +29,13 @@ export default {
     const reasons = [];
 
     // ── Hard fail-closed gates (missing data = reject, never fake-pass) ──
-    if (outcome === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Outcome yang direkomendasikan tidak diketahui (fail-closed).' };
-    if (liquidity === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Likuiditas pasar tidak diketahui (fail-closed).' };
+    if (outcome === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Recommended outcome unknown (fail-closed).' };
+    if (liquidity === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Market liquidity unknown (fail-closed).' };
     if (liquidity < p.minLiquidityUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Likuiditas $${(liquidity / 1e3).toFixed(0)}k < $${p.minLiquidityUsd / 1e3}k minimum.` };
-    if (volume === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Volume 24h tidak diketahui (fail-closed).' };
+    if (volume === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ 24h volume unknown (fail-closed).' };
     if (volume < p.minVolume24hUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Volume 24h $${(volume / 1e3).toFixed(0)}k < $${p.minVolume24hUsd / 1e3}k minimum.` };
     if (spread !== null && spread > p.maxSpread) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Spread ${(spread * 100).toFixed(2)}% > ${p.maxSpread * 100}% max.` };
-    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan pasar tidak lolos (likuiditas/volume/spread).' };
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Market security audit failed (liquidity/volume/spread).' };
 
     let score = 0;
 

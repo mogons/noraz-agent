@@ -193,13 +193,13 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       { name: `🪙 ${payload.token1Symbol || 'Token Y'} (CA)`, value: token1Line, inline: false }
     );
 
-    // Detail token meme (degen style) — hanya field yang ada datanya
+    // Meme token details (degen style) — only fields with data
     const token0Detail: string[] = [];
     if (payload.token0PriceUsd !== undefined) token0Detail.push(`💰 Price **$${payload.token0PriceUsd.toFixed(8)}**`);
     if (payload.token0MarketCapUsd !== undefined) token0Detail.push(`📈 MC **$${(payload.token0MarketCapUsd / 1000).toFixed(1)}k**`);
     if (payload.token0Volume24hUsd !== undefined) token0Detail.push(`💦 24h Vol **$${(payload.token0Volume24hUsd / 1000).toFixed(1)}k**`);
     if (payload.token0Holders !== undefined) token0Detail.push(`👥 Holders **${payload.token0Holders.toLocaleString()}**`);
-    if (payload.token0AgeHours !== undefined) token0Detail.push(`🎂 Umur **${payload.token0AgeHours.toFixed(1)}h**`);
+    if (payload.token0AgeHours !== undefined) token0Detail.push(`🎂 Age **${payload.token0AgeHours.toFixed(1)}h**`);
     if (payload.token0SmartDegenCount !== undefined && payload.token0SmartDegenCount > 0) token0Detail.push(`🧠 Smart+KOL **${payload.token0SmartDegenCount}**`);
     if (token0Detail.length > 0) {
       embed.addFields({ name: `📊 Detail ${payload.token0Symbol || 'Token X'}`, value: token0Detail.join(' • '), inline: false });

@@ -109,7 +109,7 @@ export class SessionMemoryService {
 
     if (audits.length === 0) return '';
 
-    const lines: string[] = ['\nMEMORI SINGKAT (dari sesi sebelumnya):'];
+    const lines: string[] = ['\nSHORT MEMORY (from previous session):'];
     lines.push('- Audit terakhir:');
     for (const a of audits) {
       const d = a.timestampIso ? a.timestampIso.slice(0, 16) : '';

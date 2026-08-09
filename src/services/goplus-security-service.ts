@@ -30,8 +30,8 @@ export class GoPlusSecurityService {
   private baseUrl = 'https://api.gopluslabs.io/api/v1';
 
   /**
-   * Screening path — fail-closed konservatif: honeypot => null (ditolak).
-   * Hanya field dasar yang dipakai screening (tax, blacklist, open source, holders).
+   * Screening path — conservative fail-closed: honeypot => null (rejected).
+   * Only basic fields are used for screening (tax, blacklist, open source, holders).
    */
   public async auditToken(chain: EvmChain, contractAddress: string): Promise<GoPlusTokenSecurity | null> {
     const full = await this.auditTokenFull(chain, contractAddress);
@@ -41,8 +41,8 @@ export class GoPlusSecurityService {
   }
 
   /**
-   * Audit path on-demand — detail lengkap, honeypot TETAP dikembalikan
-   * (isHoneypot=true) supaya bisa ditampilkan ke user, bukan disamarkan jadi null.
+   * On-demand audit path — full details, honeypot is STILL returned
+   * (isHoneypot=true) so it can be shown to the user, not masked as null.
    */
   public async auditTokenFull(chain: EvmChain, contractAddress: string): Promise<GoPlusTokenSecurity | null> {
     const chainId = CHAIN_ID_MAP[chain];

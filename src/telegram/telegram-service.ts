@@ -174,13 +174,15 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
   public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
     const activeDomains = hub ? hub.getActiveDomains() : [];
     const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
+    const risk = hub ? hub.getRiskManager().getRiskState() : null;
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
     const text = `🏛️ *ATHENA CONTROL CENTER DASHBOARD (TELEGRAM)*
 
-⚙️ *Mode:* ${autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL EXECUTION — screener/caller, eksekusi via link'}
-🛡️ *Max Drawdown:* 50.0%
+⚙️ *Mode:* ${autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL EXECUTION — screener/caller, execution via link'}
+🛡️ *Max Drawdown:* ${risk ? `${risk.maxDrawdownLimitPct}%` : 'n/a'}
+🛡️ *Max Position Size:* ${risk ? `$${risk.maxPositionSizeUsd}` : 'n/a'}
 
 🤖 *Active Sub-Agents Status:*
 • 🐣 Solana Meme (\`meme-solana\`): ${getStatus('meme-solana')}
@@ -341,8 +343,8 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
 
           const activeDomains = hub.getActiveDomains();
           const activeAgentsLine = activeDomains.length > 0
-            ? `Active Sub-Agents saat ini: ${activeDomains.join(', ')}`
-            : 'Active Sub-Agents saat ini: NONE (semua paused)';
+            ? `Active Sub-Agents right now: ${activeDomains.join(', ')}`
+            : 'Active Sub-Agents right now: NONE (all paused)';
           const memoryContext = new SessionMemoryService().buildMemoryContextLine();
           const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
 
@@ -352,7 +354,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           );
           const aiRes = agentResult.text || (agentResult.toolResults.length > 0
             ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
-            : '[Tidak ada respons dari AI.]');
+            : '[No response from AI.]');
           await this.sendMessage(aiRes, 'Markdown', undefined, threadId);
         } catch (err: any) {
           // Failover catch

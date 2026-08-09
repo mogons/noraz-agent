@@ -35,8 +35,8 @@ export default {
     const reasons = [];
 
     // ── Hard fail-closed gates (missing data = reject, never fake-pass) ──
-    if (p.minAgeHours > 0 && ageHours === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Umur token tidak diketahui (fail-closed).' };
-    if (p.minAgeHours > 0 && ageHours < p.minAgeHours) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Umur ${ageHours.toFixed(1)}h < ${p.minAgeHours}h minimum.` };
+    if (p.minAgeHours > 0 && ageHours === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Token age unknown (fail-closed).' };
+    if (p.minAgeHours > 0 && ageHours < p.minAgeHours) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Age ${ageHours.toFixed(1)}h < ${p.minAgeHours}h minimum.` };
     if (volume24h < p.minVolume24hUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Volume $${(volume24h / 1000).toFixed(1)}k < ${p.minVolume24hUsd / 1000}k.` };
     if (liquidity < p.minLiquidityUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Likuiditas $${(liquidity / 1000).toFixed(1)}k < ${p.minLiquidityUsd / 1000}k.` };
     if (isWash) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Wash trading terdeteksi (volume palsu).' };
@@ -44,14 +44,14 @@ export default {
     if (ratTrader !== null && ratTrader >= p.maxRatTraderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Insider/rat trader rate ${(ratTrader * 100).toFixed(1)}% >= ${p.maxRatTraderRate * 100}%.` };
     if (top10Holder !== null && top10Holder >= p.maxTop10HolderRate) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Top-10 holder ${(top10Holder * 100).toFixed(1)}% >= ${p.maxTop10HolderRate * 100}%.` };
 
-    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan (RugCheck) tidak lolos.' };
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Security audit (RugCheck) failed.' };
 
     // ── Global total fees gate OPSIONAL: hanya aktif jika minTotalFeeUsd > 0 ──
     if (p.minTotalFeeUsd > 0) {
       const totalFeeNative = typeof g.total_fee === 'number' && g.total_fee > 0 ? g.total_fee : null;
       const nativePriceUsd = typeof g.native_price_usd === 'number' && g.native_price_usd > 0 ? g.native_price_usd : null;
-      if (totalFeeNative === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Total fee tidak diketahui (fail-closed).' };
-      if (nativePriceUsd === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga native live tidak tersedia — gagal konversi fee (fail-closed).' };
+      if (totalFeeNative === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Total fee unknown (fail-closed).' };
+      if (nativePriceUsd === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Live native price unavailable — fee conversion failed (fail-closed).' };
       const totalFeeUsd = totalFeeNative * nativePriceUsd;
       if (totalFeeUsd < p.minTotalFeeUsd) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Total fee $${totalFeeUsd.toFixed(0)} < $${p.minTotalFeeUsd} (${totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).` };
     }
@@ -80,7 +80,7 @@ export default {
     const change5m = typeof g.price_change_percent5m === 'number' ? g.price_change_percent5m : null;
     const change1h = typeof g.price_change_percent1h === 'number' ? g.price_change_percent1h : null;
 
-    // ── Quality gate: minimal 1 dari 3 {smart wallet, CTO, KOL} ──
+    // ── Quality gate: at least 1 of 3 {smart wallet, CTO, KOL} ──
     const signalStrength = (smartDegen >= 1 ? 1 : 0) + (ctoFlag ? 1 : 0) + (renowned >= 1 ? 1 : 0);
     if (signalStrength < 1) {
       return { confidence: 0, recommendedAction: 'SKIP', reason: '⚠️ Kosongan: tanpa smart wallet, CTO, maupun KOL — skip.' };
@@ -94,15 +94,15 @@ export default {
       if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallet (+15)`); }
       if (renowned >= 1) { score += 10; reasons.push(`⭐ KOL ${renowned} (+10)`); }
       if (volume24h >= 100000) { score += 15; reasons.push(`🔥 Volume $${(volume24h / 1000).toFixed(0)}k (+15)`); }
-      if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 Launch baru + CTO (+10)'); }
+      if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 New launch + CTO (+10)'); }
       return finish('CTO', score);
     }
 
     // Revival (dead token waking up) — HANYA token lama (umur >= 4h)
     if (ageHours !== null && ageHours >= 4 && change1h !== null && change1h > 50) {
       let score = 15;
-      reasons.push('🕐 Umur > 4h (+15)');
-      score += 30; reasons.push(`📈 Harga +${change1h.toFixed(0)}% 1h (+30)`);
+      reasons.push('🕐 Age > 4h (+15)');
+      score += 30; reasons.push(`📈 Price +${change1h.toFixed(0)}% 1h (+30)`);
       if (volume24h >= 100000) { score += 15; reasons.push(`🔥 Volume $${(volume24h / 1000).toFixed(0)}k (+15)`); }
       if (smartDegen >= 2) { score += 20; reasons.push(`🧠 Smart money ${smartDegen} wallet (+20)`); }
       if (creatorClosed) { score += 20; reasons.push('👨‍💻 Dev sudah close/burn (+20)'); }

@@ -152,7 +152,7 @@ export async function handleControlRoomMessage(
     const records = memory.getRecentAudits(5);
 
     if (records.length === 0) {
-      await message.reply(`🧠 **ATHENA SESSION MEMORY**: Belum ada riwayat audit token yang tersimpan di memori persisten.`);
+      await message.reply(`🧠 **ATHENA SESSION MEMORY**: No token audit history is stored in persistent memory yet.`);
       return;
     }
 
@@ -180,7 +180,7 @@ export async function handleControlRoomMessage(
           modelName: modelName || '',
           baseUrl: baseUrl || '',
         });
-        await message.reply(`${result.message}\n\n💡 **AI config aktif sekarang.** Kalau kamu set provider/model, pastikan \`AI_BASE_URL\` juga sudah benar (cek via "Athena, apa AI yang kamu pakai?").`);
+        await message.reply(`${result.message}\n\n💡 **AI config is now active.** If you set a provider/model, make sure \`AI_BASE_URL\` is also correct (verify via "Athena, what AI are you using?").`);
       } else {
         const result = await toolRegistry.executeToolCall('set_api_key', { keyName, keyValue });
         await message.reply(`${result.message}\nSub-agent API key status re-evaluated.`);
@@ -370,18 +370,19 @@ export async function handleControlRoomMessage(
   const activeDomains = hub.getActiveDomains();
   const activeAgentsLine = activeDomains.length > 0
     ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
-    : '- Active Sub-Agents: NONE (semua screening agent sedang PAUSED)';
+    : '- Active Sub-Agents: NONE (all screening agents paused)';
+  const risk = hub.getRiskManager().getRiskState();
   const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
-- Execution Mode: ${autoExecuteEnabled ? 'AUTO_EXECUTE (bot bisa eksekusi)' : 'MANUAL EXECUTION — bot HANYA screener/caller, semua eksekusi dilakukan user sendiri via link yang disediakan di call card'}
+- Execution Mode: ${autoExecuteEnabled ? 'AUTO_EXECUTE (bot may execute)' : 'MANUAL EXECUTION — bot is SCREENER/CALLER ONLY, all execution is done by the user via the link provided on the call card'}
 ${activeAgentsLine}
-- Referenced Wallet Balances (untuk tracking posisi user, bukan untuk eksekusi):
+- Referenced Wallet Balances (for tracking user positions, not for execution):
   • Solana: ${simSol} SOL
   • EVM: ${simEth} ETH (Base / Robinhood)
   • Polymarket: $${simPoly} USDC
   • Hyperliquid Perps: $${simHl} USDC
-- Global Portfolio Drawdown Limit: 50.0%
-- Current Portfolio Drawdown: 0.0%${memoryContext}`;
+- Global Portfolio Drawdown Limit: ${risk.maxDrawdownLimitPct}%
+- Current Portfolio Drawdown: ${risk.currentDrawdownPct ?? 0}%${memoryContext}`;
 
   try {
     // Athena is a real agent: LLM picks tools via function-calling (AgentRunner loop)
@@ -393,9 +394,9 @@ ${activeAgentsLine}
 
     const response = agentResult.text || (
       agentResult.toolResults.length > 0
-        ? `Saya menjalankan ${agentResult.toolResults.length} tool:\n` +
+        ? `I ran ${agentResult.toolResults.length} tool(s):\n` +
           agentResult.toolResults.map((t) => `• \`${t.name}\`: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
-        : '[Tidak ada respons dari AI.]'
+        : '[No response from AI.]'
     );
 
     const chunks = splitDiscordMessage(response);
@@ -423,13 +424,13 @@ ${activeAgentsLine}
         `• **Target Model:** \`${providerConfig.modelName}\`\n` +
         `• **Active API Key Hint:** \`${keyHint}\`\n` +
         `• **Error Detail:** ⚠️ \`${error.message || 'Unknown Error'}\`\n\n` +
-        `💡 **Solusi:** Jalankan \`athena wizard\` di VPS untuk menyegarkan API Key baru kamu.\n\n` +
-        `🛡️ **Sistem Otonom Lokal:** 95% engine lokal Athena (7 Sub-Agent, GoPlus/RugCheck audit, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) tetap beroperasi 100% lancar!`
+        `💡 **Fix:** Run \`athena wizard\` on the VPS to refresh your API keys.\n\n` +
+        `🛡️ **Local Autonomous System:** 95% of Athena's local engine (7 Sub-Agents, GoPlus/RugCheck audits, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) keeps operating 100% smoothly!`
       );
       return;
     }
 
-    // 2. Dynamic intent: General Chat / Analysis Query in Indonesian
+    // 2. Dynamic intent: General Chat / Analysis Query
     const isIndonesian = /[a-z]/i.test(userQuery) && (
       lower.includes('bisa') ||
       lower.includes('hai') ||
@@ -443,29 +444,19 @@ ${activeAgentsLine}
       lower.includes('analisis')
     );
 
-    const fallbackText = isIndonesian
-      ? `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
-        `Saya menerima permintaan kamu: *"${userQuery}"*.\n\n` +
-        `📊 **Status Operasional:**\n` +
-        `• **Mode:** \`DRY_RUN (Simulasi Aman Active)\`\n` +
-        `• **Active Key Hint:** \`${keyHint}\`\n` +
-        `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
-        `💡 **Kemampuan Utama:**\n` +
-        `1. Paste Contract Address token untuk **Audit Keamanan Real-time**.\n` +
-        `2. Minta alert harga (*"kabari kalau SOL 200"*).\n` +
-        `3. Eksekusi direct on-chain: \`/swap\`, \`/bridge\`, atau \`/send\`.\n\n` +
-        `*(Catatan: Cloud AI Error. Jalankan \`athena wizard\` di VPS untuk memperbarui API Key!)*`
-      : `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
-        `I received your query: *"${userQuery}"*.\n\n` +
-        `📊 **Operating Status:**\n` +
-        `• **Mode:** \`DRY_RUN (Safe Simulation Active)\`\n` +
-        `• **Active Key Hint:** \`${keyHint}\`\n` +
-        `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
-        `💡 **Core Capabilities:**\n` +
-        `1. Paste Contract Address for **Real-Time Security Audit**.\n` +
-        `2. Ask for price alerts (*"notify me if SOL hits 200"*).\n` +
-        `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
-        `*(Note: Cloud AI Error. Run \`athena wizard\` on VPS to update API keys!)*`;
+    const fallbackText = `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
+      `I received your query: *"${userQuery}"*.\n\n` +
+      `📊 **Operating Status:**\n` +
+      `• **Mode:** \`DRY_RUN (Safe Simulation Active)\`\n` +
+      `• **Active Key Hint:** \`${keyHint}\`\n` +
+      `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
+      `💡 **Core Capabilities:**\n` +
+      `1. Paste a Contract Address for **Real-Time Security Audit**.\n` +
+      `2. Ask for price alerts (*"notify me if SOL hits 200"*).\n` +
+      `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
+      `*(Note: Cloud AI Error. Run \`athena wizard\` on the VPS to update API keys!)*`;
+
+    void isIndonesian; // input tolerance kept — outputs are always English
 
     await message.reply(fallbackText);
   }

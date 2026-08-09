@@ -231,12 +231,12 @@ export class AthenaHub {
   /**
    * LP domains.
    * - lp-solana: adapter-flow Meteora DLMM (official data API).
-   * - lp-robinhood: Robinhood Chain tidak punya indexer pool publik yang
-   *   andal (subgraph unsupported, Uniswap Data API butuh akses khusus) —
-   *   reuse screening GMGN meme-robinhood (graduated-only + GoPlus) lalu
-   *   terapkan filter LP berbasis data GMGN (likuiditas, estimasi fee
-   *   yield 0.3% Uniswap v3, velocity) supaya call-nya LP-specific,
-   *   bukan duplikat meme. CA di-surface di card; user cari pool di Uniswap.
+   * - lp-robinhood: Robinhood Chain has no reliable public pool indexer
+   *   (subgraph unsupported, Uniswap Data API requires special access) —
+   *   reuse the GMGN meme-robinhood screening (graduated-only + GoPlus) then
+   *   apply an LP filter based on GMGN data (liquidity, 0.3% Uniswap v3 fee
+   *   yield estimate, velocity) so the calls are LP-specific,
+   *   not meme duplicates. CA is surfaced on the card; users look up the pool on Uniswap.
    */
   public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
     if (id === 'lp-solana') {
@@ -244,11 +244,11 @@ export class AthenaHub {
       const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
       const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
       const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
-      // Enrich token meme (tokenX) dengan GMGN: Meteora DLMM API tidak expose
-      // smart money/KOL/CTO — ambil dari GMGN token/info. Security gate token
-      // (honeypot/tax/rug/insider/bundler/top-10) + audit GMGN /token/security
-      // dipakai sebagai FILTER — FAIL-CLOSED: token tidak ditemukan / audit
-      // tidak tersedia = pool ditolak.
+      // Enrich the meme token (tokenX) with GMGN: the Meteora DLMM API does not expose
+      // smart money/KOL/CTO — fetch it from GMGN token/info. The token security gate
+      // (honeypot/tax/rug/insider/bundler/top-10) + GMGN /token/security audit
+      // are used as a FILTER — FAIL-CLOSED: token not found / audit
+      // unavailable = pool rejected.
       const gmgn = this.gmgnAdapter ?? new GMGNAdapter();
       const enriched = new Map<string, any>();
       const results: AgentReport[] = [];
@@ -260,22 +260,22 @@ export class AthenaHub {
           } catch { enriched.set(p.tokenXAddress, null); }
         }
         const info = enriched.get(p.tokenXAddress) ?? null;
-        // FAIL-CLOSED: token tidak ditemukan di GMGN → audit tidak bisa diverifikasi.
+        // FAIL-CLOSED: token not found in GMGN → audit cannot be verified.
         if (!info) {
-          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — token tidak ditemukan di GMGN (audit tidak bisa diverifikasi).`);
+          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — token not found in GMGN (audit cannot be verified).`);
           continue;
         }
-        // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
+        // LP: tax gate disabled (LP tokens often have small taxes) — other gates remain.
         const sec = securityGateToken(info, { enableTaxGate: false });
         if (!sec.ok) {
-          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — ${sec.reasons.join(' ')}`);
+          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — ${sec.reasons.join(' ')}`);
           continue;
         }
-        // Audit keamanan per-token (honeypot/blacklist/sell-lock) — fail-closed.
+        // Per-token security audit (honeypot/blacklist/sell-lock) — fail-closed.
         const audit = await gmgn.fetchTokenSecurity('sol', p.tokenXAddress);
         const secAudit = securityAuditGate(audit, { enableTaxGate: false });
         if (!secAudit.ok) {
-          console.log(`[LP SOLANA] ⛔ Pool ditolak: ${p.pairName} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
+          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
           continue;
         }
         const payload = buildLPPayload(p);
@@ -299,29 +299,29 @@ export class AthenaHub {
       }
       return results;
     }
-    // lp-robinhood: Krystal Cloud Data API (indexer pool robinhood chain yang
-    // andal — subgraph unsupported, Uniswap Data API butuh akses khusus).
-    // Data NYATA: tvl, volume/fee/APR per 1h-24h, farm incentives. Filter
-    // mirror LP solana (Meteora): fee1h>=7, 24h Fee/TVL>1%, velocity>=100%,
-    // tvl>=10k, dedupe per pair. CA kedua token + chart link di-surface;
-    // detail token meme (harga/MC/volume/holder/umur/smart money) di-enrich
-    // dari GMGN token/info — token meme = yang BUKAN base asset (WETH/USDC/…),
-    // fail-open.
+    // lp-robinhood: Krystal Cloud Data API (a reliable robinhood chain pool
+    // indexer — subgraph unsupported, Uniswap Data API requires special access).
+    // REAL data: tvl, volume/fee/APR per 1h-24h, farm incentives. Filter
+    // mirrors LP solana (Meteora): fee1h>=7, 24h Fee/TVL>1%, velocity>=100%,
+    // tvl>=10k, dedupe per pair. Both token CAs + chart links are surfaced;
+    // meme token details (price/MC/volume/holder/age/smart money) are enriched
+    // from GMGN token/info — the meme token is the one that is NOT a base
+    // asset (WETH/USDC/…), fail-open.
     const { KrystalCloudAdapter } = await import('../adapters/krystal-cloud-adapter.js');
     const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
     const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
     const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
-    // Enrich pakai key GMGN robinhood (rate limit per key) — fallback ke GMGN_API_KEY.
-    // Security gate token meme (honeypot/tax/rug/insider/bundler/top-10) = FILTER:
-    // token berbahaya menolak pool-nya (fail-open bila tidak ditemukan di GMGN).
+    // Enrich using the GMGN robinhood key (per-key rate limit) — falls back to GMGN_API_KEY.
+    // Meme token security gate (honeypot/tax/rug/insider/bundler/top-10) = FILTER:
+    // a dangerous token rejects its pool (fail-open when not found in GMGN).
     const gmgn = this.gmgnAdapter ?? new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
     const isBaseAsset = (sym: string) => /^(WETH|ETH|USDC|USDT|DAI|WBTC|WSTETH|STETH)$/i.test(sym);
     const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
     const results: AgentReport[] = [];
     for (const p of high) {
-      // Urutkan token: token meme (non-base, mis. PEPE) jadi yang pertama,
-      // base asset (WETH/USDC/…) jadi kedua — konsisten dengan LP solana
-      // (Meteora: "Chiikawa-SOL", meme duluan). Fallback: token0 tetap pertama.
+      // Order tokens: the meme token (non-base, e.g. PEPE) first,
+      // the base asset (WETH/USDC/…) second — consistent with LP solana
+      // (Meteora: "Chiikawa-SOL", meme first). Fallback: token0 stays first.
       const memeToken = !isBaseAsset(p.token0Symbol)
         ? { addr: p.token0Address, sym: p.token0Symbol }
         : !isBaseAsset(p.token1Symbol)
@@ -337,29 +337,29 @@ export class AthenaHub {
         } catch { enriched.set(memeToken.addr, null); }
       }
       const info = enriched.get(memeToken.addr) ?? null;
-      // Market cap token meme WAJIB > $200k (fail-closed: token tidak ditemukan
-      // di GMGN / MC tidak diketahui = pool ditolak).
+      // Meme token market cap MUST be > $200k (fail-closed: token not found
+      // in GMGN / unknown MC = pool rejected).
       if (!info) {
-        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — token tidak ditemukan di GMGN (MC tidak bisa diverifikasi).`);
+        console.log(`[LP ROBINHOOD] ⛔ Pool rejected: ${memeToken.sym}-${baseToken.sym} — token not found in GMGN (MC cannot be verified).`);
         continue;
       }
       if (info.marketCapUsd < 200000) {
-        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym} MC $${(info.marketCapUsd / 1000).toFixed(0)}k < $200k.`);
+        console.log(`[LP ROBINHOOD] ⛔ Pool rejected: ${memeToken.sym} MC $${(info.marketCapUsd / 1000).toFixed(0)}k < $200k.`);
         continue;
       }
       if (info) {
-        // LP: tax gate dimatikan (token LP sering punya tax kecil) — gate lain tetap.
+        // LP: tax gate disabled (LP tokens often have small taxes) — other gates remain.
         const sec = securityGateToken(info, { enableTaxGate: false });
         if (!sec.ok) {
-          console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — ${sec.reasons.join(' ')}`);
+          console.log(`[LP ROBINHOOD] ⛔ Pool rejected: ${memeToken.sym}-${baseToken.sym} — ${sec.reasons.join(' ')}`);
           continue;
         }
       }
-      // Audit keamanan per-token (honeypot/blacklist/sell-lock) — fail-closed.
+      // Per-token security audit (honeypot/blacklist/sell-lock) — fail-closed.
       const audit = await gmgn.fetchTokenSecurity('robinhood', memeToken.addr);
       const secAudit = securityAuditGate(audit, { enableTaxGate: false });
       if (!secAudit.ok) {
-        console.log(`[LP ROBINHOOD] ⛔ Pool ditolak: ${memeToken.sym}-${baseToken.sym} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
+        console.log(`[LP ROBINHOOD] ⛔ Pool rejected: ${memeToken.sym}-${baseToken.sym} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
         continue;
       }
       const ageHours = info?.creationTimestamp !== null && info?.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : undefined;

@@ -25,12 +25,12 @@ export interface NFTSnipingReport {
 }
 
 export interface NFTScreeningConfig {
-  floorSurgeThresholdPct: number;   // filter WAJIB: floor naik >= 20% dalam 1h
-  volSpikeThresholdRatio: number;   // filter WAJIB: volume >= 2.0x baseline
-  minSalesVelocity1h: number;       // filter WAJIB: >= 5 sales/jam (koleksi aktif nyata)
+  floorSurgeThresholdPct: number;   // REQUIRED filter: floor up >= 20% within 1h
+  volSpikeThresholdRatio: number;   // REQUIRED filter: volume >= 2.0x baseline
+  minSalesVelocity1h: number;       // REQUIRED filter: >= 5 sales/hour (genuinely active collection)
   passThreshold: number;            // confidence card gate (>= 80)
   chains: string[];                 // multichain: ethereum, base, robinhood
-  trendingLimitPerChain: number;    // top N koleksi trending per chain per pass
+  trendingLimitPerChain: number;    // top N trending collections per chain per pass
 }
 
 const DEFAULT_CONFIG: NFTScreeningConfig = {
@@ -45,14 +45,14 @@ const DEFAULT_CONFIG: NFTScreeningConfig = {
 /**
  * EVM NFT Floor & Rarity Sniping Agent (OpenSea)
  *
- * HARD FILTER (bukan scoring) — semua harus lolos untuk call:
- *   1. Floor surge >= +20% dalam 1 jam
+ * HARD FILTER (not scoring) — all must pass for a call:
+ *   1. Floor surge >= +20% within 1 hour
  *   2. Volume spike >= 2.0x baseline
- *   3. Sales velocity >= 5 sales/jam
+ *   3. Sales velocity >= 5 sales/hour
  *
- * Whale sweep & verified badge = informasi tambahan di call card (bukan filter).
- * Confidence deterministik (hanya tampilan card + swarm gate >= 80):
- *   lolos 3 filter = 80, +10 whale sweep, +10 verified (cap 100).
+ * Whale sweep & verified badge = additional info on the call card (not filters).
+ * Deterministic confidence (card display only + swarm gate >= 80):
+ *   passing 3 filters = 80, +10 whale sweep, +10 verified (cap 100).
  *
  * Pipeline: fetch real signals (fail-closed) → evaluateListing (fail-closed, no
  * fabricated numbers) → strategy extension layer (0.7/0.3 blend, SKIP vetoes) →
@@ -70,30 +70,30 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /**
-   * Evaluates candidate NFT listings against HARD FILTERS (semua wajib):
-   * Floor Surge >= +20% 1h, Volume Spike >= 2.0x, Sales Velocity >= 5/h.
-   * Whale sweep & verified = info tambahan, bukan filter.
-   */
+   /**
+    * Evaluates candidate NFT listings against HARD FILTERS (all required):
+    * Floor Surge >= +20% 1h, Volume Spike >= 2.0x, Sales Velocity >= 5/h.
+    * Whale sweep & verified = additional info, not filters.
+    */
   public evaluateListing(signal: OpenSeaNFTSignal): NFTSnipingReport | null {
-    // 1. Floor Price Pump Surge Check (>= +20% in 1h) — WAJIB
+    // 1. Floor Price Pump Surge Check (>= +20% in 1h) — REQUIRED
     const isFloorSurge = signal.floorSurge1hPct >= this.config.floorSurgeThresholdPct;
 
-    // 2. Volume Explosion Spike Check (>= 2.0x baseline) — WAJIB
+    // 2. Volume Explosion Spike Check (>= 2.0x baseline) — REQUIRED
     const isVolumeSpike = signal.volumeSpike1hRatio >= this.config.volSpikeThresholdRatio;
 
-    // 3. Sales Velocity Check (>= 5 sales/hour) — WAJIB
+    // 3. Sales Velocity Check (>= 5 sales/hour) — REQUIRED
     const isHighVelocity = signal.salesVelocity1h >= this.config.minSalesVelocity1h;
 
-    // 4. Verified Whale Sweep Check — faktual, info saja: satu buyer membeli >= 3 NFT dalam 1 jam
+    // 4. Verified Whale Sweep Check — factual, info only: a single buyer bought >= 3 NFTs within 1 hour
     const isWhaleSweep = signal.isWhaleSweep && Boolean(signal.whaleInfo);
 
-    // Hard gate: SEMUA filter wajib harus lolos (bukan scoring, bukan OR)
+    // Hard gate: ALL required filters must pass (not scoring, not OR)
     if (!(isFloorSurge && isVolumeSpike && isHighVelocity)) {
       return null;
     }
 
-    // Confidence deterministik — hanya untuk tampilan card + swarm gate, bukan gate kelulusan.
+    // Deterministic confidence — for card display + swarm gate only, not a pass gate.
     let confidenceScore = 80;
     if (isWhaleSweep) confidenceScore += 10;
     if (signal.isVerified) confidenceScore += 10;
@@ -141,9 +141,9 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     console.log('[NFT AGENT] Running EVM NFT Momentum & Whale Sweep screening pass...');
     const reports: AgentReport<NFTSnipingReport>[] = [];
 
-    // Screening menyeluruh: trending collections per chain (dinamis, bukan list statis).
+    // Comprehensive screening: trending collections per chain (dynamic, not a static list).
     const candidates = await this.adapter.fetchTrendingCollections(this.config.chains, this.config.trendingLimitPerChain);
-    console.log(`[NFT AGENT] ${candidates.length} koleksi trending (${this.config.chains.join(', ')}) — screening...`);
+    console.log(`[NFT AGENT] ${candidates.length} trending collections (${this.config.chains.join(', ')}) — screening...`);
 
     for (const item of candidates) {
       const signals = await this.adapter.fetchFloorSnipingSignals(item.slug, item.chain);
@@ -157,7 +157,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
           if (strat?.evaluate) {
             const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
             if (ev?.recommendedAction === 'SKIP') {
-              console.log(`[NFT AGENT] ⛔ ${report.collectionSlug}: strategi menolak (${ev.reason})`);
+              console.log(`[NFT AGENT] ⛔ ${report.collectionSlug}: strategy rejected (${ev.reason})`);
               continue;
             }
             if (ev && typeof ev.confidence === 'number') {
@@ -166,7 +166,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[NFT AGENT] Strategi gagal: ${message}`);
+          console.warn(`[NFT AGENT] Strategy failed: ${message}`);
         }
 
         // Fail-closed: the 80 gate must hold on the FINAL blended confidence
@@ -192,13 +192,13 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
    * microstructure:
    *   1. Floor > 0.01 ETH  → real value (dust-floor collections are rug/fake risk)
    *   2. Sales velocity > 0 → actual trading activity, not a frozen listing
-   *   3. Semua hard filter lolos (surge + spike + velocity) — sudah dijamin oleh evaluateListing
+   *   3. All hard filters passed (surge + spike + velocity) — already guaranteed by evaluateListing
    * All three must hold to pass.
    */
   public deriveCollectionSafety(report: NFTSnipingReport): boolean {
     const floorOk = report.floorPriceEth > 0.01;
     const velocityOk = report.salesVelocity1h > 0;
-    // Hard filter semuanya wajib di evaluateListing — momentumOk selalu true utk report valid.
+    // All hard filters are required in evaluateListing — momentumOk is always true for valid reports.
     const momentumOk = report.isWhaleSweep || report.isFloorSurge || report.isVolumeSpike || report.salesVelocity1h >= this.config.minSalesVelocity1h;
     return floorOk && velocityOk && momentumOk;
   }

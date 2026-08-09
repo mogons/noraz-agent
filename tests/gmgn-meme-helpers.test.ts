@@ -118,10 +118,10 @@ describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', ()
     expect(securityAuditGate(mkAudit({ isBlacklist: true })).ok).toBe(false);
   });
 
-  it('tidak bisa dijual (canNotSell/sell-locked) → tolak', () => {
+  it('cannot be sold (canNotSell/sell-locked) → reject', () => {
     const r = securityAuditGate(mkAudit({ canNotSell: true }));
     expect(r.ok).toBe(false);
-    expect(r.reasons.join(' ')).toContain('dijual');
+    expect(r.reasons.join(' ')).toContain('cannot be sold');
   });
 
   it('tax tinggi (> 10%) → tolak saat enableTaxGate', () => {
@@ -140,7 +140,7 @@ describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', ()
   it('tokenSecurityAuditLabel: hanya field yang tersedia yang ditampilkan', () => {
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Renounced');
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Locked');
-    expect(tokenSecurityAuditLabel(null)).toContain('Tidak teraudit');
+    expect(tokenSecurityAuditLabel(null)).toContain('Not audited');
   });
 });
 
@@ -186,7 +186,7 @@ describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
       mkTrade({ maker: '0xw2', amountUsd: 18_000, timestamp: now - 1200 }),
     ]);
     const label = trackAccumulationLabel(acc.get('tok1')!, now * 1000);
-    expect(label).toContain('2 wallet beli');
+    expect(label).toContain('2 wallets bought');
     expect(label).toContain('$30.0k');
   });
 });

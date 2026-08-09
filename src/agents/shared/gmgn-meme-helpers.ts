@@ -8,7 +8,7 @@
 import type { GMGNRawToken, GMGNSecurityAudit, GMGNTrackTrade } from '../../adapters/gmgn-adapter.js';
 
 export interface MemePreFilterConfig {
-  /** Volume 1 JAM real (GMGN rank/hot interval=1h, trenches volume_1h, DexScreener h1) — wajib. */
+  /** Real 1-HOUR volume (GMGN rank/hot interval=1h, trenches volume_1h, DexScreener h1) — required. */
   minVolume1hUsd: number;
   minLiquidityUsd: number;
   minMarketCapUsd: number;
@@ -20,9 +20,9 @@ export interface MemePreFilterConfig {
 }
 
 /**
- * Volume 24 jam yang jujur: pakai volume_24h real bila tersedia; kalau tidak
- * (sumber rank/hot cuma kasih volume interval-1h), estimasi ×24. 0 bila tidak
- * diketahui sama sekali (fail-closed).
+ * Honest 24-hour volume: use the real volume_24h when available; otherwise
+ * (rank/hot sources only provide interval-1h volume) estimate ×24. 0 when
+ * completely unknown (fail-closed).
  */
 export function volume24hOf(t: GMGNRawToken): number {
   if (t.volume24hUsd > 0) return t.volume24hUsd;
@@ -37,12 +37,12 @@ export interface MemeSignalResult {
 }
 
 /**
- * Graduated = token sudah keluar dari bonding curve ke DEX open market.
- * - SOL: GMGN menandai venue lewat `exchange` — 'pump' = masih internal
- *   pump.fun market; 'pump_amm'/'raydium'/'meteora'/dll = sudah di DEX.
- * - EVM: `exchange` berisi contract/pool address (0x...) — kehadirannya
- *   menandakan venue sudah terbentuk (bukan bonding curve).
- * - DexScreener pairs by definition sudah di DEX. Unknown/null = fail-closed reject.
+ * Graduated = token has left the bonding curve into the open DEX market.
+ * - SOL: GMGN marks the venue via `exchange` — 'pump' = still internal
+ *   pump.fun market; 'pump_amm'/'raydium'/'meteora'/etc = already on DEX.
+ * - EVM: `exchange` holds a contract/pool address (0x...) — its presence
+ *   means the venue is already formed (not a bonding curve).
+ * - DexScreener pairs are by definition already on DEX. Unknown/null = fail-closed reject.
  */
 export function isGraduatedToken(t: GMGNRawToken): boolean {
   if (t.source === 'dexscreener') return true;
@@ -116,7 +116,7 @@ export function applySignalBoost(
   if (minsAgo > 240) return det; // stale events add nothing
   const bonus = minsAgo <= 30 ? 15 : minsAgo <= 120 ? 10 : 5;
   const typesLabel = entry.types.length > 0 ? `(${entry.types.join(',')})` : '';
-  const reason = `📡 Signal GMGN ${minsAgo.toFixed(0)}m lalu ${typesLabel} (+${bonus})`;
+  const reason = `📡 GMGN signal ${minsAgo.toFixed(0)}m ago ${typesLabel} (+${bonus})`;
   return { ...det, confidence: Math.min(100, det.confidence + bonus), reasons: [...det.reasons, reason] };
 }
 
@@ -133,28 +133,28 @@ export function preFilterToken(
     if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
     return { ok: true, reason: 'ok' };
   }
-  // Age gate OPSIONAL: minAgeHours > 0 baru dicek (degen early = 0 → token baru lolos).
-  // creation_timestamp null hanya fail-closed KALAU age gate aktif; kalau 0, umur
-  // tidak jadi kriteria (alpha early), gate lain (volume/liq/rug/insider) tetap jalan.
+  // Age gate OPTIONAL: only checked when minAgeHours > 0 (degen early = 0 → new tokens pass).
+  // creation_timestamp null only fail-closes IF the age gate is active; when 0, age
+  // is not a criterion (alpha early), other gates (volume/liq/rug/insider) still run.
   if (config.minAgeHours > 0) {
-    if (t.creationTimestamp === null) return fail('umur tidak diketahui (fail-closed).');
+    if (t.creationTimestamp === null) return fail('age unknown (fail-closed).');
     const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
-    if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
+    if (ageHours < config.minAgeHours) return fail(`age ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
   }
-  // Volume 1 JAM real (bukan 24h) — token harus ramai SEKARANG, bukan kemarin.
+  // Real 1-HOUR volume (not 24h) — the token must be active RIGHT NOW, not yesterday.
   if (t.volume1hUsd < config.minVolume1hUsd) return fail(`volume 1h $${(t.volume1hUsd/1000).toFixed(1)}k < $${config.minVolume1hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
-  // Market cap gate (fail-closed: 0/tidak diketahui = tolak) — wajib di atas ambang.
+  // Market cap gate (fail-closed: 0/unknown = reject) — must be above the threshold.
   if (t.marketCapUsd < config.minMarketCapUsd) return fail(`market cap $${(t.marketCapUsd/1000).toFixed(1)}k < $${config.minMarketCapUsd/1000}k.`);
-  // Security gate GMGN (honeypot, tax, rug, insider, top-10, wash) — shared
-  // dengan LP agent supaya ambang keamanan tetap satu sumber.
+  // GMGN security gate (honeypot, tax, rug, insider, top-10, wash) — shared
+  // with the LP agent so security thresholds stay in one source.
   const sec = securityGateToken(t);
   if (!sec.ok) return fail(sec.reasons.join(' '));
-  // Total fees gate OPSIONAL: minTotalFeeUsd > 0 baru dicek. 0 = off (alpha early;
-  // token baru fee-nya kecil tapi volume gate sudah menyaring token mati).
+  // Total fees gate OPTIONAL: only checked when minTotalFeeUsd > 0. 0 = off (alpha early;
+  // new tokens have small fees but the volume gate already filters out dead tokens).
   if (config.minTotalFeeUsd > 0) {
-    if (t.totalFeeNative === null) return fail('total fee tidak diketahui (fail-closed).');
-    if (nativePriceUsd === null || nativePriceUsd <= 0) return fail('harga live tidak tersedia — gagal konversi fee (fail-closed).');
+    if (t.totalFeeNative === null) return fail('total fee unknown (fail-closed).');
+    if (nativePriceUsd === null || nativePriceUsd <= 0) return fail('live price unavailable — fee conversion failed (fail-closed).');
     const totalFeeUsd = t.totalFeeNative * nativePriceUsd;
     if (totalFeeUsd < config.minTotalFeeUsd) return fail(`total fee $${totalFeeUsd.toFixed(0)} < $${config.minTotalFeeUsd} (${t.totalFeeNative.toFixed(2)} native @ $${nativePriceUsd.toFixed(2)}).`);
   }
@@ -162,14 +162,14 @@ export function preFilterToken(
 }
 
 /**
- * Gate audit keamanan dari GMGN `/v1/token/security` (endpoint audit per-token
- * — panel "Token Audit" UI GMGN). FAIL-CLOSED: audit null/tidak tersedia = TOLAK
- * (tidak bisa diverifikasi, jangan pernah lolos). Honeypot/blacklist/sell-lock
- * = TOLAK; tax digate sesuai opsi (meme: > 10% tolak; LP: dimatikan).
+ * Security audit gate from GMGN `/v1/token/security` (per-token audit endpoint
+ * — GMGN UI "Token Audit" panel). FAIL-CLOSED: null/unavailable audit = REJECT
+ * (cannot be verified, never pass). Honeypot/blacklist/sell-lock = REJECT;
+ * tax gated per option (meme: > 10% reject; LP: disabled).
  */
 export interface SecurityAuditGateOptions {
   maxTaxPct?: number;
-  /** Gate buy/sell/average tax (default true). LP agent mematikan ini. */
+  /** Gate buy/sell/average tax (default true). LP agent disables this. */
   enableTaxGate?: boolean;
 }
 
@@ -184,12 +184,12 @@ export function securityAuditGate(
 ): { ok: boolean; reasons: string[] } {
   const o = { ...SECURITY_AUDIT_GATE_DEFAULTS, ...opts };
   if (!audit) {
-    return { ok: false, reasons: ['audit GMGN tidak tersedia (fail-closed).'] };
+    return { ok: false, reasons: ['GMGN audit unavailable (fail-closed).'] };
   }
   const reasons: string[] = [];
-  if (audit.isHoneypot) reasons.push('honeypot terdeteksi.');
+  if (audit.isHoneypot) reasons.push('honeypot detected.');
   if (audit.isBlacklist) reasons.push('blacklist.');
-  if (audit.canNotSell) reasons.push('tidak bisa dijual (sell-locked).');
+  if (audit.canNotSell) reasons.push('cannot be sold (sell-locked).');
   if (o.enableTaxGate) {
     if (audit.buyTaxPct > o.maxTaxPct) reasons.push(`buy tax ${audit.buyTaxPct}% > ${o.maxTaxPct}%.`);
     if (audit.sellTaxPct > o.maxTaxPct) reasons.push(`sell tax ${audit.sellTaxPct}% > ${o.maxTaxPct}%.`);
@@ -198,9 +198,9 @@ export function securityAuditGate(
   return { ok: reasons.length === 0, reasons };
 }
 
-/** Label ringkas audit GMGN untuk card (field yang tersedia saja). */
+/** Concise GMGN audit label for the card (available fields only). */
 export function tokenSecurityAuditLabel(audit: GMGNSecurityAudit | null): string {
-  if (!audit) return '⚠️ Tidak teraudit (GMGN)';
+  if (!audit) return '⚠️ Not audited (GMGN)';
   const parts: string[] = [];
   if (audit.isRenounced) parts.push('Renounced');
   if (audit.isBlacklist) parts.push('No Blacklist');
@@ -211,9 +211,9 @@ export function tokenSecurityAuditLabel(audit: GMGNSecurityAudit | null): string
 }
 
 /**
- * Akumulasi trade feed smart-money/KOL per token: berapa wallet beli/jual,
- * total USD, full-close. Basis untuk candidate source (akumulasi bullish) dan
- * exit alert (full-close bearish).
+ * Smart-money/KOL trade feed accumulation per token: how many wallets
+ * buy/sell, total USD, full-close. Basis for the candidate source (bullish
+ * accumulation) and the exit alert (bearish full-close).
  */
 export interface TrackAccumulation {
   address: string;
@@ -224,7 +224,7 @@ export interface TrackAccumulation {
   sellWalletCount: number;
   totalSellUsd: number;
   fullCloseCount: number;
-  /** Wallet yang melakukan full-close (jual habis posisi) — dasar deteksi exit. */
+  /** Wallets that performed a full-close (sold entire position) — basis for exit detection. */
   fullCloseWallets: Set<string>;
   fullCloseTotalUsd: number;
   lastFullCloseAt: number;
@@ -279,25 +279,25 @@ export function buildTrackAccumulation(trades: GMGNTrackTrade[]): Map<string, Tr
   return map;
 }
 
-/** Ringkasan akumulasi untuk card: "🧠 3 smart wallet beli $45k dalam 20m". */
+/** Accumulation summary for the card: "🧠 3 smart wallets bought $45k in 20m". */
 export function trackAccumulationLabel(acc: TrackAccumulation, now = Date.now()): string {
   const mins = acc.lastBuyAt > 0 ? Math.max(0, Math.round((now / 1000 - acc.lastBuyAt) / 60)) : 0;
-  return `${acc.buyWalletCount} wallet beli $${(acc.totalBuyUsd / 1000).toFixed(1)}k ${mins <= 0 ? 'baru saja' : `${mins}m lalu`}`;
+  return `${acc.buyWalletCount} wallets bought $${(acc.totalBuyUsd / 1000).toFixed(1)}k ${mins <= 0 ? 'just now' : `${mins}m ago`}`;
 }
 
 /**
- * Gate keamanan dari data GMGN (fail-open per field: null = tidak dilaporkan,
- * dilewati) — dipakai meme agent DAN LP agent (token meme di pool).
- * Ambang default identik dengan meme config: rug < 0.3, insider < 0.3,
- * top-10 < 0.4, tax <= 10%, honeypot & wash = tolak. Bundler TIDAK digate
- * (token alpha sering bundler tinggi — filter bundler dihapus 2026-08-09).
+ * Security gate from GMGN data (fail-open per field: null = not reported,
+ * skipped) — used by BOTH the meme agent and the LP agent (meme tokens in pools).
+ * Default thresholds match the meme config: rug < 0.3, insider < 0.3,
+ * top-10 < 0.4, tax <= 10%, honeypot & wash = reject. Bundler is NOT gated
+ * (alpha tokens often have high bundler — bundler filter removed 2026-08-09).
  */
 export interface SecurityGateOptions {
   maxRugRatio?: number;
   maxRatTraderRate?: number;
   maxTop10HolderRate?: number;
   maxTaxPct?: number;
-  /** Gate buy/sell tax (default true). LP agent mematikan ini: token LP sering punya tax kecil. */
+  /** Gate buy/sell tax (default true). LP agent disables this: LP tokens often have small tax. */
   enableTaxGate?: boolean;
 }
 
@@ -315,8 +315,8 @@ export function securityGateToken(
 ): { ok: boolean; reasons: string[] } {
   const o = { ...SECURITY_GATE_DEFAULTS, ...opts };
   const reasons: string[] = [];
-  if (t.isWashTrading) reasons.push('wash trading terdeteksi.');
-  if (t.isHoneypot === true) reasons.push('honeypot (tidak bisa dijual).');
+  if (t.isWashTrading) reasons.push('wash trading detected.');
+  if (t.isHoneypot === true) reasons.push('honeypot (cannot be sold).');
   if (o.enableTaxGate) {
     const buyTax = t.buyTax !== null ? Number(t.buyTax) : null;
     const sellTax = t.sellTax !== null ? Number(t.sellTax) : null;
@@ -330,8 +330,8 @@ export function securityGateToken(
 }
 
 /**
- * Label ringkas keamanan token untuk call card LP (render di embed): hanya
- * field yang dilaporkan GMGN yang ditampilkan.
+ * Concise token security label for the LP call card (rendered in the embed):
+ * only fields reported by GMGN are shown.
  */
 export function tokenSecurityLabel(t: GMGNRawToken): string {
   const parts: string[] = [];
@@ -350,39 +350,39 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
   const vol24 = volume24hOf(t);
   const ageHours = t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null;
 
-  // Quality gate: minimal 1 dari 3 sinyal {smart wallet, CTO, KOL} wajib ada.
-  // Token "kosongan" (cuma volume/pump tanpa smart money/CTO/KOL sama sekali)
-  // = noise, bukan alpha — langsung NONE, tidak pernah jadi call.
+  // Quality gate: at least 1 of 3 signals {smart wallet, CTO, KOL} is required.
+  // "Empty" tokens (only volume/pump with no smart money/CTO/KOL at all)
+  // = noise, not alpha — straight to NONE, never becomes a call.
   const signalStrength = (smartDegen >= 1 ? 1 : 0) + (t.ctoFlag ? 1 : 0) + (renowned >= 1 ? 1 : 0);
   if (signalStrength < 1) {
-    return { type: 'NONE', confidence: 0, reasons: ['⚠️ Kosongan: tanpa smart wallet, CTO, maupun KOL — skip.'] };
+    return { type: 'NONE', confidence: 0, reasons: ['⚠️ Empty: no smart wallet, CTO, or KOL — skip.'] };
   }
 
   // CTO (GMGN source only)
   if (t.ctoFlag && t.source === 'gmgn') {
     let score = 40;
     reasons.push('👥 CTO flag GMGN = 1 (+40)');
-    if (t.creatorClose || (t.devTeamHoldRate !== null && t.devTeamHoldRate <= 5)) { score += 20; reasons.push('👨‍💻 Dev sudah close/burn (+20)'); }
-    if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallet (+15)`); }
+    if (t.creatorClose || (t.devTeamHoldRate !== null && t.devTeamHoldRate <= 5)) { score += 20; reasons.push('👨‍💻 Dev already closed/burn (+20)'); }
+    if (smartDegen >= 2) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} wallets (+15)`); }
     if (renowned >= 1) { score += 10; reasons.push(`⭐ KOL ${renowned} (+10)`); }
     if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
-    if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 Launch baru + CTO (+10)'); }
+    if (ageHours !== null && ageHours < 2) { score += 10; reasons.push('🆕 Recent launch + CTO (+10)'); }
     return { type: 'CTO', confidence: Math.min(100, score), reasons };
   }
 
-  // Revival — HANYA token lama (umur >= 4h): token muda yang pump itu MOMENTUM
-  // awal (degen early), bukan revival dari kematian.
+  // Revival — ONLY old tokens (age >= 4h): a young token pumping is initial
+  // MOMENTUM (degen early), not a revival from the dead.
   if (ageHours !== null && ageHours >= 4 && t.priceChange1h !== null && t.priceChange1h > 50) {
     let score = 15;
-    reasons.push('🕐 Umur > 4h (+15)');
-    score += 30; reasons.push(`📈 Harga +${t.priceChange1h.toFixed(0)}% 1h (+30)`);
+    reasons.push('🕐 Age > 4h (+15)');
+    score += 30; reasons.push(`📈 Price +${t.priceChange1h.toFixed(0)}% 1h (+30)`);
     if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
-    if (smartDegen >= 2) { score += 20; reasons.push(`🧠 Smart money ${smartDegen} wallet (+20)`); }
-    if (t.creatorClose) { score += 20; reasons.push('👨‍💻 Dev sudah close/burn (+20)'); }
+    if (smartDegen >= 2) { score += 20; reasons.push(`🧠 Smart money ${smartDegen} wallets (+20)`); }
+    if (t.creatorClose) { score += 20; reasons.push('👨‍💻 Dev already closed/burn (+20)'); }
     return { type: 'REVIVAL', confidence: Math.min(100, score), reasons };
   }
 
-  // Momentum (termasuk degen early — token baru yang langsung ramai)
+  // Momentum (including degen early — new tokens that are immediately active)
   {
     let score = 0;
     if (t.priceChange5m !== null && t.priceChange5m > 0) { score += 15; reasons.push(`⚡ 5m +${t.priceChange5m.toFixed(1)}% (+15)`); }
@@ -391,12 +391,12 @@ export function detectMemeSignal(t: GMGNRawToken): MemeSignalResult {
     if (total > 0 && t.buys / total > 0.6) { score += 20; reasons.push(`⚖️ Buy ${((t.buys/total)*100).toFixed(0)}% / Sell ${((t.sells/total)*100).toFixed(0)}% (+20)`); }
     if (vol24 >= 100000) { score += 15; reasons.push(`🔥 Volume $${(vol24/1000).toFixed(0)}k (+15)`); }
     if (smartDegen >= 1) { score += 15; reasons.push(`🧠 Smart money ${smartDegen} (+15)`); }
-    // Alpha early: token baru (< 2h) + smart money masuk bareng = indikasi kuat
-    if (ageHours !== null && ageHours < 2 && smartDegen >= 1) { score += 10; reasons.push(`🆕 Launch ${ageHours.toFixed(1)}h + smart money masuk bareng (+10)`); }
+    // Alpha early: new token (< 2h) + smart money entering alongside = strong indication
+    if (ageHours !== null && ageHours < 2 && smartDegen >= 1) { score += 10; reasons.push(`🆕 Launch ${ageHours.toFixed(1)}h + smart money entered alongside (+10)`); }
     if (t.top10HolderRate !== null && t.top10HolderRate < 0.3) { score += 10; reasons.push(`👥 Top-10 ${(t.top10HolderRate*100).toFixed(1)}% (+10)`); }
     const visitingBonus = t.visitingCount >= 200 ? 5 : 0;
-    if (visitingBonus > 0) { score += visitingBonus; reasons.push(`👀 ${t.visitingCount} kunjungan GMGN (+${visitingBonus})`); }
-    if (score <= 0) return { type: 'NONE', confidence: 0, reasons: ['Tidak ada sinyal momentum.'] };
+    if (visitingBonus > 0) { score += visitingBonus; reasons.push(`👀 ${t.visitingCount} GMGN visits (+${visitingBonus})`); }
+    if (score <= 0) return { type: 'NONE', confidence: 0, reasons: ['No momentum signal.'] };
     return { type: 'MOMENTUM', confidence: Math.min(100, score), reasons };
   }
 }
@@ -410,7 +410,7 @@ export function toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
     name: t.name,
     source: t.source,
     ageHours: t.creationTimestamp !== null ? (Date.now() / 1000 - t.creationTimestamp) / 3600 : null,
-    volume_24h: volume24hOf(t), // jujur: real 24h atau est 1h×24 (rank 1h cuma kasih volume 1h)
+    volume_24h: volume24hOf(t), // honest: real 24h or est 1h×24 (1h rank only provides 1h volume)
     volume_1h: t.volume1hUsd,
     liquidity: t.liquidityUsd,
     is_wash_trading: t.isWashTrading ? 1 : 0,
@@ -442,8 +442,8 @@ export function toStrategyGmgn(t: GMGNRawToken): Record<string, unknown> {
 
 /** Deterministic thesis text (no LLM) */
 export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: number, reasons: string[], strategyReason: string): string {
-  const parts = [`${type} SIGNAL $${t.symbol} (${t.name})`, `Skor ${confidence}%`, ...reasons];
-  if (strategyReason) parts.push(`Strategi: ${strategyReason}`);
+  const parts = [`${type} SIGNAL $${t.symbol} (${t.name})`, `Score ${confidence}%`, ...reasons];
+  if (strategyReason) parts.push(`Strategy: ${strategyReason}`);
   return parts.join(' | ');
 }
 
@@ -471,7 +471,7 @@ const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
   trackFreshMinutes: { min: 1, max: 1440 },
 };
 
-/** Key boolean yang boleh di-set via chat (track feed toggle). */
+/** Boolean keys that may be set via chat (track feed toggle). */
 const MEME_BOOL_KEYS = new Set(['trackFeedEnabled']);
 
 export interface MemeConfigUpdateResult {
@@ -487,7 +487,7 @@ export function validateMemeConfigUpdate(partial: Record<string, unknown>): Meme
       if (Array.isArray(value) && value.length > 0 && value.every((v) => Number.isInteger(v) && v >= 1 && v <= 21)) {
         applied.signalTypes = value;
       } else {
-        rejected.push(`signalTypes: harus array integer 1-21 (mis. [6,7,11,12])`);
+        rejected.push(`signalTypes: must be an integer array 1-21 (e.g. [6,7,11,12])`);
       }
       continue;
     }
@@ -495,18 +495,18 @@ export function validateMemeConfigUpdate(partial: Record<string, unknown>): Meme
       if (typeof value === 'boolean') {
         applied[key] = value;
       } else {
-        rejected.push(`${key}: harus boolean true/false`);
+        rejected.push(`${key}: must be boolean true/false`);
       }
       continue;
     }
     const spec = MEME_CONFIG_SPEC[key];
     if (!spec) {
-      rejected.push(`${key}: kunci tidak dikenal`);
+      rejected.push(`${key}: unknown key`);
       continue;
     }
     const n = Number(value);
     if (!Number.isFinite(n) || n < spec.min || n > spec.max) {
-      rejected.push(`${key}: harus angka ${spec.min}-${spec.max}`);
+      rejected.push(`${key}: must be a number ${spec.min}-${spec.max}`);
       continue;
     }
     applied[key] = n;

@@ -24,7 +24,7 @@ export interface PolymarketScreeningConfig {
   minVolume24hUsd: number;   // audit gate: >= $25k
   maxSpread: number;         // audit gate: <= 0.05 when book data available
   passThreshold: number;     // Swarm consensus gate (>= 80)
-  /** false = NO-CALL MODE: pass tidak dijalankan (0 request API, 0 call). */
+  /** false = NO-CALL MODE: pass not run (0 API requests, 0 calls). */
   emitCalls: boolean;
 }
 
@@ -129,18 +129,18 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
     };
   }
 
-  /**
-   * Contract wrapper — NO-CALL MODE default (emitCalls=false): pass tidak
-   * dijalankan, 0 request API, 0 call. Channel, toggle & health tetap normal.
-   *
-   * Saat emitCalls=true: fetch top markets per kategori → evaluateMarket →
-   * strategy extension (0.7/0.3 blend, SKIP vetoes) → gate >= 80 (fail-closed)
-   * → AgentReport[] dengan payload data real. Arsitektur tetap utuh untuk
-   * diaktifkan kembali nanti — cukup flip DEFAULT_CONFIG.emitCalls.
-   */
+   /**
+    * Contract wrapper — NO-CALL MODE default (emitCalls=false): pass not run,
+    * 0 API requests, 0 calls. Channel, toggle & health stay normal.
+    *
+    * When emitCalls=true: fetch top markets per category → evaluateMarket →
+    * strategy extension (0.7/0.3 blend, SKIP vetoes) → gate >= 80 (fail-closed)
+    * → AgentReport[] with real-data payloads. Architecture stays intact for
+    * re-enabling later — just flip DEFAULT_CONFIG.emitCalls.
+    */
   public async runScreeningPass(): Promise<AgentReport<PredictionSignalReport>[]> {
     if (!this.config.emitCalls) {
-      console.log('[POLYMARKET AGENT] No-call mode aktif (emitCalls=false) — screening tidak dijalankan, 0 call.');
+      console.log('[POLYMARKET AGENT] No-call mode active (emitCalls=false) — screening not run, 0 calls.');
       return [];
     }
 
@@ -160,7 +160,7 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
           if (strat?.evaluate) {
             const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(report));
             if (ev?.recommendedAction === 'SKIP') {
-              console.log(`[POLYMARKET AGENT] ⛔ ${report.marketId}: strategi menolak (${ev.reason})`);
+              console.log(`[POLYMARKET AGENT] ⛔ ${report.marketId}: strategy rejected (${ev.reason})`);
               continue;
             }
             if (ev && typeof ev.confidence === 'number') {
@@ -169,7 +169,7 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[POLYMARKET AGENT] Strategi gagal: ${message}`);
+          console.warn(`[POLYMARKET AGENT] Strategy failed: ${message}`);
         }
 
         if (confidence < this.config.passThreshold) continue;
@@ -185,7 +185,7 @@ export class PolymarketAgent implements ScreeningAgent<PredictionSignalReport> {
       }
     }
 
-    console.log(`[POLYMARKET AGENT] Pass selesai. ${reports.length} sinyal lolos.`);
+    console.log(`[POLYMARKET AGENT] Pass complete. ${reports.length} signals passed.`);
     return reports;
   }
 

@@ -30,7 +30,7 @@ function fmtInt(v: number | undefined | null): string {
 function fmtAge(creationTs: number | null | undefined): string {
   if (!creationTs) return '—';
   const ageMs = Date.now() - creationTs * 1000;
-  if (ageMs <= 0) return 'baru';
+  if (ageMs <= 0) return 'new';
   const hours = Math.floor(ageMs / 3600_000);
   if (hours < 1) return `${Math.floor(ageMs / 60_000)}m`;
   if (hours < 24) return `${hours}h`;
@@ -39,11 +39,11 @@ function fmtAge(creationTs: number | null | undefined): string {
 
 function yesNo(v: boolean | undefined | null, warnWhen = true): string {
   if (v === undefined || v === null) return '—';
-  if (v) return warnWhen ? '⚠️ YA' : 'YA';
-  return 'Tidak';
+  if (v) return warnWhen ? '⚠️ YES' : 'YES';
+  return 'No';
 }
 
-/** Sinyal creator/anti-rug dari GMGN — hanya baris yang datanya tersedia. */
+/** Creator/anti-rug signals from GMGN — only lines with available data. */
 function creatorSignals(token: GMGNRawToken): string {
   const parts: string[] = [];
   if (token.devTeamHoldRate !== null && token.devTeamHoldRate !== undefined) parts.push(`Dev hold ${fmtPct(token.devTeamHoldRate)}`);
@@ -59,25 +59,25 @@ function creatorSignals(token: GMGNRawToken): string {
   return parts.length > 0 ? parts.join(' • ') : '—';
 }
 
-/** Baris market & aktivitas dari GMGN — konsisten untuk Solana & EVM. */
+/** Market & activity lines from GMGN — consistent for Solana & EVM. */
 function marketLines(token: GMGNRawToken | null): string[] {
-  if (!token) return ['📊 **Harga:** —', '📈 **Aktivitas:** —', '👥 **Holder:** — | **Umur:** —'];
+  if (!token) return ['📊 **Price:** —', '📈 **Activity:** —', '👥 **Holders:** — | **Age:** —'];
   const tx = token.buys > 0 || token.sells > 0 ? `${fmtInt(token.buys)}/${fmtInt(token.sells)} (${token.swaps ? `${fmtInt(token.swaps)} swaps` : ''})` : '—';
   return [
     `📊 **Price:** ${fmtUsd(token.priceUsd)} | **MC:** ${fmtUsd(token.marketCapUsd)} | **Liq:** ${fmtUsd(token.liquidityUsd)} | **24h Vol:** ${fmtUsd(token.volume24hUsd)}`,
     `📈 **1h:** ${token.priceChange1h !== null && token.priceChange1h !== undefined ? `${token.priceChange1h >= 0 ? '+' : ''}${token.priceChange1h.toFixed(1)}%` : '—'} | **Buys/Sells:** ${tx}`,
-    `👥 **Holder:** ${fmtInt(token.holderCount)} | **Umur:** ${fmtAge(token.creationTimestamp)}`,
+    `👥 **Holders:** ${fmtInt(token.holderCount)} | **Age:** ${fmtAge(token.creationTimestamp)}`,
   ];
 }
 
 /** Baris audit keamanan GMGN `/v1/token/security` (panel Token Audit UI GMGN). */
 function gmgnAuditLine(audit: GMGNSecurityAudit | null): string {
-  if (!audit) return '🛡️ **GMGN Audit:** ⚠️ tidak tersedia (fail-closed)';
+  if (!audit) return '🛡️ **GMGN Audit:** ⚠️ unavailable (fail-closed)';
   const parts: string[] = [];
   parts.push(`Honeypot: ${yesNo(audit.isHoneypot)}`);
   parts.push(`Blacklist: ${yesNo(audit.isBlacklist)}`);
   parts.push(`Renounced: ${yesNo(audit.isRenounced, false)}`);
-  parts.push(`CanSell: ${audit.canNotSell ? '⚠️ TIDAK' : 'Ya'}`);
+  parts.push(`CanSell: ${audit.canNotSell ? '⚠️ NO' : 'Yes'}`);
   parts.push(`Tax avg ${audit.averageTaxPct.toFixed(1)}%${audit.highTaxPct > 0 ? ` / high ${audit.highTaxPct.toFixed(1)}%` : ''}`);
   if (audit.burnRatioPct > 0) parts.push(`Burn ${audit.burnRatioPct.toFixed(1)}%`);
   if (audit.isOpenSource) parts.push('Open Source');
@@ -88,9 +88,9 @@ function gmgnAuditLine(audit: GMGNSecurityAudit | null): string {
 
 /**
  * On-demand token audit (used when a contract address is pasted into Discord).
- * Data lengkap: GMGN (market, holder, aktivitas, sinyal creator/anti-rug) +
+ * Complete data: GMGN (market, holders, activity, creator/anti-rug signals) +
  * RugCheck (Solana) / GoPlus full (EVM). EVM CA di-scan sebagai Robinhood chain.
- * Fail-closed on errors — tidak pernah mengarang angka.
+ * Fail-closed on errors — never fabricates numbers.
  */
 export async function runTokenAudit(contract: string): Promise<TokenAuditResult> {
   const isSol = !contract.toLowerCase().startsWith('0x');
@@ -106,7 +106,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
       const apiError = audit.risks[0]?.name === 'RugCheck API Error';
 
       if (apiError && !token && !secAudit) {
-        return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
+        return { success: false, content: '⚠️ Audit data is unavailable right now. Try again later.' };
       }
 
       const riskLines = audit.risks
@@ -114,7 +114,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
         .slice(0, 5)
         .map((r) => `${r.name}${r.score ? ` (${r.score})` : ''}`);
       const auditLine = apiError
-        ? '🛡️ **Audit:** ⚠️ RugCheck API tidak tersedia saat ini'
+        ? '🛡️ **Audit:** ⚠️ RugCheck API is unavailable right now'
         : `🛡️ **RugCheck Score:** ${audit.score}${audit.isSafeForRunner ? ' (Safe ✅)' : ' (⚠️ Risky)'} | **Top 10 Holders:** ${audit.topHoldersSharePercentage.toFixed(1)}% | **LP Locked:** ${audit.lpBurnedPercentage.toFixed(0)}%`;
       const authorityLine = apiError
         ? '🔏 **Authority:** —'
@@ -126,7 +126,7 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
         auditLine,
         authorityLine,
         gmgnAuditLine(secAudit),
-        riskLines.length > 0 ? `⚠️ **Risks:** ${riskLines.join(' • ')}` : '🟢 **Risks:** Tidak ada risk tercatat',
+        riskLines.length > 0 ? `⚠️ **Risks:** ${riskLines.join(' • ')}` : '🟢 **Risks:** No risks recorded',
         `🧠 **Creator:** ${token ? creatorSignals(token) : '—'}`,
         `🔗 [DexScreener](https://dexscreener.com/solana/${contract}) | [RugCheck](https://rugcheck.xyz/tokens/${contract})`,
       ];
@@ -142,14 +142,14 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
     ]);
 
     if (!security && !token && !secAudit) {
-      return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
+      return { success: false, content: '⚠️ Audit data is unavailable right now. Try again later.' };
     }
 
     const securityLine = security
       ? `🛡️ **GoPlus:** Honeypot: ${yesNo(security.isHoneypot)} | BuyTax ${security.buyTaxPct}% | SellTax ${security.sellTaxPct}% | Blacklist: ${yesNo(security.isBlacklisted)} | Open Source: ${yesNo(security.isOpenSource, false)} | Holder ${fmtInt(security.holderCount)}${security.lpHolderCount ? ` | LP Holders ${fmtInt(security.lpHolderCount)}` : ''}`
-      : '🛡️ **GoPlus:** ⚠️ tidak ada data untuk chain robinhood (4663)';
+      : '🛡️ **GoPlus:** ⚠️ no data for the Robinhood chain (4663)';
     const ownerLine = security
-      ? `🔏 **Owner:** ${security.isOwnerRenounced ? 'Renounced ✅' : security.canTakeBackOwnership ? '⚠️ BISA AMBIL KEMBALI' : security.ownerAddress ? 'Aktif (bukan renounced)' : '—'} | Mintable: ${yesNo(security.isMintable)} | Proxy: ${yesNo(security.isProxy)} | Transfer Pausable: ${yesNo(security.isTransferPausable)} | Paused: ${yesNo(security.isPaused)} | Airdrop Scam: ${yesNo(security.isAirdropScam)}`
+      ? `🔏 **Owner:** ${security.isOwnerRenounced ? 'Renounced ✅' : security.canTakeBackOwnership ? '⚠️ CAN TAKE BACK OWNERSHIP' : security.ownerAddress ? 'Active (not renounced)' : '—'} | Mintable: ${yesNo(security.isMintable)} | Proxy: ${yesNo(security.isProxy)} | Transfer Pausable: ${yesNo(security.isTransferPausable)} | Paused: ${yesNo(security.isPaused)} | Airdrop Scam: ${yesNo(security.isAirdropScam)}`
       : '🔏 **Owner:** —';
 
     const lines: string[] = [
@@ -165,6 +165,6 @@ export async function runTokenAudit(contract: string): Promise<TokenAuditResult>
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`[AUDIT] Failed for ${contract}: ${message}`);
-    return { success: false, content: '⚠️ Data audit tidak tersedia saat ini. Coba lagi nanti.' };
+    return { success: false, content: '⚠️ Audit data is unavailable right now. Try again later.' };
   }
 }

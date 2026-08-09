@@ -2,11 +2,11 @@
  * Hyperliquid Adapter — Whale Positioning Tracker
  *
  * Reads Hyperliquid L1 DEX data for smart-money tracking:
- * - stats-data leaderboard (PvP, 30d, cached 1 jam) → top trader addresses
- *   (endpoint /info "leaderboard" sudah dihapus Hyperliquid — 422; yang hidup
- *   adalah https://stats-data.hyperliquid.xyz/Mainnet/leaderboard)
+ * - stats-data leaderboard (PvP, 30d, cached 1 hour) → top trader addresses
+ *   (the /info "leaderboard" endpoint has been removed by Hyperliquid — 422; the live
+ *   one is https://stats-data.hyperliquid.xyz/Mainnet/leaderboard)
  * - clearinghouseState per address → open positions (signed size, USD value)
- * - userFills per address → recent fills (incl. spot) untuk deteksi aliran whale
+ * - userFills per address → recent fills (incl. spot) for whale flow detection
  *
  * API Docs: https://hyperliquid.gitbook.io/hyperliquid-docs
  */
@@ -42,21 +42,21 @@ export class HyperliquidAdapter {
   private statsDataUrl = 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard?window=30d&asset=0';
 
   // Assets tracked by the whale agent (perps indices live on Hyperliquid main dex).
-  // GOLD & XYZ100 sudah tidak ada di main dex universe (XYZ100 pindah ke dex "xyz").
+  // GOLD & XYZ100 are no longer in the main dex universe (XYZ100 moved to the "xyz" dex).
   public readonly trackedAssets: string[] = ['BTC', 'ETH', 'SOL', 'HYPE'];
 
-  // PvP leaderboard cache (stats-data response besar: ~41k trader / puluhan MB) —
-  // diambil maksimal 1x/jam, bukan tiap pass. Server mengabaikan param asset/size.
+  // PvP leaderboard cache (stats-data response is large: ~41k traders / tens of MB) —
+  // fetched at most once per hour, not per pass. The server ignores the asset/size params.
   private leaderboardCache: HyperliquidTrader[] | null = null;
   private leaderboardCachedAt = 0;
   private static readonly LEADERBOARD_TTL_MS = 60 * 60 * 1000;
 
   /**
-   * Top PvP leaderboard traders (30d window) — dari stats-data.hyperliquid.xyz
-   * (endpoint /info "leaderboard" sudah dihapus Hyperliquid, selalu HTTP 422).
-   * Server mengabaikan param coin/asset — daftar global di-sort by account value
-   * (whale terbesar), di-cache 1 jam (payload besar), lalu slice top N. Posisi
-   * per coin difilter saat agregasi (clearinghouseState).
+   * Top PvP leaderboard traders (30d window) — from stats-data.hyperliquid.xyz
+   * (the /info "leaderboard" endpoint has been removed by Hyperliquid, always HTTP 422).
+   * The server ignores the coin/asset params — the global list is sorted by account value
+   * (largest whales), cached for 1 hour (large payload), then sliced to top N. Positions
+   * per coin are filtered during aggregation (clearinghouseState).
    */
   public async fetchLeaderboardTraders(
     coin: string,
@@ -75,7 +75,7 @@ export class HyperliquidAdapter {
         this.leaderboardCache = rows
           .map((e: any) => {
             const wp: any[] = Array.isArray(e?.windowPerformances) ? e.windowPerformances : [];
-            // Window 30d → pakai bucket 'month' (roi/pnl dikirim sebagai STRING)
+            // 30d window → use the 'month' bucket (roi/pnl sent as STRING)
             const perf = wp.find((x) => Array.isArray(x) && x[0] === 'month' && x[1]);
             const roi = Number(perf?.[1]?.roi ?? 0);
             const pnl = Number(perf?.[1]?.pnl ?? 0);
@@ -144,9 +144,9 @@ export class HyperliquidAdapter {
   }
 
   /**
-   * Recent fills (perps + spot) untuk satu wallet sejak `sinceMs`.
-   * Menggantikan endpoint "leaderboardTrades" yang sudah dihapus Hyperliquid (422).
-   * Spot coins kembali sebagai "BTC/USDC" style (isSpot = coin mengandung '/').
+   * Recent fills (perps + spot) for one wallet since `sinceMs`.
+   * Replaces the "leaderboardTrades" endpoint removed by Hyperliquid (422).
+   * Spot coins come back as "BTC/USDC" style (isSpot = coin contains '/').
    */
   public async fetchUserFills(user: string, sinceMs: number): Promise<HyperliquidTradeFill[]> {
     try {

@@ -42,9 +42,9 @@ async function askCustomConfig(presetKey, existingBaseUrl, existingModelName, ex
   return { provider: presetKey, baseUrl, modelName };
 }
 
-// Menu provider untuk PRIMARY key — default = Keep Existing / Auto-Detected
+// Provider menu for the PRIMARY key — default = Keep Existing / Auto-Detected
 async function askPrimaryProviderConfig(existingProvider, existingBaseUrl, existingModelName, detectedProvider) {
-  console.log('\n Select AI Provider & Model Configuration untuk PRIMARY Key:');
+  console.log('\n Select AI Provider & Model Configuration for the PRIMARY key:');
   if (existingProvider) {
     console.log(` [1] Keep Existing Config (${existingProvider} | ${existingModelName || 'default'} | ${existingBaseUrl || 'default'})`);
     console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
@@ -85,10 +85,10 @@ async function askPrimaryProviderConfig(existingProvider, existingBaseUrl, exist
   return await askCustomConfig(presetKey, existingBaseUrl, existingModelName, existingProvider);
 }
 
-// Menu provider untuk BACKUP key — default = "Sama dengan Key #1"
+// Provider menu for BACKUP keys — default = "Same as Key #1"
 async function askBackupProviderConfig(label, primaryCfg) {
-  console.log(`\n Select AI Provider & Model Configuration untuk ${label}:`);
-  console.log(` [1] Sama dengan Key #1 (${primaryCfg.provider} | ${primaryCfg.modelName}) [Default]`);
+  console.log(`\n Select AI Provider & Model Configuration for ${label}:`);
+  console.log(` [1] Same as Key #1 (${primaryCfg.provider} | ${primaryCfg.modelName}) [Default]`);
   console.log(' [2] OpenCode Go (DeepSeek V4 Pro / Flash - opencode.ai/go)');
   console.log(' [3] Z.ai / Zhipu GLM Coding Plan (GLM 4.7 / 5.2 - z.ai)');
   console.log(' [4] OpenRouter (openrouter.ai/api/v1)');
@@ -106,7 +106,7 @@ async function runWizard() {
   console.log('\n======================================================');
   console.log('🏛️ ATHENA MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD');
   console.log('======================================================\n');
-  console.log('💡 Note: API keys are MANDATORY for respective sub-agents to run cleanly. Press ENTER to keep existing configured values.\n');
+  console.log('💡 Note: API keys are MANDATORY for their respective sub-agents to run. Press ENTER to keep existing values.\n');
 
   let existingEnv = {};
   if (fs.existsSync(envPath)) {
@@ -129,6 +129,7 @@ async function runWizard() {
 
   let botToken = existingEnv.DISCORD_BOT_TOKEN || '';
   let clientId = existingEnv.DISCORD_CLIENT_ID || '';
+  let controlRoomId = existingEnv.DISCORD_CHANNEL_CONTROL_ROOM || '';
   let telegramToken = existingEnv.TELEGRAM_BOT_TOKEN || '';
   let telegramChatId = existingEnv.TELEGRAM_CHAT_ID || '';
 
@@ -142,6 +143,10 @@ async function runWizard() {
     const defaultClientMsg = clientId ? ` [Default: ${clientId}]` : '';
     const inputClient = await askQuestion(` 2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
+
+    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #athena-control-room]';
+    const inputCtrl = await askQuestion(` 3. Enter DISCORD_CHANNEL_CONTROL_ROOM (channel ID)${defaultCtrlMsg}: `);
+    controlRoomId = inputCtrl.trim() || controlRoomId;
   }
 
   // 3. TELEGRAM CREDENTIALS
@@ -167,7 +172,7 @@ async function runWizard() {
   let allKeys = [];
 
   if (existingKeyList.length > 0) {
-    console.log(` ℹ️  Found ${existingKeyList.length} API key(s) in existing config:`);
+    console.log(` ℹ️  Found ${existingKeyList.length} API key(s) in the existing config:`);
     existingKeyList.forEach((k, idx) => {
       console.log(`   - Key #${idx + 1}: ${k.slice(0, 14)}...`);
     });
@@ -188,7 +193,7 @@ async function runWizard() {
     const inputAiKey = await askQuestion(` 1. Enter PRIMARY AI API KEY (OpenCode Go / Z.ai / OpenRouter / OpenAI)${defaultAiKeyMsg}: `);
     aiKey = inputAiKey.trim() || aiKey;
 
-    // Auto-detect provider untuk primary (logika lama dipertahankan)
+    // Auto-detect the provider for the primary key
     let detectedProvider = existingProvider;
     if (!detectedProvider) {
       const lowerKey = aiKey.toLowerCase();
@@ -206,16 +211,16 @@ async function runWizard() {
     baseUrl = primaryCfg.baseUrl;
     modelName = primaryCfg.modelName;
 
-    const stackChoice = await askQuestion(' 2. Add Failover Backup API Key (misal Z.ai GLM 4.7 backup, provider boleh beda)? (y/N) [Default N]: ');
+    const stackChoice = await askQuestion(' 2. Add a failover BACKUP API key (provider may differ)? (y/N) [Default N]: ');
     let allKeysList = aiKey ? aiKey.split(',').map(k => k.trim()).filter(Boolean) : [];
     if (allKeysList.length === 0 && aiKey) allKeysList.push(aiKey);
 
     if (stackChoice.toLowerCase() === 'y') {
-      const backupCountStr = await askQuestion('   Berapa jumlah backup API key? (1-5) [Default 1]: ') || '1';
+      const backupCountStr = await askQuestion('   How many backup API keys? (1-5) [Default 1]: ') || '1';
       const backupCount = Math.min(Math.max(parseInt(backupCountStr) || 1, 1), 5);
       for (let i = 1; i <= backupCount; i++) {
-        const bKey = await askQuestion(`   ➡️ Enter BACKUP API KEY #${i} (misal Z.ai / OpenRouter key): `);
-        if (!bKey.trim()) { console.log('   ⚠️  Backup key kosong, dilewati.'); continue; }
+        const bKey = await askQuestion(`   ➡️ Enter BACKUP API KEY #${i} (e.g. Z.ai / OpenRouter key): `);
+        if (!bKey.trim()) { console.log('   ⚠️  Backup key empty, skipped.'); continue; }
         allKeysList.push(bKey.trim());
         const bCfg = await askBackupProviderConfig(`BACKUP Key #${i}`, primaryCfg);
         backupCfgEntries.push({ slot: i + 1, cfg: bCfg });
@@ -223,7 +228,7 @@ async function runWizard() {
     }
     allKeys = allKeysList;
   } else {
-    // Keep existing keys — primary provider tetap bisa diganti; AI_KEY_N_* lama dipertahankan oleh merge-write
+    // Keep existing keys — the primary provider can still be changed; legacy AI_KEY_N_* are preserved by merge-write
     const primaryCfg = await askPrimaryProviderConfig(existingProvider, existingBaseUrl, existingModelName, existingProvider);
     provider = primaryCfg.provider;
     baseUrl = primaryCfg.baseUrl;
@@ -232,7 +237,8 @@ async function runWizard() {
   const combinedKeys = allKeys.join(',');
 
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
-  console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS (MANDATORY FOR AGENTS)');
+  console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS');
+  console.log('   (GMGN = mandatory for meme/LP screening; security audit runs via GMGN /token/security)');
   let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
   let gmgnRobinhoodApiKey = existingEnv.GMGN_API_KEY_ROBINHOOD || '';
   let krystalApiKey = existingEnv.KRYSTAL_CLOUD_API_KEY || '';
@@ -248,40 +254,40 @@ async function runWizard() {
   const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (Solana — GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
   gmgnApiKey = inputGmgn.trim() || gmgnApiKey;
 
-  const defaultGmgnRh = gmgnRobinhoodApiKey ? ` [Default: ${gmgnRobinhoodApiKey.slice(0, 8)}...]` : ' [Kosong = robinhood pakai key yang sama]';
-  const inputGmgnRh = await askQuestion(` 2. GMGN_API_KEY_ROBINHOOD (Opsional — key GMGN terpisah agar solana & robinhood tidak kena rate limit bareng)${defaultGmgnRh}: `);
+  const defaultGmgnRh = gmgnRobinhoodApiKey ? ` [Default: ${gmgnRobinhoodApiKey.slice(0, 8)}...]` : ' [Optional — separate key so Solana & Robinhood never share rate limits]';
+  const inputGmgnRh = await askQuestion(` 2. GMGN_API_KEY_ROBINHOOD (Optional — dedicated GMGN key for the Robinhood chain)${defaultGmgnRh}: `);
   gmgnRobinhoodApiKey = inputGmgnRh.trim() || gmgnRobinhoodApiKey;
 
   const defaultKrystal = krystalApiKey ? ` [Default: ${krystalApiKey.slice(0, 8)}...]` : ' [Mandatory for LP Robinhood Agent]';
-  const inputKrystal = await askQuestion(` 3. KRYSTAL_CLOUD_API_KEY (Krystal Cloud DeFi Data — pool robinhood chain)${defaultKrystal}: `);
+  const inputKrystal = await askQuestion(` 3. KRYSTAL_CLOUD_API_KEY (Krystal Cloud DeFi data — Robinhood chain pools)${defaultKrystal}: `);
   krystalApiKey = inputKrystal.trim() || krystalApiKey;
 
   const defaultOpensea = openseaApiKey ? ` [Default: ${openseaApiKey.slice(0, 8)}...]` : ' [Mandatory for NFT Agent]';
-  const inputOpensea = await askQuestion(` 4. OPENSEA_API_KEY (OpenSea REST API v2 for NFT Floor & Rarity)${defaultOpensea}: `);
+  const inputOpensea = await askQuestion(` 4. OPENSEA_API_KEY (OpenSea REST API v2 for NFT floor & rarity)${defaultOpensea}: `);
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
   const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Mandatory for CT Alpha Agent]';
-  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter — fallback ct-alpha)${defaultTwex}: `);
+  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter — CT Alpha feeds)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
 
-  const defaultOpenTwitter = openTwitterToken ? ` [Default: ${openTwitterToken.slice(0, 8)}...]` : ' [Opsional — sumber utama Twitter (6551.io/mcp, gratis)]';
-  const inputOpenTwitter = await askQuestion(` 5b. TWITTER_TOKEN (OpenTwitter 6551 — profil, KOL followers, search engagement; dipakai ct-alpha)${defaultOpenTwitter}: `);
+  const defaultOpenTwitter = openTwitterToken ? ` [Default: ${openTwitterToken.slice(0, 8)}...]` : ' [Optional — primary Twitter source (6551.io/mcp, free)]';
+  const inputOpenTwitter = await askQuestion(` 5b. TWITTER_TOKEN (OpenTwitter 6551 — profiles, KOL followers, engagement; used by CT Alpha)${defaultOpenTwitter}: `);
   openTwitterToken = inputOpenTwitter.trim() || openTwitterToken;
 
-  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/LP Agents]';
-  const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (EVM Anti-Honeypot Audit Key)${defaultGoplus}: `);
+  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Optional — GoPlus has no Robinhood chain data; used for other EVM chains]';
+  const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (Optional — EVM security audit; not available on Robinhood chain)${defaultGoplus}: `);
   goplusApiKey = inputGoplus.trim() || goplusApiKey;
 
-  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Polymarket Agent]';
-  const inputPoly = await askQuestion(` 7. POLYMARKET_PRIVATE_KEY (Polymarket Polygon L2 Trading Key)${defaultPoly}: `);
+  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Optional — prediction agent is in no-call mode]';
+  const inputPoly = await askQuestion(` 7. POLYMARKET_PRIVATE_KEY (Optional — Polymarket Polygon L2 trading key; agent currently no-call)${defaultPoly}: `);
   polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
 
-  const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/Robinhood Entry via Uniswap API]';
-  const inputUniswap = await askQuestion(` 8. UNISWAP_API_KEY (Uniswap Trade API — EVM/Robinhood swap entry)${defaultUniswap}: `);
+  const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Optional — Uniswap Trade API (EVM/Robinhood swap entry)]';
+  const inputUniswap = await askQuestion(` 8. UNISWAP_API_KEY (Optional — Uniswap Trade API, EVM/Robinhood swap entry)${defaultUniswap}: `);
   uniswapApiKey = inputUniswap.trim() || uniswapApiKey;
 
   const defaultJupiter = jupiterApiKey ? ` [Default: ${jupiterApiKey.slice(0, 8)}...]` : ' [Optional — higher rate limits for Solana Jupiter quotes]';
-  const inputJupiter = await askQuestion(` 9. JUPITER_API_KEY (Jupiter API — optional, Solana swap entry rate limits)${defaultJupiter}: `);
+  const inputJupiter = await askQuestion(` 9. JUPITER_API_KEY (Optional — Solana swap entry rate limits)${defaultJupiter}: `);
   jupiterApiKey = inputJupiter.trim() || jupiterApiKey;
 
   // 6. WEB3 RPC ENDPOINTS
@@ -292,70 +298,74 @@ async function runWizard() {
   let evmEthRpcUrl = existingEnv.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com';
   let evmRobinhoodRpcUrl = existingEnv.EVM_ROBINHOOD_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
-  console.log(' 💡 Opsi Cepat Solana RPC: Kamu bisa langsung memasukkan HELIUS API KEY saja!');
-  const heliusInput = await askQuestion(' 1. Punya Helius API Key? Masukkan Key di sini (atau tekan ENTER untuk diisi manual/default): ');
-  
+  console.log(' 💡 Quick Solana RPC option: you can paste a HELIUS API KEY directly!');
+  const heliusInput = await askQuestion(' 1. Have a Helius API Key? Paste it here (or press ENTER for manual/default): ');
+
   if (heliusInput.trim()) {
     const key = heliusInput.trim();
     solanaRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${key}`;
     solanaWssUrl = `wss://mainnet.helius-rpc.com/?api-key=${key}`;
-    console.log(`    ✅ Auto-Configured Helius RPC & WSS URLs dengan API Key kamu!`);
+    console.log(`    ✅ Auto-configured Helius RPC & WSS URLs with your API key!`);
   } else {
-    const defaultSolRpc = solanaRpcUrl ? ` [SUDAH TERISI: ${solanaRpcUrl.slice(0, 35)}...]` : ' [Default: Public Solana RPC]';
+    const defaultSolRpc = solanaRpcUrl ? ` [ALREADY SET: ${solanaRpcUrl.slice(0, 35)}...]` : ' [Default: Public Solana RPC]';
     const inputSolRpc = await askQuestion(`    a. SOLANA_RPC_URL (HTTP)${defaultSolRpc}: `);
     solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
 
-    const defaultSolWss = solanaWssUrl ? ` [SUDAH TERISI: ${solanaWssUrl.slice(0, 35)}...]` : ' [Default: Public Solana WSS]';
+    const defaultSolWss = solanaWssUrl ? ` [ALREADY SET: ${solanaWssUrl.slice(0, 35)}...]` : ' [Default: Public Solana WSS]';
     const inputSolWss = await askQuestion(`    b. SOLANA_WSS_URL (WebSocket)${defaultSolWss}: `);
     solanaWssUrl = inputSolWss.trim() || solanaWssUrl;
   }
 
-  const defaultBaseRpc = evmBaseRpcUrl ? ` [SUDAH TERISI: ${evmBaseRpcUrl}]` : ' [Default: https://mainnet.base.org]';
+  const defaultBaseRpc = evmBaseRpcUrl ? ` [ALREADY SET: ${evmBaseRpcUrl}]` : ' [Default: https://mainnet.base.org]';
   const inputBaseRpc = await askQuestion(` 2. EVM_BASE_RPC_URL (Base L2 RPC)${defaultBaseRpc}: `);
   evmBaseRpcUrl = inputBaseRpc.trim() || evmBaseRpcUrl;
 
-  const defaultEthRpc = evmEthRpcUrl ? ` [SUDAH TERISI: ${evmEthRpcUrl}]` : ' [Default: https://eth.llamarpc.com]';
+  const defaultEthRpc = evmEthRpcUrl ? ` [ALREADY SET: ${evmEthRpcUrl}]` : ' [Default: https://eth.llamarpc.com]';
   const inputEthRpc = await askQuestion(` 3. EVM_ETH_RPC_URL (Ethereum Mainnet RPC)${defaultEthRpc}: `);
   evmEthRpcUrl = inputEthRpc.trim() || evmEthRpcUrl;
 
-  const defaultRhRpc = evmRobinhoodRpcUrl ? ` [SUDAH TERISI: ${evmRobinhoodRpcUrl}]` : ' [Default: https://arb1.arbitrum.io/rpc]';
-  const inputRhRpc = await askQuestion(` 4. EVM_ROBINHOOD_RPC_URL (Robinhood L2 / Arbitrum RPC)${defaultRhRpc}: `);
+  const defaultRhRpc = evmRobinhoodRpcUrl ? ` [ALREADY SET: ${evmRobinhoodRpcUrl}]` : ' [Default: https://arb1.arbitrum.io/rpc]';
+  const inputRhRpc = await askQuestion(` 4. EVM_ROBINHOOD_RPC_URL (Robinhood L2 / Arbitrum RPC — used for on-chain honeypot checks)${defaultRhRpc}: `);
   evmRobinhoodRpcUrl = inputRhRpc.trim() || evmRobinhoodRpcUrl;
 
-  // 7. BURNER WALLETS & PERPS KEYS
+  // 7. BURNER WALLETS & EXCHANGE KEYS
   console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS & EXCHANGE API KEYS');
+  console.log('   ⚠️  Wallet keys are stored ONLY in .env on this machine. Use burner wallets with capped funds.');
   let solanaPrivateKey = existingEnv.SOLANA_PRIVATE_KEY || '';
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
   let hyperliquidPrivateKey = existingEnv.HYPERLIQUID_PRIVATE_KEY || '';
 
-  const defaultSolPk = solanaPrivateKey ? ` [SUDAH TERISI: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain Solana Execution]';
+  const defaultSolPk = solanaPrivateKey ? ` [ALREADY SET: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Optional — required only for live on-chain Solana execution]';
   const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
   solanaPrivateKey = inputSolPk.trim() || solanaPrivateKey;
 
-  const defaultEvmPk = evmPrivateKey ? ` [SUDAH TERISI: ${evmPrivateKey.slice(0, 8)}...]` : ' [Required for On-Chain EVM Execution]';
+  const defaultEvmPk = evmPrivateKey ? ` [ALREADY SET: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional — required only for live on-chain EVM execution]';
   const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  const defaultHlPk = hyperliquidPrivateKey ? ` [SUDAH TERISI: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Mandatory for Perps Agent]';
-  const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Perps Trading Account Key)${defaultHlPk}: `);
+  const defaultHlPk = hyperliquidPrivateKey ? ` [ALREADY SET: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Optional — whale tracking is read-only; key only needed for perps execution]';
+  const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Optional — perps trading account key)${defaultHlPk}: `);
   hyperliquidPrivateKey = inputHlPk.trim() || hyperliquidPrivateKey;
 
-  // 8. SIMULATION MODE
+  // 8. OPERATING MODE
   console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCES');
-  const dryRunChoice = await askQuestion(' 1. Run agent in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
+  const dryRunChoice = await askQuestion(' 1. Run agents in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
   const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
 
-  const defaultSolSim = existingEnv.SIMULATION_BALANCE_SOL ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_SOL} SOL]` : ' [Default 10.0]';
-  const simSolBalance = await askQuestion(` 2. Starting Simulation Balance for Solana (SOL)${defaultSolSim}: `) || existingEnv.SIMULATION_BALANCE_SOL || '10.0';
+  const autoExecChoice = await askQuestion(' 2. Enable AUTO-EXECUTE (bot executes trades itself)? (y/N) [Default N — manual execution, safest]: ') || 'n';
+  const autoExecuteEnabled = autoExecChoice.toLowerCase() === 'y' ? 'true' : 'false';
 
-  const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
-  const simEthBalance = await askQuestion(` 3. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
+  const defaultSolSim = existingEnv.SIMULATION_BALANCE_SOL ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_SOL} SOL]` : ' [Default 10.0]';
+  const simSolBalance = await askQuestion(` 3. Starting Simulation Balance for Solana (SOL)${defaultSolSim}: `) || existingEnv.SIMULATION_BALANCE_SOL || '10.0';
 
-  const defaultPolySim = existingEnv.SIMULATION_BALANCE_POLYMARKET ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_POLYMARKET} USDC]` : ' [Default 500.0]';
-  const simPolyBalance = await askQuestion(` 4. Starting Simulation Balance for Polymarket (USDC)${defaultPolySim}: `) || existingEnv.SIMULATION_BALANCE_POLYMARKET || '500.0';
+  const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
+  const simEthBalance = await askQuestion(` 4. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
 
-  const defaultHlSim = existingEnv.SIMULATION_BALANCE_HYPERLIQUID ? ` [SUDAH TERISI: ${existingEnv.SIMULATION_BALANCE_HYPERLIQUID} USDC]` : ' [Default 1000.0]';
-  const simHlBalance = await askQuestion(` 5. Starting Simulation Balance for Hyperliquid Perps (USDC)${defaultHlSim}: `) || existingEnv.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
+  const defaultPolySim = existingEnv.SIMULATION_BALANCE_POLYMARKET ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_POLYMARKET} USDC]` : ' [Default 500.0]';
+  const simPolyBalance = await askQuestion(` 5. Starting Simulation Balance for Polymarket (USDC)${defaultPolySim}: `) || existingEnv.SIMULATION_BALANCE_POLYMARKET || '500.0';
+
+  const defaultHlSim = existingEnv.SIMULATION_BALANCE_HYPERLIQUID ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_HYPERLIQUID} USDC]` : ' [Default 1000.0]';
+  const simHlBalance = await askQuestion(` 6. Starting Simulation Balance for Hyperliquid Perps (USDC)${defaultHlSim}: `) || existingEnv.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
 
   const primaryAiKey = allKeys[0] || '';
 
@@ -365,6 +375,7 @@ async function runWizard() {
   const updates = {
     NODE_ENV: 'production',
     DRY_RUN: isDryRun,
+    AUTO_EXECUTE_ENABLED: autoExecuteEnabled,
     LOG_LEVEL: 'info',
     SIMULATION_BALANCE_SOL: simSolBalance.trim(),
     SIMULATION_BALANCE_ETH: simEthBalance.trim(),
@@ -372,6 +383,7 @@ async function runWizard() {
     SIMULATION_BALANCE_HYPERLIQUID: simHlBalance.trim(),
     DISCORD_BOT_TOKEN: botToken.trim(),
     DISCORD_CLIENT_ID: clientId.trim(),
+    DISCORD_CHANNEL_CONTROL_ROOM: controlRoomId.trim(),
     TELEGRAM_BOT_TOKEN: telegramToken.trim(),
     TELEGRAM_CHAT_ID: telegramChatId.trim(),
     AI_PROVIDER: provider,
@@ -405,7 +417,7 @@ async function runWizard() {
     RUGCHECK_API_URL: 'https://api.rugcheck.xyz/v1',
   };
 
-  // Per-key backup config: AI_KEY_N_PROVIDER / AI_KEY_N_BASE_URL / AI_KEY_N_MODEL_NAME (slot = posisi di AI_API_KEYS)
+  // Per-key backup config: AI_KEY_N_PROVIDER / AI_KEY_N_BASE_URL / AI_KEY_N_MODEL_NAME (slot = position in AI_API_KEYS)
   for (const { slot, cfg } of backupCfgEntries) {
     updates[`AI_KEY_${slot}_PROVIDER`] = cfg.provider;
     updates[`AI_KEY_${slot}_BASE_URL`] = cfg.baseUrl;
@@ -447,8 +459,10 @@ async function runWizard() {
   console.log('\n======================================================');
   console.log('✅ Configuration file (.env) successfully generated!');
   console.log(`💡 Operating Mode: ${isDryRun === 'true' ? 'SIMULATION (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
-  console.log(`🪙 Demo Balance: ${simSolBalance} SOL | ${simEthBalance} ETH`);
+  console.log(`⚡ Auto-Execute: ${autoExecuteEnabled === 'true' ? 'ENABLED (bot trades itself)' : 'DISABLED (manual execution via call cards)'}`);
+  console.log(`🪙 Simulation Balances: ${simSolBalance} SOL | ${simEthBalance} ETH | $${simPolyBalance} USDC | $${simHlBalance} USDC perps`);
   console.log('💡 All API keys and adapter credentials saved securely in .env');
+  console.log('   Next steps: run `npm install`, then `npm run build`, then `pm2 start dist/index.js --name athena-agent --update-env`');
   console.log('======================================================\n');
 
   rl.close();

@@ -30,7 +30,7 @@ export interface CTAlphaSignal {
 export interface CTAlphaConfig {
   passThreshold: number; // 80 — swarm consensus gate (>= 80% posted)
   maxResults: number;    // 10
-  /** false = NO-CALL MODE: screening tetap jalan (fetch+evaluasi), output ditekan (0 call). */
+  /** false = NO-CALL MODE: screening still runs (fetch+evaluate), output suppressed (0 calls). */
   emitCalls: boolean;
 }
 
@@ -104,20 +104,20 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
       const engagementFactor = Math.min(18, Math.floor(t.likes / 50) + Math.floor(t.retweets / 10));
       let confidenceScore = Math.min(98, 80 + engagementFactor);
 
-      // OpenTwitter bonus: kalau author akun ini di-follow banyak KOL (perhatian
-      // institusional), naikkan confidence. Fail-open — tanpa OpenTwitter / gagal,
-      // skor tetap seperti biasa.
+      // OpenTwitter bonus: if this author account is followed by many KOLs
+      // (institutional attention), raise confidence. Fail-open — without
+      // OpenTwitter / on failure, the score stays as usual.
       const ot = this.twitterService as TwitterService & { isOpenTwitterConfigured?: () => boolean; openTwitterKOLFollowers?: (u: string) => Promise<string[]> };
       if (typeof ot.isOpenTwitterConfigured === 'function' && ot.isOpenTwitterConfigured() && typeof ot.openTwitterKOLFollowers === 'function') {
         try {
           const kols = await ot.openTwitterKOLFollowers(t.authorUsername.replace(/^@/, ''));
           if (kols.length > 0) {
             confidenceScore = Math.min(98, confidenceScore + Math.min(10, kols.length * 2));
-            console.log(`[CT ALPHA AGENT] ⭐ @${t.authorUsername} di-follow ${kols.length} KOL (${kols.slice(0, 3).join(', ')}) — +${Math.min(10, kols.length * 2)}`);
+            console.log(`[CT ALPHA AGENT] ⭐ @${t.authorUsername} followed by ${kols.length} KOLs (${kols.slice(0, 3).join(', ')}) — +${Math.min(10, kols.length * 2)}`);
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.warn(`[CT ALPHA AGENT] KOL check gagal untuk @${t.authorUsername}: ${message}`);
+          console.warn(`[CT ALPHA AGENT] KOL check failed for @${t.authorUsername}: ${message}`);
         }
       }
 
@@ -162,7 +162,7 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
         if (strat?.evaluate) {
           const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', this.buildStrategyCtx(s));
           if (ev?.recommendedAction === 'SKIP') {
-            console.log(`[CT ALPHA AGENT] ⛔ @${s.authorUsername}: strategi menolak (${ev.reason})`);
+            console.log(`[CT ALPHA AGENT] ⛔ @${s.authorUsername}: strategy rejected (${ev.reason})`);
             continue;
           }
           if (ev && typeof ev.confidence === 'number') {
@@ -172,12 +172,12 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.warn(`[CT ALPHA AGENT] Strategi gagal: ${message}`);
+        console.warn(`[CT ALPHA AGENT] Strategy failed: ${message}`);
       }
 
       // Fail-closed: the 80 gate must hold on the FINAL blended confidence
       if (confidence < this.config.passThreshold) {
-        console.log(`[CT ALPHA AGENT] ⚪ @${s.authorUsername}: ${confidence}% < ${this.config.passThreshold}% setelah strategi.`);
+        console.log(`[CT ALPHA AGENT] ⚪ @${s.authorUsername}: ${confidence}% < ${this.config.passThreshold}% after strategy.`);
         continue;
       }
 
@@ -186,13 +186,13 @@ export class CTAlphaAgent implements ScreeningAgent<CTAlphaSignal> {
       console.log(`[CT ALPHA AGENT] 🎯 ${s.category} @${s.authorUsername} ${confidence}%`);
     }
 
-    console.log(`[CT ALPHA AGENT] Pass selesai. ${reports.length} sinyal lolos.`);
+    console.log(`[CT ALPHA AGENT] Pass complete. ${reports.length} signals passed.`);
 
-    // NO-CALL MODE (emitCalls=false): screening & evaluasi tetap jalan (heartbeat,
-    // toggle, health tetap normal) tapi output ditekan — 0 call ke Discord.
-    // Hidupkan lagi nanti: set emitCalls=true di DEFAULT_CONFIG.
+    // NO-CALL MODE (emitCalls=false): screening & evaluation still run (heartbeat,
+    // toggle, health stay normal) but output is suppressed — 0 calls to Discord.
+    // Re-enable later: set emitCalls=true in DEFAULT_CONFIG.
     if (!this.config.emitCalls) {
-      console.log(`[CT ALPHA AGENT] No-call mode aktif (emitCalls=false) — ${reports.length} sinyal ditekan, 0 call dipublikasikan.`);
+      console.log(`[CT ALPHA AGENT] No-call mode active (emitCalls=false) — ${reports.length} signals suppressed, 0 calls published.`);
       return [];
     }
 
