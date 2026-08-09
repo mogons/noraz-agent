@@ -32,7 +32,7 @@ export interface WhaleSpotFlow {
 }
 
 export interface WhalePositionSignal {
-  coin: string;                    // "BTC" | "GOLD" | "XYZ100"
+  coin: string;                    // "BTC" | "ETH" | "SOL"
   totalLongUsd: number;
   totalShortUsd: number;
   netUsd: number;                  // totalLong - totalShort

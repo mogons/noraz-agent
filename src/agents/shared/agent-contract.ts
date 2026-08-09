@@ -16,7 +16,7 @@ export interface WhaleSpotEntry {
   fillCount: number;
 }
 
-/** Whale tracking: laporan posisi smart trader per aset (BTC/GOLD/XYZ100). */
+/** Whale tracking: laporan posisi smart trader per aset (BTC/ETH/SOL). */
 export interface WhaleReport {
   coin: string;
   totalLongUsd: number;

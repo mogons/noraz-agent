@@ -69,7 +69,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   const perpsId = await getOrCreateChannel(
     'call-whale-tracking',
-    '🐋 Smart Trader & Whale Positioning Tracking (Hyperliquid: BTC, GOLD, XYZ100)'
+    '🐋 Smart Trader & Whale Positioning Tracking (Hyperliquid: BTC, ETH, SOL)'
   );
 
   const nftId = await getOrCreateChannel(
