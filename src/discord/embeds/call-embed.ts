@@ -96,7 +96,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       embed.addFields(
         { name: '⚖️ Net Positioning', value: `${netStr} (${report.longCount} long vs ${report.shortCount} short trader)`, inline: true },
         { name: '📊 Long / Short', value: `Long **${fmtM(report.totalLongUsd)}**\nShort **${fmtM(report.totalShortUsd)}**`, inline: true },
-        { name: '🔗 Source', value: 'Hyperliquid PvP Leaderboard (7d)', inline: true }
+        { name: '🔗 Source', value: 'Hyperliquid PvP Leaderboard (30d)', inline: true }
       );
 
       const traderLines = (entries: Array<{ address: string; sizeUsd: number; returnPct: number }>, dir: string) =>

@@ -2,7 +2,7 @@
  * Whale Tracking Agent (Hyperliquid) — replaces the old perps call agent.
  *
  * Tracks smart-money positioning on BTC / ETH / SOL:
- * - PvP leaderboard (7d, stats-data, cached 1 jam) → top trader addresses
+ * - PvP leaderboard (30d, stats-data, cached 1 jam) → top trader addresses
  * - clearinghouseState per address → actual OPEN positions (long/short + USD size)
  * - userFills per address (5 menit) → spot order flow (buy vs sell), fills >= $100k
  *
@@ -21,7 +21,7 @@ export interface WhaleTraderPosition {
   side: 'LONG' | 'SHORT';
   sizeUsd: number;
   entryPx: number;
-  returnPct: number; // PvP 7d return % of the trader (0 when unknown)
+  returnPct: number; // PvP 30d return % of the trader (0 when unknown)
 }
 
 export interface WhaleSpotFlow {
@@ -54,7 +54,7 @@ export interface WhaleTrackConfig {
 }
 
 const DEFAULT_CONFIG: WhaleTrackConfig = {
-  topTraderCount: 25,
+  topTraderCount: 50,
   minPerpsUsd: 1_000_000,
   minSpotUsd: 100_000,
   spotFillTraderLimit: 5,

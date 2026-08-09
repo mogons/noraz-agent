@@ -2,7 +2,7 @@
  * Hyperliquid Adapter — Whale Positioning Tracker
  *
  * Reads Hyperliquid L1 DEX data for smart-money tracking:
- * - stats-data leaderboard (PvP, 7d, cached 1 jam) → top trader addresses
+ * - stats-data leaderboard (PvP, 30d, cached 1 jam) → top trader addresses
  *   (endpoint /info "leaderboard" sudah dihapus Hyperliquid — 422; yang hidup
  *   adalah https://stats-data.hyperliquid.xyz/Mainnet/leaderboard)
  * - clearinghouseState per address → open positions (signed size, USD value)
@@ -13,8 +13,8 @@
 
 export interface HyperliquidTrader {
   address: string;
-  returnPct: number;   // PvP 7d return % (week ROI * 100)
-  pnlUsd: number;      // PvP 7d PnL USD
+  returnPct: number;   // PvP 30d return % (month ROI * 100)
+  pnlUsd: number;      // PvP 30d PnL USD
 }
 
 export interface HyperliquidPosition {
@@ -39,11 +39,11 @@ export interface HyperliquidTradeFill {
 
 export class HyperliquidAdapter {
   private infoApiUrl = 'https://api.hyperliquid.xyz/info';
-  private statsDataUrl = 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard?window=7d&asset=0';
+  private statsDataUrl = 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard?window=30d&asset=0';
 
   // Assets tracked by the whale agent (perps indices live on Hyperliquid main dex).
   // GOLD & XYZ100 sudah tidak ada di main dex universe (XYZ100 pindah ke dex "xyz").
-  public readonly trackedAssets: string[] = ['BTC', 'ETH', 'SOL'];
+  public readonly trackedAssets: string[] = ['BTC', 'ETH', 'SOL', 'HYPE'];
 
   // PvP leaderboard cache (stats-data response besar: ~41k trader / puluhan MB) —
   // diambil maksimal 1x/jam, bukan tiap pass. Server mengabaikan param asset/size.
@@ -52,7 +52,7 @@ export class HyperliquidAdapter {
   private static readonly LEADERBOARD_TTL_MS = 60 * 60 * 1000;
 
   /**
-   * Top PvP leaderboard traders (7d window) — dari stats-data.hyperliquid.xyz
+   * Top PvP leaderboard traders (30d window) — dari stats-data.hyperliquid.xyz
    * (endpoint /info "leaderboard" sudah dihapus Hyperliquid, selalu HTTP 422).
    * Server mengabaikan param coin/asset — daftar global di-sort by account value
    * (whale terbesar), di-cache 1 jam (payload besar), lalu slice top N. Posisi
@@ -61,7 +61,7 @@ export class HyperliquidAdapter {
   public async fetchLeaderboardTraders(
     coin: string,
     topN: number,
-    _timeWindow: '7d' = '7d',
+    _timeWindow: '30d' = '30d',
   ): Promise<HyperliquidTrader[]> {
     try {
       if (!this.leaderboardCache || Date.now() - this.leaderboardCachedAt >= HyperliquidAdapter.LEADERBOARD_TTL_MS) {
@@ -75,10 +75,10 @@ export class HyperliquidAdapter {
         this.leaderboardCache = rows
           .map((e: any) => {
             const wp: any[] = Array.isArray(e?.windowPerformances) ? e.windowPerformances : [];
-            const week = wp.find((x) => Array.isArray(x) && x[0] === 'week' && x[1]);
-            // stats-data mengirim roi/pnl/accountValue sebagai STRING — konversi eksplisit
-            const roi = Number(week?.[1]?.roi ?? 0);
-            const pnl = Number(week?.[1]?.pnl ?? 0);
+            // Window 30d → pakai bucket 'month' (roi/pnl dikirim sebagai STRING)
+            const perf = wp.find((x) => Array.isArray(x) && x[0] === 'month' && x[1]);
+            const roi = Number(perf?.[1]?.roi ?? 0);
+            const pnl = Number(perf?.[1]?.pnl ?? 0);
             return {
               address: String(e?.ethAddress || ''),
               returnPct: Number((roi * 100).toFixed(2)) || 0,
@@ -90,7 +90,7 @@ export class HyperliquidAdapter {
           .sort((a, b) => b.accountValue - a.accountValue)
           .map((t) => ({ address: t.address, returnPct: t.returnPct, pnlUsd: t.pnlUsd }));
         this.leaderboardCachedAt = Date.now();
-        console.log(`[HYPERLIQUID] leaderboard cached: ${this.leaderboardCache.length} traders (stats-data, 7d, TTL 1h)`);
+        console.log(`[HYPERLIQUID] leaderboard cached: ${this.leaderboardCache.length} traders (stats-data, 30d, TTL 1h)`);
       }
       return this.leaderboardCache.slice(0, topN);
     } catch (err: unknown) {
