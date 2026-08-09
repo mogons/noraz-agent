@@ -63,7 +63,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const token: GMGNRawToken = {
       chain: 'robinhood', address: '0x1234567890123456789012345678901234567890',
       symbol: 'RHMEME', name: 'Robinhood Meme',
-      priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 30000, liquidityUsd: 50000,
+      priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 60000, liquidityUsd: 50000,
       buys: 800, sells: 200, swaps: 1000, holderCount: 500,
       top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
       smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,

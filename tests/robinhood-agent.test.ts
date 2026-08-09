@@ -7,7 +7,7 @@ const ETH_PRICE = 1929.03;
 
 const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   chain: 'robinhood', address: 'addr1', symbol: 'TEST', name: 'Test Token',
-  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 30000, liquidityUsd: 50000,
+  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 60000, liquidityUsd: 50000,
   buys: 800, sells: 200, swaps: 1000, holderCount: 500,
   top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
   smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,
@@ -53,17 +53,17 @@ describe('RobinhoodScreeningAgent', () => {
     expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 0 }))).toBe(0);
   });
 
-  it('preFilter passes a rank-1h-style token (only 1h volume, est 24h >= 200k)', () => {
+  it('preFilter passes a rank-1h-style token with strong 1h volume (24h tidak diketahui)', () => {
     const agent = new RobinhoodScreeningAgent();
-    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 15000 }), ETH_PRICE);
-    expect(res.ok).toBe(true); // 15k × 24 = 360k ≥ 200k
+    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 60000 }), ETH_PRICE);
+    expect(res.ok).toBe(true); // volume 1h 60k >= 50k → lolos tanpa data 24h
   });
 
-  it('preFilter rejects 1h-only token whose est 24h is below the gate', () => {
+  it('preFilter rejects token yang volume 1h-nya di bawah gate $50k', () => {
     const agent = new RobinhoodScreeningAgent();
-    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 500 }), ETH_PRICE);
+    const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 20000 }), ETH_PRICE);
     expect(res.ok).toBe(false);
-    expect(res.reason).toContain('volume 24h');
+    expect(res.reason).toContain('volume 1h');
   });
 
   it('preFilter passes a healthy token', () => {

@@ -13,7 +13,7 @@ export interface SolanaSignal {
 }
 
 export interface SolanaScreeningConfig {
-  minVolume24hUsd: number;   // 200000
+  minVolume1hUsd: number;    // 50000 — volume 1 JAM real (token harus ramai SEKARANG)
   minLiquidityUsd: number;   // 10000
   minMarketCapUsd: number;   // 100000 — wajib di atas $100k (MC 0/tidak diketahui = tolak)
   minAgeHours: number;       // 0 — degen early: token baru langsung lolos (smart money/CTO/KOL jadi penentu)
@@ -29,7 +29,7 @@ export interface SolanaScreeningConfig {
 }
 
 const DEFAULT_CONFIG: SolanaScreeningConfig = {
-  minVolume24hUsd: 200000,
+  minVolume1hUsd: 50000,
   minLiquidityUsd: 10000,
   minMarketCapUsd: 100000,
   minAgeHours: 0,

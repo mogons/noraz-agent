@@ -8,7 +8,8 @@
 import type { GMGNRawToken } from '../../adapters/gmgn-adapter.js';
 
 export interface MemePreFilterConfig {
-  minVolume24hUsd: number;
+  /** Volume 1 JAM real (GMGN rank/hot interval=1h, trenches volume_1h, DexScreener h1) — wajib. */
+  minVolume1hUsd: number;
   minLiquidityUsd: number;
   minMarketCapUsd: number;
   minAgeHours: number;
@@ -128,8 +129,7 @@ export function preFilterToken(
   const fail = (reason: string) => ({ ok: false as const, reason: `⛔ ${t.symbol}: ${reason}` });
   if (t.source === 'dexscreener') {
     // DexScreener fallback lacks GMGN social/CTO fields — allow only volume-based Momentum
-    const vol24 = volume24hOf(t);
-    if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
+    if (t.volume1hUsd < config.minVolume1hUsd) return fail(`volume 1h $${(t.volume1hUsd/1000).toFixed(1)}k < $${config.minVolume1hUsd/1000}k.`);
     if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
     return { ok: true, reason: 'ok' };
   }
@@ -141,8 +141,8 @@ export function preFilterToken(
     const ageHours = (Date.now() / 1000 - t.creationTimestamp) / 3600;
     if (ageHours < config.minAgeHours) return fail(`umur ${ageHours.toFixed(1)}h < ${config.minAgeHours}h.`);
   }
-  const vol24 = volume24hOf(t);
-  if (vol24 < config.minVolume24hUsd) return fail(`volume 24h (${t.volume24hUsd > 0 ? 'real' : 'est 1h×24'}) $${(vol24/1000).toFixed(1)}k < $${config.minVolume24hUsd/1000}k.`);
+  // Volume 1 JAM real (bukan 24h) — token harus ramai SEKARANG, bukan kemarin.
+  if (t.volume1hUsd < config.minVolume1hUsd) return fail(`volume 1h $${(t.volume1hUsd/1000).toFixed(1)}k < $${config.minVolume1hUsd/1000}k.`);
   if (t.liquidityUsd < config.minLiquidityUsd) return fail(`liq $${(t.liquidityUsd/1000).toFixed(1)}k < $${config.minLiquidityUsd/1000}k.`);
   // Market cap gate (fail-closed: 0/tidak diketahui = tolak) — wajib di atas ambang.
   if (t.marketCapUsd < config.minMarketCapUsd) return fail(`market cap $${(t.marketCapUsd/1000).toFixed(1)}k < $${config.minMarketCapUsd/1000}k.`);
@@ -151,7 +151,7 @@ export function preFilterToken(
   const sec = securityGateToken(t);
   if (!sec.ok) return fail(sec.reasons.join(' '));
   // Total fees gate OPSIONAL: minTotalFeeUsd > 0 baru dicek. 0 = off (alpha early;
-  // token baru fee-nya kecil tapi volume gate 100k sudah menyaring token mati).
+  // token baru fee-nya kecil tapi volume gate sudah menyaring token mati).
   if (config.minTotalFeeUsd > 0) {
     if (t.totalFeeNative === null) return fail('total fee tidak diketahui (fail-closed).');
     if (nativePriceUsd === null || nativePriceUsd <= 0) return fail('harga live tidak tersedia — gagal konversi fee (fail-closed).');
@@ -330,7 +330,7 @@ export function buildMemeThesis(t: GMGNRawToken, type: string, confidence: numbe
  * Returns { applied, rejected } with human-readable messages.
  */
 const MEME_CONFIG_SPEC: Record<string, { min: number; max: number }> = {
-  minVolume24hUsd: { min: 1000, max: 100_000_000 },
+  minVolume1hUsd: { min: 1000, max: 100_000_000 },
   minLiquidityUsd: { min: 1000, max: 100_000_000 },
   minMarketCapUsd: { min: 1000, max: 1_000_000_000 },
   minAgeHours: { min: 0, max: 168 },

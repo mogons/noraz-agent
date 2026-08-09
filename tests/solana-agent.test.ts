@@ -9,7 +9,7 @@ const requireEsm = createRequire(import.meta.url);
 
 const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   chain: 'sol', address: 'addr1', symbol: 'TEST', name: 'Test Token',
-  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 30000, liquidityUsd: 50000,
+  priceUsd: 0.001, marketCapUsd: 200000, volume24hUsd: 300000, volume1hUsd: 60000, liquidityUsd: 50000,
   buys: 800, sells: 200, swaps: 1000, holderCount: 500,
   top10HolderRate: 0.1, devTeamHoldRate: 0.0, creatorClose: true, creatorTokenStatus: 'creator_close',
   smartDegenCount: 5, renownedCount: 2, bundlerRate: 0.1, ratTraderAmountRate: 0.02,
@@ -139,27 +139,28 @@ describe('SolanaScreeningAgent', () => {
     expect(second.map((t) => t.address)).toEqual(['fresh2']);
   });
 
-  it('preFilter enforces 24H volume gate (minVolume24hUsd)', () => {
+  it('preFilter enforces 1H volume gate (minVolume1hUsd 50k)', () => {
     const agent = new SolanaScreeningAgent();
-    // vol24h 300k >= 200k → lolos
+    // volume 1h 60k >= 50k → lolos
     expect(agent.preFilter(mkToken(), 73.65).ok).toBe(true);
-    // vol24h 20k < 200k → ditolak
-    const low = agent.preFilter(mkToken({ volume24hUsd: 20000 }), 73.65);
+    // volume 1h 20k < 50k → ditolak
+    const low = agent.preFilter(mkToken({ volume1hUsd: 20000 }), 73.65);
     expect(low.ok).toBe(false);
-    expect(low.reason).toContain('volume 24h');
+    expect(low.reason).toContain('volume 1h');
   });
 
   it('updateConfig applies whitelisted keys and rejects unknown/out-of-range', () => {
     const agent = new SolanaScreeningAgent();
-    const res = agent.updateConfig({ minAgeHours: 3, passThreshold: 85, bogusKey: 5, minVolume24hUsd: 1 });
+    const res = agent.updateConfig({ minAgeHours: 3, passThreshold: 85, bogusKey: 5, minVolume1hUsd: 1 });
     expect(res.applied.minAgeHours).toBe(3);
     expect(res.applied.passThreshold).toBe(85);
     expect(res.rejected.some((r) => r.includes('bogusKey'))).toBe(true);
-    expect(res.rejected.some((r) => r.includes('minVolume24hUsd'))).toBe(true);
+    expect(res.rejected.some((r) => r.includes('minVolume1hUsd'))).toBe(true);
     expect(agent.getConfig().minAgeHours).toBe(3);
     expect(agent.getConfig().passThreshold).toBe(85);
     // unchanged defaults for untouched keys
     expect(agent.getConfig().minLiquidityUsd).toBe(10000);
+    expect(agent.getConfig().minVolume1hUsd).toBe(50000);
   });
 
   it('updateConfig validates signalTypes array (ints 1-21 only)', () => {
