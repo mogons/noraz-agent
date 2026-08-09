@@ -4,6 +4,7 @@ import { OpenSeaAdapter } from '../src/adapters/opensea-adapter.js';
 // Struktur fixture mengikuti OpenSea API v2 yang NYATA (diverifikasi live):
 // stats → { total: { floor_price }, intervals: [{ interval: 'one_day'|'seven_day', volume, sales }] }
 // floor_prices → { floor_prices: [{ time, token_unit }] } (timeframe=one_day, resolution=25)
+// collections → { safelist_request_status: 'verified'|'not_requested'|... } (badge verified)
 // events → { asset_events: [{ event_type: 'sale', event_timestamp, buyer, payment: { quantity, decimals } }] }
 
 const HOUR = 3600;
@@ -82,6 +83,7 @@ describe('OpenSeaAdapter', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })                                     // stats
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 6.0) })                 // floor_prices: 8.0 vs 6.0 = +33.3%
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ safelist_request_status: 'verified' }) })    // collection detail: verified
       .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
         mkSaleEvent({ event_timestamp: now - 600 }),    // dalam 1 jam (volume 1h)
         mkSaleEvent({ event_timestamp: now - 1800 }),   // dalam 1 jam (volume 1h)
@@ -95,6 +97,7 @@ describe('OpenSeaAdapter', () => {
     expect(s.floorSurge1hPct).toBeGreaterThan(30);   // floor naik 8 vs 6 = +33%
     expect(s.salesVelocity1h).toBe(2);               // 2 sale dalam 1 jam terakhir
     expect(s.volumeSpike1hRatio).toBe(2);            // 8 ETH (1h) vs 4 ETH (1-2h baseline)
+    expect(s.isVerified).toBe(true);                 // safelist_request_status === 'verified'
     expect(s.chain).toBe('ethereum');
   });
 
@@ -104,6 +107,7 @@ describe('OpenSeaAdapter', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 8.0) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ safelist_request_status: 'not_requested' }) }) // unverified
       .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
         mkSaleEvent({ event_timestamp: now - 600 }),
         mkSaleEvent({ event_timestamp: now - 1200 }),
@@ -112,6 +116,7 @@ describe('OpenSeaAdapter', () => {
     const adapter = new OpenSeaAdapter();
     const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(s.isWhaleSweep).toBe(true);
+    expect(s.isVerified).toBe(false);
     expect(s.whaleInfo?.address).toBe('0xwhale1');
     expect(s.whaleInfo?.buyCount).toBe(3);
     expect(s.whaleInfo?.spentEth).toBeCloseTo(12, 5); // 3 × 4 ETH
@@ -123,10 +128,12 @@ describe('OpenSeaAdapter', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 8.0) })
+      .mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) }) // collection detail ditolak → isVerified false
       .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({}) })); // events ditolak key
     const adapter = new OpenSeaAdapter();
     const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(s.isWhaleSweep).toBe(false);
+    expect(s.isVerified).toBe(false); // fail-closed: tidak bisa dipastikan = unverified
     // one_day vol 50 vs baseline 6 hari ((200-50)/6=25) → 2.0x; velocity 12/24 = 0.5
     expect(s.volumeSpike1hRatio).toBeCloseTo(2.0, 5);
     expect(s.salesVelocity1h).toBeCloseTo(0.5, 5);

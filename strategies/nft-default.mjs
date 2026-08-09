@@ -1,18 +1,20 @@
 export default {
   id: 'nft-default',
   name: 'NFT Floor Momentum + Whale Sweep',
-  version: '1.0.0',
+  version: '2.0.0',
   description:
-    'Default NFT strategy: floor-momentum scoring for EVM collections on OpenSea. ' +
-    'Gates: min floor 0.01 ETH (fail-closed if missing), min sales velocity 1/h, min volume spike 1.5x, ' +
-    'collection security audit must pass. ' +
-    'Scoring (base 60 + bonus, konsisten agent): floor surge 35, volume spike 25, sales velocity 20, whale sweep 20. ' +
+    'Default NFT strategy: hard filters (bukan scoring) untuk koleksi EVM di OpenSea. ' +
+    'Semua wajib lolos: min floor 0.01 ETH (fail-closed jika missing), floor surge >= 20% 1h, ' +
+    'volume spike >= 2.0x baseline, sales velocity >= 5/h, collection security audit harus pass. ' +
+    'Whale sweep & verified = bonus info di card. ' +
+    'Confidence deterministik: 80 (lolos semua filter) + 10 whale sweep + 10 verified, cap 100. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
     passThreshold: 80,
     minFloorEth: 0.01,
-    minVelocity1h: 1.0,
-    minVolSpike: 1.5,
+    minSurgePct: 20,
+    minVolSpike: 2.0,
+    minVelocity1h: 5.0,
   },
   evaluate(ctx) {
     const p = this.params;
@@ -25,6 +27,7 @@ export default {
     const volSpike = num(ctx.volumeSpike1hRatio ?? nft.volume_spike_1h_ratio);
     const velocity = num(ctx.salesVelocity1h ?? nft.sales_velocity_1h);
     const isWhaleSweep = Boolean(ctx.isWhaleSweep ?? nft.is_whale_sweep);
+    const isVerified = Boolean(ctx.isVerified ?? nft.is_verified);
 
     const reasons = [];
 
@@ -32,34 +35,22 @@ export default {
     if (floor === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor price tidak diketahui (fail-closed).' };
     if (floor < p.minFloorEth) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Floor ${floor} ETH < ${p.minFloorEth} ETH minimum.` };
     if (price === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Harga listing tidak diketahui (fail-closed).' };
+    if (surge === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Floor surge tidak diketahui (fail-closed).' };
+    if (surge < p.minSurgePct) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Floor surge +${surge.toFixed(1)}% < ${p.minSurgePct}% minimum.` };
     if (velocity === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Sales velocity tidak diketahui (fail-closed).' };
     if (velocity < p.minVelocity1h) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Velocity ${velocity}/h < ${p.minVelocity1h}/h minimum.` };
     if (volSpike === null) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Volume spike ratio tidak diketahui (fail-closed).' };
     if (volSpike < p.minVolSpike) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Vol spike ${volSpike.toFixed(2)}x < ${p.minVolSpike}x minimum.` };
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Audit keamanan koleksi tidak lolos (floor/velocity/momentum).' };
 
-    // Base 60 konsisten dengan agent evaluateListing (baseline + trigger bonus).
-    let score = 60;
-
-    // ── Floor surge (35) — real price discovery ──
-    if (surge !== null) {
-      if (surge >= 15) { score += 35; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+35)`); }
-      else if (surge >= 8) { score += 25; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+25)`); }
-      else if (surge >= 3) { score += 15; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+15)`); }
-      else { score += 5; reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h (+5)`); }
-    }
-
-    // ── Volume spike (25) — demand explosion ──
-    if (volSpike >= 2) { score += 25; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+25)`); }
-    else if (volSpike >= 1.5) { score += 15; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+15)`); }
-    else { score += 8; reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h (+8)`); }
-
-    // ── Sales velocity (20) — actual trading activity ──
-    if (velocity >= 1) { score += 20; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+20)`); }
-    else { score += 10; reasons.push(`⚡ ${velocity.toFixed(1)}/h sales (+10)`); }
-
-    // ── Verified whale sweep (20) — smart money confirmation ──
-    if (isWhaleSweep) { score += 20; reasons.push(`🐋 Verified whale sweep (+20)`); }
+    // Confidence deterministik — konsisten dengan agent evaluateListing:
+    // 80 (semua hard filter lolos) + 10 whale sweep + 10 verified, cap 100.
+    let score = 80;
+    reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h ✓`);
+    reasons.push(`🌊 Vol ${volSpike.toFixed(1)}x 1h ✓`);
+    reasons.push(`⚡ ${velocity.toFixed(1)}/h sales ✓`);
+    if (isWhaleSweep) { score += 10; reasons.push('🐋 Whale sweep (+10)'); }
+    if (isVerified) { score += 10; reasons.push('✅ Verified (+10)'); }
 
     const capped = Math.min(100, score);
     const passed = capped >= p.passThreshold;

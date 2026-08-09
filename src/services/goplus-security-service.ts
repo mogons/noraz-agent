@@ -5,6 +5,16 @@ export interface GoPlusTokenSecurity {
   isBlacklisted: boolean;
   isOpenSource: boolean;
   holderCount: number;
+  ownerAddress?: string;
+  isOwnerRenounced?: boolean;
+  canTakeBackOwnership?: boolean;
+  isMintable?: boolean;
+  isProxy?: boolean;
+  isTransferPausable?: boolean;
+  isPaused?: boolean;
+  isAirdropScam?: boolean;
+  lpHolderCount?: number;
+  liquidityUsd?: number;
 }
 
 export type EvmChain = 'base' | 'eth' | 'bsc' | 'robinhood';
@@ -19,7 +29,22 @@ const CHAIN_ID_MAP: Record<EvmChain, number> = {
 export class GoPlusSecurityService {
   private baseUrl = 'https://api.gopluslabs.io/api/v1';
 
+  /**
+   * Screening path — fail-closed konservatif: honeypot => null (ditolak).
+   * Hanya field dasar yang dipakai screening (tax, blacklist, open source, holders).
+   */
   public async auditToken(chain: EvmChain, contractAddress: string): Promise<GoPlusTokenSecurity | null> {
+    const full = await this.auditTokenFull(chain, contractAddress);
+    if (!full) return null;
+    if (full.isHoneypot) return null;
+    return full;
+  }
+
+  /**
+   * Audit path on-demand — detail lengkap, honeypot TETAP dikembalikan
+   * (isHoneypot=true) supaya bisa ditampilkan ke user, bukan disamarkan jadi null.
+   */
+  public async auditTokenFull(chain: EvmChain, contractAddress: string): Promise<GoPlusTokenSecurity | null> {
     const chainId = CHAIN_ID_MAP[chain];
     if (!chainId) return null;
     try {
@@ -35,15 +60,23 @@ export class GoPlusSecurityService {
       if (data.code && data.code !== 1) return null;
       const r = data.result?.[contractAddress.toLowerCase()];
       if (!r) return null;
-      const isHoneypot = r.is_honeypot === '1';
-      if (isHoneypot) return null;
       return {
-        isHoneypot: false,
+        isHoneypot: r.is_honeypot === '1',
         buyTaxPct: parseFloat(String(r.buy_tax ?? '0')) || 0,
         sellTaxPct: parseFloat(String(r.sell_tax ?? '0')) || 0,
         isBlacklisted: r.is_blacklisted === '1',
         isOpenSource: r.is_open_source === '1',
         holderCount: parseInt(String(r.holder_count ?? '0'), 10) || 0,
+        ownerAddress: r.owner_address || undefined,
+        isOwnerRenounced: r.is_owner_renounced === '1',
+        canTakeBackOwnership: r.can_take_back_ownership === '1',
+        isMintable: r.is_mintable === '1',
+        isProxy: r.is_proxy === '1',
+        isTransferPausable: r.is_transfer_pausable === '1',
+        isPaused: r.is_paused === '1',
+        isAirdropScam: r.is_airdrop_scam === '1',
+        lpHolderCount: parseInt(String(r.lp_holder_count ?? '0'), 10) || 0,
+        liquidityUsd: parseFloat(String(r.liquidity ?? '0')) || 0,
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

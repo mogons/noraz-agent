@@ -86,17 +86,17 @@ describe('KrystalCloudAdapter', () => {
     const highFee = mkPool({
       poolAddress: '0xa', tvl: '150000',
       stats1h: { volume: '50000', fee: '150', apr: 100 },
-      stats24h: { volume: '500000', fee: '5000', apr: 90 }, // feeTvl24 = 5000/150000 = 3.3% > 1% ✓
+      stats24h: { volume: '500000', fee: '5000', apr: 90 }, // feeTvl24 = 5% > 4% ✓
     });
     const lowFee = mkPool({
       poolAddress: '0xb', tvl: '150000',
       stats1h: { volume: '50000', fee: '150', apr: 100 },
-      stats24h: { volume: '500000', fee: '500', apr: 90 }, // feeTvl24 = 0.33% < 1% ✗
+      stats24h: { volume: '500000', fee: '500', apr: 90 }, // feeTvl24 = 0.33% < 4% ✗
     });
     const dupPair = mkPool({
       poolAddress: '0xc', tvl: '300000',
       stats1h: { volume: '50000', fee: '150', apr: 100 },
-      stats24h: { volume: '800000', fee: '8000', apr: 95 }, // feeTvl24 = 2.7% > 1% ✓, pair sama WETH-USDC
+      stats24h: { volume: '800000', fee: '8000', apr: 95 }, // feeTvl24 = 4.5% > 4% ✓, pair sama WETH-USDC
     });
     // 1. parse ke signal via fetch (pakai adapter method parse di fetch)
     // simulasikan dengan stub fetch lalu filter
@@ -106,7 +106,7 @@ describe('KrystalCloudAdapter', () => {
       {
         poolAddress: '0xa', pairName: 'WETH-USDC', feeTier: 3000,
         tvlUsd: 150000, activeTvlUsd: 450, volume1hUsd: 50000, fee1hUsd: 150,
-        volume24hUsd: 500000, fee24hUsd: 5000, feesToTvlRatio24h: 0.0333,
+        volume24hUsd: 500000, fee24hUsd: 5000, feesToTvlRatio24h: 0.05,
         volumeToTvlRatio1h: 0.33, volumeToActiveTvlRatio1h: 111, feeAprPercentage: 100,
         apr24h: 90, farmApr24h: 0, token0Symbol: 'WETH', token1Symbol: 'USDC',
         token0Address: '0xweth', aiRecommendation: 'x',
@@ -122,13 +122,13 @@ describe('KrystalCloudAdapter', () => {
       {
         poolAddress: '0xc', pairName: 'WETH-USDC', feeTier: 3000,
         tvlUsd: 300000, activeTvlUsd: 900, volume1hUsd: 50000, fee1hUsd: 150,
-        volume24hUsd: 800000, fee24hUsd: 8000, feesToTvlRatio24h: 0.0267,
+        volume24hUsd: 800000, fee24hUsd: 8000, feesToTvlRatio24h: 0.045,
         volumeToTvlRatio1h: 0.17, volumeToActiveTvlRatio1h: 55, feeAprPercentage: 100,
         apr24h: 95, farmApr24h: 0, token0Symbol: 'WETH', token1Symbol: 'USDC',
         token0Address: '0xweth', aiRecommendation: 'x',
       },
     ]);
-    // lowFee (0x b) ditolak (feeTvl 0.33% < 1%); 0xa (3.33%) vs 0xc (2.67%) dedupe → 0xa menang (feeTvl tertinggi)
+    // lowFee (0x b) ditolak (feeTvl 0.33% < 4%); 0xa (5%) vs 0xc (4.5%) dedupe → 0xa menang (feeTvl tertinggi)
     expect(filtered.length).toBe(1);
     expect(filtered[0].poolAddress).toBe('0xa');
   });

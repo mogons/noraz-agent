@@ -24,6 +24,8 @@ export interface OpenSeaNFTSignal {
   salesVelocity1h: number;      // real: sales dalam 1 jam terakhir (events); fallback 24h/24
   isWhaleSweep: boolean;        // faktual: satu buyer membeli >= 3 dalam 1 jam
   whaleInfo?: OpenSeaWhaleInfo;
+  /** Verified badge OpenSea (safelist_request_status === 'verified'); fail-closed false. */
+  isVerified: boolean;
   openseaUrl: string;
   aiThesis: string;
 }
@@ -321,6 +323,16 @@ export class OpenSeaAdapter {
         }
       } catch { /* best-effort — floor surge jadi 0 (tidak trigger) */ }
 
+      // ── 2b. Verified badge: safelist_request_status === 'verified' (fail-closed false) ──
+      let isVerified = false;
+      try {
+        const colRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}`, { headers, signal: AbortSignal.timeout(15000) });
+        if (colRes.ok) {
+          const colData: any = await colRes.json();
+          isVerified = colData?.safelist_request_status === 'verified';
+        }
+      } catch { /* best-effort — verified jadi false (tidak bisa dipastikan) */ }
+
       // ── 3. Events (sale): velocity 1h, volume 1h vs baseline 1h, whale sweep ──
       let salesVelocity1h = 0;
       let volume1hEth = 0;
@@ -390,6 +402,7 @@ export class OpenSeaAdapter {
           salesVelocity1h: velocity,
           isWhaleSweep,
           whaleInfo,
+          isVerified,
           openseaUrl: `https://opensea.io/collection/${collectionSlug}`,
           aiThesis: `OpenSea API v2 Live Signal: ${collectionSlug} floor ${floorPriceEth} ETH (+${floorSurge1hPct.toFixed(1)}% 1h), ${velocity.toFixed(1)} sales/h, vol ${volumeSpike1hRatio.toFixed(1)}x baseline.`,
         },

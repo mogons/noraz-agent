@@ -155,7 +155,7 @@ export class KrystalCloudAdapter {
   /**
    * High-yield filter — mirror LP solana (Meteora) dengan data NYATA:
    * - fee1h >= $50 (real — kalibrasi 2026-08-09: $7 terlalu kecil)
-   * - 24h Fee/TVL > 2% (real)
+   * - 24h Fee/TVL > 4% (real)
    * - volume/activeTvl >= 100% per 1h (velocity, fee_rate real)
    * - tvl >= $20k (sudah difilter server-side, tetap dicek di sini)
    * - dedupe per pair (1 pool terbaik per pasangan token)
@@ -166,7 +166,7 @@ export class KrystalCloudAdapter {
     for (const pool of pools) {
       if (pool.tvlUsd < 20000) continue;
       if (pool.fee1hUsd < 50) continue;
-      if (pool.feesToTvlRatio24h <= 0.02) continue;
+      if (pool.feesToTvlRatio24h <= 0.04) continue;
       if (pool.volumeToActiveTvlRatio1h < 1.0) continue;
 
       const pairKey = `${pool.token0Symbol}-${pool.token1Symbol}`.toUpperCase();

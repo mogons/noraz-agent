@@ -89,7 +89,7 @@ describe('MeteoraDLMMAdapter (official DLMM Data API)', () => {
     feeAprPercentage: 500, // > 100% annualized
     feesToTvlRatio1h: 0.00013, // 0.013% / 100
     feesToActiveTvlRatio1h: 0.0067, // 0.67%/jam > 0.1%
-    feesToTvlRatio24h: 0.025, // 2.5% 24h > 2%
+    feesToTvlRatio24h: 0.05, // 5% 24h > 4%
     volumeToTvlRatio1h: 0.033,
     volumeToActiveTvlRatio1h: 1.67, // >= 1.0 (100%+ active TVL per jam)
     organicVolumeScore1h: 60,

@@ -18,13 +18,14 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
   floorPriceEth: 8.0,
   floorSurge1hPct: 35,
   volumeSpike1hRatio: 3.5,
-  salesVelocity1h: 2,
+  salesVelocity1h: 6,
   isWhaleSweep: true,
   whaleInfo: {
     address: '0xabc123def456',
     buyCount: 4,
     spentEth: 30.5,
   },
+  isVerified: false,
   openseaUrl: 'https://opensea.io/collection/pudgypenguins',
   aiThesis: 'pudgy floor momentum thesis',
   ...over,
@@ -70,19 +71,25 @@ describe('NFTScreeningAgent', () => {
     expect(r.payload?.securityAuditPassed).toBe(true);
   });
 
-  it('runScreeningPass posts velocity-only signals (velocity >= 1/h = 80, kalibrasi baru)', async () => {
+  it('runScreeningPass rejects velocity-only signals (hard filter: surge + spike + velocity semuanya wajib)', async () => {
     const agent = new NFTScreeningAgent(
-      mkFakeAdapter([mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })])
+      mkFakeAdapter([mkSignal({ floorSurge1hPct: 3, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined })])
     );
     (agent as any).strategyEngine = { getActiveStrategy: () => null };
     const reports = await agent.runScreeningPass();
-    expect(reports.length).toBe(1);
-    expect(reports[0].confidence).toBe(80);
+    expect(reports.length).toBe(0);
+  });
+
+  it('evaluateListing hard gate: reject bila salah satu filter wajib gagal (surge/spike/velocity)', () => {
+    const agent = new NFTScreeningAgent(mkFakeAdapter([]));
+    expect(agent.evaluateListing(mkSignal({ floorSurge1hPct: 3 }))).toBeNull();
+    expect(agent.evaluateListing(mkSignal({ volumeSpike1hRatio: 1.0 }))).toBeNull();
+    expect(agent.evaluateListing(mkSignal({ salesVelocity1h: 2 }))).toBeNull();
   });
 
   it('buildPayload maps real fields', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
-    const signal = mkSignal({ priceEth: 8.25, floorPriceEth: 8.0, confidenceScore: 100 });
+    const signal = mkSignal({ priceEth: 8.25, floorPriceEth: 8.0, confidenceScore: 100, isVerified: true });
     const report = agent.evaluateListing(signal)!;
     const p = agent.buildPayload(report, 'Pudgy #1234 pump thesis');
     expect(p.domain).toBe('NFT');
@@ -108,31 +115,23 @@ describe('NFTScreeningAgent', () => {
     expect(p.title).toBe('Pudgy Penguins (floor)');
   });
 
-  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, dan momentum (sweep/surge/spike/velocity)', () => {
+  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, dan semua hard filter lolos', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal())!)).toBe(true);
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ floorPriceEth: 0.005, priceEth: 0.006 }))!)).toBe(false);
-    expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ salesVelocity1h: 0 }))!)).toBe(false);
-    const volOnly = agent.evaluateListing(
-      mkSignal({ floorSurge1hPct: 0, isWhaleSweep: false, whaleInfo: undefined, volumeSpike1hRatio: 4.0 })
-    )!;
-    expect(volOnly.isVolumeSpike).toBe(true);
-    expect(volOnly.isFloorSurge).toBe(false);
-    expect(agent.deriveCollectionSafety(volOnly)).toBe(true); // spike termasuk momentum
-    const velOnly = agent.evaluateListing(
-      mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined, salesVelocity1h: 2 })
-    )!;
-    expect(agent.deriveCollectionSafety(velOnly)).toBe(true); // velocity >= ambang = momentum
+    expect(agent.evaluateListing(mkSignal({ salesVelocity1h: 0 }))).toBeNull(); // velocity 0 gagal hard gate
   });
 
-  it('deriveCollectionSafety: whale sweep OR floor surge alone can pass (with floor + velocity)', () => {
+  it('evaluateListing: verified badge diteruskan ke report & confidence +10', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
-    const surgeOnly = agent.evaluateListing(mkSignal({ isWhaleSweep: false, whaleInfo: undefined, volumeSpike1hRatio: 1.0 }))!;
-    expect(agent.deriveCollectionSafety(surgeOnly)).toBe(true);
-    const whaleOnly = agent.evaluateListing(
-      mkSignal({ floorSurge1hPct: 0, volumeSpike1hRatio: 1.0, isWhaleSweep: true, whaleInfo: { address: '0xabc', buyCount: 4, spentEth: 30 } })
-    )!;
-    expect(agent.deriveCollectionSafety(whaleOnly)).toBe(true);
+    const unverified = agent.evaluateListing(mkSignal())!;
+    expect(unverified.isVerified).toBe(false);
+    expect(unverified.confidenceScore).toBe(90); // 80 + 10 whale sweep
+    expect(unverified.detectionReason).toContain('⚠️ Unverified');
+    const verified = agent.evaluateListing(mkSignal({ isVerified: true }))!;
+    expect(verified.isVerified).toBe(true);
+    expect(verified.confidenceScore).toBe(100); // 80 + 10 whale + 10 verified
+    expect(verified.detectionReason).toContain('✅ Verified');
   });
 
   it('deriveCollectionSafety: floor boundary is strict (0.01 fails, just above passes)', () => {
@@ -147,12 +146,12 @@ describe('NFTScreeningAgent', () => {
     expect(agent.deriveCollectionSafety(justAbove)).toBe(true);
   });
 
-  it('calibration: strong combo (surge + spike + velocity + whale) reaches >= 80 (100)', () => {
+  it('calibration: strong combo (surge + spike + velocity + whale) = 90, +verified = 100', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     const report = agent.evaluateListing(mkSignal());
     expect(report).not.toBeNull();
     expect(report!.confidenceScore).toBeGreaterThanOrEqual(80);
-    expect(report!.confidenceScore).toBe(100);
+    expect(report!.confidenceScore).toBe(90);
   });
 
   it('strategy extension: SKIP vetoes the signal', async () => {
@@ -198,16 +197,23 @@ describe('nft-default strategy', () => {
     priceEth: 8.2,
     floorSurge1hPct: 35,
     volumeSpike1hRatio: 3.5,
-    salesVelocity1h: 2,
+    salesVelocity1h: 6,
     isFloorSurge: true,
     isVolumeSpike: true,
     isWhaleSweep: true,
+    isVerified: false,
   };
 
   it('BUY on healthy ctx (>= 80, not SKIP)', () => {
     const ev = strat.evaluate({ ...healthy });
     expect(ev.recommendedAction).not.toBe('SKIP');
     expect(ev.confidence).toBeGreaterThanOrEqual(80);
+  });
+
+  it('confidence deterministic: 80 + 10 whale + 10 verified = 100', () => {
+    const ev = strat.evaluate({ ...healthy, isVerified: true });
+    expect(ev.recommendedAction).toBe('BUY');
+    expect(ev.confidence).toBe(100);
   });
 
   it('reads snake_case nft ctx block (gmgn-like fallback)', () => {
@@ -235,14 +241,20 @@ describe('nft-default strategy', () => {
     expect(ev.reason).toContain('0.01');
   });
 
-  it('SKIP when salesVelocity1h missing or below minVelocity1h', () => {
-    expect(strat.evaluate({ ...healthy, salesVelocity1h: undefined }).recommendedAction).toBe('SKIP');
-    expect(strat.evaluate({ ...healthy, salesVelocity1h: 0.5 }).recommendedAction).toBe('SKIP');
+  it('SKIP when floor surge below 20% gate', () => {
+    const ev = strat.evaluate({ ...healthy, floorSurge1hPct: 15 });
+    expect(ev.recommendedAction).toBe('SKIP');
+    expect(ev.reason).toContain('20');
   });
 
-  it('SKIP when volumeSpike1hRatio missing (fail-closed)', () => {
-    const ev = strat.evaluate({ ...healthy, volumeSpike1hRatio: undefined });
-    expect(ev.recommendedAction).toBe('SKIP');
+  it('SKIP when salesVelocity1h missing or below minVelocity1h (5/h)', () => {
+    expect(strat.evaluate({ ...healthy, salesVelocity1h: undefined }).recommendedAction).toBe('SKIP');
+    expect(strat.evaluate({ ...healthy, salesVelocity1h: 2 }).recommendedAction).toBe('SKIP');
+  });
+
+  it('SKIP when volumeSpike1hRatio missing or below 2.0x', () => {
+    expect(strat.evaluate({ ...healthy, volumeSpike1hRatio: undefined }).recommendedAction).toBe('SKIP');
+    expect(strat.evaluate({ ...healthy, volumeSpike1hRatio: 1.2 }).recommendedAction).toBe('SKIP');
   });
 
   it('SKIP when security audit failed', () => {

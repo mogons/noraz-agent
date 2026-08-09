@@ -274,12 +274,22 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     embed.setTitle(`🖼️ ATHENA NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
 
     const safeNftSymbol = sanitizeEmbedField(payload.symbol, 40);
+    const safeNetwork = sanitizeEmbedField(payload.network, 20) || 'N/A';
     embed.addFields(
       { name: 'Collection', value: safeNftSymbol || 'N/A', inline: true },
+      { name: '⛓️ Chain', value: safeNetwork, inline: true },
       { name: 'Price & Floor', value: sanitizeEmbedField(payload.priceUsd, 40) || 'N/A', inline: true },
       { name: 'Market Info', value: sanitizeEmbedField(payload.marketCap, 80) || 'N/A', inline: true },
       { name: '💡 NFT Rarity & Floor AI Thesis', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
     );
+
+    if (payload.tokenVerified !== undefined) {
+      embed.addFields({
+        name: '✅ Verification Status',
+        value: payload.tokenVerified ? '✅ **Verified** (OpenSea blue check)' : '⚠️ **Unverified** — DYOR, risiko lebih tinggi',
+        inline: true,
+      });
+    }
 
     const openseaUrl = payload.dexScreenerUrl || 'https://opensea.io';
     buttonsRow.addComponents(
