@@ -6,7 +6,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
 
   it('returns [] without an API key (fail-closed)', async () => {
     const adapter = new GMGNAdapter();
-    expect(await adapter.fetchRank('sol')).toEqual([]);
+    expect(await adapter.fetchRank('robinhood')).toEqual([]);
   });
 
   it('paces requests — burst calls are spaced apart (shared queue across instances)', async () => {
@@ -19,7 +19,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     const a = new GMGNAdapter();
     const b = new GMGNAdapter(); // different instance — queue is static/shared
     await Promise.all([
-      a.fetchRank('sol'), a.fetchRank('sol'), b.fetchRank('sol'), b.fetchRank('sol'), a.fetchRank('sol'),
+      a.fetchRank('robinhood'), a.fetchRank('robinhood'), b.fetchRank('robinhood'), b.fetchRank('robinhood'), a.fetchRank('robinhood'),
     ]);
     expect(fn).toHaveBeenCalledTimes(5);
     callTimes.sort((x, y) => x - y);
@@ -34,7 +34,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       ok: true, status: 200,
       headers: { get: () => null },
       json: async () => ({ code: 0, data: { data: { rank: [{
-        chain: 'sol', address: 'abc', symbol: 'TEST', name: 'Test',
+        chain: 'robinhood', address: 'abc', symbol: 'TEST', name: 'Test',
         price: '0.001', market_cap: 100000, volume: 200000, liquidity: 30000,
         buys: 800, sells: 200, cto_flag: 1, smart_degen_count: 5,
         dev_team_hold_rate: 0.02, bundler_rate: 0.1, rug_ratio: 0.01,
@@ -44,7 +44,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       }] } } }),
     }));
     const adapter = new GMGNAdapter();
-    const [t] = await adapter.fetchRank('sol');
+    const [t] = await adapter.fetchRank('robinhood');
     expect(t.symbol).toBe('TEST');
     expect(t.ctoFlag).toBe(true);
     expect(t.smartDegenCount).toBe(5);
@@ -113,7 +113,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       json: async () => ({ code: 0, data: { data: { rank: [{ symbol: 'MIN', address: 'x' }] } } }),
     }));
     const adapter = new GMGNAdapter();
-    const [t] = await adapter.fetchRank('sol');
+    const [t] = await adapter.fetchRank('robinhood');
     expect(t.rugRatio).toBeNull();
     expect(t.smartDegenCount).toBe(0);
     expect(t.creationTimestamp).toBeNull();
@@ -127,7 +127,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       json: async () => ({ code: 0, data: [{ token_address: 'tok1', signal_type: 7, trigger_at: 1786095170, trigger_mc: 100000, data: { symbol: 'SIG', address: 'tok1' } }] }),
     }));
     const adapter = new GMGNAdapter();
-    const evts = await adapter.fetchTokenSignals('sol', [6, 7, 8]);
+    const evts = await adapter.fetchTokenSignals('robinhood', [6, 7, 8]);
     expect(evts.length).toBe(1);
     expect(evts[0].signal_type).toBe(7);
     expect(evts[0].data.symbol).toBe('SIG');
@@ -149,7 +149,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       } }),
     }));
     const adapter = new GMGNAdapter();
-    const t = await adapter.fetchTokenInfo('sol', 'tok123');
+    const t = await adapter.fetchTokenInfo('robinhood', 'tok123');
     expect(t).not.toBeNull();
     expect(t!.address).toBe('tok123');
     expect(t!.symbol).toBe('WATCH');
@@ -171,8 +171,8 @@ describe('GMGNAdapter (OpenAPI)', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: null }) });
     vi.stubGlobal('fetch', fn);
     const adapter = new GMGNAdapter();
-    expect(await adapter.fetchTokenInfo('sol', 'tok123')).toBeNull();
-    expect(await adapter.fetchTokenInfo('sol', 'tok123')).toBeNull();
+    expect(await adapter.fetchTokenInfo('robinhood', 'tok123')).toBeNull();
+    expect(await adapter.fetchTokenInfo('robinhood', 'tok123')).toBeNull();
   });
 
   it('handles 429 with reset wait and does not spam', async () => {
@@ -182,7 +182,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: { data: { rank: [] } } }) });
     vi.stubGlobal('fetch', fn);
     const adapter = new GMGNAdapter();
-    const res = await adapter.fetchRank('sol');
+    const res = await adapter.fetchRank('robinhood');
     expect(fn).toHaveBeenCalledTimes(2);
     expect(res).toEqual([]);
   }, 15000);
@@ -196,7 +196,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     });
     vi.stubGlobal('fetch', fn);
     const adapter = new GMGNAdapter();
-    const res = await adapter.fetchRank('sol');
+    const res = await adapter.fetchRank('robinhood');
     expect(fn).toHaveBeenCalledTimes(1); // no retry during a 5-minute ban
     expect(res).toEqual([]);
   });
@@ -208,7 +208,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       .mockResolvedValueOnce({ ok: false, status: 429, headers: { get: () => String(Math.floor(Date.now()/1000) + 2) } });
     vi.stubGlobal('fetch', fn);
     const adapter = new GMGNAdapter();
-    const res = await adapter.fetchRank('sol');
+    const res = await adapter.fetchRank('robinhood');
     expect(fn).toHaveBeenCalledTimes(2); // one wait + one retry, then stop
     expect(res).toEqual([]);
   }, 15000);
@@ -225,7 +225,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     });
     vi.stubGlobal('fetch', fn);
     const adapter = new GMGNAdapter();
-    const res = await adapter.fetchTrenches('sol', {
+    const res = await adapter.fetchTrenches('robinhood', {
       types: ['completed'],
       limit: 80,
       filters: { max_rug_ratio: 0.3, max_bundler_rate: 0.3 },
@@ -238,7 +238,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(body.completed).toBeDefined();
     expect(body.completed.limit).toBe(80);
     expect(body.completed.max_rug_ratio).toBe(0.3);
-    expect(body.completed.launchpad_platform_v2).toBe(true);
+    expect(body.completed.launchpad_platform_v2).toBeUndefined(); // breaks robinhood — never sent
   });
 
   it('fetchHotSearches parses the top tokens block', async () => {
@@ -246,10 +246,10 @@ describe('GMGNAdapter (OpenAPI)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true, status: 200,
       headers: { get: () => null },
-      json: async () => ({ code: 0, data: [{ interval: '1h', chain: 'sol', tokens: [{ address: 'h1', symbol: 'HOT', exchange: 'pump_amm', launchpad_status: '1' }] }] }),
+      json: async () => ({ code: 0, data: [{ interval: '1h', chain: 'robinhood', tokens: [{ address: 'h1', symbol: 'HOT', exchange: 'pump_amm', launchpad_status: '1' }] }] }),
     }));
     const adapter = new GMGNAdapter();
-    const tokens = await adapter.fetchHotSearches({ chain: 'sol', interval: '1h', filters: ['migrated', 'renounced', 'frozen'] });
+    const tokens = await adapter.fetchHotSearches({ chain: 'robinhood', interval: '1h', filters: ['migrated', 'renounced', 'frozen'] });
     expect(tokens.length).toBe(1);
     expect(tokens[0].symbol).toBe('HOT');
     expect(tokens[0].exchange).toBe('pump_amm');
@@ -266,7 +266,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       ] } } }),
     }));
     const adapter = new GMGNAdapter();
-    const tokens = await adapter.fetchRank('sol');
+    const tokens = await adapter.fetchRank('robinhood');
     expect(tokens[0].exchange).toBe('raydium');
     expect(tokens[0].launchpadStatus).toBe('1');
     expect(tokens[1].exchange).toBe('pump');
@@ -291,7 +291,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       }),
     }));
     const adapter = new GMGNAdapter();
-    const a = await adapter.fetchTokenSecurity('sol', 'tok1');
+    const a = await adapter.fetchTokenSecurity('robinhood', 'tok1');
     expect(a).not.toBeNull();
     expect(a!.isBlacklist).toBe(true);
     expect(a!.isRenounced).toBe(true);
@@ -311,7 +311,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
       json: async () => ({ code: 401, message: 'rate limited' }),
     }));
     const adapter = new GMGNAdapter();
-    expect(await adapter.fetchTokenSecurity('sol', 'tok_fail_closed')).toBeNull();
+    expect(await adapter.fetchTokenSecurity('robinhood', 'tok_fail_closed')).toBeNull();
   });
 
   it('fetchTokenSecurity cache module-level: call kedua tidak fetch ulang (TTL 10m)', async () => {
@@ -345,7 +345,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     vi.stubGlobal('fetch', fn);
     const a = new GMGNAdapter();
     const b = new GMGNAdapter();
-    const trades = await a.fetchTrackTrades('sol', 'smartmoney');
+    const trades = await a.fetchTrackTrades('robinhood', 'smartmoney');
     expect(trades).toHaveLength(2);
     expect(trades[0].tokenAddress).toBe('0xaaa'); // lowercase
     expect(trades[0].side).toBe('sell');
@@ -354,7 +354,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(trades[0].makerTags).toEqual(['smart_degen', 'photon']);
     expect(trades[0].kind).toBe('smartmoney');
     expect(trades[1].isFullClose).toBe(false);
-    await b.fetchTrackTrades('sol', 'smartmoney'); // cache shared → tidak fetch ulang
+    await b.fetchTrackTrades('robinhood', 'smartmoney'); // cache shared → tidak fetch ulang
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -362,6 +362,6 @@ describe('GMGNAdapter (OpenAPI)', () => {
     process.env.GMGN_API_KEY = 'test-key';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
     const adapter = new GMGNAdapter();
-    expect(await adapter.fetchTrackTrades('sol', 'kol')).toEqual([]);
+    expect(await adapter.fetchTrackTrades('robinhood', 'kol')).toEqual([]);
   });
 });

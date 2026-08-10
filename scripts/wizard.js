@@ -238,7 +238,7 @@ async function runWizard() {
 
   // 5. PRO MARKET DATA & SECURITY AUDIT APIS
   console.log('\n📊 STEP 5: PRO MARKET DATA & SECURITY AUDIT APIS');
-  console.log('   (GMGN = mandatory for meme/LP screening; security audit runs via GMGN /token/security)');
+  console.log('   (GMGN = mandatory for meme screening; security audit runs via GMGN /token/security + GoPlus)');
   let gmgnApiKey = existingEnv.GMGN_API_KEY || '';
   let gmgnRobinhoodApiKey = existingEnv.GMGN_API_KEY_ROBINHOOD || '';
   let krystalApiKey = existingEnv.KRYSTAL_CLOUD_API_KEY || '';
@@ -246,15 +246,13 @@ async function runWizard() {
   let twexApiKey = existingEnv.TWEX_API_KEY || existingEnv.TWITTER_BEARER_TOKEN || '';
   let openTwitterToken = existingEnv.TWITTER_TOKEN || '';
   let goplusApiKey = existingEnv.GOPLUS_API_KEY || '';
-  let polymarketPrivateKey = existingEnv.POLYMARKET_PRIVATE_KEY || '';
   let uniswapApiKey = existingEnv.UNISWAP_API_KEY || '';
-  let jupiterApiKey = existingEnv.JUPITER_API_KEY || '';
 
-  const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Solana/LP Agents]';
-  const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (Solana — GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
+  const defaultGmgn = gmgnApiKey ? ` [Default: ${gmgnApiKey.slice(0, 8)}...]` : ' [Mandatory for Robinhood meme screening]';
+  const inputGmgn = await askQuestion(` 1. GMGN_API_KEY (Robinhood — GMGN AI Pro API for Smart Money & Snipers)${defaultGmgn}: `);
   gmgnApiKey = inputGmgn.trim() || gmgnApiKey;
 
-  const defaultGmgnRh = gmgnRobinhoodApiKey ? ` [Default: ${gmgnRobinhoodApiKey.slice(0, 8)}...]` : ' [Optional — separate key so Solana & Robinhood never share rate limits]';
+  const defaultGmgnRh = gmgnRobinhoodApiKey ? ` [Default: ${gmgnRobinhoodApiKey.slice(0, 8)}...]` : ' [Optional — dedicated GMGN key for the Robinhood chain]';
   const inputGmgnRh = await askQuestion(` 2. GMGN_API_KEY_ROBINHOOD (Optional — dedicated GMGN key for the Robinhood chain)${defaultGmgnRh}: `);
   gmgnRobinhoodApiKey = inputGmgnRh.trim() || gmgnRobinhoodApiKey;
 
@@ -266,106 +264,49 @@ async function runWizard() {
   const inputOpensea = await askQuestion(` 4. OPENSEA_API_KEY (OpenSea REST API v2 for NFT floor & rarity)${defaultOpensea}: `);
   openseaApiKey = inputOpensea.trim() || openseaApiKey;
 
-  const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Mandatory for CT Alpha Agent]';
-  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter — CT Alpha feeds)${defaultTwex}: `);
+  const defaultTwex = twexApiKey ? ` [Default: ${twexApiKey.slice(0, 8)}...]` : ' [Optional — X/Twitter social intelligence]';
+  const inputTwex = await askQuestion(` 5. TWEX_API_KEY / TWITTER_BEARER_TOKEN (X/Twitter — social intelligence & sentiment)${defaultTwex}: `);
   twexApiKey = inputTwex.trim() || twexApiKey;
 
   const defaultOpenTwitter = openTwitterToken ? ` [Default: ${openTwitterToken.slice(0, 8)}...]` : ' [Optional — primary Twitter source (6551.io/mcp, free)]';
-  const inputOpenTwitter = await askQuestion(` 5b. TWITTER_TOKEN (OpenTwitter 6551 — profiles, KOL followers, engagement; used by CT Alpha)${defaultOpenTwitter}: `);
+  const inputOpenTwitter = await askQuestion(` 5b. TWITTER_TOKEN (OpenTwitter 6551 — profiles, KOL followers, engagement)${defaultOpenTwitter}: `);
   openTwitterToken = inputOpenTwitter.trim() || openTwitterToken;
 
-  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Optional — GoPlus has no Robinhood chain data; used for other EVM chains]';
-  const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (Optional — EVM security audit; not available on Robinhood chain)${defaultGoplus}: `);
+  const defaultGoplus = goplusApiKey ? ` [Default: ${goplusApiKey.slice(0, 8)}...]` : ' [Mandatory for EVM/Robinhood token security audit]';
+  const inputGoplus = await askQuestion(` 6. GOPLUS_API_KEY (EVM token security audit — Robinhood Chain)${defaultGoplus}: `);
   goplusApiKey = inputGoplus.trim() || goplusApiKey;
 
-  const defaultPoly = polymarketPrivateKey ? ` [Default: ${polymarketPrivateKey.slice(0, 8)}...]` : ' [Optional — prediction agent is in no-call mode]';
-  const inputPoly = await askQuestion(` 7. POLYMARKET_PRIVATE_KEY (Optional — Polymarket Polygon L2 trading key; agent currently no-call)${defaultPoly}: `);
-  polymarketPrivateKey = inputPoly.trim() || polymarketPrivateKey;
-
-  const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Optional — Uniswap Trade API (EVM/Robinhood swap entry)]';
-  const inputUniswap = await askQuestion(` 8. UNISWAP_API_KEY (Optional — Uniswap Trade API, EVM/Robinhood swap entry)${defaultUniswap}: `);
+  const defaultUniswap = uniswapApiKey ? ` [Default: ${uniswapApiKey.slice(0, 8)}...]` : ' [Optional — Uniswap Trade API (Robinhood/EVM swap entry)]';
+  const inputUniswap = await askQuestion(` 7. UNISWAP_API_KEY (Optional — Uniswap Trade API, Robinhood/EVM swap entry)${defaultUniswap}: `);
   uniswapApiKey = inputUniswap.trim() || uniswapApiKey;
 
-  const defaultJupiter = jupiterApiKey ? ` [Default: ${jupiterApiKey.slice(0, 8)}...]` : ' [Optional — higher rate limits for Solana Jupiter quotes]';
-  const inputJupiter = await askQuestion(` 9. JUPITER_API_KEY (Optional — Solana swap entry rate limits)${defaultJupiter}: `);
-  jupiterApiKey = inputJupiter.trim() || jupiterApiKey;
-
   // 6. WEB3 RPC ENDPOINTS
-  console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS & HIGH-VELOCITY NETWORK NODES');
-  let solanaRpcUrl = existingEnv.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-  let solanaWssUrl = existingEnv.SOLANA_WSS_URL || 'wss://api.mainnet-beta.solana.com';
-  let evmBaseRpcUrl = existingEnv.EVM_BASE_RPC_URL || existingEnv.EVM_RPC_URL || 'https://mainnet.base.org';
-  let evmEthRpcUrl = existingEnv.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com';
-  let evmRobinhoodRpcUrl = existingEnv.EVM_ROBINHOOD_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+  console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS (Robinhood Chain — EVM L2, chain ID 4663, native ETH)');
+  let evmRobinhoodRpcUrl = existingEnv.EVM_ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com';
 
-  console.log(' 💡 Quick Solana RPC option: you can paste a HELIUS API KEY directly!');
-  const heliusInput = await askQuestion(' 1. Have a Helius API Key? Paste it here (or press ENTER for manual/default): ');
-
-  if (heliusInput.trim()) {
-    const key = heliusInput.trim();
-    solanaRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${key}`;
-    solanaWssUrl = `wss://mainnet.helius-rpc.com/?api-key=${key}`;
-    console.log(`    ✅ Auto-configured Helius RPC & WSS URLs with your API key!`);
-  } else {
-    const defaultSolRpc = solanaRpcUrl ? ` [ALREADY SET: ${solanaRpcUrl.slice(0, 35)}...]` : ' [Default: Public Solana RPC]';
-    const inputSolRpc = await askQuestion(`    a. SOLANA_RPC_URL (HTTP)${defaultSolRpc}: `);
-    solanaRpcUrl = inputSolRpc.trim() || solanaRpcUrl;
-
-    const defaultSolWss = solanaWssUrl ? ` [ALREADY SET: ${solanaWssUrl.slice(0, 35)}...]` : ' [Default: Public Solana WSS]';
-    const inputSolWss = await askQuestion(`    b. SOLANA_WSS_URL (WebSocket)${defaultSolWss}: `);
-    solanaWssUrl = inputSolWss.trim() || solanaWssUrl;
-  }
-
-  const defaultBaseRpc = evmBaseRpcUrl ? ` [ALREADY SET: ${evmBaseRpcUrl}]` : ' [Default: https://mainnet.base.org]';
-  const inputBaseRpc = await askQuestion(` 2. EVM_BASE_RPC_URL (Base L2 RPC)${defaultBaseRpc}: `);
-  evmBaseRpcUrl = inputBaseRpc.trim() || evmBaseRpcUrl;
-
-  const defaultEthRpc = evmEthRpcUrl ? ` [ALREADY SET: ${evmEthRpcUrl}]` : ' [Default: https://eth.llamarpc.com]';
-  const inputEthRpc = await askQuestion(` 3. EVM_ETH_RPC_URL (Ethereum Mainnet RPC)${defaultEthRpc}: `);
-  evmEthRpcUrl = inputEthRpc.trim() || evmEthRpcUrl;
-
-  const defaultRhRpc = evmRobinhoodRpcUrl ? ` [ALREADY SET: ${evmRobinhoodRpcUrl}]` : ' [Default: https://arb1.arbitrum.io/rpc]';
-  const inputRhRpc = await askQuestion(` 4. EVM_ROBINHOOD_RPC_URL (Robinhood L2 / Arbitrum RPC — used for on-chain honeypot checks)${defaultRhRpc}: `);
+  const defaultRhRpc = evmRobinhoodRpcUrl ? ` [ALREADY SET: ${evmRobinhoodRpcUrl}]` : ' [Default: https://rpc.mainnet.chain.robinhood.com]';
+  const inputRhRpc = await askQuestion(` 1. EVM_ROBINHOOD_RPC_URL (Robinhood Chain RPC — used for on-chain swaps & honeypot checks)${defaultRhRpc}: `);
   evmRobinhoodRpcUrl = inputRhRpc.trim() || evmRobinhoodRpcUrl;
 
-  // 7. BURNER WALLETS & EXCHANGE KEYS
-  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLETS & EXCHANGE API KEYS');
-  console.log('   ⚠️  Wallet keys are stored ONLY in .env on this machine. Use burner wallets with capped funds.');
-  let solanaPrivateKey = existingEnv.SOLANA_PRIVATE_KEY || '';
+  // 7. BURNER WALLET (EVM)
+  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLET (EVM — Robinhood Chain)');
+  console.log('   ⚠️  Wallet key is stored ONLY in .env on this machine. Use burner wallets with capped funds.');
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
-  let hyperliquidPrivateKey = existingEnv.HYPERLIQUID_PRIVATE_KEY || '';
-
-  const defaultSolPk = solanaPrivateKey ? ` [ALREADY SET: ${solanaPrivateKey.slice(0, 8)}...]` : ' [Optional — required only for live on-chain Solana execution]';
-  const inputSolPk = await askQuestion(` 1. SOLANA_PRIVATE_KEY${defaultSolPk}: `);
-  solanaPrivateKey = inputSolPk.trim() || solanaPrivateKey;
 
   const defaultEvmPk = evmPrivateKey ? ` [ALREADY SET: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional — required only for live on-chain EVM execution]';
-  const inputEvmPk = await askQuestion(` 2. EVM_PRIVATE_KEY${defaultEvmPk}: `);
+  const inputEvmPk = await askQuestion(` 1. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  const defaultHlPk = hyperliquidPrivateKey ? ` [ALREADY SET: ${hyperliquidPrivateKey.slice(0, 8)}...]` : ' [Optional — whale tracking is read-only; key only needed for perps execution]';
-  const inputHlPk = await askQuestion(` 3. HYPERLIQUID_PRIVATE_KEY (Optional — perps trading account key)${defaultHlPk}: `);
-  hyperliquidPrivateKey = inputHlPk.trim() || hyperliquidPrivateKey;
-
   // 8. OPERATING MODE
-  console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCES');
+  console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCE');
   const dryRunChoice = await askQuestion(' 1. Run agents in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
   const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
 
   const autoExecChoice = await askQuestion(' 2. Enable AUTO-EXECUTE (bot executes trades itself)? (y/N) [Default N — manual execution, safest]: ') || 'n';
   const autoExecuteEnabled = autoExecChoice.toLowerCase() === 'y' ? 'true' : 'false';
 
-  const defaultSolSim = existingEnv.SIMULATION_BALANCE_SOL ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_SOL} SOL]` : ' [Default 10.0]';
-  const simSolBalance = await askQuestion(` 3. Starting Simulation Balance for Solana (SOL)${defaultSolSim}: `) || existingEnv.SIMULATION_BALANCE_SOL || '10.0';
-
   const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
-  const simEthBalance = await askQuestion(` 4. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
-
-  const defaultPolySim = existingEnv.SIMULATION_BALANCE_POLYMARKET ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_POLYMARKET} USDC]` : ' [Default 500.0]';
-  const simPolyBalance = await askQuestion(` 5. Starting Simulation Balance for Polymarket (USDC)${defaultPolySim}: `) || existingEnv.SIMULATION_BALANCE_POLYMARKET || '500.0';
-
-  const defaultHlSim = existingEnv.SIMULATION_BALANCE_HYPERLIQUID ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_HYPERLIQUID} USDC]` : ' [Default 1000.0]';
-  const simHlBalance = await askQuestion(` 6. Starting Simulation Balance for Hyperliquid Perps (USDC)${defaultHlSim}: `) || existingEnv.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
+  const simEthBalance = await askQuestion(` 3. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
 
   const primaryAiKey = allKeys[0] || '';
 
@@ -377,10 +318,7 @@ async function runWizard() {
     DRY_RUN: isDryRun,
     AUTO_EXECUTE_ENABLED: autoExecuteEnabled,
     LOG_LEVEL: 'info',
-    SIMULATION_BALANCE_SOL: simSolBalance.trim(),
     SIMULATION_BALANCE_ETH: simEthBalance.trim(),
-    SIMULATION_BALANCE_POLYMARKET: simPolyBalance.trim(),
-    SIMULATION_BALANCE_HYPERLIQUID: simHlBalance.trim(),
     DISCORD_BOT_TOKEN: botToken.trim(),
     DISCORD_CLIENT_ID: clientId.trim(),
     DISCORD_CHANNEL_CONTROL_ROOM: controlRoomId.trim(),
@@ -402,19 +340,10 @@ async function runWizard() {
     TWITTER_BEARER_TOKEN: twexApiKey.trim(),
     TWITTER_TOKEN: openTwitterToken.trim(),
     GOPLUS_API_KEY: goplusApiKey.trim(),
-    POLYMARKET_PRIVATE_KEY: polymarketPrivateKey.trim(),
     UNISWAP_API_KEY: uniswapApiKey.trim(),
-    JUPITER_API_KEY: jupiterApiKey.trim(),
-    SOLANA_RPC_URL: solanaRpcUrl.trim(),
-    SOLANA_WSS_URL: solanaWssUrl.trim(),
-    EVM_BASE_RPC_URL: evmBaseRpcUrl.trim(),
-    EVM_RPC_URL: evmBaseRpcUrl.trim(),
-    EVM_ETH_RPC_URL: evmEthRpcUrl.trim(),
+    EVM_RPC_URL: evmRobinhoodRpcUrl.trim(),
     EVM_ROBINHOOD_RPC_URL: evmRobinhoodRpcUrl.trim(),
-    SOLANA_PRIVATE_KEY: solanaPrivateKey.trim(),
     EVM_PRIVATE_KEY: evmPrivateKey.trim(),
-    HYPERLIQUID_PRIVATE_KEY: hyperliquidPrivateKey.trim(),
-    RUGCHECK_API_URL: 'https://api.rugcheck.xyz/v1',
   };
 
   // Per-key backup config: AI_KEY_N_PROVIDER / AI_KEY_N_BASE_URL / AI_KEY_N_MODEL_NAME (slot = position in AI_API_KEYS)
@@ -460,7 +389,7 @@ async function runWizard() {
   console.log('✅ Configuration file (.env) successfully generated!');
   console.log(`💡 Operating Mode: ${isDryRun === 'true' ? 'SIMULATION (DRY_RUN ACTIVE)' : 'LIVE TRADING (CAUTION)'}`);
   console.log(`⚡ Auto-Execute: ${autoExecuteEnabled === 'true' ? 'ENABLED (bot trades itself)' : 'DISABLED (manual execution via call cards)'}`);
-  console.log(`🪙 Simulation Balances: ${simSolBalance} SOL | ${simEthBalance} ETH | $${simPolyBalance} USDC | $${simHlBalance} USDC perps`);
+  console.log(`🪙 Simulation Balance: ${simEthBalance} ETH`);
   console.log('💡 All API keys and adapter credentials saved securely in .env');
   console.log('   Next steps: run `npm install`, then `npm run build`, then `pm2 start dist/index.js --name athena-agent --update-env`');
   console.log('======================================================\n');

@@ -191,7 +191,7 @@ describe('RobinhoodScreeningAgent', () => {
     expect(agent.preFilter(healthy, ETH_PRICE).ok).toBe(true); // sanity: GMGN audit gates pass
     const reports = await agent.runScreeningPass();
     expect(reports.length).toBe(1);
-    expect(reports[0].payload?.domain).toBe('MEME_EVM');
+    expect(reports[0].payload?.domain).toBe('MEME_ROBINHOOD');
   });
 
   it('preFilter rejects honeypot & high-tax tokens from GMGN audit data', () => {
@@ -226,7 +226,7 @@ describe('RobinhoodScreeningAgent', () => {
     const strat = requireEsm(stratPath).default;
 
     const ctx = {
-      domain: 'MEME_EVM',
+      domain: 'MEME_ROBINHOOD',
       symbol: token.symbol,
       contractAddress: token.address,
       priceUsd: token.priceUsd,

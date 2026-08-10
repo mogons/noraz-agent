@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 
-export type SolChain = 'sol' | 'base' | 'eth' | 'bsc' | 'robinhood';
+export type Chain = 'robinhood';
 export type RankInterval = '1m' | '5m' | '1h' | '6h' | '24h';
 
 export interface GMGNRawToken {
-  chain: SolChain;
+  chain: Chain;
   address: string;
   symbol: string;
   name: string;
@@ -137,7 +137,7 @@ export class GMGNAdapter {
 
   /**
    * Global pacing queue — ALL GMGN requests (every adapter instance: meme
-   * solana/robinhood, LP enrich, etc.) queue here with minimal spacing
+   * robinhood, LP enrich, etc.) queue here with minimal spacing
    * so requests do not collide within a 5-minute session. GMGN uses
    * a leaky bucket rate=20/capacity=20 per key — with this spacing, bursts
    * (e.g. 30 simultaneous LP enrich requests) spread out automatically.
@@ -253,7 +253,7 @@ export class GMGNAdapter {
    */
   private normalizeToken(
     raw: any,
-    chain: SolChain,
+    chain: Chain,
     source: 'gmgn' | 'dexscreener' = 'gmgn',
     bareVolumeWindow: '1h' | '24h' = '24h'
   ): GMGNRawToken {
@@ -377,7 +377,7 @@ export class GMGNAdapter {
    * Fetch a single token's detail from GMGN OpenAPI. Response nests the token under
    * `data`; null on any failure (fail-closed).
    */
-  public async fetchTokenInfo(chain: SolChain, address: string): Promise<GMGNRawToken | null> {
+  public async fetchTokenInfo(chain: Chain, address: string): Promise<GMGNRawToken | null> {
     const res = await this.gmgnRequest<any>('GET', '/v1/token/info', { chain, address });
     if (!res) return null;
     const data = res?.data;
@@ -392,7 +392,7 @@ export class GMGNAdapter {
    * (meme agent, LP hub, on-demand audit) so the same token is not
    * audited repeatedly within the same window. Fail-closed: error → null.
    */
-  public async fetchTokenSecurity(chain: SolChain, address: string): Promise<GMGNSecurityAudit | null> {
+  public async fetchTokenSecurity(chain: Chain, address: string): Promise<GMGNSecurityAudit | null> {
     const key = `${chain}:${address.toLowerCase()}`;
     const cached = GMGNAdapter.securityCache.get(key);
     if (cached && Date.now() - cached.at < GMGNAdapter.SECURITY_CACHE_TTL_MS) {
@@ -431,7 +431,7 @@ export class GMGNAdapter {
    * of 60 seconds — used by meme agents (accumulation candidates) & wallet-tracker (exit
    * alerts) without duplicate requests. Fail-open: error → [].
    */
-  public async fetchTrackTrades(chain: SolChain, kind: 'smartmoney' | 'kol'): Promise<GMGNTrackTrade[]> {
+  public async fetchTrackTrades(chain: Chain, kind: 'smartmoney' | 'kol'): Promise<GMGNTrackTrade[]> {
     const key = `track:${chain}:${kind}`;
     const cached = GMGNAdapter.trackCache.get(key);
     if (cached && Date.now() - cached.at < GMGNAdapter.TRACK_CACHE_TTL_MS) {
@@ -469,7 +469,7 @@ export class GMGNAdapter {
    * platforms (Pump.fun, letsbonk, ...), and min_* / max_* range fields.
    */
   public async fetchRank(
-    chain: SolChain = 'sol',
+    chain: Chain = 'robinhood',
     opts: {
       interval?: RankInterval;
       limit?: number;
@@ -499,7 +499,7 @@ export class GMGNAdapter {
    * returned under the `pump` key by the API.
    */
   public async fetchTrenches(
-    chain: SolChain = 'sol',
+    chain: Chain = 'robinhood',
     opts: {
       types?: Array<'new_creation' | 'near_completion' | 'completed'>;
       limit?: number;
@@ -508,10 +508,9 @@ export class GMGNAdapter {
   ): Promise<{ newCreation: GMGNRawToken[]; nearCompletion: GMGNRawToken[]; completed: GMGNRawToken[] }> {
     const types = opts.types?.length ? opts.types : ['new_creation', 'near_completion', 'completed'];
     const actualLimit = opts.limit || 80;
-    // launchpad_platform_v2 breaks robinhood (returns 0 tokens); only SOL supports it
+    // launchpad_platform_v2 breaks robinhood (returns 0 tokens) — omitted for robinhood
     const section: Record<string, unknown> = {
       filters: ['offchain', 'onchain'],
-      ...(chain === 'sol' ? { launchpad_platform_v2: true } : {}),
       limit: actualLimit,
       ...(opts.filters || {}),
     };
@@ -534,7 +533,7 @@ export class GMGNAdapter {
    * groups run in parallel and merge by trigger_at desc.
    */
   public async fetchTokenSignals(
-    chain: SolChain = 'sol',
+    chain: Chain = 'robinhood',
     signalTypes: number[] = [],
     opts: {
       groups?: Array<{ signal_type?: number[]; mc_min?: number; mc_max?: number; trigger_mc_min?: number; trigger_mc_max?: number; total_fee_min?: number; total_fee_max?: number }>;
@@ -564,13 +563,13 @@ export class GMGNAdapter {
    */
   public async fetchHotSearches(
     opts: {
-      chain?: SolChain;
+      chain?: Chain;
       interval?: RankInterval;
       limit?: number;
       filters?: string[];
     } = {}
   ): Promise<GMGNRawToken[]> {
-    const chain = opts.chain || 'sol';
+    const chain = opts.chain || 'robinhood';
     const res = await this.gmgnRequest<any>('POST', '/v1/market/hot_searches', {}, {
       params: [{
         label: 'hot-search',
@@ -592,13 +591,13 @@ export class GMGNAdapter {
    * DexScreener fallback (kept from legacy behavior). Returns normalized tokens with
    * source: 'dexscreener' and GMGN-only metrics zeroed/null — used only when GMGN fails.
    */
-  public async fetchDexScreenerFallback(chain: SolChain = 'sol'): Promise<GMGNRawToken[]> {
+  public async fetchDexScreenerFallback(chain: Chain = 'robinhood'): Promise<GMGNRawToken[]> {
     try {
       // 1. Try DexScreener Top Boosts API for real live trending tokens
       const boostsRes = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
       if (boostsRes.ok) {
         const boostedTokens: any[] = (await boostsRes.json()) as any[];
-        const targetChainId = chain === 'sol' ? 'solana' : chain;
+        const targetChainId = 'robinhood';
         const matchingBoosted = boostedTokens.filter((t: any) => t.chainId === targetChainId);
 
         if (matchingBoosted.length > 0) {
@@ -614,11 +613,11 @@ export class GMGNAdapter {
       }
 
       // 2. Fallback to DexScreener Search API if Top Boosts is empty for target chain
-      const query = chain === 'sol' ? 'pump' : chain;
+      const query = 'robinhood';
       const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${query}`);
       if (searchRes.ok) {
         const searchData: any = await searchRes.json();
-        const targetChainId = chain === 'sol' ? 'solana' : chain;
+        const targetChainId = 'robinhood';
         if (searchData.pairs && Array.isArray(searchData.pairs)) {
           const chainPairs = searchData.pairs.filter((p: any) => p.chainId === targetChainId);
           if (chainPairs.length > 0) {
@@ -633,7 +632,7 @@ export class GMGNAdapter {
     return [];
   }
 
-  private normalizeDexScreenerPair(pair: any, chain: SolChain): GMGNRawToken {
+  private normalizeDexScreenerPair(pair: any, chain: Chain): GMGNRawToken {
     const priceUsd = parseFloat(pair.priceUsd || '0') || 0;
     const volume24hUsd = pair.volume?.h24 || 0;
     const volume1hUsd = pair.volume?.h1 || 0;
@@ -695,7 +694,7 @@ export class GMGNAdapter {
    * DexScreener fallback list in the old GMGNTokenSignal shape (source: 'dexscreener',
    * smart-money metrics zeroed). New GMGN endpoints live on fetchRank/fetchTrenches/etc.
    */
-  public async fetchTrendingSignals(chain: SolChain = 'sol'): Promise<GMGNTokenSignal[]> {
+  public async fetchTrendingSignals(chain: Chain = 'robinhood'): Promise<GMGNTokenSignal[]> {
     const tokens = await this.fetchDexScreenerFallback(chain);
     return tokens.map((t) => ({
       ...t,

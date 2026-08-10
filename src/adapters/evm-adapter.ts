@@ -2,7 +2,7 @@ import type { WalletService } from '../services/wallet-service.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 
 export interface EVMTradeRequest {
-  chain: 'base' | 'ethereum' | 'bsc' | 'robinhood' | string;
+  chain: string;
   tokenAddress: string;
   amountEth: number;
   slippagePercentage?: number; // e.g. 1.5%
@@ -34,13 +34,7 @@ export interface EVMSwapRequest {
 }
 
 const CHAIN_ID_MAP: Record<string, number> = {
-  ethereum: 1, eth: 1, '1': 1,
-  base: 8453, '8453': 8453,
-  arbitrum: 42161, arb: 42161, '42161': 42161,
-  optimism: 10, op: 10, '10': 10,
-  polygon: 137, poly: 137, '137': 137,
-  bsc: 56, binance: 56, '56': 56,
-  robinhood: 5318008, '5318008': 5318008,
+  robinhood: 4663, '4663': 4663,
 };
 
 export class EVMTradeAdapter {
@@ -52,19 +46,13 @@ export class EVMTradeAdapter {
 
   public parseChainId(chainInput: string | number): number {
     const key = String(chainInput).toLowerCase().trim();
-    return CHAIN_ID_MAP[key] || 1;
+    return CHAIN_ID_MAP[key] || 4663;
   }
 
   public async executeBuyToken(request: EVMTradeRequest): Promise<EVMTradeResult> {
-    const dexName = request.chain === 'robinhood' 
-      ? 'Uniswap / Robinhood L2 Swap Router' 
-      : request.chain === 'base' 
-      ? 'Aerodrome / Uniswap v3 Base' 
-      : request.chain === 'bsc' 
-      ? 'PancakeSwap v3' 
-      : 'Uniswap v3 Ethereum';
+    const dexName = 'Uniswap / Robinhood L2 Swap Router';
 
-    console.log(`[EVM ADAPTER] Initiating Buy Order on ${String(request.chain).toUpperCase()} via ${dexName} (Amount: ${request.amountEth} ETH/BNB)`);
+    console.log(`[EVM ADAPTER] Initiating Buy Order on ${String(request.chain).toUpperCase()} via ${dexName} (Amount: ${request.amountEth} ETH)`);
 
     if (this.isDryRun) {
       // Realistic dry run: fetch REAL quote from the Uniswap API, report real numbers, do NOT broadcast.
@@ -94,7 +82,7 @@ export class EVMTradeAdapter {
             tokenOut: request.tokenAddress,
             amount: BigInt(Math.round(request.amountEth * 1e18)).toString(),
             type: 'EXACT_INPUT',
-            chainId: 5318008,
+            chainId: this.parseChainId(request.chain),
             configs: [{ protocols: ['V2','V3','V4'], routingType: 'CLASSIC', enableUniversalRouter: true }],
           }),
           signal: controller.signal,
@@ -148,7 +136,7 @@ export class EVMTradeAdapter {
   }
 
   /**
-   * Send native ETH/BNB/MATIC directly via WalletService (viem)
+   * Send native ETH directly via WalletService (viem)
    */
   public async sendToken(request: EVMSendRequest, walletService?: WalletService): Promise<EVMTradeResult> {
     const chainId = this.parseChainId(request.chain);
@@ -159,7 +147,7 @@ export class EVMTradeAdapter {
       return {
         success: true,
         txHash: simHash,
-        explorerUrl: walletService ? walletService.getExplorerUrl(chainId, simHash) : `https://etherscan.io/tx/${simHash}`,
+        explorerUrl: walletService ? walletService.getExplorerUrl(chainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`,
         chain: String(request.chain),
         inputEth: request.amountEth,
         outputTokens: request.amountEth,
@@ -211,7 +199,7 @@ export class EVMTradeAdapter {
       return {
         success: true,
         txHash: simHash,
-        explorerUrl: walletService ? walletService.getExplorerUrl(chainId, simHash) : `https://etherscan.io/tx/${simHash}`,
+        explorerUrl: walletService ? walletService.getExplorerUrl(chainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`,
         chain: String(request.chain),
         inputEth: request.amountEth,
         outputTokens: request.amountEth * 3200, // Simulated output e.g. ETH -> USDC

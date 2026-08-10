@@ -93,7 +93,7 @@ switch (subCommand) {
   athena wizard (or setup)   - Launch Interactive Configuration Wizard for .env & Tokens
   athena terminal (or tui)   - Launch Parthenon Interactive Terminal TUI
   athena deploy              - Deploy 24/7 Background Daemon via PM2 Process Manager
-  athena test                - Run Automated Unit Test Suite (12/12 Core Modules)
+  athena test                - Run Automated Unit Test Suite (Vitest)
   athena build               - Compile TypeScript Codebase into /dist
   athena update              - Pull Latest Git Updates, Install, & Re-build
 `);

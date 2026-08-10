@@ -11,7 +11,7 @@ describe('Swarm Consensus gate-only path (agent-computed confidence)', () => {
     const swarm = new SwarmConsensusEngine();
     const res = swarm.evaluateSignal({
       symbol: 'GATE_85',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       contractAddress: 'gate85',
       liquidityUsd: 0,
       volume1hUsd: 0,
@@ -27,7 +27,7 @@ describe('Swarm Consensus gate-only path (agent-computed confidence)', () => {
     const swarm = new SwarmConsensusEngine();
     const res = swarm.evaluateSignal({
       symbol: 'GATE_50',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       contractAddress: 'gate50',
       liquidityUsd: 0,
       volume1hUsd: 0,
@@ -46,7 +46,7 @@ describe('Swarm Consensus gate-only path (agent-computed confidence)', () => {
     const swarm = new SwarmConsensusEngine();
     const res = swarm.evaluateSignal({
       symbol: 'GATE_STRAT',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       contractAddress: 'gate-strat',
       liquidityUsd: 0,
       volume1hUsd: 0,

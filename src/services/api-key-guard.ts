@@ -33,6 +33,9 @@ export class ApiKeyGuardService {
       if (key === 'AI_API_KEY') {
         val = val || process.env.AI_API_KEYS || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
       }
+      if (key === 'GMGN_API_KEY') {
+        val = val || process.env.GMGN_API_KEY_ROBINHOOD;
+      }
       if (!val || val.trim() === '' || val.includes('YOUR_') || val.includes('placeholder') || val.includes('mock')) {
         missingKeys.push(key);
       }

@@ -1,14 +1,9 @@
 export type AgentDomainId =
-  | 'meme-solana'
   | 'meme-robinhood'
-  | 'perps'
-  | 'nft'
-  | 'prediction'
-  | 'ct-alpha'
-  | 'lp-solana'
-  | 'lp-robinhood';
+  | 'lp-robinhood'
+  | 'nft';
 
-export type AgentCategory = 'MEME' | 'LP' | 'PERPS' | 'NFT' | 'PREDICTION' | 'CT_ALPHA';
+export type AgentCategory = 'MEME' | 'LP' | 'NFT';
 
 export interface AgentDomainInfo {
   id: AgentDomainId;
@@ -22,76 +17,31 @@ export interface AgentDomainInfo {
 
 export const AGENT_DOMAINS: AgentDomainInfo[] = [
   {
-    id: 'meme-solana',
-    displayName: 'MEME-SOLANA',
-    name: 'Solana DEX Meme Screening',
-    channel: 'call-meme-solana',
-    aliases: ['solana', 'solana-meme'],
-    requiredKeys: ['AI_API_KEY'],
-    category: 'MEME',
-  },
-  {
     id: 'meme-robinhood',
     displayName: 'MEME-ROBINHOOD',
     name: 'Robinhood Chain Meme Screening',
     channel: 'call-meme-robinhood',
-    aliases: ['robinhood', 'evm', 'evm-meme', 'base', 'meme-evm'],
+    aliases: ['robinhood', 'evm', 'evm-meme', 'meme-evm'],
     requiredKeys: ['AI_API_KEY'],
     category: 'MEME',
   },
   {
-    id: 'perps',
-    displayName: 'WHALE-TRACKING',
-    name: 'Smart Trader & Whale Positioning Tracking (Hyperliquid)',
-    channel: 'call-whale-tracking',
-    aliases: ['perpetual', 'hyperliquid', 'perps-futures', 'futures', 'whale', 'smartmoney', 'smart-money'],
-    requiredKeys: ['AI_API_KEY'],
-    category: 'PERPS',
+    id: 'lp-robinhood',
+    displayName: 'LP-ROBINHOOD',
+    name: 'Robinhood Chain Concentrated Liquidity Velocity',
+    channel: 'call-lp-robinhood',
+    aliases: ['uniswap', 'evm-lp', 'robinhood-lp'],
+    requiredKeys: ['KRYSTAL_CLOUD_API_KEY', 'GMGN_API_KEY', 'AI_API_KEY'],
+    category: 'LP',
   },
   {
     id: 'nft',
     displayName: 'NFT-SNIPING',
-    name: 'EVM NFT Floor & Rarity Sniping (OpenSea)',
+    name: 'Robinhood Chain NFT Floor & Rarity Sniping (OpenSea)',
     channel: 'call-nft-sniping',
     aliases: ['opensea', 'nft-sniper'],
     requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
     category: 'NFT',
-  },
-  {
-    id: 'prediction',
-    displayName: 'PREDICTION-MARKETS',
-    name: 'Polymarket Prediction Market Arbitrage',
-    channel: 'call-prediction-markets',
-    aliases: ['polymarket', 'poly', 'prediction-market'],
-    requiredKeys: ['AI_API_KEY'],
-    category: 'PREDICTION',
-  },
-  {
-    id: 'ct-alpha',
-    displayName: 'CT-ALPHA',
-    name: 'Smart CT & AI Narrative Intelligence',
-    channel: 'call-ct-alpha',
-    aliases: ['twitter', 'ct', 'ctalpha'],
-    requiredKeys: ['TWEX_API_KEY', 'AI_API_KEY'],
-    category: 'CT_ALPHA',
-  },
-  {
-    id: 'lp-solana',
-    displayName: 'LP-SOLANA',
-    name: 'Solana Concentrated Liquidity Velocity (Meteora)',
-    channel: 'call-lp-solana',
-    aliases: ['meteora', 'solana-lp'],
-    requiredKeys: ['AI_API_KEY'],
-    category: 'LP',
-  },
-  {
-    id: 'lp-robinhood',
-    displayName: 'LP-EVM',
-    name: 'EVM Concentrated Liquidity Velocity (Uniswap)',
-    channel: 'call-lp-robinhood',
-    aliases: ['uniswap', 'evm-lp'],
-    requiredKeys: ['AI_API_KEY'],
-    category: 'LP',
   },
 ];
 

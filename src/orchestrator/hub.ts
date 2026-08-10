@@ -3,11 +3,9 @@ import { globalRiskEngineV2 } from './risk-engine-v2.js';
 import { AGENT_DOMAINS, getAgentDomain, normalizeDomainKey as registryNormalizeDomain } from './agent-registry.js';
 import type { AgentDomainId } from './agent-registry.js';
 import type { AgentReport, ScreeningAgent } from '../agents/shared/agent-contract.js';
-import type { MeteoraDLMMAdapter } from '../adapters/meteora-dlmm-adapter.js';
 import type { KrystalCloudAdapter } from '../adapters/krystal-cloud-adapter.js';
 import type { GMGNAdapter } from '../adapters/gmgn-adapter.js';
-import { securityGateToken, tokenSecurityLabel, securityAuditGate, tokenSecurityAuditLabel } from '../agents/shared/gmgn-meme-helpers.js';
-import { buildLPPayload } from './dispatch.js';
+import { securityGateToken, securityAuditGate, tokenSecurityAuditLabel } from '../agents/shared/gmgn-meme-helpers.js';
 
 export interface ChannelStatus {
   channelId: string;
@@ -19,7 +17,6 @@ export interface ChannelStatus {
 export interface AthenaHubOptions {
   /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
-  meteoraAdapter?: MeteoraDLMMAdapter;
   krystalAdapter?: KrystalCloudAdapter;
   gmgnAdapter?: GMGNAdapter;
 }
@@ -31,7 +28,6 @@ export class AthenaHub {
   private autoExecuteStates: Map<string, { enabled: boolean; maxTradeAmount: number }> = new Map();
 
   private agentFactories: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
-  private meteoraAdapter?: MeteoraDLMMAdapter;
   private krystalAdapter?: KrystalCloudAdapter;
   private gmgnAdapter?: GMGNAdapter;
 
@@ -40,7 +36,6 @@ export class AthenaHub {
   constructor(options: AthenaHubOptions = {}) {
     this.riskManager = new RiskManager();
     this.agentFactories = options.agentFactories ?? {};
-    this.meteoraAdapter = options.meteoraAdapter;
     this.krystalAdapter = options.krystalAdapter;
     this.gmgnAdapter = options.gmgnAdapter;
     this.initializeAgentStatesDefaultPaused();
@@ -51,18 +46,12 @@ export class AthenaHub {
     this.agentFactories = { ...this.agentFactories, ...factories };
   }
 
-  /** Late wiring seam for the Meteora LP adapter (composition root). */
-  public attachAdapters(deps: { meteoraAdapter?: MeteoraDLMMAdapter }): void {
-    this.meteoraAdapter = deps.meteoraAdapter ?? this.meteoraAdapter;
-  }
-
   public attachStateStore(store: any): void {
     this.stateStore = store;
     const savedStates = store.getAllAgentStates ? store.getAllAgentStates() : {};
     const domains = AGENT_DOMAINS.map((d) => d.id);
     for (const d of domains) {
       const savedState = savedStates[d];
-      // Default strictly to false (PAUSED) unless explicitly enabled in state
       const isActive = savedState !== undefined ? Boolean(savedState) : false;
       this.agentStates.set(d, isActive);
     }
@@ -70,7 +59,6 @@ export class AthenaHub {
   }
 
   private initializeAgentStatesDefaultPaused(): void {
-    // All sub-agents are PAUSED by default on startup until explicitly resumed by user
     const domains = AGENT_DOMAINS.map((d) => d.id);
     for (const d of domains) {
       this.agentStates.set(d, false);
@@ -157,7 +145,6 @@ export class AthenaHub {
     const key = domain.toLowerCase().trim();
     console.log(`[HUB] Triggering on-demand screening pass for: ${key.toUpperCase()}`);
 
-    // Registry-driven resolution: canonical id, aliases, and channel names all resolve.
     const info = getAgentDomain(key);
     if (!info) {
       console.warn(`[HUB] Unknown screening domain "${key}" — no agent registered.`);
@@ -165,7 +152,6 @@ export class AthenaHub {
     }
 
     try {
-      // Explicit factory (test DI / custom wiring) wins over default flows.
       const factory = this.agentFactories[info.id];
       if (factory) {
         const agent = await factory();
@@ -183,11 +169,6 @@ export class AthenaHub {
     return [];
   }
 
-  /**
-   * Resolve the LIVE agent instance for a domain (the same singleton the 5-min
-   * loop uses) — or null when no factory is wired (LP domains / fresh resolve).
-   * Used by the chat tool `set_screening_config` to update runtime thresholds.
-   */
   public async getScreeningAgent(domain: string): Promise<ScreeningAgent | null> {
     const info = getAgentDomain(domain);
     if (!info) return null;
@@ -198,10 +179,6 @@ export class AthenaHub {
 
   private async resolveAgent(id: AgentDomainId): Promise<ScreeningAgent> {
     switch (id) {
-      case 'meme-solana': {
-        const { SolanaScreeningAgent } = await import('../agents/meme-solana/solana-screening-agent.js');
-        return new SolanaScreeningAgent();
-      }
       case 'meme-robinhood': {
         const { RobinhoodScreeningAgent } = await import('../agents/meme-robinhood/robinhood-screening-agent.js');
         return new RobinhoodScreeningAgent();
@@ -210,19 +187,6 @@ export class AthenaHub {
         const { NFTScreeningAgent } = await import('../agents/nft/nft-screening-agent.js');
         return new NFTScreeningAgent();
       }
-      case 'prediction': {
-        const { PolymarketAgent } = await import('../agents/prediction/polymarket-agent.js');
-        return new PolymarketAgent();
-      }
-      case 'ct-alpha': {
-        const { CTAlphaAgent } = await import('../agents/ct-alpha/ct-alpha-agent.js');
-        return new CTAlphaAgent();
-      }
-      case 'perps': {
-        const { PerpsScreeningAgent } = await import('../agents/perps/perps-screening-agent.js');
-        const { HyperliquidAdapter } = await import('../adapters/hyperliquid-adapter.js');
-        return new PerpsScreeningAgent(new HyperliquidAdapter());
-      }
       default:
         throw new Error(`No agent factory registered for domain "${id}"`);
     }
@@ -230,7 +194,6 @@ export class AthenaHub {
 
   /**
    * LP domains.
-   * - lp-solana: adapter-flow Meteora DLMM (official data API).
    * - lp-robinhood: Robinhood Chain has no reliable public pool indexer
    *   (subgraph unsupported, Uniswap Data API requires special access) —
    *   reuse the GMGN meme-robinhood screening (graduated-only + GoPlus) then
@@ -239,89 +202,17 @@ export class AthenaHub {
    *   not meme duplicates. CA is surfaced on the card; users look up the pool on Uniswap.
    */
   public async runLPPass(id: AgentDomainId): Promise<AgentReport[]> {
-    if (id === 'lp-solana') {
-      const { MeteoraDLMMAdapter } = await import('../adapters/meteora-dlmm-adapter.js');
-      const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
-      const adapter = this.meteoraAdapter ?? new MeteoraDLMMAdapter();
-      const high = adapter.filterHighYieldPools(await adapter.fetchTopYieldPools());
-      // Enrich the meme token (tokenX) with GMGN: the Meteora DLMM API does not expose
-      // smart money/KOL/CTO — fetch it from GMGN token/info. The token security gate
-      // (honeypot/tax/rug/insider/bundler/top-10) + GMGN /token/security audit
-      // are used as a FILTER — FAIL-CLOSED: token not found / audit
-      // unavailable = pool rejected.
-      const gmgn = this.gmgnAdapter ?? new GMGNAdapter();
-      const enriched = new Map<string, any>();
-      const results: AgentReport[] = [];
-      for (const p of high) {
-        if (p.tokenXAddress && !enriched.has(p.tokenXAddress)) {
-          try {
-            const info = await gmgn.fetchTokenInfo('sol', p.tokenXAddress);
-            enriched.set(p.tokenXAddress, info);
-          } catch { enriched.set(p.tokenXAddress, null); }
-        }
-        const info = enriched.get(p.tokenXAddress) ?? null;
-        // FAIL-CLOSED: token not found in GMGN → audit cannot be verified.
-        if (!info) {
-          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — token not found in GMGN (audit cannot be verified).`);
-          continue;
-        }
-        // LP: tax gate disabled (LP tokens often have small taxes) — other gates remain.
-        const sec = securityGateToken(info, { enableTaxGate: false });
-        if (!sec.ok) {
-          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — ${sec.reasons.join(' ')}`);
-          continue;
-        }
-        // Per-token security audit (honeypot/blacklist/sell-lock) — fail-closed.
-        const audit = await gmgn.fetchTokenSecurity('sol', p.tokenXAddress);
-        const secAudit = securityAuditGate(audit, { enableTaxGate: false });
-        if (!secAudit.ok) {
-          console.log(`[LP SOLANA] ⛔ Pool rejected: ${p.pairName} — AUDIT FAIL: ${secAudit.reasons.join(' ')}`);
-          continue;
-        }
-        const payload = buildLPPayload(p);
-        payload.token0PriceUsd = info.priceUsd || payload.token0PriceUsd;
-        payload.token0MarketCapUsd = info.marketCapUsd || payload.token0MarketCapUsd;
-        payload.token0Volume24hUsd = info.volume24hUsd || payload.token0Volume24hUsd;
-        payload.token0Holders = info.holderCount || payload.token0Holders;
-        payload.token0AgeHours = info.creationTimestamp ? (Date.now() / 1000 - info.creationTimestamp) / 3600 : payload.token0AgeHours;
-        const smart = (info.smartDegenCount ?? 0) + (info.renownedCount ?? 0);
-        if (smart > 0) payload.token0SmartDegenCount = smart;
-        payload.gmgnUrl = `https://gmgn.ai/sol/token/${p.tokenXAddress}`;
-        payload.securityAuditPassed = true;
-        payload.securityScore = tokenSecurityAuditLabel(audit);
-        results.push({
-          passed: true,
-          signal: p,
-          reason: p.aiRecommendation,
-          confidence: 80,
-          payload,
-        });
-      }
-      return results;
-    }
-    // lp-robinhood: Krystal Cloud Data API (a reliable robinhood chain pool
-    // indexer — subgraph unsupported, Uniswap Data API requires special access).
-    // REAL data: tvl, volume/fee/APR per 1h-24h, farm incentives. Filter
-    // mirrors LP solana (Meteora): fee1h>=7, 24h Fee/TVL>1%, velocity>=100%,
-    // tvl>=10k, dedupe per pair. Both token CAs + chart links are surfaced;
-    // meme token details (price/MC/volume/holder/age/smart money) are enriched
-    // from GMGN token/info — the meme token is the one that is NOT a base
-    // asset (WETH/USDC/…), fail-open.
     const { KrystalCloudAdapter } = await import('../adapters/krystal-cloud-adapter.js');
     const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
     const krystal = this.krystalAdapter ?? new KrystalCloudAdapter();
     const high = krystal.filterHighYieldPools(await krystal.fetchTopRobinhoodPools());
-    // Enrich using the GMGN robinhood key (per-key rate limit) — falls back to GMGN_API_KEY.
-    // Meme token security gate (honeypot/tax/rug/insider/bundler/top-10) = FILTER:
-    // a dangerous token rejects its pool (fail-open when not found in GMGN).
     const gmgn = this.gmgnAdapter ?? new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
     const isBaseAsset = (sym: string) => /^(WETH|ETH|USDC|USDT|DAI|WBTC|WSTETH|STETH)$/i.test(sym);
     const enriched = new Map<string, any>(); // tokenAddress -> GMGN info
     const results: AgentReport[] = [];
     for (const p of high) {
       // Order tokens: the meme token (non-base, e.g. PEPE) first,
-      // the base asset (WETH/USDC/…) second — consistent with LP solana
-      // (Meteora: "Chiikawa-SOL", meme first). Fallback: token0 stays first.
+      // the base asset (WETH/USDC/…) second. Fallback: token0 stays first.
       const memeToken = !isBaseAsset(p.token0Symbol)
         ? { addr: p.token0Address, sym: p.token0Symbol }
         : !isBaseAsset(p.token1Symbol)
@@ -454,7 +345,7 @@ export class AthenaHub {
     globalRiskEngineV2.activateKillSwitch(reason);
 
     return {
-      closedPositionsCount: 0, // Mock count of closed positions
+      closedPositionsCount: 0, // informational only — this command closes nothing on-chain, it freezes the hub
       message: `🚨 Emergency Kill Switch Activated! All sub-agents PAUSED and trading locked. Reason: ${reason}`,
     };
   }

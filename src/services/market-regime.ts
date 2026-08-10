@@ -35,13 +35,13 @@ export class MarketRegimeFilter {
       recommendedAction = '⚠️ Extreme volatility: Reduce position sizing by 50% and widen LP tick ranges.';
     } else if (btc24h > 3.0 && eth24h > 3.0) {
       regime = 'TRENDING_BULL';
-      recommendedAction = '🟢 Strong bullish momentum: Spot meme and trend-following perps active.';
+      recommendedAction = '🟢 Strong bullish momentum: Spot meme plays and trend-following entries active.';
     } else if (btc24h < -3.0 && eth24h < -3.0) {
       regime = 'TRENDING_BEAR';
-      recommendedAction = '🔴 Bearish trend: Tighten stop-losses and prioritize perps short setups.';
+      recommendedAction = '🔴 Bearish trend: Tighten stop-losses and prioritize defensive exits.';
     } else {
       regime = 'SIDEWAYS_CHOP';
-      recommendedAction = '🟡 Sideways chop: Pause trend-following leverage perps; favor LP range strategies.';
+      recommendedAction = '🟡 Sideways chop: Pause aggressive entries; favor LP range strategies.';
     }
 
     this.currentRegime = {
@@ -64,12 +64,12 @@ export class MarketRegimeFilter {
    */
   public isDomainAllowedInCurrentRegime(domain: string): boolean {
     if (this.currentRegime.regime === 'EXTREME_VOLATILITY') {
-      // Pause high leverage perps during extreme panic/spike
-      if (domain === 'PERPS') return false;
+      // Pause high-risk domains during extreme panic/spike
+      if (domain === 'MEME_ROBINHOOD') return false;
     }
     if (this.currentRegime.regime === 'SIDEWAYS_CHOP') {
-      // Discourage trend-following perps in chop
-      if (domain === 'PERPS') return false;
+      // Discourage aggressive trend-following in chop
+      if (domain === 'MEME_ROBINHOOD') return false;
     }
     return true;
   }

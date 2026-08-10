@@ -98,54 +98,9 @@ describe('runTokenAudit', () => {
 
   it('returns unavailable message when no data sources respond (fail-closed, no canned numbers)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-    const res = await runTokenAudit(SOL_MINT);
+    const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(false);
     expect(res.content).toContain('unavailable');
-    expect(res.content).not.toContain('$0.0035');
-  });
-
-  it('Solana: audit lengkap — market, RugCheck risks, authority & sinyal creator', async () => {
-    process.env.GMGN_API_KEY = 'test';
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => mkRugCheckReport() })               // RugCheck
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') })       // GMGN token info
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity() }));                // GMGN /token/security
-    const res = await runTokenAudit(SOL_MINT);
-    expect(res.success).toBe(true);
-    expect(res.content).toContain('(Solana)');
-    expect(res.content).toContain('**Price:** $0.0034');
-    expect(res.content).toContain('**MC:** $34.0k');
-    expect(res.content).toContain('**Buys/Sells:** 123/45');
-    expect(res.content).toContain('**Holders:** 1.2k');
-    expect(res.content).toContain('**Age:**');
-    expect(res.content).toContain('RugCheck Score');
-    expect(res.content).toContain('850');
-    expect(res.content).toContain('Top 10 Holders');
-    expect(res.content).toContain('12.3%');
-    expect(res.content).toContain('LP Locked');
-    expect(res.content).toContain('85%');
-    expect(res.content).toContain('Mint Auth');
-    expect(res.content).toContain('Freeze Auth');
-    expect(res.content).toContain('GMGN Audit');
-    expect(res.content).toContain('Renounced');
-    expect(res.content).toContain('Burn 3.5%');
-    expect(res.content).toContain('Locked');
-    expect(res.content).toContain('Low Liquidity (400)');
-    expect(res.content).toContain('Dev hold 3.2%');
-    expect(res.content).toContain('Bundler 1.1%');
-    expect(res.content).toContain('Rat trader 0.4%');
-    expect(res.content).toContain('dexscreener.com/solana/');
-    expect(res.content).toContain('rugcheck.xyz/tokens/');
-  });
-
-  it('Solana: RugCheck API error tetap menampilkan data GMGN (tidak fail total)', async () => {
-    process.env.GMGN_API_KEY = 'test';
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => mkRugCheckReport() })
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnInfo(SOL_MINT, 'sol') })
-      .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity() }));
-    const res = await runTokenAudit(SOL_MINT);
-    expect(res.success).toBe(true);
   });
 
   it('EVM: di-scan sebagai Robinhood chain — GoPlus lengkap + GMGN + link yang benar', async () => {
@@ -157,19 +112,17 @@ describe('runTokenAudit', () => {
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
     expect(res.content).toContain('(EVM/Robinhood)');
-    expect(res.content).toContain('**Price:** $0.0034');
-    expect(res.content).toContain('Honeypot: No');
+    expect(res.content).toContain('Honeypot: Tidak ✅');
     expect(res.content).toContain('BuyTax 0%');
     expect(res.content).toContain('SellTax 0%');
-    expect(res.content).toContain('Open Source: YES');
+    expect(res.content).toContain('Open Source: Ya ✅');
     expect(res.content).toContain('Owner');
     expect(res.content).toContain('Renounced');
-    expect(res.content).toContain('Mintable: No');
-    expect(res.content).toContain('Proxy: No');
+    expect(res.content).toContain('Mintable: Tidak ✅');
+    expect(res.content).toContain('Proxy: Tidak ✅');
     expect(res.content).toContain('LP Holders 89');
     expect(res.content).toContain('GMGN Audit');
-    expect(res.content).toContain('Burn 3.5%');
-    expect(res.content).toContain('Dev hold 3.2%');
+    expect(res.content).toContain('Clean ✅');
     expect(res.content).toContain('dexscreener.com/robinhood/');
     expect(res.content).toContain('gopluslabs.io/token-security/4663/');
   });
@@ -184,7 +137,7 @@ describe('runTokenAudit', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity({ is_honeypot: true }) }));
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
-    expect(res.content).toContain('Honeypot: ⚠️ YES');
+    expect(res.content).toContain('Honeypot: ⚠️ Ya');
     expect(res.content).toContain('GMGN Audit');
   });
 

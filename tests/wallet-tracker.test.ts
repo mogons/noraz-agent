@@ -6,7 +6,6 @@ import { StateStore } from '../src/services/state-store.js';
 import { WalletTracker } from '../src/services/wallet-tracker.js';
 import { GMGNAdapter, GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
 import { WalletService } from '../src/services/wallet-service.js';
-import { Connection } from '@solana/web3.js';
 
 const dbPaths: string[] = [];
 const stores: StateStore[] = [];
@@ -30,14 +29,12 @@ afterAll(() => {
   }
 });
 
-const SOL_OWNER = '11111111111111111111111111111111';
 const EVM_OWNER = '0x1111111111111111111111111111111111111111';
 const EVM_ADDR = '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 function makeWalletService(overrides: Partial<WalletService> = {}): WalletService {
   return {
     hasWallet: vi.fn(() => true),
-    getSolanaAddress: vi.fn(() => SOL_OWNER),
     getEvmAddress: vi.fn(() => EVM_OWNER),
     ...overrides,
   } as unknown as WalletService;
@@ -67,21 +64,10 @@ function makeExitGmgn(trades: import('../src/adapters/gmgn-adapter.js').GMGNTrac
   } as unknown as GMGNAdapter;
 }
 
-function makeConnection(accounts: unknown[] = [], fail: boolean = false): Connection {
-  return {
-    getTokenAccountsByOwner: vi.fn(
-      fail
-        ? () => Promise.reject(new Error('RPC down'))
-        : () => Promise.resolve({ value: accounts })
-    ),
-  } as unknown as Connection;
-}
-
 function makeTracker(opts: {
   positionManager: PositionManager;
   gmgn?: GMGNAdapter;
   walletService?: WalletService;
-  solanaConnection?: Connection;
   stateStore?: StateStore;
   evmBalanceReader?: (chain: string, token: string, owner: string) => Promise<bigint | null>;
 }): WalletTracker {
@@ -132,58 +118,18 @@ const sampleToken: GMGNRawToken = {
   source: 'gmgn',
 };
 
-describe('WalletTracker.scanSolanaHoldings', () => {
-  it('returns holdings with mint + raw amount for tokens with balance > 0', async () => {
-    const tracker = makeTracker({
-      positionManager: new PositionManager(),
-      walletService: makeWalletService(),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'MINT1', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-        { account: { data: { parsed: { info: { mint: 'MINT2', tokenAmount: { uiAmount: 0, amount: '0' } } } } } },
-        { account: { data: { parsed: { info: { mint: 'MINT3', tokenAmount: { uiAmount: 2.5, amount: '2500000000' } } } } } },
-      ]),
-    });
-    const holdings = await tracker.scanSolanaHoldings();
-    expect(holdings).toEqual([
-      { mint: 'MINT1', amount: 1000 },
-      { mint: 'MINT3', amount: 2500000000 },
-    ]);
-  });
-
-  it('fails closed to [] when the RPC call throws', async () => {
-    const tracker = makeTracker({
-      positionManager: new PositionManager(),
-      walletService: makeWalletService(),
-      solanaConnection: makeConnection([], true),
-    });
-    expect(await tracker.scanSolanaHoldings()).toEqual([]);
-  });
-
-  it('fails closed to [] when no solana wallet is configured', async () => {
-    const tracker = makeTracker({
-      positionManager: new PositionManager(),
-      walletService: makeWalletService({ hasWallet: vi.fn(() => false) }),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'MINT1', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-      ]),
-    });
-    expect(await tracker.scanSolanaHoldings()).toEqual([]);
-  });
-});
-
 describe('WalletTracker.scanEvmHoldings', () => {
-  it('returns tracked robinhood tokens with balance > 0, excludes zero-balance and non-evm chains', async () => {
+  it('returns tracked robinhood tokens with balance > 0, excludes zero-balance tokens', async () => {
     const store = newStore();
     store.setTrackedToken({ chain: 'robinhood', address: 'TOK1', symbol: 'ONE', addedAt: 1 });
     store.setTrackedToken({ chain: 'robinhood', address: 'TOK2', symbol: 'TWO', addedAt: 2 });
-    store.setTrackedToken({ chain: 'sol', address: 'SOLTOK', symbol: 'SOL', addedAt: 3 });
     const tracker = makeTracker({
       positionManager: new PositionManager(),
       stateStore: store,
       walletService: makeWalletService(),
       evmBalanceReader: async (_chain, token) => (token === 'TOK1' ? 1000n : 0n),
     });
-    expect(await tracker.scanEvmHoldings()).toEqual([{ address: 'TOK1' }]);
+    expect(await tracker.scanEvmHoldings()).toEqual([{ address: 'TOK1', amount: 1000 }]);
   });
 
   it('fails closed to [] when the balance reader reports a failed read (null)', async () => {
@@ -203,15 +149,14 @@ describe('WalletTracker.syncPositions', () => {
   it('adds a new position when a held token is not yet tracked', async () => {
     const pm = new PositionManager();
     const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: 'MINTX', symbol: 'TOKX', addedAt: 1 });
     const gmgn = makeGmgn({ ...sampleToken, address: 'MINTX', symbol: 'TOKX', priceUsd: 0.5, volume24hUsd: 60000, smartDegenCount: 7 });
     const tracker = makeTracker({
       positionManager: pm,
       stateStore: store,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'MINTX', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-      ]),
+      evmBalanceReader: async (_chain, token) => (token === 'MINTX' ? 1000n : 0n),
     });
     const alerts = await tracker.syncPositions();
     expect(alerts).toEqual([]);
@@ -232,14 +177,15 @@ describe('WalletTracker.syncPositions', () => {
 
   it('skips adding when token info fetch fails (fail-closed)', async () => {
     const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: 'MINTX', symbol: 'TOKX', addedAt: 1 });
     const gmgn = makeGmgn(null);
     const tracker = makeTracker({
       positionManager: pm,
+      stateStore: store,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'MINTX', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-      ]),
+      evmBalanceReader: async () => 1000n,
     });
     await tracker.syncPositions();
     expect(pm.getActivePositions()).toHaveLength(0);
@@ -247,6 +193,8 @@ describe('WalletTracker.syncPositions', () => {
 
   it('updates an existing position and returns a WARNING alert on volume dry-up', async () => {
     const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: 'MINTX', symbol: 'TOKX', addedAt: 1 });
     pm.addPosition({
       id: 'MINTX',
       symbol: 'TOKX',
@@ -261,11 +209,10 @@ describe('WalletTracker.syncPositions', () => {
     const gmgn = makeGmgn({ ...sampleToken, address: 'MINTX', symbol: 'TOKX', priceUsd: 1.0, volume24hUsd: 10000, smartDegenCount: 10 });
     const tracker = makeTracker({
       positionManager: pm,
+      stateStore: store,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'MINTX', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-      ]),
+      evmBalanceReader: async () => 1000n,
     });
     const alerts = await tracker.syncPositions();
     expect(alerts).toHaveLength(1);
@@ -276,6 +223,8 @@ describe('WalletTracker.syncPositions', () => {
 
   it('auto-closes active positions that are no longer held', async () => {
     const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: 'GONETOK', symbol: 'GONE', addedAt: 1 });
     pm.addPosition({
       id: 'GONETOK',
       symbol: 'GONE',
@@ -287,16 +236,17 @@ describe('WalletTracker.syncPositions', () => {
     });
     const tracker = makeTracker({
       positionManager: pm,
+      stateStore: store,
       gmgn: makeGmgn(null),
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
+      evmBalanceReader: async () => 0n,
     });
     const alerts = await tracker.syncPositions();
     expect(alerts).toEqual([]);
     expect(pm.getActivePositions()).toHaveLength(0);
   });
 
-  it('does NOT auto-close when the solana scan could not run (no wallet)', async () => {
+  it('does NOT auto-close when the EVM scan could not run (no wallet)', async () => {
     const pm = new PositionManager();
     pm.addPosition({
       id: 'SAFE',
@@ -311,7 +261,6 @@ describe('WalletTracker.syncPositions', () => {
       positionManager: pm,
       gmgn: makeGmgn(null),
       walletService: makeWalletService({ hasWallet: vi.fn(() => false) }),
-      solanaConnection: makeConnection([]),
     });
     await tracker.syncPositions();
     expect(pm.getActivePositions()).toHaveLength(1);
@@ -335,7 +284,6 @@ describe('WalletTracker.syncPositions', () => {
       stateStore: store,
       gmgn: makeGmgn(null),
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
       evmBalanceReader: async () => null,
     });
     await tracker.syncPositions();
@@ -360,22 +308,22 @@ describe('WalletTracker.syncPositions', () => {
       stateStore: store,
       gmgn: makeGmgn(null),
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
       evmBalanceReader: async () => 0n,
     });
     await tracker.syncPositions();
     expect(pm.getActivePositions()).toHaveLength(0);
   });
 
-  it('dedupes holdings by address across chains', async () => {
+  it('dedupes holdings by address', async () => {
     const pm = new PositionManager();
+    const store = newStore();
+    store.setTrackedToken({ chain: 'robinhood', address: 'DUP', symbol: 'DUP', addedAt: 1 });
     const tracker = makeTracker({
       positionManager: pm,
+      stateStore: store,
       gmgn: makeGmgn({ ...sampleToken, address: 'DUP', symbol: 'DUP' }),
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([
-        { account: { data: { parsed: { info: { mint: 'DUP', tokenAmount: { uiAmount: 1000, amount: '1000' } } } } } },
-      ]),
+      evmBalanceReader: async () => 1000n,
     });
     const alerts = await tracker.syncPositions();
     expect(alerts).toEqual([]);
@@ -401,7 +349,6 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
       positionManager: pm,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
       stateStore: newStore(),
     });
     const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
@@ -423,7 +370,6 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
       positionManager: pm,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
       stateStore: newStore(),
     });
     const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
@@ -453,7 +399,6 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
         positionManager: pm,
         gmgn: makeExitGmgn(trades),
         walletService: makeWalletService(),
-        solanaConnection: makeConnection([]),
         stateStore: newStore(),
       });
       const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
@@ -472,7 +417,6 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
       positionManager: pm,
       gmgn,
       walletService: makeWalletService(),
-      solanaConnection: makeConnection([]),
       stateStore: newStore(),
     });
     const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
@@ -484,10 +428,10 @@ describe('WalletTracker.registerTrackedToken', () => {
   it('persists tracked tokens via the StateStore', () => {
     const store = newStore();
     const tracker = makeTracker({ positionManager: new PositionManager(), stateStore: store });
-    tracker.registerTrackedToken('sol', 'AAA111', 'SOLTOK');
+    tracker.registerTrackedToken('robinhood', 'AAA111', 'SOLTOK');
     const tokens = store.getTrackedTokens();
     expect(tokens).toHaveLength(1);
-    expect(tokens[0]).toMatchObject({ chain: 'sol', address: 'AAA111', symbol: 'SOLTOK' });
+    expect(tokens[0]).toMatchObject({ chain: 'robinhood', address: 'AAA111', symbol: 'SOLTOK' });
     expect(typeof tokens[0].addedAt).toBe('number');
   });
 });

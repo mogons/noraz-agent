@@ -21,43 +21,36 @@ export const slashCommands = [
         .setDescription('Remove/delete a registered burner wallet Private Key from memory')
         .addStringOption(opt =>
           opt.setName('chain')
-            .setDescription('Chain type to remove (solana / evm)')
+            .setDescription('Wallet type to remove (evm / robinhood)')
             .setRequired(true)
             .addChoices(
-              { name: 'Solana Wallet', value: 'solana' },
-              { name: 'EVM Wallet', value: 'evm' }
+              { name: 'Robinhood Chain (EVM) Wallet', value: 'evm' }
             )
         )
     )
     .addSubcommand(sub =>
       sub.setName('balance')
-        .setDescription('View current native SOL, ETH, and token balances')
+        .setDescription('View current Robinhood Chain (ETH) and token balances')
     )
     .addSubcommand(sub =>
       sub.setName('withdraw')
-        .setDescription('Withdraw native funds (SOL/ETH) from burner wallet to destination address')
+        .setDescription('Withdraw native funds (ETH) from Robinhood burner wallet to destination address')
         .addStringOption(opt =>
           opt.setName('to')
-            .setDescription('Destination recipient wallet address (SOL base58 or EVM 0x...)')
+            .setDescription('Destination recipient wallet address (0x...)')
             .setRequired(true)
         )
         .addNumberOption(opt =>
           opt.setName('amount')
-            .setDescription('Amount of native token (SOL / ETH) to withdraw')
+            .setDescription('Amount of native token (ETH) to withdraw')
             .setRequired(true)
         )
         .addStringOption(opt =>
           opt.setName('chain')
-            .setDescription('Network chain (default: auto-detected from address)')
+            .setDescription('Network chain (default: robinhood)')
             .setRequired(false)
             .addChoices(
-              { name: 'Solana (SOL)', value: 'solana' },
-              { name: 'Base L2 (ETH)', value: 'base' },
-              { name: 'Ethereum Mainnet (ETH)', value: 'ethereum' },
-              { name: 'Arbitrum One (ETH)', value: 'arbitrum' },
-              { name: 'Optimism (ETH)', value: 'optimism' },
-              { name: 'Polygon (MATIC)', value: 'polygon' },
-              { name: 'BNB Chain (BNB)', value: 'bsc' }
+              { name: 'Robinhood Chain (ETH)', value: 'robinhood' }
             )
         )
     ),
@@ -67,7 +60,7 @@ export const slashCommands = [
     .setDescription('Execute on-demand 3-layer audit for a token Contract Address (CA)')
     .addStringOption(opt =>
       opt.setName('contract')
-        .setDescription('Solana or EVM token Contract Address (CA)')
+        .setDescription('Robinhood Chain (EVM) token Contract Address (CA)')
         .setRequired(true)
     ),
 
@@ -82,14 +75,9 @@ export const slashCommands = [
             .setDescription('Domain agent to activate (optional - auto-detected in channel)')
             .setRequired(false)
             .addChoices(
-              { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'Solana LP Agent', value: 'lp-solana' },
               { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
-              { name: 'NFT Sniping Agent', value: 'nft' },
-              { name: 'Polymarket Prediction Agent', value: 'prediction' },
-              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
+              { name: 'NFT Sniping Agent', value: 'nft' }
             )
         )
     )
@@ -101,37 +89,27 @@ export const slashCommands = [
             .setDescription('Domain agent to deactivate (optional - auto-detected in channel)')
             .setRequired(false)
             .addChoices(
-              { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'Solana LP Agent', value: 'lp-solana' },
               { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
-              { name: 'NFT Sniping Agent', value: 'nft' },
-              { name: 'Polymarket Prediction Agent', value: 'prediction' },
-              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
+              { name: 'NFT Sniping Agent', value: 'nft' }
             )
         )
     )
     .addSubcommand(sub =>
       sub.setName('status')
-        .setDescription('View real-time status of all 8 sub-agents (active / paused)')
+        .setDescription('View real-time status of all 3 sub-agents (active / paused)')
     )
     .addSubcommand(sub =>
       sub.setName('trigger')
         .setDescription('Run an immediate on-demand screening pass for an agent')
         .addStringOption(opt =>
           opt.setName('agent')
-            .setDescription('Domain agent to trigger (e.g. meme-solana, perps, lp-solana)')
+            .setDescription('Domain agent to trigger (e.g. meme-robinhood, lp-robinhood, nft)')
             .setRequired(true)
             .addChoices(
-              { name: 'Solana Meme Agent', value: 'meme-solana' },
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'Solana LP Agent', value: 'lp-solana' },
               { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'Whale Tracking Agent (Hyperliquid)', value: 'perps' },
-              { name: 'NFT Sniping Agent', value: 'nft' },
-              { name: 'Polymarket Prediction Agent', value: 'prediction' },
-              { name: 'Smart CT & AI Alpha Agent', value: 'ct-alpha' }
+              { name: 'NFT Sniping Agent', value: 'nft' }
             )
         )
     ),
@@ -178,7 +156,7 @@ export const slashCommands = [
         .addStringOption(opt => opt.setName('strategy').setDescription('Strategy id').setRequired(true))
         .addStringOption(opt =>
           opt.setName('domain')
-            .setDescription('Screening domain (e.g. meme-solana, meme-robinhood, nft, perps)')
+            .setDescription('Screening domain (e.g. meme-robinhood, lp-robinhood, nft)')
             .setRequired(true)
         )
     )
@@ -228,14 +206,14 @@ export const slashCommands = [
 
   new SlashCommandBuilder()
     .setName('pump')
-    .setDescription('Pump.fun Bonding Curve progress & Raydium graduation tracker')
-    .addStringOption(opt => opt.setName('contract').setDescription('Pump.fun Token Contract Address').setRequired(true)),
+    .setDescription('Robinhood Chain token momentum, holder & liquidity tracker')
+    .addStringOption(opt => opt.setName('contract').setDescription('Robinhood Chain Token Contract Address').setRequired(true)),
 
   new SlashCommandBuilder()
     .setName('convert')
-    .setDescription('Quick token value & SOL/USD converter')
+    .setDescription('Quick token value & USD converter')
     .addNumberOption(opt => opt.setName('amount').setDescription('Token Amount').setRequired(true))
-    .addStringOption(opt => opt.setName('symbol').setDescription('Token Symbol (e.g., SOL, ETH, BONK)').setRequired(true)),
+    .addStringOption(opt => opt.setName('symbol').setDescription('Token Symbol (e.g., ETH, USDC)').setRequired(true)),
 
   new SlashCommandBuilder()
     .setName('alert')
@@ -243,7 +221,7 @@ export const slashCommands = [
     .addSubcommand(sub =>
       sub.setName('set')
         .setDescription('Set a custom price alert for an asset')
-        .addStringOption(opt => opt.setName('symbol').setDescription('Token Symbol (e.g., BTC, ETH, SOL)').setRequired(true))
+        .addStringOption(opt => opt.setName('symbol').setDescription('Token Symbol (e.g., BTC, ETH, USDC)').setRequired(true))
         .addNumberOption(opt => opt.setName('price').setDescription('Target USD Price').setRequired(true))
         .addStringOption(opt =>
           opt.setName('direction')
@@ -296,10 +274,10 @@ export const slashCommands = [
   new SlashCommandBuilder()
     .setName('bridge')
     .setDescription('Get instant cross-chain bridge quote & 1-click Relay.link execution link')
-    .addStringOption(opt => opt.setName('origin').setDescription('Origin chain (e.g. ethereum, base, arbitrum, optimism, solana, polygon)').setRequired(true))
-    .addStringOption(opt => opt.setName('destination').setDescription('Destination chain (e.g. base, ethereum, arbitrum, optimism, solana)').setRequired(true))
+    .addStringOption(opt => opt.setName('origin').setDescription('Origin chain (e.g. ethereum, robinhood)').setRequired(true))
+    .addStringOption(opt => opt.setName('destination').setDescription('Destination chain (e.g. robinhood, ethereum)').setRequired(true))
     .addNumberOption(opt => opt.setName('amount').setDescription('Amount to bridge').setRequired(true))
-    .addStringOption(opt => opt.setName('token').setDescription('Token symbol (e.g. ETH, USDC, SOL)')),
+    .addStringOption(opt => opt.setName('token').setDescription('Token symbol (e.g. ETH, USDC)')),
 
   new SlashCommandBuilder()
     .setName('swap')
@@ -307,13 +285,13 @@ export const slashCommands = [
     .addStringOption(opt => opt.setName('from').setDescription('Token to swap from (e.g. ETH, USDC, or contract address)').setRequired(true))
     .addStringOption(opt => opt.setName('to').setDescription('Token to swap to (e.g. USDC, ETH, or contract address)').setRequired(true))
     .addNumberOption(opt => opt.setName('amount').setDescription('Amount to swap').setRequired(true))
-    .addStringOption(opt => opt.setName('chain').setDescription('Chain to swap on (default: ethereum)')),
+    .addStringOption(opt => opt.setName('chain').setDescription('Chain to swap on (default: robinhood)')),
 
   new SlashCommandBuilder()
     .setName('send')
     .setDescription('Send/transfer tokens to another wallet via Relay.link')
-    .addStringOption(opt => opt.setName('to').setDescription('Recipient wallet address (0x... or SOL address)').setRequired(true))
+    .addStringOption(opt => opt.setName('to').setDescription('Recipient wallet address (0x...)').setRequired(true))
     .addNumberOption(opt => opt.setName('amount').setDescription('Amount to send').setRequired(true))
     .addStringOption(opt => opt.setName('token').setDescription('Token symbol (default: ETH)'))
-    .addStringOption(opt => opt.setName('chain').setDescription('Chain to send on (default: ethereum)')),
+    .addStringOption(opt => opt.setName('chain').setDescription('Chain to send on (default: robinhood)')),
 ];

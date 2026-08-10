@@ -2,7 +2,7 @@ import { StateStore, SignalLedgerEntry } from '../services/state-store.js';
 
 export interface SignalCandidate {
   symbol: string;
-  domain: 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA';
+  domain: 'MEME_ROBINHOOD' | 'NFT' | 'LP_ROBINHOOD';
   contractAddress?: string;
   liquidityUsd: number;
   volume1hUsd: number;
@@ -43,7 +43,7 @@ export class SwarmConsensusEngine {
   private activeOpposingIntents: Map<string, { domain: string; direction: 'LONG' | 'SHORT' | 'BUY' | 'SELL'; timestamp: number }> = new Map();
 
   /**
-   * Register a direction intent from an agent (e.g. PERPS SHORT on BTC) to enable Cross-Agent Veto
+   * Register a direction intent from an agent (e.g. a SHORT on BTC vs a spot BUY) to enable Cross-Agent Veto
    */
   public registerAgentIntent(symbol: string, domain: string, direction: 'LONG' | 'SHORT' | 'BUY' | 'SELL'): void {
     const key = symbol.toUpperCase();
@@ -53,7 +53,7 @@ export class SwarmConsensusEngine {
   public evaluateSignal(candidate: SignalCandidate & { direction?: 'LONG' | 'SHORT' | 'BUY' | 'SELL' }): ConsensusResult {
     const symbolKey = candidate.symbol.toUpperCase();
 
-    // Cross-Agent Conflict Veto Check (e.g., PERPS SHORT vs SPOT BUY)
+    // Cross-Agent Conflict Veto Check (e.g., SHORT intent vs SPOT BUY)
     const existingIntent = this.activeOpposingIntents.get(symbolKey);
     if (existingIntent && Date.now() - existingIntent.timestamp < 60 * 60 * 1000) {
       const incomingDir = candidate.direction || 'BUY';
@@ -111,7 +111,7 @@ export class SwarmConsensusEngine {
           const snapshot = { ...process.env };
           const sensitiveKeys = Object.keys(process.env).filter((k) =>
             /KEY|TOKEN|SECRET|PRIVATE|PASSWORD|API/i.test(k) ||
-            k.startsWith('SOLANA_') || k.startsWith('EVM_') || k.startsWith('AI_')
+            k.startsWith('EVM_') || k.startsWith('AI_')
           );
           for (const k of sensitiveKeys) delete process.env[k];
           let ev: any = null;

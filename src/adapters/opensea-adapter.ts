@@ -16,7 +16,7 @@ export interface OpenSeaNFTSignal {
   collectionName: string;
   tokenId: string;
   name: string;
-  chain: 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'robinhood';
+  chain: 'robinhood';
   priceEth: number;
   floorPriceEth: number;
   floorSurge1hPct: number;      // real: floor price history (time-series), last 1 hour
@@ -56,24 +56,9 @@ export interface OpenSeaSwapResult {
 }
 
 const CHAIN_MAP: Record<string, { id: number; name: string; slug: string }> = {
-  '1': { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
-  ethereum: { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
-  eth: { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' },
-
-  '8453': { id: 8453, name: 'Base L2', slug: 'base' },
-  base: { id: 8453, name: 'Base L2', slug: 'base' },
-
-  '42161': { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
-  arbitrum: { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
-  arb: { id: 42161, name: 'Arbitrum One', slug: 'arbitrum' },
-
-  '10': { id: 10, name: 'OP Mainnet', slug: 'optimism' },
-  optimism: { id: 10, name: 'OP Mainnet', slug: 'optimism' },
-  op: { id: 10, name: 'OP Mainnet', slug: 'optimism' },
-
-  '137': { id: 137, name: 'Polygon L2', slug: 'polygon' },
-  polygon: { id: 137, name: 'Polygon L2', slug: 'polygon' },
-  poly: { id: 137, name: 'Polygon L2', slug: 'polygon' },
+  '4663': { id: 4663, name: 'Robinhood Chain', slug: 'robinhood' },
+  robinhood: { id: 4663, name: 'Robinhood Chain', slug: 'robinhood' },
+  hood: { id: 4663, name: 'Robinhood Chain', slug: 'robinhood' },
 };
 
 export class OpenSeaAdapter {
@@ -81,7 +66,7 @@ export class OpenSeaAdapter {
   private isDryRun: boolean;
 
   /** Chains being screened (OpenSea ChainIdentifier, including robinhood). */
-  public readonly supportedChains = ['ethereum', 'base', 'robinhood'] as const;
+  public readonly supportedChains = ['robinhood'] as const;
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.OPENSEA_API_KEY;
@@ -114,7 +99,7 @@ export class OpenSeaAdapter {
         .map((c) => ({
           slug: String(c?.collection || ''),
           name: String(c?.name || ''),
-          chain: String(c?.contracts?.[0]?.chain || 'ethereum'),
+          chain: String(c?.contracts?.[0]?.chain || 'robinhood'),
         }))
         .filter((c) => c.slug.length > 0);
     } catch (err: unknown) {
@@ -127,11 +112,11 @@ export class OpenSeaAdapter {
   public parseChain(input: string | number): { id: number; name: string; slug: string } {
     const key = String(input).toLowerCase().trim();
     if (CHAIN_MAP[key]) return CHAIN_MAP[key];
-    return { id: 1, name: 'Ethereum Mainnet', slug: 'ethereum' };
+    return { id: 4663, name: 'Robinhood Chain', slug: 'robinhood' };
   }
 
   /**
-   * Get a token swap quote via OpenSea API v2 Swap Aggregator (powered by Relay, 0x, Jupiter)
+   * Get a token swap quote via OpenSea API v2 Swap Aggregator (powered by Relay, 0x)
    */
   public async getSwapQuote(request: OpenSeaSwapRequest): Promise<OpenSeaSwapResult> {
     const chainInfo = this.parseChain(request.chain);
@@ -224,7 +209,7 @@ export class OpenSeaAdapter {
 
     if (this.isDryRun) {
       const simHash = `0xsim_os_swap_${quote.chainId}_${Date.now()}`;
-      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`;
       return {
         ...quote,
         txHash: simHash,
@@ -274,7 +259,7 @@ export class OpenSeaAdapter {
    *   3. /events/collection/{slug}?event_type=sale → 1h velocity, 1h volume vs 1h baseline, whale sweep
    * Fail-closed per endpoint: unavailable data = 0/false (never fabricated).
    */
-  public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins', chain: string = 'ethereum'): Promise<OpenSeaNFTSignal[]> {
+  public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins', chain: string = 'robinhood'): Promise<OpenSeaNFTSignal[]> {
     if (!this.apiKey) {
       console.log(`[OPENSEA ADAPTER] No API key configured for ${collectionSlug}. Returning empty.`);
       return [];

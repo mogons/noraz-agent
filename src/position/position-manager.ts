@@ -18,7 +18,7 @@ export interface ActiveLPPosition {
   id: string; // poolAddress
   poolAddress: string;
   pairName: string;
-  network: 'Solana' | 'Robinhood';
+  network: 'Robinhood';
   isOutOfRange: boolean;
   currentVolumeToActiveTvl4h: number;
   currentVolumeToTvl4h?: number;

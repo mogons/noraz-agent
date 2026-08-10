@@ -78,7 +78,7 @@ export async function handleControlRoomMessage(
   // 0a. Sub-agent PAUSE / STOP intent
   if (lowerQuery.includes('pause') || lowerQuery.includes('stop') || lowerQuery.includes('matikan') || lowerQuery.includes('hentikan')) {
     if (lowerQuery.includes('agent') || lowerQuery.includes('sub agent') || lowerQuery.includes('screening')) {
-      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood', 'all'];
+      const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft', 'all'];
       const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
       const result = await toolRegistry.executeToolCall('pause_sub_agent', { agentId: foundDomain });
       await message.reply(`🔴 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
@@ -89,7 +89,7 @@ export async function handleControlRoomMessage(
   // 0b. Sub-agent RESUME / START intent
   if (lowerQuery.includes('resume') || lowerQuery.includes('start') || lowerQuery.includes('nyalakan') || lowerQuery.includes('aktifkan')) {
     if (lowerQuery.includes('agent') || lowerQuery.includes('sub agent') || lowerQuery.includes('screening')) {
-      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood', 'all'];
+      const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft', 'all'];
       const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
       const result = await toolRegistry.executeToolCall('resume_sub_agent', { agentId: foundDomain });
       await message.reply(`🟢 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
@@ -99,8 +99,8 @@ export async function handleControlRoomMessage(
 
   // 0c. Trigger ON-DEMAND Screening Pass intent
   if (lowerQuery.includes('jalankan screening') || lowerQuery.includes('run screening') || lowerQuery.includes('trigger screening')) {
-    const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood'];
-    const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'solana-meme';
+    const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft'];
+    const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'meme-robinhood';
     await message.reply(`⚡ **ATHENA ON-DEMAND SCREENING TRIGGERED** for \`${foundDomain.toUpperCase()}\`...\nScreening pass in progress.`);
     const result = await toolRegistry.executeToolCall('trigger_screening_pass', { agentId: foundDomain });
     await message.reply(`✅ **SCREENING COMPLETE** for \`${foundDomain.toUpperCase()}\`: Found **${result.data?.length || 0}** signals passing 3-Layer Swarm Filter.`);
@@ -133,8 +133,8 @@ export async function handleControlRoomMessage(
   // 0f. Natural Language Schedule Automation intent
   if (lowerQuery.includes('setiap') || lowerQuery.includes('every') || lowerQuery.includes('schedule')) {
     if (lowerQuery.includes('jam') || lowerQuery.includes('hour') || lowerQuery.includes('menit') || lowerQuery.includes('min')) {
-      const agentDomains = ['solana-meme', 'evm-meme', 'solana', 'evm', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood'];
-      const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'solana-meme';
+      const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft'];
+      const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'meme-robinhood';
       const result = await toolRegistry.executeToolCall('schedule_automation', {
         interval: userQuery,
         action: 'screening',
@@ -203,20 +203,20 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Base lewat Relay")
+  // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Robinhood lewat Relay")
   const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
   if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
     const relayAdapter = new RelayAdapter();
 
-    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'solana', 'sol', 'polygon', 'poly', 'bsc', 'zora'];
+    const chains = ['ethereum', 'eth', 'robinhood'];
     const foundChains = chains.filter(c => lowerQuery.includes(c));
     const origin = foundChains[0] || 'ethereum';
-    const destination = foundChains[1] || 'base';
+    const destination = foundChains[1] || 'robinhood';
 
     const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
     const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
-    const token = lowerQuery.includes('usdc') ? 'USDC' : lowerQuery.includes('sol') ? 'SOL' : 'ETH';
+    const token = lowerQuery.includes('usdc') ? 'USDC' : 'ETH';
 
     const result = await relayAdapter.executeBridge({
       originChain: origin,
@@ -246,17 +246,17 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1c. Detect if user is asking to Swap tokens (e.g., "swap 0.5 ETH ke USDC di Base", "tuker 100 USDC jadi ETH")
+  // 1c. Detect if user is asking to Swap tokens (e.g., "swap 0.5 ETH ke USDC di Robinhood", "tuker 100 USDC jadi ETH")
   const isSwapIntent = ['swap', 'tuker', 'tukar', 'exchange', 'konversi'].some(kw => lowerQuery.includes(kw));
   if (isSwapIntent) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
     const relayAdapter = new RelayAdapter();
 
-    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'solana', 'sol', 'polygon', 'poly', 'bsc'];
+    const chains = ['robinhood', 'ethereum', 'eth'];
     const foundChain = chains.find(c => lowerQuery.includes(c));
-    const chain = foundChain || 'ethereum';
+    const chain = foundChain || 'robinhood';
 
-    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH', 'SOL', 'BNB', 'MATIC', 'ARB', 'OP', 'BUSD'];
+    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH'];
     const upperQuery = userQuery.toUpperCase();
     const foundTokens = knownTokens.filter(t => upperQuery.includes(t));
     const fromToken = foundTokens[0] || 'ETH';
@@ -288,7 +288,7 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1d. Detect if user is asking to Send/Transfer tokens (e.g., "send 0.5 ETH ke 0xabc...", "kirim 1 SOL ke wallet")
+  // 1d. Detect if user is asking to Send/Transfer tokens (e.g., "send 0.5 ETH ke 0xabc...", "kirim 1 ETH ke wallet")
   const isSendIntent = ['send', 'kirim', 'kirimkan', 'transfer'].some(kw => lowerQuery.includes(kw));
   const evmAddrMatch = userQuery.match(/\b0x[a-fA-F0-9]{40}\b/);
   if (isSendIntent && evmAddrMatch) {
@@ -297,11 +297,9 @@ export async function handleControlRoomMessage(
 
     const recipientAddress = evmAddrMatch[0];
 
-    const chains = ['ethereum', 'eth', 'base', 'arbitrum', 'arb', 'optimism', 'op', 'polygon', 'poly', 'bsc'];
-    const foundChain = chains.find(c => lowerQuery.includes(c));
-    const chain = foundChain || 'ethereum';
+    const chain = 'robinhood';
 
-    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH', 'SOL', 'BNB', 'MATIC'];
+    const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH'];
     const upperQuery = userQuery.toUpperCase();
     const foundToken = knownTokens.find(t => upperQuery.includes(t));
     const token = foundToken || 'ETH';
@@ -334,15 +332,13 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 2. Detect if user pasted a Contract Address (CA) - Solana (32-44 chars Base58) or EVM (0x + 40 hex)
-  const solanaCaRegex = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/;
+  // 2. Detect if user pasted a Robinhood Chain (EVM) Contract Address (CA - 0x + 40 hex)
   const evmCaRegex = /\b0x[a-fA-F0-9]{40}\b/;
-  const isCaPasted = solanaCaRegex.test(userQuery) || evmCaRegex.test(userQuery);
+  const isCaPasted = evmCaRegex.test(userQuery);
 
   if (isCaPasted) {
-    const matchedCa = userQuery.match(solanaCaRegex)?.[0] || userQuery.match(evmCaRegex)?.[0] || userQuery;
-    const isSol = !matchedCa.startsWith('0x');
-    const chainName = isSol ? 'Solana (SOL)' : 'EVM (Base / ETH / Robinhood)';
+    const matchedCa = userQuery.match(evmCaRegex)?.[0] || userQuery;
+    const chainName = 'Robinhood Chain (EVM)';
     
     const { runTokenAudit } = await import('../../services/token-audit-service.js');
     const audit = await runTokenAudit(matchedCa);
@@ -350,16 +346,13 @@ export async function handleControlRoomMessage(
     // Log into persistent Session Memory
     const { SessionMemoryService } = await import('../../services/session-memory.js');
     const memory = new SessionMemoryService();
-    memory.recordAudit(matchedCa, isSol ? 'SOL_MEME' : 'EVM_TOKEN', isSol ? 'sol' : 'base', audit.success ? 80 : 0, audit.success ? 'REAL-TIME AUDIT' : 'UNAVAILABLE', `Audited ${matchedCa}`);
+    memory.recordAudit(matchedCa, 'EVM_TOKEN', 'robinhood', audit.success ? 80 : 0, audit.success ? 'REAL-TIME AUDIT' : 'UNAVAILABLE', `Audited ${matchedCa}`);
 
     await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n\n${audit.content}`);
     return;
   }
 
-  const simSol = process.env.SIMULATION_BALANCE_SOL || '10.0';
   const simEth = process.env.SIMULATION_BALANCE_ETH || '1.0';
-  const simPoly = process.env.SIMULATION_BALANCE_POLYMARKET || '500.0';
-  const simHl = process.env.SIMULATION_BALANCE_HYPERLIQUID || '1000.0';
   const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
 
   // Shared Athena system prompt (persona + architecture) + live operating params
@@ -377,10 +370,7 @@ Current Operating Parameters:
 - Execution Mode: ${autoExecuteEnabled ? 'AUTO_EXECUTE (bot may execute)' : 'MANUAL EXECUTION — bot is SCREENER/CALLER ONLY, all execution is done by the user via the link provided on the call card'}
 ${activeAgentsLine}
 - Referenced Wallet Balances (for tracking user positions, not for execution):
-  • Solana: ${simSol} SOL
-  • EVM: ${simEth} ETH (Base / Robinhood)
-  • Polymarket: $${simPoly} USDC
-  • Hyperliquid Perps: $${simHl} USDC
+  • Robinhood Chain: ${simEth} ETH
 - Global Portfolio Drawdown Limit: ${risk.maxDrawdownLimitPct}%
 - Current Portfolio Drawdown: ${risk.currentDrawdownPct ?? 0}%${memoryContext}`;
 
@@ -425,7 +415,7 @@ ${activeAgentsLine}
         `• **Active API Key Hint:** \`${keyHint}\`\n` +
         `• **Error Detail:** ⚠️ \`${error.message || 'Unknown Error'}\`\n\n` +
         `💡 **Fix:** Run \`athena wizard\` on the VPS to refresh your API keys.\n\n` +
-        `🛡️ **Local Autonomous System:** 95% of Athena's local engine (7 Sub-Agents, GoPlus/RugCheck audits, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) keeps operating 100% smoothly!`
+        `🛡️ **Local Autonomous System:** 95% of Athena's local engine (3 Sub-Agents, GoPlus/GMGN audits, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) keeps operating 100% smoothly!`
       );
       return;
     }
@@ -452,7 +442,7 @@ ${activeAgentsLine}
       `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
       `💡 **Core Capabilities:**\n` +
       `1. Paste a Contract Address for **Real-Time Security Audit**.\n` +
-      `2. Ask for price alerts (*"notify me if SOL hits 200"*).\n` +
+       `2. Ask for price alerts (*"notify me if ETH hits 4000"*).\n` +
       `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
       `*(Note: Cloud AI Error. Run \`athena wizard\` on the VPS to update API keys!)*`;
 

@@ -11,7 +11,6 @@ import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode } from '../../config/config.js';
 
 export interface DashboardEmbedOptions {
-  solBalance?: string | null;
   ethBalance?: string | null;
   activeAlerts?: number;
 }
@@ -26,7 +25,6 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
   const risk = hub.getRiskManager().getRiskState();
   const executionMode = isDryRunMode() ? 'DRY_RUN (Safe Simulation)' : 'LIVE';
   const drawdownStr = `Current Drawdown: \`${risk.currentDrawdownPct.toFixed(1)}%\` (Max: \`${risk.maxDrawdownLimitPct.toFixed(1)}%\`)`;
-  const solBalanceStr = opts.solBalance ?? '`— (unavailable)`';
   const ethBalanceStr = opts.ethBalance ?? '`— (unavailable)`';
   const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
@@ -46,21 +44,16 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
         inline: false,
       },
       {
-        name: '🤖 24/7 Specialist Sub-Agents Status (PAUSED by Default)',
+        name: '🤖 24/7 Robinhood Chain Specialist Sub-Agents Status (PAUSED by Default)',
         value:
-          `• 🐣 **Solana Meme Agent:** ${getStatusBadge('meme-solana')}\n` +
           `• 🔷 **Robinhood Meme Agent:** ${getStatusBadge('meme-robinhood')}\n` +
-          `• 📈 **Perpetual Futures Agent:** ${getStatusBadge('perps')}\n` +
-          `• 💧 **Trade+LP Velocity Engine:** ${getStatusBadge('lp-solana')}\n` +
-          `• 🖼️ **NFT Sniping Agent:** ${getStatusBadge('nft')}\n` +
-          `• 🎯 **Polymarket Prediction Agent:** ${getStatusBadge('prediction')}\n` +
-          `• 💡 **Smart CT & AI Alpha Agent:** ${getStatusBadge('ct-alpha')}`,
+          `• 💧 **Robinhood LP Velocity Agent:** ${getStatusBadge('lp-robinhood')}\n` +
+          `• 🖼️ **NFT Sniping Agent:** ${getStatusBadge('nft')}`,
         inline: false,
       },
       {
-        name: '🌐 Connected API Keys & Social Intelligence Status',
+        name: '🌐 Connected API Keys & Security Status',
         value:
-          `• 🐦 **TwexAPI (X/Twitter Scraping):** ${isTwexSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED (fail-closed)`'}\n` +
           `• 🖼️ **OpenSea API (NFT Data):** ${isOpenSeaSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED (fail-closed)`'}\n` +
           `• 🧠 **LLM AI Reasoning API:** ${isLlmSet ? '`🟢 CONFIGURED`' : '`⚪ NOT CONFIGURED`'}`,
         inline: false,
@@ -68,8 +61,7 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
       {
         name: '🔑 Wallet Balances & Active Alerts',
         value:
-          `• **Solana Balance:** ${solBalanceStr}\n` +
-          `• **EVM Balance:** ${ethBalanceStr}\n` +
+          `• **Robinhood Chain EVM Balance:** ${ethBalanceStr}\n` +
           `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
         inline: false,
       }

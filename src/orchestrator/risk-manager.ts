@@ -81,7 +81,7 @@ export class RiskManager {
       0
     );
 
-    // Check 1: Max correlated positions (e.g., 3 strategies all long SOL)
+    // Check 1: Max correlated positions (e.g., 3 strategies all long the same memecoin)
     if (existingCount >= this.limits.maxCorrelatedPositions) {
       return {
         allowed: false,

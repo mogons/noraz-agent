@@ -115,7 +115,7 @@ export class KrystalCloudAdapter {
       const t1 = p.token1?.token;
       if (!p.poolAddress || !t0 || !t1) continue;
 
-      // Active-TVL proxy (same as the Solana LP Meteora): TVL effectively
+      // Active-TVL proxy (same as the Robinhood LP signal): TVL effectively
       // generating fees = fee_rate × tvl, fee_rate real from 1h data.
       const feeRate = volume1hUsd > 0 ? fee1hUsd / volume1hUsd : 0;
       const activeTvlUsd = feeRate > 0 ? feeRate * tvlUsd : tvlUsd * 0.3;
@@ -153,7 +153,7 @@ export class KrystalCloudAdapter {
   }
 
   /**
-   * High-yield filter — mirrors the Solana LP (Meteora) with REAL data:
+   * High-yield filter — Robinhood LP velocity with REAL data:
    * - fee1h >= $50 (real — calibrated 2026-08-09: $7 was too low)
    * - 24h Fee/TVL > 4% (real)
    * - volume/activeTvl >= 100% per 1h (velocity, real fee_rate)

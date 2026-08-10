@@ -27,15 +27,9 @@ export function encodeSymbolForUrl(symbol: string | undefined | null): string {
 
 export function buildCallEmbed(payload: CallSignalPayload) {
   const colorMap: Record<CallSignalPayload['domain'], number> = {
-    MEME_SOLANA: 0x14f195, // Solana Teal
-    MEME_EVM: 0x3c3c3d,    // EVM Dark Grey
-    PERPS: 0xf39c12,       // Gold / Amber
-    NFT: 0x9b59b6,         // Purple
-    LP_METEORA: 0x2ecc71,  // Bright Emerald Green
-    LP_ROBINHOOD: 0x3498db,  // Royal Blue
-    PREDICTION: 0x00ffaa,  // Cyan / Prediction
-    CT_ALPHA: 0x1da1f2,    // Twitter / X Blue
-    WHALE: 0x5865f2,       // Discord Blurple
+    MEME_ROBINHOOD: 0x3498db,
+    NFT: 0x9b59b6,
+    LP_ROBINHOOD: 0x00ffaa,
   };
 
   const confidenceStr = payload.confidenceScore ? `${payload.confidenceScore}% CONFIDENCE` : 'HIGH CONFIDENCE';
@@ -48,128 +42,10 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   const buttonsRow = new ActionRowBuilder<ButtonBuilder>();
 
   // ==========================================
-  // DOMAIN 1: CT ALPHA (X / TWITTER)
+  // DOMAIN: CONCENTRATED LIQUIDITY (LP_ROBINHOOD)
   // ==========================================
-  if (payload.domain === 'CT_ALPHA') {
-    embed.setTitle(`🔥 SMART CT ALPHA: ${sanitizeEmbedField(payload.title, 150)}`);
-    
-    if (payload.contractAddress && payload.contractAddress !== 'N/A') {
-      embed.addFields({ name: '📍 Contract Mentioned', value: `\`${payload.contractAddress}\``, inline: false });
-    }
-
-    embed.addFields(
-      { name: '🐦 Source & Network', value: sanitizeEmbedField(payload.network, 40) || 'X (Twitter)', inline: true },
-      { name: '🧠 AI Sentiment Score', value: `${confidenceStr}`, inline: true },
-      { name: '💡 Actionable Takeaway', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
-    );
-
-    const tweetUrl = payload.dexScreenerUrl || 'https://x.com';
-    buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setLabel('🐦 View Tweet on X')
-        .setURL(tweetUrl)
-        .setStyle(ButtonStyle.Link),
-      new ButtonBuilder()
-        .setCustomId('start_channel_ct-alpha')
-        .setLabel('⚡ Start CT Alpha')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId('pause_channel_ct-alpha')
-        .setLabel('⏸️ Pause CT Alpha')
-        .setStyle(ButtonStyle.Secondary)
-    );
-
-    return { embeds: [embed], components: [buttonsRow] };
-  }
-
-  // ==========================================
-  // DOMAIN 2: WHALE TRACKING (HYPERLIQUID SMART MONEY)
-  // ==========================================
-  if (payload.domain === 'WHALE') {
-    embed.setTitle(`🐋 ATHENA WHALE WATCH: ${sanitizeEmbedField(payload.symbol, 20)}`);
-
-    const report = payload.whaleReport;
-    const fmtM = (v: number) => (v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
-    const netStr = report ? `${report.netUsd >= 0 ? '🟢 +' : '🔴 '}${fmtM(Math.abs(report.netUsd))}` : 'N/A';
-
-    if (report) {
-      embed.addFields(
-        { name: '⚖️ Net Positioning', value: `${netStr} (${report.longCount} long vs ${report.shortCount} short trader)`, inline: true },
-        { name: '📊 Long / Short', value: `Long **${fmtM(report.totalLongUsd)}**\nShort **${fmtM(report.totalShortUsd)}**`, inline: true },
-        { name: '🔗 Source', value: 'Hyperliquid PvP Leaderboard (30d)', inline: true }
-      );
-
-      const traderLines = (entries: Array<{ address: string; sizeUsd: number; returnPct: number }>, dir: string) =>
-        entries.map((t) => {
-          const short = `${t.address.slice(0, 6)}…${t.address.slice(-4)}`;
-          const pct = t.returnPct ? ` (PvP ${t.returnPct.toFixed(1)}%)` : '';
-          return `${dir} **${fmtM(t.sizeUsd)}** — [${short}](https://app.hyperliquid.xyz/explorer/address/${t.address})${pct}`;
-        });
-
-      const longLines = traderLines(report.longTraders, '🟢');
-      const shortLines = traderLines(report.shortTraders, '🔴');
-
-      if (longLines.length > 0) {
-        embed.addFields({ name: `🧭 Long Positions (≥ $1M)`, value: longLines.join('\n'), inline: false });
-      }
-      if (shortLines.length > 0) {
-        embed.addFields({ name: `🧭 Short Positions (≥ $1M)`, value: shortLines.join('\n'), inline: false });
-      }
-      if (report.spotFlow.length > 0) {
-        embed.addFields({
-          name: '📈 Spot Flow (5m, ≥ $100k)',
-          value: report.spotFlow
-            .map((f) => `**${sanitizeEmbedField(f.market, 24)}**: Buy ${fmtM(f.buyUsd)} | Sell ${fmtM(f.sellUsd)} (${f.fillCount} fill)`)
-            .join('\n'),
-          inline: false,
-        });
-      }
-    }
-
-    if (payload.cexRadar && payload.cexRadar.length > 0) {
-      const fmtUsd = (v: number) => (v >= 1_000_000_000 ? `$${(v / 1e9).toFixed(2)}B` : v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
-      const fmtOi = (v: number) => (v >= 1_000_000_000 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(1)}M`);
-      const radarLines = payload.cexRadar.map((e) => {
-        const parts: string[] = [];
-        parts.push(`OI ${fmtOi(e.oiUsd)}${e.oiChange24hPct !== null ? ` (${e.oiChange24hPct >= 0 ? '+' : ''}${e.oiChange24hPct.toFixed(1)}%)` : ''}`);
-        if (e.fundingRatePct !== null) parts.push(`Funding ${e.fundingRatePct.toFixed(3)}%`);
-        if (e.topTraderLongRatio !== null && e.topTraderLongRatio !== undefined) parts.push(`TopTrader L/S ${e.topTraderLongRatio.toFixed(1)}x`);
-        if (e.accountLongShortRatio !== null && e.accountLongShortRatio !== undefined) parts.push(`Akun L/S ${e.accountLongShortRatio.toFixed(1)}x`);
-        if (e.prints.count > 0) {
-          const net = e.prints.netBuyUsd - e.prints.netSellUsd;
-          parts.push(`Prints ${e.prints.count}×≥$1M (net ${net >= 0 ? '+' : '-'}${fmtUsd(Math.abs(net))})`);
-        } else {
-          parts.push('Prints 0');
-        }
-        if (e.liq24hUsd !== null && e.liq24hUsd !== undefined) parts.push(`Liq 24h ${fmtUsd(e.liq24hUsd)}`);
-        return `**${e.exchange === 'binance' ? 'Binance' : e.exchange === 'bybit' ? 'Bybit' : 'OKX'}**: ${parts.join(' | ')}`;
-      });
-      embed.addFields({ name: '🌐 CEX Radar (OI · Funding · L/S · Whale Prints)', value: radarLines.join('\n'), inline: false });
-    }
-
-    embed.addFields({ name: '💡 Ringkasan', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
-
-    const hyperliquidUrl = payload.dexScreenerUrl || `https://app.hyperliquid.xyz/trade/${payload.symbol}`;
-    buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setLabel('🚀 Trade on Hyperliquid')
-        .setURL(hyperliquidUrl)
-        .setStyle(ButtonStyle.Link),
-      new ButtonBuilder()
-        .setCustomId('pause_channel_perps')
-        .setLabel('⏸️ Pause Whale Tracking')
-        .setStyle(ButtonStyle.Secondary)
-    );
-
-    return { embeds: [embed], components: [buttonsRow] };
-  }
-
-  // ==========================================
-  // DOMAIN 3 & 4: CONCENTRATED LIQUIDITY (LP)
-  // ==========================================
-  if (payload.domain === 'LP_METEORA' || payload.domain === 'LP_ROBINHOOD') {
-    const isMeteora = payload.domain === 'LP_METEORA';
-    embed.setTitle(`💧 ATHENA LP OPPORTUNITY: ${payload.title}`);
+  if (payload.domain === 'LP_ROBINHOOD') {
+    embed.setTitle(`💧 ATHENA ROBINHOOD LP OPPORTUNITY: ${payload.title}`);
 
     if (payload.contractAddress) {
       embed.addFields({ name: '📍 Pool Address', value: `\`${payload.contractAddress}\``, inline: false });
@@ -181,7 +57,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       { name: 'Est. 24h Fee APR', value: payload.feeApr || 'N/A', inline: true }
     );
 
-    // CA masing-masing token + chart link (DexScreener/GMGN)
     const token0Line = payload.token0Address
       ? `\`${payload.token0Address}\`\n🔗 [Chart DexScreener](${payload.token0ChartUrl ?? '#'})${payload.gmgnUrl ? ` • [GMGN](${payload.gmgnUrl})` : ''}`
       : 'N/A';
@@ -193,7 +68,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
       { name: `🪙 ${payload.token1Symbol || 'Token Y'} (CA)`, value: token1Line, inline: false }
     );
 
-    // Meme token details (degen style) — only fields with data
     const token0Detail: string[] = [];
     if (payload.token0PriceUsd !== undefined) token0Detail.push(`💰 Price **$${payload.token0PriceUsd.toFixed(8)}**`);
     if (payload.token0MarketCapUsd !== undefined) token0Detail.push(`📈 MC **$${(payload.token0MarketCapUsd / 1000).toFixed(1)}k**`);
@@ -203,14 +77,6 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     if (payload.token0SmartDegenCount !== undefined && payload.token0SmartDegenCount > 0) token0Detail.push(`🧠 Smart+KOL **${payload.token0SmartDegenCount}**`);
     if (token0Detail.length > 0) {
       embed.addFields({ name: `📊 Detail ${payload.token0Symbol || 'Token X'}`, value: token0Detail.join(' • '), inline: false });
-    }
-
-    if (payload.tokenVerified !== undefined) {
-      embed.addFields({
-        name: '🛡️ Token Verification',
-        value: payload.tokenVerified ? '✅ Verified (Meteora blue check)' : '⚠️ **Unverified** — likuiditas komunitas, DYOR',
-        inline: true,
-      });
     }
 
     if (payload.securityScore) {
@@ -225,7 +91,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
     buttonsRow.addComponents(
       new ButtonBuilder()
-        .setCustomId(`pause_channel_${isMeteora ? 'lp-solana' : 'lp-robinhood'}`)
+        .setCustomId('pause_channel_lp-robinhood')
         .setLabel('⏸️ Pause LP Screening')
         .setStyle(ButtonStyle.Secondary)
     );
@@ -233,7 +99,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     if (payload.poolUrl) {
       buttonsRow.addComponents(
         new ButtonBuilder()
-          .setLabel(isMeteora ? '🌐 View on Meteora' : '🌐 View on Uniswap')
+          .setLabel('🌐 View on Uniswap')
           .setURL(payload.poolUrl)
           .setStyle(ButtonStyle.Link)
       );
@@ -261,35 +127,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   }
 
   // ==========================================
-  // DOMAIN 5: PREDICTION MARKETS (POLYMARKET)
-  // ==========================================
-  if (payload.domain === 'PREDICTION') {
-    embed.setTitle(`🎯 ATHENA POLYMARKET ARBITRAGE: ${sanitizeEmbedField(payload.title, 150)}`);
-    
-    embed.addFields(
-      { name: '🌐 Platform', value: sanitizeEmbedField(payload.network, 40) || 'Polygon (Polymarket)', inline: true },
-      { name: '🎯 Recommended Outcome', value: `**${sanitizeEmbedField(payload.symbol, 20)}**`, inline: true },
-      { name: '🟢 Swarm Confidence', value: confidenceStr, inline: true },
-      { name: '💡 Polymarket AI Thesis', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false }
-    );
-
-    const polyUrl = payload.dexScreenerUrl || 'https://polymarket.com';
-    buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId('pause_channel_prediction')
-        .setLabel('⏸️ Pause Polymarket Screening')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setLabel('📊 View Market on Polymarket')
-        .setURL(polyUrl)
-        .setStyle(ButtonStyle.Link)
-    );
-
-    return { embeds: [embed], components: [buttonsRow] };
-  }
-
-  // ==========================================
-  // DOMAIN 6: NFT SNIPING (OPENSEA)
+  // DOMAIN: NFT SNIPING (OPENSEA)
   // ==========================================
   if (payload.domain === 'NFT') {
     embed.setTitle(`🖼️ ATHENA NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
@@ -328,16 +166,11 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   }
 
   // ==========================================
-  // DOMAIN 7 & 8: MEME DEX TOKENS (SOLANA & EVM)
+  // DOMAIN: MEME DEX TOKENS (ROBINHOOD / EVM)
   // ==========================================
-  const isSolana = payload.domain === 'MEME_SOLANA';
   const safeTitle = sanitizeEmbedField(payload.title);
   const safeSymbol = sanitizeEmbedField(payload.symbol, 32);
-  embed.setTitle(
-    isSolana
-      ? `🚀 ATHENA SOLANA MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`
-      : `🔷 ATHENA EVM MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`
-  );
+  embed.setTitle(`🔷 ATHENA ROBINHOOD MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`);
 
   if (payload.contractAddress) {
     const ageStr = payload.tokenAge ? ` • ⏱️ **Age:** ${payload.tokenAge}` : '';
@@ -385,55 +218,34 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
   if (payload.contractAddress) {
     const ca = payload.contractAddress;
-    const gmgnLink = payload.gmgnUrl || `https://gmgn.ai/${isSolana ? 'sol' : 'base'}/token/${ca}`;
-    const dexscreenerLink = payload.dexScreenerUrl || `https://dexscreener.com/${isSolana ? 'solana' : 'base'}/${ca}`;
-    const rugcheckLink = payload.rugcheckUrl || `https://rugcheck.xyz/tokens/${ca}`;
+    const gmgnLink = payload.gmgnUrl || `https://gmgn.ai/robinhood/token/${ca}`;
+    const dexscreenerLink = payload.dexScreenerUrl || `https://dexscreener.com/robinhood/${ca}`;
 
     embed.addFields({
       name: '🔗 Independent Verification Links',
-      value: `📊 [DexScreener](${dexscreenerLink}) | 📈 [GMGN Chart](${gmgnLink}) | 🛡️ [RugCheck](${rugcheckLink}) | 🐦 [X (Twitter) Search](https://x.com/search?q=%24${encodeSymbolForUrl(payload.symbol)}&src=typed_query)`,
+      value: `📊 [DexScreener](${dexscreenerLink}) | 📈 [GMGN Chart](${gmgnLink}) | 🐦 [X (Twitter) Search](https://x.com/search?q=%24${encodeSymbolForUrl(payload.symbol)}&src=typed_query)`,
       inline: false,
     });
   }
 
   embed.addFields({ name: '💡 AI Thesis & Signal Reasoning', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
 
-  // Manual-execution mode: call cards carry LINKS to the trading platform,
-  // never execute buttons. Auto-execution is locked off (AUTO_EXECUTE_ENABLED=false).
-  if (isSolana) {
-    // Solana: Jupiter swap prefilled with the token CA
-    const jupiterUrl = payload.contractAddress
-      ? `https://jup.ag/swap/SOL-${encodeSymbolForUrl(payload.contractAddress)}`
-      : 'https://jup.ag';
-    buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setLabel('🚀 Trade on Jupiter')
-        .setURL(jupiterUrl)
-        .setStyle(ButtonStyle.Link),
-      new ButtonBuilder()
-        .setCustomId('pause_channel_meme-solana')
-        .setLabel('⏸️ Pause Solana Screening')
-        .setStyle(ButtonStyle.Secondary)
-    );
-  } else {
-    // Robinhood chain: Uniswap explore pools (token CA)
-    const uniswapUrl = payload.contractAddress
-      ? `https://app.uniswap.org/explore/pools/robinhood/${payload.contractAddress}`
-      : 'https://app.uniswap.org/explore/pools/robinhood';
-    buttonsRow.addComponents(
-      new ButtonBuilder()
-        .setLabel('🌐 Trade on Uniswap')
-        .setURL(uniswapUrl)
-        .setStyle(ButtonStyle.Link),
-      new ButtonBuilder()
-        .setCustomId('pause_channel_meme-robinhood')
-        .setLabel('⏸️ Pause Robinhood Screening')
-        .setStyle(ButtonStyle.Secondary)
-    );
-  }
+  const uniswapUrl = payload.contractAddress
+    ? `https://app.uniswap.org/explore/pools/robinhood/${payload.contractAddress}`
+    : 'https://app.uniswap.org/explore/pools/robinhood';
+  buttonsRow.addComponents(
+    new ButtonBuilder()
+      .setLabel('🌐 Trade on Uniswap')
+      .setURL(uniswapUrl)
+      .setStyle(ButtonStyle.Link),
+    new ButtonBuilder()
+      .setCustomId('pause_channel_meme-robinhood')
+      .setLabel('⏸️ Pause Robinhood Screening')
+      .setStyle(ButtonStyle.Secondary)
+  );
 
   if (payload.dexScreenerUrl || payload.contractAddress) {
-    const url = payload.dexScreenerUrl || `https://dexscreener.com/${isSolana ? 'solana' : 'base'}/${payload.contractAddress}`;
+    const url = payload.dexScreenerUrl || `https://dexscreener.com/robinhood/${payload.contractAddress}`;
     buttonsRow.addComponents(
       new ButtonBuilder()
         .setLabel('📊 Chart on DexScreener')

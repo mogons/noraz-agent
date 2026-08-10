@@ -51,32 +51,30 @@ describe('StrategyEngine', () => {
     const list = engine.listStrategies();
     expect(list.some((s) => s.id === 'test-momentum')).toBe(true);
 
-    const active = engine.setActiveStrategy('meme-solana', 'test-momentum');
+    const active = engine.setActiveStrategy('meme-robinhood', 'test-momentum');
     expect(active.success).toBe(true);
 
     const listAfter = engine.listStrategies();
     expect(listAfter.find((s) => s.id === 'test-momentum')?.active).toBe(true);
   });
 
-  it('activates the default meme-solana strategy', () => {
+  it('activates the default meme-robinhood strategy', () => {
     const engine = new StrategyEngine();
-    const res = engine.setActiveStrategy('meme-solana', 'meme-solana-default');
+    const res = engine.setActiveStrategy('meme-robinhood', 'meme-robinhood-default');
     expect(res.success).toBe(true);
-    const active = engine.getActiveStrategy('meme-solana');
-    expect(active?.id).toBe('meme-solana-default');
+    const active = engine.getActiveStrategy('meme-robinhood');
+    expect(active?.id).toBe('meme-robinhood-default');
+  });
+
+  it('per-domain activation: activating meme-robinhood does not deactivate nft', () => {
+    const engine = new StrategyEngine();
+    engine.setActiveStrategy('meme-robinhood', 'meme-robinhood-default');
+    engine.setActiveStrategy('nft', 'nft-default');
+    expect(engine.getActiveStrategy('meme-robinhood')?.id).toBe('meme-robinhood-default');
+    expect(engine.getActiveStrategy('nft')?.id).toBe('nft-default');
   });
 
   it('falls back to domain-default strategy without explicit activation', () => {
-    const engine = new StrategyEngine();
-    // No active map set — the shipped meme-solana-default must be active out-of-the-box
-    const active = engine.getActiveStrategy('meme-solana');
-    expect(active?.id).toBe('meme-solana-default');
-    // Domain normalization: uppercase/underscore (swarm style) also resolves
-    const swarmStyle = engine.getActiveStrategy('MEME_SOLANA');
-    expect(swarmStyle?.id).toBe('meme-solana-default');
-  });
-
-  it('falls back to meme-robinhood-default strategy without explicit activation', () => {
     const engine = new StrategyEngine();
     // No active map set — the shipped meme-robinhood-default must be active out-of-the-box
     const active = engine.getActiveStrategy('meme-robinhood');

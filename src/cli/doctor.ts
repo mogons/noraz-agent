@@ -27,9 +27,7 @@ export async function runAthenaDoctor(): Promise<void> {
   // 2. Check RPC Node Connectivity
   console.log('\n⚡ 2. WEB3 RPC NODE LATENCY CHECKS:');
   const rpcs = [
-    { chain: 'Solana Mainnet', url: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com' },
-    { chain: 'Base L2', url: process.env.EVM_BASE_RPC_URL || 'https://mainnet.base.org' },
-    { chain: 'Ethereum Mainnet', url: process.env.EVM_ETH_RPC_URL || 'https://eth.llamarpc.com' },
+    { chain: 'Robinhood Chain', url: process.env.EVM_ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com' },
   ];
 
   for (const rpc of rpcs) {
@@ -38,7 +36,7 @@ export async function runAthenaDoctor(): Promise<void> {
       const res = await fetch(rpc.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: rpc.chain.includes('Solana') ? 'getHealth' : 'eth_blockNumber', params: [] }),
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
       });
       const latency = Date.now() - start;
       console.log(`   • ${rpc.chain.padEnd(20)}: 🟢 ONLINE (${latency}ms) | Endpoint: ${rpc.url}`);

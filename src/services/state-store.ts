@@ -27,7 +27,7 @@ export interface SignalLedgerEntry {
  * Token tracked by the wallet auto-tracker — resolved on startup via GMGN token info.
  */
 export interface TrackedToken {
-  chain: 'sol' | 'robinhood';
+  chain: 'robinhood';
   address: string;
   symbol: string;
   addedAt: number;
@@ -46,9 +46,8 @@ export interface AthenaPersistedState {
   priceAlerts: Record<string, PriceAlert>;
   tradeJournalEntries: Record<string, TradeJournalEntry>;
 
-  // Persistent Wallet Private Keys (survives process restarts and git updates)
+  // Persistent Wallet Private Key (survives process restarts and git updates)
   walletKeys: {
-    solanaPrivateKey?: string;
     evmPrivateKey?: string;
   };
 
@@ -303,25 +302,20 @@ export class StateStore {
   // WALLET KEYS (Persistent across bot updates)
   // ==========================================
 
-  public setWalletKey(chain: 'solana' | 'evm', privateKey: string): void {
+  public setWalletKey(chain: 'evm', privateKey: string): void {
     if (!this.state.walletKeys) this.state.walletKeys = {};
-    if (chain === 'solana') {
-      this.state.walletKeys.solanaPrivateKey = privateKey;
-    } else {
-      this.state.walletKeys.evmPrivateKey = privateKey;
-    }
+    this.state.walletKeys.evmPrivateKey = privateKey;
     this.scheduleSave();
   }
 
-  public removeWalletKey(chain: 'solana' | 'evm'): void {
+  public removeWalletKey(chain: 'evm'): void {
     if (this.state.walletKeys) {
-      if (chain === 'solana') delete this.state.walletKeys.solanaPrivateKey;
-      if (chain === 'evm') delete this.state.walletKeys.evmPrivateKey;
+      delete this.state.walletKeys.evmPrivateKey;
       this.scheduleSave();
     }
   }
 
-  public getWalletKeys(): { solanaPrivateKey?: string; evmPrivateKey?: string } {
+  public getWalletKeys(): { evmPrivateKey?: string } {
     return this.state.walletKeys || {};
   }
 

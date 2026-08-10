@@ -1,4 +1,3 @@
-import { RugCheckService } from './security-service.js';
 import { GoPlusSecurityService } from './goplus-security-service.js';
 import { GMGNAdapter, type GMGNRawToken, type GMGNSecurityAudit } from '../adapters/gmgn-adapter.js';
 
@@ -39,100 +38,47 @@ function fmtAge(creationTs: number | null | undefined): string {
 
 function yesNo(v: boolean | undefined | null, warnWhen = true): string {
   if (v === undefined || v === null) return '—';
-  if (v) return warnWhen ? '⚠️ YES' : 'YES';
-  return 'No';
+  if (v) return warnWhen ? '⚠️ Ya' : 'Ya ✅';
+  return warnWhen ? 'Tidak ✅' : '⚠️ Tidak';
 }
 
-/** Creator/anti-rug signals from GMGN — only lines with available data. */
-function creatorSignals(token: GMGNRawToken): string {
+function creatorSignals(t: GMGNRawToken): string {
   const parts: string[] = [];
-  if (token.devTeamHoldRate !== null && token.devTeamHoldRate !== undefined) parts.push(`Dev hold ${fmtPct(token.devTeamHoldRate)}`);
-  if (token.bundlerRate !== null && token.bundlerRate !== undefined) parts.push(`Bundler ${fmtPct(token.bundlerRate)}`);
-  if (token.rugRatio !== null && token.rugRatio !== undefined) parts.push(`Rug ratio ${fmtPct(token.rugRatio)}`);
-  if (token.ratTraderAmountRate !== null && token.ratTraderAmountRate !== undefined) parts.push(`Rat trader ${fmtPct(token.ratTraderAmountRate)}`);
-  if (token.isWashTrading) parts.push('Wash trading ⚠️');
-  if (token.ctoFlag) parts.push('CTO ⚠️');
-  if (token.creatorClose) parts.push('Creator close ⚠️');
-  if (token.isHoneypot) parts.push('Honeypot ⚠️');
-  if (token.exchange) parts.push(`Venue: ${token.exchange}`);
-  if (token.launchpadPlatform) parts.push(`Launchpad: ${token.launchpadPlatform}`);
-  return parts.length > 0 ? parts.join(' • ') : '—';
+  if (t.creatorClose) parts.push('Dev exited/closed ✅');
+  if (t.ctoFlag) parts.push('CTO active 🚀');
+  if (t.renouncedMint) parts.push('Mint renounced ✅');
+  if (t.smartDegenCount) parts.push(`Smart: ${t.smartDegenCount}`);
+  if (t.ratTraderAmountRate && t.ratTraderAmountRate > 0.05) parts.push(`Cabals: ${(t.ratTraderAmountRate * 100).toFixed(0)}% ⚠️`);
+  return parts.length > 0 ? parts.join(' • ') : 'No special creator signals recorded';
 }
 
-/** Market & activity lines from GMGN — consistent for Solana & EVM. */
-function marketLines(token: GMGNRawToken | null): string[] {
-  if (!token) return ['📊 **Price:** —', '📈 **Activity:** —', '👥 **Holders:** — | **Age:** —'];
-  const tx = token.buys > 0 || token.sells > 0 ? `${fmtInt(token.buys)}/${fmtInt(token.sells)} (${token.swaps ? `${fmtInt(token.swaps)} swaps` : ''})` : '—';
+function marketLines(t: GMGNRawToken | null): string[] {
+  if (!t) return ['📊 **Market Data:** Unavailable'];
   return [
-    `📊 **Price:** ${fmtUsd(token.priceUsd)} | **MC:** ${fmtUsd(token.marketCapUsd)} | **Liq:** ${fmtUsd(token.liquidityUsd)} | **24h Vol:** ${fmtUsd(token.volume24hUsd)}`,
-    `📈 **1h:** ${token.priceChange1h !== null && token.priceChange1h !== undefined ? `${token.priceChange1h >= 0 ? '+' : ''}${token.priceChange1h.toFixed(1)}%` : '—'} | **Buys/Sells:** ${tx}`,
-    `👥 **Holders:** ${fmtInt(token.holderCount)} | **Age:** ${fmtAge(token.creationTimestamp)}`,
+    `📊 **Market:** \`$${t.symbol || '—'}\` (${t.name || '—'})`,
+    `💵 **Price:** \`$${t.priceUsd ? t.priceUsd.toFixed(6) : '—'}\` | **MC:** \`${fmtUsd(t.marketCapUsd)}\` | **Liq:** \`${fmtUsd(t.liquidityUsd)}\``,
+    `📈 **Vol 24h:** \`${fmtUsd(t.volume24hUsd)}\` | **Holders:** \`${fmtInt(t.holderCount)}\` | **Age:** \`${fmtAge(t.creationTimestamp)}\``,
   ];
 }
 
-/** Baris audit keamanan GMGN `/v1/token/security` (panel Token Audit UI GMGN). */
 function gmgnAuditLine(audit: GMGNSecurityAudit | null): string {
-  if (!audit) return '🛡️ **GMGN Audit:** ⚠️ unavailable (fail-closed)';
-  const parts: string[] = [];
-  parts.push(`Honeypot: ${yesNo(audit.isHoneypot)}`);
-  parts.push(`Blacklist: ${yesNo(audit.isBlacklist)}`);
-  parts.push(`Renounced: ${yesNo(audit.isRenounced, false)}`);
-  parts.push(`CanSell: ${audit.canNotSell ? '⚠️ NO' : 'Yes'}`);
-  parts.push(`Tax avg ${audit.averageTaxPct.toFixed(1)}%${audit.highTaxPct > 0 ? ` / high ${audit.highTaxPct.toFixed(1)}%` : ''}`);
-  if (audit.burnRatioPct > 0) parts.push(`Burn ${audit.burnRatioPct.toFixed(1)}%`);
-  if (audit.isOpenSource) parts.push('Open Source');
-  if (audit.isLocked) parts.push('Locked');
-  if (audit.flags.length > 0) parts.push(`Flags: ${audit.flags.join(',')}`);
-  return `🛡️ **GMGN Audit:** ${parts.join(' | ')}`;
+  if (!audit) return '🔍 **GMGN Audit:** —';
+  const flags: string[] = [];
+  if (audit.isHoneypot) flags.push('⚠️ HONEYPOT');
+  if (audit.canNotSell) flags.push('⚠️ SELL LOCK');
+  if (audit.isBlacklist) flags.push('⚠️ BLACKLIST');
+  if (audit.buyTaxPct > 5 || audit.sellTaxPct > 5) flags.push(`⚠️ TAX B:${audit.buyTaxPct.toFixed(1)}%/S:${audit.sellTaxPct.toFixed(1)}%`);
+  const status = flags.length > 0 ? flags.join(' • ') : 'Clean ✅';
+  return `🔍 **GMGN Audit:** ${status}`;
 }
 
-/**
- * On-demand token audit (used when a contract address is pasted into Discord).
- * Complete data: GMGN (market, holders, activity, creator/anti-rug signals) +
- * RugCheck (Solana) / GoPlus full (EVM). EVM CA di-scan sebagai Robinhood chain.
- * Fail-closed on errors — never fabricates numbers.
- */
-export async function runTokenAudit(contract: string): Promise<TokenAuditResult> {
-  const isSol = !contract.toLowerCase().startsWith('0x');
+export async function runTokenAudit(contractAddress: string): Promise<TokenAuditResult> {
+  const contract = contractAddress.trim();
+  if (!contract) {
+    return { success: false, content: '❌ Provide a valid Contract Address.' };
+  }
+
   try {
-    if (isSol) {
-      const security = new RugCheckService();
-      const audit = await security.auditSolanaToken(contract);
-      const gmgn = new GMGNAdapter();
-      const [token, secAudit] = await Promise.all([
-        gmgn.fetchTokenInfo('sol', contract),
-        gmgn.fetchTokenSecurity('sol', contract),
-      ]);
-      const apiError = audit.risks[0]?.name === 'RugCheck API Error';
-
-      if (apiError && !token && !secAudit) {
-        return { success: false, content: '⚠️ Audit data is unavailable right now. Try again later.' };
-      }
-
-      const riskLines = audit.risks
-        .filter((r) => r.name !== 'RugCheck API Error')
-        .slice(0, 5)
-        .map((r) => `${r.name}${r.score ? ` (${r.score})` : ''}`);
-      const auditLine = apiError
-        ? '🛡️ **Audit:** ⚠️ RugCheck API is unavailable right now'
-        : `🛡️ **RugCheck Score:** ${audit.score}${audit.isSafeForRunner ? ' (Safe ✅)' : ' (⚠️ Risky)'} | **Top 10 Holders:** ${audit.topHoldersSharePercentage.toFixed(1)}% | **LP Locked:** ${audit.lpBurnedPercentage.toFixed(0)}%`;
-      const authorityLine = apiError
-        ? '🔏 **Authority:** —'
-        : `🔏 **Mint Auth:** ${audit.mintAuthority ? '⚠️ AKTIF' : 'None ✅'} | **Freeze Auth:** ${audit.freezeAuthority ? '⚠️ AKTIF' : 'None ✅'}`;
-
-      const lines: string[] = [
-        `📌 **Contract:** \`${contract}\` (Solana)`,
-        ...marketLines(token),
-        auditLine,
-        authorityLine,
-        gmgnAuditLine(secAudit),
-        riskLines.length > 0 ? `⚠️ **Risks:** ${riskLines.join(' • ')}` : '🟢 **Risks:** No risks recorded',
-        `🧠 **Creator:** ${token ? creatorSignals(token) : '—'}`,
-        `🔗 [DexScreener](https://dexscreener.com/solana/${contract}) | [RugCheck](https://rugcheck.xyz/tokens/${contract})`,
-      ];
-      return { success: true, content: lines.join('\n') };
-    }
-
     const goplus = new GoPlusSecurityService();
     const security = await goplus.auditTokenFull('robinhood', contract);
     const gmgn = new GMGNAdapter();

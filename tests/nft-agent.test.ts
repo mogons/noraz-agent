@@ -13,7 +13,7 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
   collectionName: 'Pudgy Penguins',
   tokenId: '1234',
   name: 'Pudgy #1234',
-  chain: 'ethereum',
+  chain: 'robinhood',
   priceEth: 8.2,
   floorPriceEth: 8.0,
   floorSurge1hPct: 35,
@@ -33,7 +33,7 @@ const mkSignal = (over: Partial<OpenSeaNFTSignal> = {}): OpenSeaNFTSignal => ({
 
 const mkFakeAdapter = (signals: OpenSeaNFTSignal[]): OpenSeaAdapter => ({
   fetchTrendingCollections: vi.fn(async () => [
-    { slug: 'pudgypenguins', name: 'Pudgy Penguins', chain: 'ethereum' },
+    { slug: 'pudgypenguins', name: 'Pudgy Penguins', chain: 'robinhood' },
   ]),
   fetchFloorSnipingSignals: vi.fn(async () => signals),
 } as unknown as OpenSeaAdapter);
@@ -96,7 +96,7 @@ describe('NFTScreeningAgent', () => {
     expect(p.title).toContain('Pudgy Penguins');
     expect(p.symbol).toBe('PUDGYPENGUINS');
     expect(p.contractAddress).toBe('N/A');
-    expect(p.network).toBe('ETHEREUM');
+    expect(p.network).toBe('ROBINHOOD');
     expect(p.priceUsd).toBe('8.25 ETH');
     expect(p.marketCap).toContain('Floor');
     expect(p.confidenceScore).toBe(100);

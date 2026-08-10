@@ -7,14 +7,14 @@ describe('PriceFeedService', () => {
   it('returns real price from CoinGecko response and caches it', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ bitcoin: { usd: 70000 }, solana: { usd: 150 } }),
+      json: async () => ({ bitcoin: { usd: 70000 }, ethereum: { usd: 3500 } }),
     }));
     const svc = new PriceFeedService();
     expect(await svc.getPrice('BTC')).toBe(70000);
-    expect(await svc.getPrice('SOL')).toBe(150);
+    expect(await svc.getPrice('ETH')).toBe(3500);
   });
 
-  it('returns null for unsupported symbols (never falls back to SOL)', async () => {
+  it('returns null for unsupported symbols (no fallback mapping)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
     const svc = new PriceFeedService();
     expect(await svc.getPrice('SHIB')).toBeNull();

@@ -3,14 +3,9 @@ import { Guild, ChannelType, PermissionFlagsBits } from 'discord.js';
 export interface ChannelSetupResult {
   controlRoomId: string;
   auditOnDemandId: string;
-  memeSolanaId: string;
   memeEvmId: string;
-  perpsId: string;
-  nftId: string;
-  lpSolanaId: string;
   lpEvmId: string;
-  predictionId: string;
-  ctAlphaId: string;
+  nftId: string;
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
@@ -54,12 +49,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   const auditOnDemandId = await getOrCreateChannel(
     'audit-on-demand',
-    '🔎 On-Demand Token Audit Channel - Paste any Solana or EVM Contract Address (CA) here for instant 12-point audit!'
-  );
-
-  const memeSolanaId = await getOrCreateChannel(
-    'call-meme-solana',
-    '🚀 High-Confidence Solana DEX Signal Calls (Pump.fun, Raydium, Meteora)'
+    '🔎 On-Demand Token Audit Channel - Paste any Robinhood Chain / EVM Contract Address (CA) here for instant 12-point audit!'
   );
 
   const memeEvmId = await getOrCreateChannel(
@@ -67,48 +57,23 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     '🔷 High-Confidence Robinhood Chain Meme Signal Calls (Robinhood Chain L2 DEX)'
   );
 
-  const perpsId = await getOrCreateChannel(
-    'call-whale-tracking',
-    '🐋 Smart Trader & Whale Positioning Tracking (Hyperliquid: BTC, ETH, SOL)'
+  const lpEvmId = await getOrCreateChannel(
+    'call-lp-robinhood',
+    '💧 High-Yield Robinhood Chain Concentrated Liquidity Calls (Uniswap V3 / Aerodrome)'
   );
 
   const nftId = await getOrCreateChannel(
     'call-nft-sniping',
-    '🖼️ NFT Floor Price & Rarity Sniping Alerts (MagicEden, OpenSea)'
+    '🖼️ NFT Floor Price & Rarity Sniping Alerts (OpenSea EVM)'
   );
 
-  const lpSolanaId = await getOrCreateChannel(
-    'call-lp-solana',
-    '💧 High-Yield Solana Concentrated Liquidity Calls (Meteora DLMM, Orca)'
-  );
-
-  const lpEvmId = await getOrCreateChannel(
-    'call-lp-robinhood',
-    '🔷 High-Yield EVM Concentrated Liquidity Calls (Robinhood Chain Concentrated Pools)'
-  );
-
-  const predictionId = await getOrCreateChannel(
-    'call-prediction-markets',
-    '🎯 Polymarket Prediction Market Arbitrage, Odds Mispricing, & Whale Bet Signals'
-  );
-
-  const ctAlphaId = await getOrCreateChannel(
-    'call-ct-alpha',
-    '💡 Smart Crypto Twitter (CT) & AI Alpha - Airdrop threads, AI Agent launches, & Smart Money Calls'
-  );
-
-  console.log('[DISCORD BOOTSTRAP] All Athena channels are ready!');
+  console.log('[DISCORD BOOTSTRAP] All Robinhood Chain Athena channels are ready!');
 
   return {
     controlRoomId,
     auditOnDemandId,
-    memeSolanaId,
     memeEvmId,
-    perpsId,
-    nftId,
-    lpSolanaId,
     lpEvmId,
-    predictionId,
-    ctAlphaId,
+    nftId,
   };
 }

@@ -1,35 +1,37 @@
-# AGENTS.md - Athena Project Guidelines & Agent Instructions
+# AGENTS.md - Athena AI (Robinhood Chain Edition) Guidelines & Agent Instructions
 
-Welcome to the **Athena** codebase! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
+Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
 
 ---
 
 ## 1. Project Overview
 
-**Athena** is an autonomous, multi-agent crypto intelligence and trading ecosystem operated through a **Discord Command Center**.
+**Athena AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**.
 
 - **Core Hub Agent (`#athena-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels:
-  - `#call-meme-solana` (Solana DEX tokens / Pump.fun / Raydium)
-  - `#call-meme-robinhood` (EVM L1/L2 tokens / Uniswap / Aerodrome)
-  - `#call-perps-futures` (Leverage trading setups / Hyperliquid / CEXs)
-  - `#call-nft-sniping` (NFT floor & rarity alerts / MagicEden / Blur)
+  - `#call-meme-robinhood` (Robinhood Chain L2 & EVM DEX tokens / GMGN + GoPlus security)
+  - `#call-lp-robinhood` (Robinhood Chain Concentrated Liquidity Velocity Signals / Krystal Cloud)
+  - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea REST v2)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops).
 
 ---
 
 ## 2. Technology Stack & Environment
 
-- **Runtime:** Node.js (v20+) / TypeScript
+- **Runtime:** Node.js (>=22.12) / TypeScript
 - **Discord Bot SDK:** `discord.js` (v14+)
+- **Target Chain:** Robinhood Chain (EVM L2) — chain ID **4663**, native token **ETH**, RPC `https://rpc.mainnet.chain.robinhood.com`
 - **Blockchain & Crypto Web3 SDKs:**
-  - `@solana/web3.js` & `@jup-ag/api` (Solana)
-  - `viem` / `ethers.js` (EVM)
-  - `ccxt` (Perpetuals & CEX)
-- **Security Audit APIs:** RugCheck API (Solana), GoPlus Security API (EVM)
+  - `viem` (EVM reads/signs)
+  - GMGN OpenAPI (smart-money / rank / trenches / token security audit)
+  - Krystal Cloud DeFi Data API (Robinhood LP pools)
+  - OpenSea REST API v2 (EVM NFTs + swap aggregator)
+  - Relay.link (swap / send / bridge quotes & execution)
+- **Security Audit APIs:** GoPlus Security API (EVM) + GMGN `/v1/token/security`
 - **AI Engine:** OpenRouter / OpenAI / Anthropic Node SDK
-- **Database & State:** SQLite / Prisma ORM / Redis
+- **Database & State:** Local JSON file persistence (`database/athena_state.json`)
 - **Protocol:** Model Context Protocol (MCP)
 
 ---
@@ -47,21 +49,21 @@ Athena/
 │   │   ├── risk-manager.ts
 │   │   └── swarm-consensus.ts    # 3-Layer Signal Quality Filter Engine
 │   ├── agents/                    # Specialized screening agents
-│   │   ├── meme-solana/           # Solana DEX screening
-│   │   ├── meme-robinhood/              # EVM DEX screening
-│   │   ├── perps/                 # Technical setup screening
-│   │   └── nft/                   # NFT floor & rarity screening
+│   │   ├── shared/                # Shared ScreeningAgent contract + GMGN helpers
+│   │   ├── meme-robinhood/        # Robinhood Chain EVM DEX screening (GMGN + GoPlus)
+│   │   └── nft/                   # EVM NFT floor & rarity screening (OpenSea)
 │   ├── adapters/                  # Web3 & Exchange execution adapters
-│   │   ├── solana-adapter.ts
 │   │   ├── evm-adapter.ts
-│   │   └── ccxt-adapter.ts
+│   │   ├── relay-adapter.ts
+│   │   ├── gmgn-adapter.ts
+│   │   ├── krystal-cloud-adapter.ts
+│   │   └── opensea-adapter.ts
 │   ├── position/                  # Auto TP/SL & Trailing Stop Position Manager
 │   │   └── position-manager.ts
 │   ├── discord/                   # Discord handlers, slash commands & embed views
 │   │   ├── commands/
 │   │   └── embeds/
 │   ├── services/                  # Shared security, price feeds & LLM services
-│   └── database/                  # Prisma models, trade audit log & state persistence
 ├── .env.example                   # Environment variable template
 ├── package.json
 └── tsconfig.json
@@ -81,7 +83,7 @@ Athena/
    - Avoid using `any`. Define clear interfaces for Token Signals, Audit Results, Swarm Scores, Discord Command Contexts, and Position States.
 5. **Discord UX Standards:**
    - Use Discord Rich Embeds with clear color coding (🟢 Green for High Confidence Call, 🔴 Red for Warning/Risk, 🔵 Blue for Status Info).
-   - Provide interactive Action Buttons (`BUY 0.5 SOL`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
+   - Provide interactive Action Buttons (`BUY 0.5 ETH`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
 
 ---
 

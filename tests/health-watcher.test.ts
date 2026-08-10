@@ -4,19 +4,19 @@ import { HealthWatcherService } from '../src/services/health-watcher.js';
 describe('HealthWatcherService', () => {
   it('marks an agent responsive after a real heartbeat', () => {
     const hw = new HealthWatcherService();
-    hw.recordHeartbeat('meme-solana');
+    hw.recordHeartbeat('meme-robinhood');
     const { report } = hw.auditSystemHealth();
-    const sol = report.find((a) => a.domain === 'meme-solana');
-    expect(sol).toBeDefined();
-    expect(sol!.status).toBe('HEALTHY');
+    const agent = report.find((a) => a.domain === 'meme-robinhood');
+    expect(agent).toBeDefined();
+    expect(agent!.status).toBe('HEALTHY');
   });
 
   it('normalizes heartbeat domain casing', () => {
     const hw = new HealthWatcherService();
-    hw.recordHeartbeat('MEME_SOLANA');
+    hw.recordHeartbeat('MEME_ROBINHOOD');
     const { report } = hw.auditSystemHealth();
-    const sol = report.find((a) => a.domain === 'meme-solana');
-    expect(sol).toBeDefined();
-    expect(sol!.status).toBe('HEALTHY');
+    const agent = report.find((a) => a.domain === 'meme-robinhood');
+    expect(agent).toBeDefined();
+    expect(agent!.status).toBe('HEALTHY');
   });
 });

@@ -56,7 +56,7 @@ export async function launchTUI(): Promise<void> {
     console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
-    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Solana/EVM/Perps/NFT/Polymarket)`);
+    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Robinhood/EVM)`);
     console.log(` ${C.green}[4]${C.reset} 🧠 Command Room Oracle Chat (Natural Language AI Hub)`);
     console.log(` ${C.green}[5]${C.reset} ⚙️ Global Risk Management & Position Size Safeguards`);
     console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Realized PnL Analytics (View Summary)`);
@@ -77,42 +77,31 @@ export async function launchTUI(): Promise<void> {
       case '1':
         console.clear();
         console.log(`${C.cyan}=== 🔑 ATHENA TREASURY & BURNER WALLETS ===${C.reset}`);
-        const hasSol = walletService.hasWallet('solana');
         const hasEvm = walletService.hasWallet('evm');
-        console.log(`• Solana Wallet: ${hasSol ? C.green + walletService.getSolanaAddress() + C.reset : C.red + 'Not Configured' + C.reset}`);
-        console.log(`• EVM Wallet:    ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
-        console.log('[1] Import / Replace Solana Private Key');
-        console.log('[2] Import / Replace EVM Private Key');
-        console.log('[3] Remove / Clear Solana Private Key');
-        console.log('[4] Remove / Clear EVM Private Key');
-        console.log('[5] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
+        console.log(`• Robinhood (EVM) Wallet: ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
+        console.log('[1] Import / Replace EVM Private Key');
+        console.log('[2] Remove / Clear EVM Private Key');
+        console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
         console.log('[0] Back to Parthenon Menu\n');
-        const walletSub = await prompt('Select Treasury Action (0-5): ');
-        if (walletSub === '1' || walletSub === '2') {
-          const chain = walletSub === '1' ? 'solana' : 'evm';
-          const pk = await prompt(`Enter ${chain.toUpperCase()} Private Key: `);
+        const walletSub = await prompt('Select Treasury Action (0-3): ');
+        if (walletSub === '1') {
+          const pk = await prompt(`Enter EVM Private Key: `);
           if (pk.trim()) {
-            walletService.setKey(chain, pk.trim());
-            console.log(`${C.green}✅ ${chain.toUpperCase()} Private Key imported and active!${C.reset}`);
+            walletService.setKey('evm', pk.trim());
+            console.log(`${C.green}✅ EVM Private Key imported and active!${C.reset}`);
           }
-        } else if (walletSub === '3' || walletSub === '4') {
-          const chain = walletSub === '3' ? 'solana' : 'evm';
-          walletService.removeKey(chain);
-          console.log(`${C.yellow}🗑️ ${chain.toUpperCase()} Private Key removed from memory!${C.reset}`);
-        } else if (walletSub === '5') {
-          const to = await prompt('Destination Recipient Wallet Address: ');
-          const amtStr = await prompt('Amount of Native Token (SOL / ETH) to Withdraw: ');
+        } else if (walletSub === '2') {
+          walletService.removeKey('evm');
+          console.log(`${C.yellow}🗑️ EVM Private Key removed from memory!${C.reset}`);
+        } else if (walletSub === '3') {
+          const to = await prompt('Destination Recipient Wallet Address (0x...): ');
+          const amtStr = await prompt('Amount of Native Token (ETH) to Withdraw: ');
           const amt = parseFloat(amtStr);
           if (to.trim() && !isNaN(amt) && amt > 0) {
             console.log(`${C.yellow}Executing withdrawal...${C.reset}`);
             try {
-              if (!to.startsWith('0x')) {
-                const res = await walletService.sendSol(to.trim(), amt);
-                console.log(`${C.green}✅ Solana Withdrawal Complete! Tx: ${res.txHash}${C.reset}`);
-              } else {
-                const res = await walletService.sendEvm(8453, to.trim(), amt);
-                console.log(`${C.green}✅ EVM Base Withdrawal Complete! Tx: ${res.txHash}${C.reset}`);
-              }
+              const res = await walletService.sendEvm(4663, to.trim(), amt);
+              console.log(`${C.green}✅ EVM Robinhood Withdrawal Complete! Tx: ${res.txHash}${C.reset}`);
             } catch (err: any) {
               console.log(`${C.red}❌ Withdrawal failed: ${err.message}${C.reset}`);
             }
@@ -127,38 +116,21 @@ export async function launchTUI(): Promise<void> {
         const ca = await prompt('Enter Token Contract Address (CA): ');
         if (ca.trim()) {
           console.log(`${C.yellow}Executing 3-Layer Swarm Consensus Audit (Quant + Catalyst + Security)...${C.reset}`);
-          const isSol = !ca.trim().startsWith('0x');
           let liquidityUsd = 0;
           let volume1hUsd = 0;
           let securityPassed = false;
           let socialHypeScore = 0;
           try {
-            if (isSol) {
-              const { RugCheckService } = await import('../services/security-service.js');
-              const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
-              const rug = new RugCheckService();
-              const audit = await rug.auditSolanaToken(ca.trim());
-              securityPassed = audit ? audit.isSafeForRunner : false;
-              const gmgn = new GMGNAdapter();
-              const sigs = await gmgn.fetchTrendingSignals('sol');
-              const tok = sigs.find((s) => s.contractAddress.toLowerCase() === ca.trim().toLowerCase());
-              if (tok) {
-                liquidityUsd = tok.liquidityUsd || 0;
-                volume1hUsd = (tok.volume24hUsd || 0) / 24;
-                socialHypeScore = Math.min(98, 40 + (tok.smartMoneyCount >= 2 ? 20 : 0) + (tok.liquidityUsd >= 25000 ? 15 : 0) + (tok.volume24hUsd >= 100000 ? 15 : 0));
-              }
-            } else {
-              const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
-              const goplus = new GoPlusSecurityService();
-              const audit = await goplus.auditToken('base', ca.trim());
-              securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
-            }
+            const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
+            const goplus = new GoPlusSecurityService();
+            const audit = await goplus.auditToken('robinhood', ca.trim());
+            securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
           } catch (err: any) {
             console.log(`${C.red}⚠️ Real audit data unavailable: ${err?.message}${C.reset}`);
           }
           const res = swarmEngine.evaluateSignal({
             symbol: 'CUSTOM',
-            domain: 'MEME_SOLANA',
+            domain: 'MEME_ROBINHOOD',
             contractAddress: ca.trim(),
             liquidityUsd,
             volume1hUsd,
@@ -190,13 +162,13 @@ export async function launchTUI(): Promise<void> {
         console.log('[A] ⚡ Activate ALL Agents');
         console.log('[P] ⏸️ Pause ALL Agents');
         console.log('[0] Back to Parthenon Menu\n');
-        const agentChoice = await prompt('Select Option (1-8, A, P, 0): ');
+        const agentChoice = await prompt(`Select Option (1-${subAgentsList.length}, A, P, 0): `);
         if (agentChoice.toUpperCase() === 'A') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, true));
-          console.log(`${C.green}⚡ All 8 Sub-Agents activated in TUI Parthenon!${C.reset}`);
+          console.log(`${C.green}⚡ All ${subAgentsList.length} Sub-Agents activated in TUI Parthenon!${C.reset}`);
         } else if (agentChoice.toUpperCase() === 'P') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, false));
-          console.log(`${C.yellow}⏸️ All 8 Sub-Agents paused in TUI Parthenon!${C.reset}`);
+          console.log(`${C.yellow}⏸️ All ${subAgentsList.length} Sub-Agents paused in TUI Parthenon!${C.reset}`);
         } else {
           const selected = subAgentsList.find(a => a.id === agentChoice.trim());
           if (selected) {
@@ -290,7 +262,7 @@ Current Operating Parameters:
         const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
         AGENT_DOMAINS.forEach((d, i) => console.log(`[${i + 1}] ${d.displayName} (${d.channel})`));
         console.log('[0] Back\n');
-        const sel = await prompt('Select Agent (1-8): ');
+        const sel = await prompt(`Select Agent (1-${AGENT_DOMAINS.length}): `);
         const chosen = AGENT_DOMAINS[parseInt(sel) - 1];
         if (!chosen) { await prompt(`${C.red}Invalid. Press Enter...${C.reset}`); break; }
         console.log(`\n${C.yellow}Running ${chosen.displayName} screening pass...${C.reset}`);

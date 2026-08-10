@@ -15,17 +15,16 @@ const MAX_READ_FILE_BYTES = 30 * 1024; // 30 KB
  */
 const PROTECTED_ENV_KEYS = [
   'DRY_RUN',
-  'SOLANA_PRIVATE_KEY', 'EVM_PRIVATE_KEY', 'HYPERLIQUID_PRIVATE_KEY', 'POLYMARKET_PRIVATE_KEY',
-  'SOLANA_RPC_URL', 'SOLANA_WSS_URL', 'EVM_RPC_URL', 'EVM_BASE_RPC_URL', 'EVM_ETH_RPC_URL',
-  'EVM_ROBINHOOD_RPC_URL', 'EVM_ARB_RPC_URL', 'EVM_OP_RPC_URL', 'EVM_POLYGON_RPC_URL', 'EVM_BSC_RPC_URL',
+  'EVM_PRIVATE_KEY',
+  'EVM_RPC_URL', 'EVM_ROBINHOOD_RPC_URL',
   'AI_BASE_URL', 'AI_PROVIDER',
 ];
 
 /** Keys settable via set_api_key (API credentials only — never mode/private/infra). */
 const SETTABLE_ENV_KEYS = [
   'AI_API_KEY', 'AI_API_KEYS', 'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
-  'GMGN_API_KEY', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'TWITTER_BEARER_TOKEN', 'GOPLUS_API_KEY',
-  'UNISWAP_API_KEY', 'JUPITER_API_KEY', 'RUGCHECK_API_URL',
+  'GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'TWITTER_BEARER_TOKEN', 'GOPLUS_API_KEY',
+  'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY',
 ];
 
 export interface AthenaToolDefinition {
@@ -64,13 +63,13 @@ export class ToolRegistry {
     return [
       {
         name: 'pause_sub_agent',
-        description: 'Pause a specific background screening sub-agent (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood).',
+        description: 'Pause a specific background screening sub-agent (e.g. meme-robinhood, lp-robinhood, nft).',
         parameters: {
           type: 'object',
           properties: {
             agentId: {
               type: 'string',
-              description: 'The ID of the sub-agent to pause (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
+              description: 'The ID of the sub-agent to pause (e.g. meme-robinhood, lp-robinhood, nft, or all).',
             },
           },
           required: ['agentId'],
@@ -84,7 +83,7 @@ export class ToolRegistry {
           properties: {
             agentId: {
               type: 'string',
-              description: 'The ID of the sub-agent to resume (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
+              description: 'The ID of the sub-agent to resume (e.g. meme-robinhood, lp-robinhood, nft, or all).',
             },
           },
           required: ['agentId'],
@@ -98,7 +97,7 @@ export class ToolRegistry {
           properties: {
             agentId: {
               type: 'string',
-              description: 'The sub-agent to trigger immediately (e.g. solana-meme, evm-meme, perps, nft, prediction, ct-alpha, lp-solana, lp-robinhood, or all).',
+              description: 'The sub-agent to trigger immediately (e.g. meme-robinhood, lp-robinhood, nft, or all).',
             },
           },
           required: ['agentId'],
@@ -162,7 +161,7 @@ export class ToolRegistry {
             },
             agentId: {
               type: 'string',
-              description: 'Target sub-agent ID (e.g. solana-meme, evm-meme, perps, nft).',
+              description: 'Target sub-agent ID (e.g. meme-robinhood, lp-robinhood, nft).',
             },
           },
           required: ['interval'],
@@ -190,7 +189,7 @@ export class ToolRegistry {
           properties: {
             keyName: {
               type: 'string',
-              description: 'API key environment variable name (e.g. GMGN_API_KEY, OPENSEA_API_KEY, TWEX_API_KEY, POLYMARKET_API_KEY).',
+              description: 'API key environment variable name (e.g. GMGN_API_KEY, GMGN_API_KEY_ROBINHOOD, OPENSEA_API_KEY, KRYSTAL_CLOUD_API_KEY).',
             },
             keyValue: {
               type: 'string',
@@ -249,7 +248,7 @@ export class ToolRegistry {
       },
       {
         name: 'get_portfolio',
-        description: 'Show portfolio state: SOL/ETH wallet balances, open position count, current drawdown.',
+        description: 'Show portfolio state: Robinhood (ETH) wallet balance, open position count, current drawdown.',
         parameters: { type: 'object', properties: {} },
       },
       {
@@ -273,7 +272,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             strategyId: { type: 'string', description: 'Strategy id.' },
-            domain: { type: 'string', description: 'Screening domain (e.g. meme-solana, perps).' },
+            domain: { type: 'string', description: 'Screening domain (e.g. meme-robinhood, lp-robinhood).' },
           },
           required: ['strategyId', 'domain'],
         },
@@ -313,11 +312,11 @@ export class ToolRegistry {
       },
       {
         name: 'set_screening_config',
-        description: 'Update runtime screening thresholds for a sub-agent (meme-solana, meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume1hUsd (1000-100000000; real 1H volume, default 50000), minLiquidityUsd (1000-100000000), minMarketCapUsd (1000-1000000000), minAgeHours (0-168; 0 = degen early, new tokens pass), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (0-1000000; 500 = default, 0 = fee gate off), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalTypes (array of ints 1-21, e.g. [6,7,11,12]), trackFeedEnabled (boolean; smart-money trade feed as candidate booster), minTrackWallets (1-50; default 2), minTrackBuyUsd (1000-100000000; default 10000), trackFreshMinutes (1-1440; default 30). Persisted across restarts.',
+        description: 'Update runtime screening thresholds for a sub-agent (meme-robinhood). Whitelisted keys only; out-of-range values are rejected, never silently changed. Valid keys (meme agents): minVolume1hUsd (1000-100000000; real 1H volume, default 50000), minLiquidityUsd (1000-100000000), minMarketCapUsd (1000-1000000000), minAgeHours (0-168; 0 = degen early, new tokens pass), maxRugRatio (0.01-1), maxRatTraderRate (0.01-1), maxTop10HolderRate (0.01-1), minTotalFeeUsd (0-1000000; 500 = default, 0 = fee gate off), passThreshold (50-99), rankLimit (10-100), trenchesLimit (10-80), hotSearchesLimit (10-500), signalTypes (array of ints 1-21, e.g. [6,7,11,12]), trackFeedEnabled (boolean; smart-money trade feed as candidate booster), minTrackWallets (1-50; default 2), minTrackBuyUsd (1000-100000000; default 10000), trackFreshMinutes (1-1440; default 30). Persisted across restarts.',
         parameters: {
           type: 'object',
           properties: {
-            agentId: { type: 'string', description: 'Sub-agent domain: meme-solana or meme-robinhood.' },
+            agentId: { type: 'string', description: 'Sub-agent domain: meme-robinhood.' },
             config: { type: 'object', description: 'Key-value map of thresholds to update (whitelisted keys only).' },
           },
           required: ['agentId', 'config'],
@@ -426,7 +425,7 @@ export class ToolRegistry {
 
           const interval = String(args.interval || 'every 1 hour');
           const action = (args.action || 'screening') as any;
-          const agentId = String(args.agentId || 'solana-meme');
+          const agentId = String(args.agentId || 'meme-robinhood');
 
           const task = globalCronScheduler.addSchedule(interval, action, agentId);
           return {
@@ -523,7 +522,7 @@ export class ToolRegistry {
           const dryRun = process.env.DRY_RUN !== 'false';
           const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
           const active = this.orchestrator.getActiveDomains();
-          const keyNames = ['GMGN_API_KEY', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'POLYGON_RPC_URL', 'SOLANA_RPC_URL', 'BASE_RPC_URL'];
+          const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'EVM_ROBINHOOD_RPC_URL'];
           const keys = keyNames.map((k) => {
             const v = process.env[k];
             const set = Boolean(v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock'));
@@ -563,14 +562,12 @@ export class ToolRegistry {
 
         case 'get_portfolio': {
           const ws = this.walletService ?? (await import('../services/wallet-service.js')).globalWalletService;
-          const sol = await ws.getSolanaBalance();
-          const eth = await ws.getEvmBalance(1);
+          const eth = await ws.getEvmBalance(4663);
           const drawdown = this.orchestrator?.getRiskManager().getRiskState().currentDrawdownPct ?? null;
           return {
             success: true,
             message: 'Portfolio state.',
             data: {
-              solana: sol ? { balance: sol.balance, symbol: sol.symbol, simulated: sol.simulated } : null,
               evm: eth ? { balance: eth.balance, symbol: eth.symbol, simulated: eth.simulated } : null,
               currentDrawdownPct: drawdown,
             },
@@ -600,9 +597,7 @@ export class ToolRegistry {
         }
 
         case 'write_indicator_file': {
-          const { StrategyEngine } = await import('./strategy-engine.js');
-          const engine = new StrategyEngine();
-          return engine.writeIndicator(String(args.name || ''), String(args.code || ''));
+          return this.strategyEngine.writeIndicator(String(args.name || ''), String(args.code || ''));
         }
 
         case 'set_screening_config': {

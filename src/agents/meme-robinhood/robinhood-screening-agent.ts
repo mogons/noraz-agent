@@ -207,7 +207,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       : `🧠 **Smart Traders:** ${t.smartDegenCount} wallets (+${t.creatorClose ? 'dev closed' : 'monitoring'})`;
 
     return {
-      domain: 'MEME_EVM',
+      domain: 'MEME_ROBINHOOD',
       title: `${t.name} (${t.symbol})`,
       symbol: t.symbol,
       contractAddress: t.address,
@@ -232,7 +232,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       aiThesis: thesis,
       gmgnUrl: `https://gmgn.ai/robinhood/token/${t.address}`,
       dexScreenerUrl: `https://dexscreener.com/robinhood/${t.address}`,
-      rugcheckUrl: `https://gopluslabs.io/token-security/4663/${t.address}`,
+      goplusUrl: `https://gopluslabs.io/token-security/4663/${t.address}`,
       securityAuditPassed: true, // security audit via GMGN in preFilter (rug/honeypot/tax/insider/bundler/top10)
       socialHypeScore: confidence,
       liquidityUsd: t.liquidityUsd,
@@ -313,7 +313,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
         const strat = this.strategyEngine.getActiveStrategy('meme-robinhood');
         if (strat?.evaluate) {
           const ev = this.strategyEngine.runStrategySafely(strat, 'evaluate', {
-            domain: 'MEME_EVM', symbol: t.symbol, contractAddress: t.address,
+            domain: 'MEME_ROBINHOOD', symbol: t.symbol, contractAddress: t.address,
             priceUsd: t.priceUsd, liquidityUsd: t.liquidityUsd,
             volume24hUsd: volume24hOf(t), volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t)/24,
             smartMoneyCount: t.smartDegenCount, securityAuditPassed: true,

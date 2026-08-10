@@ -1,7 +1,7 @@
 /**
- * Shared GMGN meme-agent helpers (Solana + EVM meme agents).
+ * Shared GMGN meme-agent helpers (Robinhood Chain meme agents).
  *
- * The two meme agents are near-identical; everything that is chain-agnostic
+ * The meme agents are near-identical; everything that is chain-agnostic
  * lives here so thresholds, dedup and the strategy context contract stay in
  * ONE place. No scoring logic changes — this is pure de-duplication.
  */
@@ -38,10 +38,8 @@ export interface MemeSignalResult {
 
 /**
  * Graduated = token has left the bonding curve into the open DEX market.
- * - SOL: GMGN marks the venue via `exchange` — 'pump' = still internal
- *   pump.fun market; 'pump_amm'/'raydium'/'meteora'/etc = already on DEX.
- * - EVM: `exchange` holds a contract/pool address (0x...) — its presence
- *   means the venue is already formed (not a bonding curve).
+ * - Robinhood (EVM): `exchange` holds a contract/pool address (0x...) — its
+ *   presence means the venue is already formed (not a bonding curve).
  * - DexScreener pairs are by definition already on DEX. Unknown/null = fail-closed reject.
  */
 export function isGraduatedToken(t: GMGNRawToken): boolean {

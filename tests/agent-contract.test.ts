@@ -9,7 +9,7 @@ describe('Agent contract types', () => {
       reason: 'ok',
       confidence: 85,
       payload: {
-        domain: 'MEME_SOLANA', title: 'X', symbol: 'X', network: 'Solana',
+        domain: 'MEME_ROBINHOOD', title: 'X', symbol: 'X', network: 'Robinhood',
         aiThesis: 't', securityAuditPassed: true, socialHypeScore: 70,
         liquidityUsd: 1000, volume1hUsd: 500,
       },
@@ -20,9 +20,9 @@ describe('Agent contract types', () => {
 
   it('ScreeningAgent interface is implementable', () => {
     const agent: ScreeningAgent = {
-      domain: 'meme-solana',
+      domain: 'meme-robinhood',
       runScreeningPass: async () => [],
     };
-    expect(agent.domain).toBe('meme-solana');
+    expect(agent.domain).toBe('meme-robinhood');
   });
 });

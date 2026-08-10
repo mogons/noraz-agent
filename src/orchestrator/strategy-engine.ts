@@ -32,12 +32,13 @@ export class StrategyEngine {
   public listStrategies(): Array<{ id: string; active: boolean }> {
     ensureDirs();
     const activeMap = this.readActiveMap();
+    const activeIds = Object.values(activeMap).filter((v): v is string => typeof v === 'string');
     const files = fs.existsSync(STRATEGIES_DIR)
       ? fs.readdirSync(STRATEGIES_DIR).filter((f) => f.endsWith('.mjs'))
       : [];
     return files.map((f) => {
       const id = f.replace(/\.mjs$/, '');
-      return { id, active: activeMap[id] === true };
+      return { id, active: activeIds.includes(id) || activeMap[id] === true };
     });
   }
 
@@ -151,7 +152,7 @@ export class StrategyEngine {
 
   // ─── Active strategy per domain ──────────────────────────────────────
 
-  private readActiveMap(): Record<string, boolean> {
+  private readActiveMap(): Record<string, string | boolean> {
     if (!fs.existsSync(ACTIVE_FILE)) return {};
     try {
       return JSON.parse(fs.readFileSync(ACTIVE_FILE, 'utf-8'));
@@ -160,7 +161,7 @@ export class StrategyEngine {
     }
   }
 
-  private writeActiveMap(map: Record<string, boolean>): void {
+  private writeActiveMap(map: Record<string, string | boolean>): void {
     try {
       fs.writeFileSync(ACTIVE_FILE, JSON.stringify(map, null, 2), 'utf-8');
     } catch (err: any) {
@@ -168,20 +169,35 @@ export class StrategyEngine {
     }
   }
 
+  private domainKey(domain: string): string {
+    return domain.toLowerCase().replace(/[_\s]+/g, '-');
+  }
+
+  /**
+   * Per-domain activation: each domain keeps its own active strategy, so
+   * activating meme-robinhood does NOT deactivate nft or lp-robinhood.
+   * Active map format: { [domainKey]: strategyId }.
+   */
   public setActiveStrategy(domain: string, strategyId: string): { success: boolean; message: string } {
     const strategies = this.listStrategies();
     if (!strategies.some((s) => s.id === strategyId)) {
       return { success: false, message: `Strategy ${strategyId} not found in strategies/.` };
     }
     const map = this.readActiveMap();
-    for (const s of strategies) map[s.id] = s.id === strategyId;
+    map[this.domainKey(domain)] = strategyId;
     this.writeActiveMap(map);
     return { success: true, message: `✅ Strategy ${strategyId} is now active for domain ${domain}.` };
   }
 
   public getActiveStrategy(domain: string): AthenaStrategy | null {
     const map = this.readActiveMap();
-    const activeId = Object.keys(map).find((k) => map[k] === true);
+    const domainKey = this.domainKey(domain);
+    let activeId = typeof map[domainKey] === 'string' ? map[domainKey] : undefined;
+    if (!activeId) {
+      // Legacy format migration: { strategyId: true } global map from before per-domain activation.
+      const legacy = Object.entries(map).find(([, v]) => v === true);
+      activeId = legacy ? legacy[0] : undefined;
+    }
     if (activeId) {
       const file = path.join(STRATEGIES_DIR, `${activeId}.mjs`);
       if (fs.existsSync(file)) {
@@ -193,9 +209,9 @@ export class StrategyEngine {
         }
       }
     }
-    // Fallback: domain-default strategy (e.g. meme-solana-default.mjs) is active
+    // Fallback: domain-default strategy (e.g. meme-robinhood-default.mjs) is active
     // out-of-the-box when no explicit strategy has been set yet.
-    const defaultId = `${domain.toLowerCase().replace(/[_\s]+/g, '-')}-default`;
+    const defaultId = `${this.domainKey(domain)}-default`;
     const defaultFile = path.join(STRATEGIES_DIR, `${defaultId}.mjs`);
     if (fs.existsSync(defaultFile)) {
       try {
@@ -240,7 +256,7 @@ export class StrategyEngine {
     if (typeof fn !== 'function') return undefined;
     const snapshot = { ...process.env };
     const sensitiveKeys = Object.keys(process.env).filter((k) =>
-      /KEY|TOKEN|SECRET|PRIVATE|PASSWORD|API/i.test(k) || k.startsWith('SOLANA_') || k.startsWith('EVM_') || k.startsWith('AI_')
+      /KEY|TOKEN|SECRET|PRIVATE|PASSWORD|API/i.test(k) || k.startsWith('EVM_') || k.startsWith('AI_')
     );
     for (const k of sensitiveKeys) delete process.env[k];
     try {

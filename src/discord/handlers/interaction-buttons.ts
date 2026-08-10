@@ -18,10 +18,9 @@ import { priceAlertService, walletService, buildDashboardOptions } from './comma
 
 export async function handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
   if (interaction.customId === 'wallet_setup_modal') {
-    const chain = interaction.fields.getTextInputValue('wallet_chain').toLowerCase().trim();
     const pk = interaction.fields.getTextInputValue('wallet_pk').trim();
 
-    const chainType = chain.includes('sol') ? 'solana' : 'evm';
+    const chainType = 'evm';
     walletService.setKey(chainType, pk);
 
     let addressStr = '';
@@ -107,11 +106,9 @@ export async function handleButtonPress(interaction: ButtonInteraction, hub: Ath
     hub.setAllAgentsActive(false);
     await interaction.reply({ content: '🛑 **EMERGENCY CIRCUIT BREAKER TRIGGERED!** All sub-agents paused & pending orders halted.', ephemeral: false });
   } else if (customId === 'btn_view_wallets') {
-    const sol = await walletService.getSolanaBalance();
-    const eth = await walletService.getEvmBalance(1);
-    const solStr = sol ? `${sol.balance.toFixed(4)} SOL${sol.simulated ? ' (Simulated)' : ''}` : '— (unavailable)';
+    const eth = await walletService.getEvmBalance(4663);
     const ethStr = eth ? `${eth.balance.toFixed(4)} ETH${eth.simulated ? ' (Simulated)' : ''}` : '— (unavailable)';
-    await interaction.reply({ content: `🔑 **Burner Wallets:** Solana: \`${solStr}\` | EVM: \`${ethStr}\`.`, ephemeral: true });
+    await interaction.reply({ content: `🔑 **Burner Wallets:** Robinhood (ETH): \`${ethStr}\`.`, ephemeral: true });
   } else if (customId === 'btn_view_alerts') {
     const alerts = priceAlertService.listAlerts(interaction.user.id);
     const count = alerts.length;

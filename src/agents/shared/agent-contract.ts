@@ -1,6 +1,4 @@
-import type { CexRadarEntry } from '../../adapters/cex-radar-adapter.js';
-
-export type CallDomain = 'MEME_SOLANA' | 'MEME_EVM' | 'PERPS' | 'NFT' | 'LP_METEORA' | 'LP_ROBINHOOD' | 'PREDICTION' | 'CT_ALPHA' | 'WHALE';
+export type CallDomain = 'MEME_ROBINHOOD' | 'NFT' | 'LP_ROBINHOOD';
 
 /** Whale tracking: a single open position >= threshold belonging to one smart trader. */
 export interface WhaleTraderEntry {
@@ -18,7 +16,7 @@ export interface WhaleSpotEntry {
   fillCount: number;
 }
 
-/** Whale tracking: smart trader position report per asset (BTC/ETH/SOL/HYPE). */
+/** Whale tracking: smart trader position report per asset (BTC/ETH). */
 export interface WhaleReport {
   coin: string;
   totalLongUsd: number;
@@ -53,27 +51,21 @@ export interface CallCardPayload {
   bundlerPct?: string;
   dexPaidStatus?: string;
   smartMoneyInfo?: string;
-  /** Informational only (never a filter): apakah token terverifikasi di platform (Meteora blue check, dll). */
   tokenVerified?: boolean;
   confidenceScore?: number;
   securityScore?: string;
   aiThesis: string;
   dexScreenerUrl?: string;
   gmgnUrl?: string;
-  rugcheckUrl?: string;
-  /** Direct pool page (Meteora app / Uniswap explore) — domain-specific LP link. */
+  goplusUrl?: string;
   poolUrl?: string;
-  /** Extra data-source link for LP (e.g. Krystal pool page — verifikasi data). */
   krystalUrl?: string;
-  /** LP: kontrak masing-masing token di pool (token X/meme & token Y/base). */
   token0Address?: string;
   token1Address?: string;
   token0Symbol?: string;
   token1Symbol?: string;
-  /** LP: chart token (DexScreener/GMGN) — per token. */
   token0ChartUrl?: string;
   token1ChartUrl?: string;
-  /** LP: detail token meme (token X) — degen style. */
   token0PriceUsd?: number;
   token0MarketCapUsd?: number;
   token0Volume24hUsd?: number;
@@ -85,10 +77,8 @@ export interface CallCardPayload {
   socialHypeScore: number;
   liquidityUsd: number;
   volume1hUsd: number;
-  /** Whale tracking: smart trader position report (domain WHALE) — custom embed render. */
   whaleReport?: WhaleReport;
-  /** CEX Radar: OI/funding/L-S/whale prints context from Binance/Bybit/OKX (card info only, never a filter). */
-  cexRadar?: CexRadarEntry[];
+  cexRadar?: any[];
 }
 
 export interface AgentReport<TSignal = unknown> {

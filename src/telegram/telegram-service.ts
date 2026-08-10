@@ -74,7 +74,7 @@ export class TelegramService {
   }
 
   /**
-   * Auto-bootstrap all 10 Athena Sub-Channels / Forum Topics in Telegram Group
+   * Auto-bootstrap all Athena Sub-Channels / Forum Topics in Telegram Group
    */
   public async bootstrapTelegramTopics(): Promise<Record<string, number | null>> {
     if (!this.isEnabled()) return {};
@@ -83,14 +83,9 @@ export class TelegramService {
     const topicNames = [
       'athena-control-room',
       'audit-on-demand',
-      'call-meme-solana',
       'call-meme-robinhood',
-      'call-whale-tracking',
-      'call-lp-solana',
       'call-lp-robinhood',
       'call-nft-sniping',
-      'call-prediction-markets',
-      'call-ct-alpha',
     ];
 
     const results: Record<string, number | null> = {};
@@ -185,34 +180,20 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 🛡️ *Max Position Size:* ${risk ? `$${risk.maxPositionSizeUsd}` : 'n/a'}
 
 🤖 *Active Sub-Agents Status:*
-• 🐣 Solana Meme (\`meme-solana\`): ${getStatus('meme-solana')}
 • 🔷 Robinhood Meme (\`meme-robinhood\`): ${getStatus('meme-robinhood')}
-• ⚡ Solana LP (\`lp-solana\`): ${getStatus('lp-solana')}
 • 💧 Robinhood LP (\`lp-robinhood\`): ${getStatus('lp-robinhood')}
-• 🐋 Whale Tracking (\`perps\`): ${getStatus('perps')}
 • 🖼️ NFT Sniping (\`nft\`): ${getStatus('nft')}
-• 🎯 Polymarket (\`prediction\`): ${getStatus('prediction')}
-• 💡 Smart CT Alpha (\`ct-alpha\`): ${getStatus('ct-alpha')}
 
 Use buttons below to toggle agents, view wallet status, or execute withdrawals:`;
 
     const replyMarkup = {
       inline_keyboard: [
         [
-          { text: '▶️ Toggle SOL Meme', callback_data: 'toggle_meme-solana' },
           { text: '▶️ Toggle Robinhood Meme', callback_data: 'toggle_meme-robinhood' },
-        ],
-        [
-          { text: '▶️ Toggle SOL LP', callback_data: 'toggle_lp-solana' },
           { text: '▶️ Toggle Robinhood LP', callback_data: 'toggle_lp-robinhood' },
         ],
         [
-          { text: '▶️ Toggle Whale', callback_data: 'toggle_perps' },
           { text: '▶️ Toggle NFT', callback_data: 'toggle_nft' },
-        ],
-        [
-          { text: '▶️ Toggle Polymarket', callback_data: 'toggle_prediction' },
-          { text: '▶️ Toggle CT Alpha', callback_data: 'toggle_ct-alpha' },
         ],
         [
           { text: '⚡ Start All', callback_data: 'start_all' },
@@ -274,21 +255,18 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         hub.toggleChannelScreening('telegram-forum', domain, !active);
         await this.sendMessage(`⚡ Sub-agent domain \`${domain}\` is now **${!active ? 'ACTIVE' : 'PAUSED'}** on Telegram!`, 'Markdown', undefined, threadId);
       } else if (data === 'start_all') {
-        ['meme-solana', 'meme-robinhood', 'lp-solana', 'lp-robinhood', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, true));
-        await this.sendMessage('⚡ **GLOBAL MASTER SCREENING ACTIVATED!** All 8 Sub-Agents are active on Telegram.', 'Markdown', undefined, threadId);
+        ['meme-robinhood', 'lp-robinhood', 'nft'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, true));
+        await this.sendMessage('⚡ **GLOBAL MASTER SCREENING ACTIVATED!** All 3 Sub-Agents are active on Telegram.', 'Markdown', undefined, threadId);
       } else if (data === 'pause_all') {
-        ['meme-solana', 'meme-robinhood', 'lp-solana', 'lp-robinhood', 'perps', 'nft', 'prediction', 'ct-alpha'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
-        await this.sendMessage('⏸️ **GLOBAL MASTER SCREENING PAUSED!** All 8 Sub-Agents are paused on Telegram.', 'Markdown', undefined, threadId);
+        ['meme-robinhood', 'lp-robinhood', 'nft'].forEach(d => hub.toggleChannelScreening('telegram-forum', d, false));
+        await this.sendMessage('⏸️ **GLOBAL MASTER SCREENING PAUSED!** All 3 Sub-Agents are paused on Telegram.', 'Markdown', undefined, threadId);
       } else if (data === 'balances') {
         const isDryRun = isDryRunMode();
-        const hasSol = walletService.hasWallet('solana');
         const hasEvm = walletService.hasWallet('evm');
-        let solAddr = hasSol ? `\`${walletService.getSolanaAddress()}\`` : 'Not Configured';
         let evmAddr = hasEvm ? `\`${walletService.getEvmAddress()}\`` : 'Not Configured';
         await this.sendMessage(
           `💼 *ATHENA WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
-          `• *Solana Wallet:* ${solAddr}\n` +
-          `• *EVM Wallet:* ${evmAddr}\n\n` +
+          `• *Robinhood Chain (ETH) Wallet:* ${evmAddr}\n\n` +
           `Use \`/withdraw <to> <amount>\` to transfer funds.`,
           'Markdown', undefined, threadId
         );
@@ -297,7 +275,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
           `💸 *INSTANT FUND WITHDRAWAL INSTRUCTION*\n\n` +
           `To withdraw funds to your master wallet address, send message:\n` +
           `\`/withdraw <recipient_address> <amount>\`\n\n` +
-          `*Example:* \`/withdraw 7XwW4PzZg... 0.5\``,
+          `*Example:* \`/withdraw 0x1234...abcd 0.5\``,
           'Markdown', undefined, threadId
         );
       }
@@ -320,13 +298,8 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         }
         const isDryRun = isDryRunMode();
         try {
-          if (!recipient.startsWith('0x')) {
-            const { txHash, explorerUrl } = await walletService.sendSol(recipient, amount);
-            await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} SOL\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
-          } else {
-            const { txHash, explorerUrl } = await walletService.sendEvm(8453, recipient, amount);
-            await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} ETH (Base)\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
-          }
+          const { txHash, explorerUrl } = await walletService.sendEvm(4663, recipient, amount);
+          await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} ETH (Robinhood)\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
         } catch (err: any) {
           await this.sendMessage(`❌ Withdrawal failed: ${err.message}`, 'Markdown', undefined, threadId);
         }

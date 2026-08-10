@@ -7,7 +7,7 @@ export interface PositionRiskCheck {
   assetSymbol: string;
   chain: string;
   usdValue: number;
-  tags?: string[]; // e.g. ['meme', 'ai', 'solana']
+  tags?: string[]; // e.g. ['meme', 'ai', 'robinhood']
   volatilityAtr?: number;
 }
 

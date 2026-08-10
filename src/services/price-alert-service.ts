@@ -4,7 +4,7 @@ import { StateStore } from './state-store.js';
 export interface PriceAlert {
   id: string;
   userId: string;
-  symbol: string; // e.g. "BTC", "ETH", "SOL", "HYPE"
+  symbol: string; // e.g. "BTC", "ETH", "USDC"
   targetPriceUsd: number;
   direction: 'ABOVE' | 'BELOW';
   channelId?: string;
@@ -77,7 +77,7 @@ export class PriceAlertService {
    * Examples:
    * - "Athena, kabari kalau BTC 70k" -> symbol: BTC, target: 70000, ABOVE
    * - "alert me if ETH drops below 1500" -> symbol: ETH, target: 1500, BELOW
-   * - "notify when SOL hits 100" -> symbol: SOL, target: 100, ABOVE
+   * - "notify when ETH hits 3000" -> symbol: ETH, target: 3000, ABOVE
    */
   public parseNaturalLanguageAlert(text: string, userId: string, channelId?: string): PriceAlert | null {
     const lower = text.toLowerCase();
@@ -87,13 +87,12 @@ export class PriceAlertService {
     if (!isAlertIntent) return null;
 
     // Detect crypto symbol
-    const knownSymbols = ['BTC', 'ETH', 'SOL', 'HYPE', 'BONK', 'PEPE', 'WIF', 'DOGE', 'AVAX', 'SUI', 'LINK'];
+    const knownSymbols = ['BTC', 'ETH', 'USDC', 'BONK', 'PEPE', 'WIF', 'DOGE', 'AVAX', 'SUI', 'LINK'];
     let matchedSymbol = knownSymbols.find(s => lower.includes(s.toLowerCase()));
 
     if (!matchedSymbol) {
       if (lower.includes('bitcoin')) matchedSymbol = 'BTC';
       else if (lower.includes('ethereum')) matchedSymbol = 'ETH';
-      else if (lower.includes('solana')) matchedSymbol = 'SOL';
     }
 
     if (!matchedSymbol) return null;

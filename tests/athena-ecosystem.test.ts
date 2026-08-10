@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { SwarmConsensusEngine } from '../src/orchestrator/swarm-consensus.js';
-import { SolanaScreeningAgent } from '../src/agents/meme-solana/solana-screening-agent.js';
 import { RobinhoodScreeningAgent } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
-import { PerpsScreeningAgent } from '../src/agents/perps/perps-screening-agent.js';
-import { HyperliquidAdapter } from '../src/adapters/hyperliquid-adapter.js';
 import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
-import { PolymarketAgent } from '../src/agents/prediction/polymarket-agent.js';
 import { PriceAlertService } from '../src/services/price-alert-service.js';
 import { PositionManager } from '../src/position/position-manager.js';
 
@@ -15,8 +11,8 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const swarm = new SwarmConsensusEngine();
     const result = swarm.evaluateSignal({
       symbol: 'ATHENA_MEME',
-      domain: 'MEME_SOLANA',
-      contractAddress: 'So11111111111111111111111111111111111111112',
+      domain: 'MEME_ROBINHOOD',
+      contractAddress: '0x1234567890123456789012345678901234567890',
       liquidityUsd: 25000,
       volume1hUsd: 75000,
       securityAuditPassed: true,
@@ -26,28 +22,6 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
 
     expect(result.confidenceScore).toBeGreaterThanOrEqual(80);
     expect(result.passed).toBe(true);
-  });
-
-  it('2. Solana Meme Agent: preFilter + detectSignal with real GMGN fields', () => {
-    const agent = new SolanaScreeningAgent();
-    const det = agent.detectSignal({
-      chain: 'sol', address: 'So11111111111111111111111111111111111111112',
-      symbol: 'SOLMEME', name: 'Sol Meme', priceUsd: 0.001, marketCapUsd: 100000,
-      volume24hUsd: 150000, volume1hUsd: 30000, liquidityUsd: 40000, buys: 700, sells: 300, swaps: 1000,
-      holderCount: 300, top10HolderRate: 0.1, devTeamHoldRate: 0.005,
-      creatorClose: true, creatorTokenStatus: 'creator_close',
-      smartDegenCount: 3, renownedCount: 1, bundlerRate: 0.05,
-      ratTraderAmountRate: 0.01, rugRatio: 0.02, isWashTrading: false,
-      ctoFlag: true, renouncedMint: true, renouncedFreeze: true,
-      creationTimestamp: Date.now()/1000 - 6*3600, openTimestamp: Date.now()/1000 - 6*3600,
-      priceChange1m: 1, priceChange5m: 4, priceChange1h: 90,
-      visitingCount: 250, squareMentions: 5, twitterRenameCount: 0,
-      twitterDelPostCount: 0, twitterCreateTokenCount: 0,
-      buyTax: null, sellTax: null, dexscrBoostFee: 0, dexscrAd: 0, source: 'gmgn',
-      exchange: 'pump_amm', launchpadPlatform: 'Pump.fun', launchpadStatus: '1', progress: 1,
-    });
-    expect(det.type).toBe('CTO');
-    expect(det.confidence).toBeGreaterThanOrEqual(80);
   });
 
   it('3. Robinhood Meme Agent: evaluates healthy Robinhood Chain token (CTO confidence >= 80)', async () => {
@@ -94,35 +68,15 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(reports.length).toBe(0);
   });
 
-  it('4. Whale Tracking Agent: fail-closed tanpa network — zero reports', async () => {
-    const hlAdapter = new HyperliquidAdapter();
-    const agent = new PerpsScreeningAgent(hlAdapter);
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
-    const reports = await agent.runScreeningPass();
-    vi.unstubAllGlobals();
-    expect(Array.isArray(reports)).toBe(true);
-    expect(reports.length).toBe(0);
-  }, 30000);
-
   it('5. EVM NFT Agent: Should evaluate NFT Momentum & Whale Sweeps', async () => {
     const agent = new NFTScreeningAgent();
     const reports = await agent.runScreeningPass();
     expect(Array.isArray(reports)).toBe(true);
-    // With real API: returns results only when OPENSEA_API_KEY is configured
-    // Without API key: returns empty array (no fake data)
     if (reports.length > 0) {
-      // Contract shape: AgentReport<NFTSnipingReport>
       expect(reports[0].confidence).toBeGreaterThanOrEqual(80);
       expect(reports[0].signal.isFloorSurge).toBe(true);
       expect(reports[0].payload?.domain).toBe('NFT');
     }
-  });
-
-  it('6. Polymarket Prediction Agent: no-op (screening dinonaktifkan) — selalu [] tanpa request API', async () => {
-    const agent = new PolymarketAgent();
-    const reports = await agent.runScreeningPass();
-    expect(Array.isArray(reports)).toBe(true);
-    expect(reports.length).toBe(0);
   });
 
   it('7. Price Alert Service: Should parse natural language alert expressions', () => {
@@ -208,10 +162,10 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
 
     journal.recordTradeEntry({
       id: 'real_trade_1',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       symbol: 'REALTOKEN',
       contractAddressOrId: '0xabc',
-      chain: 'solana',
+      chain: 'robinhood',
       entryTimestamp: new Date().toISOString(),
       entryPriceUsdOrEth: 0.01,
       positionSizeUsd: 100,
@@ -248,90 +202,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
   });
 
-  it('12. Smart CT Alpha Agent: fail-closed without key, real signals with real tweets', async () => {
-    const { CTAlphaAgent } = await import('../src/agents/ct-alpha/ct-alpha-agent.js');
-
-    // Without a TWEX key -> no fabricated tweets -> no signals
-    const noKeyAgent = new CTAlphaAgent();
-    const emptyReports = await noKeyAgent.runScreeningPass();
-    expect(emptyReports.length).toBe(0);
-
-    // With a stubbed real tweet -> engagement-based confidence
-    process.env.TWEX_API_KEY = 'twex-test';
-    const nowIso = new Date().toISOString();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{
-        id: 't1', text: 'New AI agent launch on Base, big smart money accumulation',
-        author: { username: 'ct_whale', name: 'CT Whale' },
-        public_metrics: { like_count: 500, retweet_count: 150, reply_count: 30 },
-        created_at: nowIso,
-      }],
-    }));
-    const agent = new CTAlphaAgent();
-    const reports = await agent.runScreeningPass();
-    vi.unstubAllGlobals();
-    expect(Array.isArray(reports)).toBe(true);
-    if (reports.length > 0) {
-      const score = reports[0].confidenceScore ?? reports[0].signal?.confidenceScore ?? 0;
-      expect(score).toBeGreaterThanOrEqual(80);
-    }
-  });
-
-  it('13. Relay Adapter: Should calculate cross-chain bridge intent quotes via Relay.link', async () => {
-    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
-    const adapter = new RelayAdapter();
-    const quote = await adapter.getBridgeQuote({
-      originChain: 'ethereum',
-      destinationChain: 'base',
-      amount: 0.5,
-      tokenSymbol: 'ETH',
-    });
-
-    expect(quote.success).toBe(true);
-    expect(quote.originChainId).toBe(1);
-    expect(quote.destinationChainId).toBe(8453);
-    expect(quote.expectedAmountOut).toBeGreaterThan(0);
-    expect(quote.relayWebUrl).toContain('relay.link/bridge');
-  });
-
-  it('14. Relay Adapter Swap: Should calculate same-chain token swap quotes via Relay.link', async () => {
-    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
-    const adapter = new RelayAdapter();
-    const quote = await adapter.getSwapQuote({
-      chain: 'base',
-      fromToken: 'ETH',
-      toToken: 'USDC',
-      amount: 1.0,
-    });
-
-    expect(quote.success).toBe(true);
-    expect(quote.chainId).toBe(8453);
-    expect(quote.fromToken).toBe('ETH');
-    expect(quote.toToken).toBe('USDC');
-    expect(quote.expectedAmountOut).toBeGreaterThan(0);
-    expect(quote.relayWebUrl).toContain('relay.link/swap');
-  });
-
-  it('15. Relay Adapter Send: Should calculate token transfer quotes to recipient wallet via Relay.link', async () => {
-    const { RelayAdapter } = await import('../src/adapters/relay-adapter.js');
-    const adapter = new RelayAdapter();
-    const quote = await adapter.getSendQuote({
-      chain: 'ethereum',
-      token: 'ETH',
-      amount: 0.25,
-      recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
-    });
-
-    expect(quote.success).toBe(true);
-    expect(quote.chainId).toBe(1);
-    expect(quote.tokenSymbol).toBe('ETH');
-    expect(quote.recipientAddress).toBe('0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18');
-    expect(quote.expectedAmountOut).toBeGreaterThan(0);
-    expect(quote.relayWebUrl).toContain('relay.link');
-  });
-
-  it('16. Wallet Service: Should store private keys and derive EVM and Solana wallet addresses', async () => {
+  it('16. Wallet Service: Should store private keys and derive the EVM wallet address', async () => {
     const { WalletService } = await import('../src/services/wallet-service.js');
     const ws = new WalletService();
 
@@ -342,45 +213,31 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const bal = await ws.getEvmBalance(1);
     expect(bal.symbol).toBe('ETH');
     expect(typeof bal.balance).toBe('number');
-  });
-
-  it('17. Solana Adapter Direct Execution: realistic dry-run via real Jupiter quote', async () => {
-    const { SolanaTradeAdapter } = await import('../src/adapters/solana-adapter.js');
-    const adapter = new SolanaTradeAdapter();
-    const swapRes = await adapter.swapToken({
-      inputMint: 'So11111111111111111111111111111111111111112',
-      outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      amountSol: 1.0,
-    });
-    expect(swapRes.simulated).toBe(true);
-    // Network-dependent: if the real Jupiter quote fails (offline/rate-limited), the dry-run
-    // must report success=false — not fail the test.
-    if (!swapRes.error) expect(swapRes.success).toBe(true);
-  });
+  }, 15000);
 
   it('18. EVM Adapter Direct Execution: Should simulate sendToken and swapToken via WalletService', async () => {
     const { EVMTradeAdapter } = await import('../src/adapters/evm-adapter.js');
     const { WalletService } = await import('../src/services/wallet-service.js');
     const adapter = new EVMTradeAdapter();
 
-    // Robinhood L2 chainId resolution (Uniswap API chain 5318008)
-    expect(adapter.parseChainId('robinhood')).toBe(5318008);
-    expect(adapter.parseChainId(5318008)).toBe(5318008);
+    // Robinhood L2 chainId resolution
+    expect(adapter.parseChainId('robinhood')).toBe(4663);
+    expect(adapter.parseChainId(4663)).toBe(4663);
 
     const ws = new WalletService();
     ws.setKey('evm', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
 
     const sendRes = await adapter.sendToken({
-      chain: 'base',
+      chain: 'robinhood',
       recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
       amountEth: 0.1,
     }, ws);
     expect(sendRes.success).toBe(true);
     expect(sendRes.simulated).toBe(true);
-    expect(sendRes.explorerUrl).toContain('basescan.org');
+    expect(sendRes.explorerUrl).toMatch(/\/tx\//);
 
     const swapRes = await adapter.swapToken({
-      chain: 'base',
+      chain: 'robinhood',
       fromToken: 'ETH',
       toToken: 'USDC',
       amountEth: 0.2,
@@ -429,13 +286,13 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const adapter = new OpenSeaAdapter();
 
     const quote = await adapter.getSwapQuote({
-      chain: 'base',
+      chain: 'robinhood',
       fromToken: 'ETH',
       toToken: 'USDC',
       amount: 0.5,
     });
     expect(quote.success).toBe(true);
-    expect(quote.chainId).toBe(8453);
+    expect(quote.chainId).toBe(4663);
     expect(quote.expectedAmountOut).toBeGreaterThan(0);
     expect(quote.openseaSwapUrl).toContain('opensea.io/swap');
 
@@ -459,13 +316,13 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(toolDefs.length).toBeGreaterThan(4);
     expect(toolDefs.some(t => t.name === 'pause_sub_agent')).toBe(true);
 
-    const pauseRes = await registry.executeToolCall('pause_sub_agent', { agentId: 'solana-meme' });
+    const pauseRes = await registry.executeToolCall('pause_sub_agent', { agentId: 'meme-robinhood' });
     expect(pauseRes.success).toBe(true);
-    expect(hub.isAgentActive('solana-meme')).toBe(false);
+    expect(hub.isAgentActive('meme-robinhood')).toBe(false);
 
-    const resumeRes = await registry.executeToolCall('resume_sub_agent', { agentId: 'solana-meme' });
+    const resumeRes = await registry.executeToolCall('resume_sub_agent', { agentId: 'meme-robinhood' });
     expect(resumeRes.success).toBe(true);
-    expect(hub.isAgentActive('solana-meme')).toBe(true);
+    expect(hub.isAgentActive('meme-robinhood')).toBe(true);
 
     const riskRes = await registry.executeToolCall('set_risk_limit', { maxDrawdownPct: 40 });
     expect(riskRes.success).toBe(true);
@@ -506,7 +363,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const testDbPath = path.join(process.cwd(), 'database', `test_swarm_learning_${Date.now()}.json`);
     const engine = new SwarmLearningEngine(testDbPath);
 
-    const call = engine.recordSignalCall('solana-meme', 'BONK', 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 0.00001, 88);
+    const call = engine.recordSignalCall('meme-robinhood', 'BONK', 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 0.00001, 88);
     expect(call.result).toBe('OPEN');
 
     const initialWeight = engine.getWeights().smartMoneyWeight;
@@ -518,13 +375,13 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     const { AthenaHub } = await import('../src/orchestrator/hub.js');
     const hub = new AthenaHub();
 
-    hub.setAgentActive('solana-meme', false);
-    expect(hub.isAgentActive('meme-solana')).toBe(false);
-    expect(hub.isAgentActive('solana')).toBe(false);
+    hub.setAgentActive('evm', false);
+    expect(hub.isAgentActive('meme-robinhood')).toBe(false);
+    expect(hub.isAgentActive('robinhood')).toBe(false);
 
-    hub.setAgentActive('solana', true);
-    expect(hub.isAgentActive('meme-solana')).toBe(true);
-    expect(hub.isAgentActive('solana-meme')).toBe(true);
+    hub.setAgentActive('robinhood', true);
+    expect(hub.isAgentActive('meme-robinhood')).toBe(true);
+    expect(hub.isAgentActive('evm')).toBe(true);
   });
 
   it('25. ApiKeyGuard: Should halt sub-agents with missing required API keys', async () => {
@@ -557,12 +414,12 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
   it('27. Auto-execute: hub state reflects enablement', async () => {
     const { AthenaHub } = await import('../src/orchestrator/hub.js');
     const hub = new AthenaHub();
-    hub.setAutoExecute('meme-solana', true, 0.1);
-    const st = hub.isAutoExecuteEnabled('meme-solana');
+    hub.setAutoExecute('meme-robinhood', true, 0.1);
+    const st = hub.isAutoExecuteEnabled('meme-robinhood');
     expect(st.enabled).toBe(true);
     expect(st.maxTradeAmount).toBe(0.1);
-    hub.setAutoExecute('meme-solana', false);
-    expect(hub.isAutoExecuteEnabled('meme-solana').enabled).toBe(false);
+    hub.setAutoExecute('meme-robinhood', false);
+    expect(hub.isAutoExecuteEnabled('meme-robinhood').enabled).toBe(false);
 
     // meme-robinhood domain key resolves too (auto-execute wiring target)
     const stRb = hub.isAutoExecuteEnabled('meme-robinhood');

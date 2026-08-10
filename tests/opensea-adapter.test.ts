@@ -26,7 +26,7 @@ const mkFloorPrices = (now: number, nowEth: number, oneHAgoEth: number) => {
     const t = now - i * HOUR;
     // naik dari oneHAgoEth → nowEth dalam 1 jam terakhir: hanya titik sekarang (i=0) yang nowEth
     const eth = i === 0 ? nowEth : oneHAgoEth;
-    points.push({ time: t, token_unit: eth, usd_price: String(eth * 3000), symbol: 'ETH', chain: 'ethereum' });
+    points.push({ time: t, token_unit: eth, usd_price: String(eth * 3000), symbol: 'ETH', chain: 'robinhood' });
   }
   return { floor_prices: points };
 };
@@ -36,7 +36,7 @@ const mkSaleEvent = (over: any = {}) => ({
   event_timestamp: t0() - HOUR,
   buyer: '0xwhale1',
   seller: '0xseller',
-  chain: 'ethereum',
+  chain: 'robinhood',
   payment: { quantity: '4000000000000000000', decimals: 18, symbol: 'ETH', token_address: '0x0000' },
   nft: { identifier: '1', name: 'Pudgy #1' },
   ...over,
@@ -45,27 +45,27 @@ const mkSaleEvent = (over: any = {}) => ({
 describe('OpenSeaAdapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; });
 
-  it('fetchTrendingCollections: satu request untuk semua chain, parse slug/name/chain', async () => {
+  it('fetchTrendingCollections: satu request untuk robinhood, parse slug/name/chain', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         collections: [
-          { collection: 'pudgypenguins', name: 'Pudgy Penguins', contracts: [{ address: '0x1', chain: 'ethereum' }] },
-          { collection: 'base-paint', name: 'BasePaint', contracts: [{ address: '0x2', chain: 'base' }] },
-          { collection: 'rbh-nft', name: 'RBH NFT', contracts: [{ address: '0x3', chain: 'robinhood' }] },
+          { collection: 'pudgypenguins', name: 'Pudgy Penguins', contracts: [{ address: '0x1', chain: 'robinhood' }] },
+          { collection: 'rbh-nft', name: 'RBH NFT', contracts: [{ address: '0x2', chain: 'robinhood' }] },
+          { collection: 'hood-punks', name: 'Hood Punks', contracts: [{ address: '0x3', chain: 'robinhood' }] },
         ],
       }),
     }));
     const adapter = new OpenSeaAdapter();
-    const cols = await adapter.fetchTrendingCollections(['ethereum', 'base', 'robinhood'], 5);
+    const cols = await adapter.fetchTrendingCollections(['robinhood'], 5);
     expect(cols).toHaveLength(3);
     expect(cols[0].slug).toBe('pudgypenguins');
-    expect(cols[0].chain).toBe('ethereum');
-    expect(cols[1].chain).toBe('base');
+    expect(cols[0].chain).toBe('robinhood');
+    expect(cols[1].chain).toBe('robinhood');
     expect(cols[2].chain).toBe('robinhood');
     const url = (vi.mocked(fetch).mock.calls[0][0] as string);
-    expect(url).toContain('chains=ethereum%2Cbase%2Crobinhood');
+    expect(url).toContain('chains=robinhood');
     expect(url).toContain('limit=5');
   });
 
@@ -98,7 +98,7 @@ describe('OpenSeaAdapter', () => {
     expect(s.salesVelocity1h).toBe(2);               // 2 sale dalam 1 jam terakhir
     expect(s.volumeSpike1hRatio).toBe(2);            // 8 ETH (1h) vs 4 ETH (1-2h baseline)
     expect(s.isVerified).toBe(true);                 // safelist_request_status === 'verified'
-    expect(s.chain).toBe('ethereum');
+    expect(s.chain).toBe('robinhood');
   });
 
   it('whale sweep terdeteksi faktual: satu buyer beli 3+ dalam 1 jam', async () => {
@@ -164,7 +164,7 @@ describe('OpenSeaAdapter', () => {
     process.env.DRY_RUN = 'false'; // exercise the live quote path
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('API down')));
     const adapter = new OpenSeaAdapter();
-    const quote = await adapter.getSwapQuote({ chain: 'ethereum', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 });
+    const quote = await adapter.getSwapQuote({ chain: 'robinhood', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 });
     expect(quote.success).toBe(false);
     expect(quote.expectedAmountOut).toBe(0);
     expect(quote.error).toBeTruthy();
@@ -179,7 +179,7 @@ describe('OpenSeaAdapter', () => {
       json: async () => ({}), // no expected_out
     }));
     const adapter = new OpenSeaAdapter();
-    const quote = await adapter.getSwapQuote({ chain: 'ethereum', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 });
+    const quote = await adapter.getSwapQuote({ chain: 'robinhood', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 });
     expect(quote.success).toBe(false);
     expect(quote.expectedAmountOut).toBe(0);
   });
@@ -190,7 +190,7 @@ describe('OpenSeaAdapter', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('API down')));
     const adapter = new OpenSeaAdapter();
     const wallet = { hasWallet: () => true, getEvmAddress: () => '0xabc', getEvmWalletClient: () => null, getEvmAccount: () => null } as any;
-    const res = await adapter.executeSwap({ chain: 'ethereum', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 }, wallet);
+    const res = await adapter.executeSwap({ chain: 'robinhood', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 }, wallet);
     expect(res.success).toBe(false);
     expect(res.txHash).toBeUndefined();
   });

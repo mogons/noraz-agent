@@ -76,7 +76,7 @@ describe('KrystalCloudAdapter', () => {
     expect(await adapter.fetchTopRobinhoodPools()).toEqual([]);
   });
 
-  it('filterHighYieldPools — mirror LP solana gates + dedupe per pair', () => {
+  it('filterHighYieldPools — mirror LP robinhood gates + dedupe per pair', () => {
     process.env.KRYSTAL_CLOUD_API_KEY = 'test';
     const adapter = new KrystalCloudAdapter();
     const good = adapter.fetchTopRobinhoodPools && undefined; // helper di bawah

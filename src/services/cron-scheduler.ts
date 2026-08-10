@@ -111,7 +111,7 @@ export class CronSchedulerService {
       expressionOrInterval,
       intervalMs,
       action,
-      agentId: agentId || 'solana-meme',
+      agentId: agentId || 'meme-robinhood',
       targetChannelId,
       createdAtIso: new Date().toISOString(),
       enabled: true,

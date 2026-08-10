@@ -1,22 +1,19 @@
-# AGENTS.md - Athena Project Guidelines & Agent Instructions
+# AGENTS.md - Athena AI (Robinhood Chain Edition) Guidelines & Agent Instructions
 
-Welcome to the **Athena** codebase! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
+Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
 
 ---
 
 ## 1. Project Overview
 
-**Athena** is an autonomous, multi-agent crypto intelligence and trading ecosystem operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
+**Athena AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and Operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
 
 - **Core Hub Agent (`#athena-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels:
-  - `#call-meme-solana` (Solana DEX tokens / Pump.fun / Raydium / Meteora DLMM)
-  - `#call-meme-robinhood` (EVM L1/L2 tokens / Base / Ethereum / Robinhood L2 / Uniswap)
-  - `#call-perps-futures` (Leverage trading setups / Hyperliquid / CEXs)
-  - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea)
-  - `#call-prediction-markets` (Polymarket prediction market arbitrage & whale bets)
-  - `#call-lp-solana` & `#call-lp-robinhood` (Trade + LP Velocity Concentrated Liquidity Signals)
+  - `#call-meme-robinhood` (Robinhood Chain L2 & EVM DEX tokens / GMGN + GoPlus security)
+  - `#call-lp-robinhood` (Robinhood Chain Concentrated Liquidity Velocity Signals / Krystal Cloud)
+  - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea REST v2)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops, and Out-of-Range LP Warnings).
 
 ---
@@ -25,15 +22,16 @@ Welcome to the **Athena** codebase! This document outlines project conventions, 
 
 - **Runtime:** Node.js (>=22.12) / TypeScript
 - **Discord Bot SDK:** `discord.js` (v14+)
+- **Target Chain:** Robinhood Chain (EVM L2) — chain ID **4663**, native token **ETH**, RPC `https://rpc.mainnet.chain.robinhood.com`, explorer `https://robinhoodchain.blockscout.com`
 - **Blockchain & Crypto Web3 SDKs:**
-  - `@solana/web3.js` & `@jup-ag/api` (Solana)
-  - `viem` / `ethers.js` (EVM)
-  - `ccxt` (Perpetuals & CEX)
-  - Polymarket Gamma API & CLOB SDK (Polygon L2)
-  - OpenSea Stream & REST API v2 (EVM NFTs)
-- **Security Audit APIs:** RugCheck API (Solana), GoPlus Security API (EVM)
+  - `viem` (EVM reads/signs)
+  - GMGN OpenAPI (smart-money / rank / trenches / token security audit)
+  - Krystal Cloud DeFi Data API (Robinhood LP pools, `ethereum@4663`)
+  - OpenSea REST API v2 (EVM NFTs + swap aggregator)
+  - Relay.link (swap / send / bridge quotes & execution)
+- **Security Audit APIs:** GoPlus Security API (EVM) + GMGN `/v1/token/security`
 - **AI Engine:** OpenRouter / OpenAI / Anthropic Node SDK
-- **Database & State:** SQLite / Prisma ORM / Redis
+- **Database & State:** Local JSON file persistence (`database/athena_state.json`)
 - **Protocol:** Model Context Protocol (MCP)
 
 ---
@@ -54,7 +52,7 @@ Athena/
 │   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter Engine
 │   │   ├── swarm-learning.ts      # Outcome-driven agent weight recalibration
 │   │   ├── strategy-engine.ts     # Sandboxed .mjs strategy loader (sanitized env)
-│   │   ├── agent-registry.ts      # Single source of truth for all 8 agent domains
+│   │   ├── agent-registry.ts      # Single source of truth for all 3 agent domains
 │   │   ├── agent-runner.ts        # LLM tool-call loop for chat/TUI/Telegram
 │   │   ├── dispatch.ts            # Per-domain dispatch + LP payload builder
 │   │   └── tool-registry.ts       # LLM function-calling tools (chat commands)
@@ -62,22 +60,14 @@ Athena/
 │   │   ├── shared/
 │   │   │   ├── agent-contract.ts  # ScreeningAgent contract + CallCardPayload
 │   │   │   └── gmgn-meme-helpers.ts # Shared GMGN prefilter/dedupe/signal helpers
-│   │   ├── meme-solana/           # Solana DEX screening (GMGN + RugCheck)
-│   │   ├── meme-robinhood/        # EVM DEX screening (GMGN + GoPlus)
-│   │   ├── perps/                 # Technical setup screening (Hyperliquid)
-│   │   ├── nft/                   # EVM NFT floor & rarity screening (OpenSea)
-│   │   ├── prediction/            # Polymarket prediction market screening
-│   │   └── ct-alpha/              # X/Twitter smart-CT screening
+│   │   ├── meme-robinhood/        # Robinhood Chain EVM DEX screening (GMGN + GoPlus)
+│   │   └── nft/                   # EVM NFT floor & rarity screening (OpenSea)
 │   ├── adapters/                  # Web3 & Exchange execution adapters
-│   │   ├── solana-adapter.ts      # Jupiter swaps + MEV guard (DRY_RUN)
 │   │   ├── evm-adapter.ts         # EVM swaps/sends
 │   │   ├── relay-adapter.ts       # Relay.link quote/swap/send + token maps
 │   │   ├── gmgn-adapter.ts        # GMGN OpenAPI (rank/trenches/signals/audit)
-│   │   ├── hyperliquid-adapter.ts # Perps market data + order execution
-│   │   ├── meteora-dlmm-adapter.ts # Solana LP pools (DexScreener fallback)
-│   │   ├── opensea-adapter.ts     # NFT floor signals + swap aggregator
-│   │   ├── polymarket-adapter.ts  # Gamma/CLOB market data + bets
-│   │   └── mev-execution-guard.ts # Transaction simulation + priority fees
+│   │   ├── krystal-cloud-adapter.ts # Krystal Cloud DeFi data (Robinhood LP pools)
+│   │   └── opensea-adapter.ts     # NFT floor signals + swap aggregator
 │   ├── position/                  # Auto TP/SL & Trailing Stop Position Manager
 │   │   └── position-manager.ts
 │   ├── discord/                   # Discord handlers, slash commands & embed views
@@ -95,7 +85,6 @@ Athena/
 │   │   ├── wallet-service.ts      # Wallet keys + balances (singleton)
 │   │   ├── wallet-tracker.ts      # Holdings lifecycle -> PositionManager
 │   │   ├── trade-journal-service.ts # Open/close audit trail
-│   │   ├── security-service.ts    # RugCheck (Solana)
 │   │   ├── goplus-security-service.ts # GoPlus (EVM)
 │   │   ├── token-audit-service.ts # On-demand audit pipeline
 │   │   ├── ai-service.ts          # Multi-provider LLM failover
@@ -110,7 +99,7 @@ Athena/
 ├── indicators/                    # Custom technical indicator .mjs modules
 ├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/doctor)
 ├── scripts/                       # wizard.js (env setup), update-core.mjs (git pull+rebuild)
-├── tests/                         # Vitest suite (247 tests)
+├── tests/                         # Full Vitest suite
 ├── .env.example                   # Environment variable template
 ├── package.json
 └── tsconfig.json
@@ -130,7 +119,7 @@ Athena/
    - Avoid using `any`. Define clear interfaces for Token Signals, Audit Results, Swarm Scores, Discord Command Contexts, and Position States.
 5. **Discord UX Standards:**
    - Use Discord Rich Embeds with clear color coding (🟢 Green for High Confidence Call, 🔴 Red for Warning/Risk, 🔵 Blue for Status Info).
-   - Provide interactive Action Buttons (`BUY 0.5 SOL`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`, `BET YES 50 USDC`).
+   - Provide interactive Action Buttons (`BUY 0.5 ETH`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
 
 ---
 

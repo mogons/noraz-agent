@@ -72,7 +72,7 @@ export interface RelaySendResult {
 
 /** Well-known token addresses per chain for user-friendly symbol lookup */
 const WELL_KNOWN_TOKENS: Record<number, Record<string, string>> = {
-  // Ethereum Mainnet
+  // Ethereum Mainnet (bridge origin only — cross-chain bridge to Robinhood L2)
   1: {
     ETH: '0x0000000000000000000000000000000000000000',
     WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
@@ -80,43 +80,11 @@ const WELL_KNOWN_TOKENS: Record<number, Record<string, string>> = {
     USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   },
-  // Base L2
-  8453: {
+  // Robinhood Chain L2 (canonical contracts — docs.robinhood.com/chain/contracts)
+  4663: {
     ETH: '0x0000000000000000000000000000000000000000',
-    WETH: '0x4200000000000000000000000000000000000006',
-    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    USDbC: '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA',
-    DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-  },
-  // Arbitrum One
-  42161: {
-    ETH: '0x0000000000000000000000000000000000000000',
-    WETH: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-    ARB: '0x912CE59144191C1204E64559FE8253a0e49E6548',
-  },
-  // OP Mainnet
-  10: {
-    ETH: '0x0000000000000000000000000000000000000000',
-    WETH: '0x4200000000000000000000000000000000000006',
-    USDC: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
-    OP: '0x4200000000000000000000000000000000000042',
-  },
-  // Polygon
-  137: {
-    MATIC: '0x0000000000000000000000000000000000000000',
-    WMATIC: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
-    USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-  },
-  // BNB Smart Chain
-  56: {
-    BNB: '0x0000000000000000000000000000000000000000',
-    WBNB: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
-    USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
-    USDT: '0x55d398326f99059fF775485246999027B3197955',
-    BUSD: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56',
+    WETH: '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73',
+    USDG: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
   },
 };
 
@@ -128,31 +96,9 @@ export class RelayAdapter {
     eth: { id: 1, name: 'Ethereum Mainnet' },
     ethereum: { id: 1, name: 'Ethereum Mainnet' },
 
-    '8453': { id: 8453, name: 'Base L2' },
-    base: { id: 8453, name: 'Base L2' },
-
-    '42161': { id: 42161, name: 'Arbitrum One' },
-    arb: { id: 42161, name: 'Arbitrum One' },
-    arbitrum: { id: 42161, name: 'Arbitrum One' },
-
-    '10': { id: 10, name: 'OP Mainnet' },
-    op: { id: 10, name: 'OP Mainnet' },
-    optimism: { id: 10, name: 'OP Mainnet' },
-
-    '137': { id: 137, name: 'Polygon L2' },
-    poly: { id: 137, name: 'Polygon L2' },
-    polygon: { id: 137, name: 'Polygon L2' },
-
-    '56': { id: 56, name: 'BNB Smart Chain' },
-    bsc: { id: 56, name: 'BNB Smart Chain' },
-    binance: { id: 56, name: 'BNB Smart Chain' },
-
-    '792703809': { id: 792703809, name: 'Solana' },
-    sol: { id: 792703809, name: 'Solana' },
-    solana: { id: 792703809, name: 'Solana' },
-
-    '7777777': { id: 7777777, name: 'Zora Network' },
-    zora: { id: 7777777, name: 'Zora Network' },
+    '4663': { id: 4663, name: 'Robinhood Chain' },
+    robinhood: { id: 4663, name: 'Robinhood Chain' },
+    hood: { id: 4663, name: 'Robinhood Chain' },
   };
 
   constructor() {
@@ -164,7 +110,7 @@ export class RelayAdapter {
     if (this.chainMap[strKey]) {
       return this.chainMap[strKey];
     }
-    return { id: Number(input) || 1, name: `Chain #${input}` };
+    return { id: Number(input) || 4663, name: `Chain #${input}` };
   }
 
   /** Resolve a token symbol to its on-chain address for a given chainId */
@@ -464,14 +410,14 @@ export class RelayAdapter {
   }
 
   /**
-   * Direct execution of Bridge request using WalletService + EVM/Solana adapters.
+   * Direct execution of Bridge request using WalletService + EVM adapters.
    */
   public async executeBridge(request: RelayQuoteRequest, walletService?: any): Promise<RelayQuoteResult & { txHash?: string; explorerUrl?: string }> {
     const quote = await this.getBridgeQuote(request);
     
     if (this.isDryRun) {
       const simHash = `sim_bridge_${quote.originChainId}_${quote.destinationChainId}_${Date.now()}`;
-      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.originChainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.originChainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`;
       return {
         ...quote,
         txHash: simHash,
@@ -483,19 +429,19 @@ export class RelayAdapter {
     return {
       ...quote,
       success: false,
-      error: 'Live bridge execution not enabled. Configure DRY_RUN=false and execution wallet first.',
+      error: 'Live bridge execution not enabled for Robinhood Chain. Configure DRY_RUN=false and execution wallet first.',
     };
   }
 
   /**
-   * Direct execution of Swap request using WalletService + EVM/Solana adapters.
+   * Direct execution of Swap request using WalletService + EVM adapters.
    */
   public async executeSwap(request: RelaySwapRequest, walletService?: any): Promise<RelaySwapResult & { txHash?: string; explorerUrl?: string }> {
     const quote = await this.getSwapQuote(request);
     
     if (this.isDryRun) {
       const simHash = `sim_swap_${quote.chainId}_${Date.now()}`;
-      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`;
       return {
         ...quote,
         txHash: simHash,
@@ -508,17 +454,10 @@ export class RelayAdapter {
     }
 
     try {
-      if (quote.chainId === 792703809) {
-        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
-        const solanaAdapter = new SolanaTradeAdapter();
-        const res = await solanaAdapter.swapToken({ inputMint: request.fromToken, outputMint: request.toToken, amountSol: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      } else {
-        const { EVMTradeAdapter } = await import('./evm-adapter.js');
-        const evmAdapter = new EVMTradeAdapter();
-        const res = await evmAdapter.swapToken({ chain: quote.chainId, fromToken: request.fromToken, toToken: request.toToken, amountEth: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      }
+      const { EVMTradeAdapter } = await import('./evm-adapter.js');
+      const evmAdapter = new EVMTradeAdapter();
+      const res = await evmAdapter.swapToken({ chain: quote.chainId, fromToken: request.fromToken, toToken: request.toToken, amountEth: request.amount }, walletService);
+      return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
     } catch (err: any) {
       console.warn(`[RELAY ADAPTER] Relay Swap failed (${err.message}). Attempting OpenSea DEX Aggregator fallback...`);
       try {
@@ -539,14 +478,14 @@ export class RelayAdapter {
   }
 
   /**
-   * Direct execution of Send request using WalletService + EVM/Solana adapters.
+   * Direct execution of Send request using WalletService + EVM adapter.
    */
   public async executeSend(request: RelaySendRequest, walletService?: any): Promise<RelaySendResult & { txHash?: string; explorerUrl?: string }> {
     const quote = await this.getSendQuote(request);
 
     if (this.isDryRun) {
       const simHash = `sim_send_${quote.chainId}_${Date.now()}`;
-      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://etherscan.io/tx/${simHash}`;
+      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.chainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`;
       return {
         ...quote,
         txHash: simHash,
@@ -559,17 +498,10 @@ export class RelayAdapter {
     }
 
     try {
-      if (quote.chainId === 792703809) {
-        const { SolanaTradeAdapter } = await import('./solana-adapter.js');
-        const solanaAdapter = new SolanaTradeAdapter();
-        const res = await solanaAdapter.sendToken({ recipientAddress: request.recipientAddress, amountSol: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      } else {
-        const { EVMTradeAdapter } = await import('./evm-adapter.js');
-        const evmAdapter = new EVMTradeAdapter();
-        const res = await evmAdapter.sendToken({ chain: quote.chainId, recipientAddress: request.recipientAddress, amountEth: request.amount }, walletService);
-        return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
-      }
+      const { EVMTradeAdapter } = await import('./evm-adapter.js');
+      const evmAdapter = new EVMTradeAdapter();
+      const res = await evmAdapter.sendToken({ chain: quote.chainId, recipientAddress: request.recipientAddress, amountEth: request.amount }, walletService);
+      return { ...quote, txHash: res.txHash, explorerUrl: res.explorerUrl, simulated: false };
     } catch (err: any) {
       return { ...quote, error: err.message };
     }

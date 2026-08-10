@@ -8,7 +8,6 @@ interface RpcStatus {
 
 export class RPCFailoverManager {
   private endpoints: Record<string, string[]> = {
-    solana: [],
     evm: [],
   };
   private status: Record<string, RpcStatus[]> = {};
@@ -16,54 +15,56 @@ export class RPCFailoverManager {
   constructor() {
     const configured = (() => {
       const raw = getEnvString('RPC_FAILOVER_URLS');
-      if (!raw) return {};
-      try { return JSON.parse(raw); } catch { return {}; }
+      if (!raw) return {} as Record<string, string[]>;
+      try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+        const out: Record<string, string[]> = {};
+        for (const [key, value] of Object.entries(parsed)) {
+          if (Array.isArray(value)) {
+            out[key] = value.filter((u): u is string => typeof u === 'string');
+          }
+        }
+        return out;
+      } catch {
+        return {};
+      }
     })();
-    const solanaUrls = [
-      ...((configured as any).solana as string[] | undefined || []),
-      getEnvString('SOLANA_RPC_URL'),
-    ].filter((u): u is string => Boolean(u));
     const evmUrls = [
-      ...((configured as any).evm as string[] | undefined || []),
-      getEnvString('EVM_RPC_URL'),
-      getEnvString('BASE_RPC_URL'),
+      ...(configured.evm || []),
+      getEnvString('EVM_ROBINHOOD_RPC_URL'),
     ].filter((u): u is string => Boolean(u));
 
-    this.endpoints.solana = solanaUrls;
     this.endpoints.evm = evmUrls;
-    for (const chain of ['solana', 'evm'] as const) {
-      this.status[chain] = this.endpoints[chain].map((url) => ({ url, latencyMs: Infinity, healthy: false }));
-    }
+    this.status.evm = this.endpoints.evm.map((url) => ({ url, latencyMs: Infinity, healthy: false }));
   }
 
-  public getRpcUrls(chain: 'solana' | 'evm'): string[] {
+  public getRpcUrls(chain: 'evm'): string[] {
     return this.endpoints[chain];
   }
 
   public async probeLatencies(): Promise<void> {
-    for (const chain of ['solana', 'evm'] as const) {
-      await Promise.all(this.status[chain].map(async (s) => {
-        const start = Date.now();
-        try {
-          const res = await fetch(s.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-          s.latencyMs = Date.now() - start;
-          s.healthy = res.ok;
-        } catch {
-          s.latencyMs = Infinity;
-          s.healthy = false;
-        }
-      }));
-    }
+    await Promise.all(this.status.evm.map(async (s) => {
+      const start = Date.now();
+      try {
+        const res = await fetch(s.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        s.latencyMs = Date.now() - start;
+        s.healthy = res.ok;
+      } catch {
+        s.latencyMs = Infinity;
+        s.healthy = false;
+      }
+    }));
   }
 
-  public getActiveRPC(chain: 'solana' | 'evm'): string {
+  public getActiveRPC(chain: 'evm'): string {
     const healthy = this.status[chain]
       .filter((s) => s.healthy)
       .sort((a, b) => a.latencyMs - b.latencyMs);
     return healthy[0]?.url ?? this.endpoints[chain][0] ?? '';
   }
 
-  public reportRPCFailure(chain: 'solana' | 'evm', url: string): void {
+  public reportRPCFailure(chain: 'evm', url: string): void {
     const entry = this.status[chain].find((s) => s.url === url);
     if (entry) entry.healthy = false;
   }

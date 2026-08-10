@@ -17,20 +17,11 @@ import { globalHealthWatcher } from './services/health-watcher.js';
 import { globalMarketRegimeFilter } from './services/market-regime.js';
 import { bootstrapDiscordChannels } from './discord/setup/channel-bootstrap.js';
 import { SkillLoader } from './services/skill-loader.js';
-import { MeteoraDLMMAdapter } from './adapters/meteora-dlmm-adapter.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
-import { SolanaTradeAdapter } from './adapters/solana-adapter.js';
 import { EVMTradeAdapter } from './adapters/evm-adapter.js';
 import { GMGNAdapter } from './adapters/gmgn-adapter.js';
-import { SolanaScreeningAgent } from './agents/meme-solana/solana-screening-agent.js';
 import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
-import { PolymarketAdapter } from './adapters/polymarket-adapter.js';
-import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
-import { CexRadarAdapter } from './adapters/cex-radar-adapter.js';
-import { PolymarketAgent } from './agents/prediction/polymarket-agent.js';
-import { PerpsScreeningAgent } from './agents/perps/perps-screening-agent.js';
-import { CTAlphaAgent } from './agents/ct-alpha/ct-alpha-agent.js';
 import { priceAlertService, tradeJournalService, walletService, priceFeedService } from './discord/handlers/interaction-handler.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
@@ -42,8 +33,6 @@ dotenv.config();
 
 const telegramService = new TelegramService();
 const apiKeyGuard = new ApiKeyGuardService();
-const ctAlphaAgent = new CTAlphaAgent();
-const perpsScreeningAgent = new PerpsScreeningAgent(new HyperliquidAdapter(), undefined, new CexRadarAdapter());
 
 console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
@@ -66,7 +55,7 @@ SwarmConsensusEngine.setStrategyProvider((domain: string) => strategyEngine.getA
 function gateSignal(payload: any): boolean {
   const res = swarmEngine.evaluateSignal({
     symbol: payload.symbol || 'CUSTOM',
-    domain: payload.domain || 'MEME_SOLANA',
+    domain: payload.domain || 'MEME_ROBINHOOD',
     contractAddress: payload.contractAddress || '',
     liquidityUsd: Number(payload.liquidityUsd) || 0,
     volume1hUsd: Number(payload.volume1hUsd) || 0,
@@ -84,8 +73,6 @@ function gateSignal(payload: any): boolean {
 const controlRoomNotifyCooldown = new Map<string, number>();
 const CONTROL_ROOM_NOTIFY_MS = 10 * 60 * 1000; // max 1 notif per key per 10 minutes
 
-// Per-agent screening timeout: a stuck pass logs and resolves to [] (fail-closed),
-// so one hung agent can never stall the whole sub-agent loop.
 const SCREENING_TIMEOUT_MS = Math.max(1000, Number(process.env.SCREENING_TIMEOUT_MS) || 60000);
 function withScreeningTimeout<T>(promise: Promise<T>, domain: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -98,13 +85,6 @@ function withScreeningTimeout<T>(promise: Promise<T>, domain: string): Promise<T
       (error) => { clearTimeout(timer); reject(error); }
     );
   });
-}
-
-// Perps call-card titles are formatted `${direction} ${coin} (${leverage}x)`; extract
-// direction/leverage for the auto-execute simulation log (fallbacks if title deviates).
-function parsePerpsSimulation(title: string | undefined): { direction: string; leverage: string } {
-  const m = String(title || '').match(/^(LONG|SHORT)\s+\S+\s+\(([\d.]+)x\)/);
-  return { direction: m ? m[1] : 'LONG', leverage: m ? m[2] : '10' };
 }
 
 async function notifyControlRoom(client: any, key: string, content: string): Promise<void> {
@@ -124,7 +104,6 @@ async function notifyControlRoom(client: any, key: string, content: string): Pro
   }
 }
 
-
 const positionManager = new PositionManager();
 positionManager.attachStateStore(stateStore);
 const { PositionScanner } = await import('./services/position-scanner.js');
@@ -135,28 +114,18 @@ const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new
 
 const aiService = new AIService();
 const skillLoader = new SkillLoader();
-const meteoraAdapter = new MeteoraDLMMAdapter();
 const openseaAdapter = new OpenSeaAdapter();
-const polymarketAdapter = new PolymarketAdapter();
-const solanaTradeAdapter = new SolanaTradeAdapter();
 const evmTradeAdapter = new EVMTradeAdapter();
+
 // Apply persisted per-domain screening overrides (set via chat `set_screening_config`)
 const savedScreeningConfigs = stateStore.getScreeningConfigs();
-const solanaScreeningAgent = new SolanaScreeningAgent(savedScreeningConfigs['meme-solana'] as any);
 const robinhoodScreeningAgent = new RobinhoodScreeningAgent(savedScreeningConfigs['meme-robinhood'] as any);
 const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
-const polymarketAgent = new PolymarketAgent(polymarketAdapter);
 
-// Wire shared adapters + singleton agent instances into the Hub so on-demand
-// passes (Discord/TUI) use the SAME instances as the 5-min loop.
-hub.attachAdapters({ meteoraAdapter });
+// Wire shared adapters + singleton agent instances into the Hub
 hub.attachAgentFactories({
-  'meme-solana': () => solanaScreeningAgent,
   'meme-robinhood': () => robinhoodScreeningAgent,
   nft: () => nftScreeningAgent,
-  prediction: () => polymarketAgent,
-  perps: () => perpsScreeningAgent,
-  'ct-alpha': () => ctAlphaAgent,
 });
 
 // Attach StateStore to all persistent services
@@ -168,9 +137,9 @@ walletService.attachStateStore(stateStore);
 const loadedSkills = skillLoader.loadAllSkills();
 
 console.log(`[SKILL SYSTEM] Active skills loaded: ${loadedSkills.length} (${loadedSkills.map(s => s.name).join(', ')})`);
-console.log(`[SECURITY SERVICES] RugCheck API (Solana) & GoPlus Security (EVM - Base/ETH/Robinhood) Initialized.`);
-console.log(`[SCREENING AGENTS] Solana Meme + EVM Meme + EVM NFT Sniping + Polymarket Prediction Agents Initialized.`);
-console.log(`[SCREENING ADAPTERS] OpenSea + Polymarket Gamma/CLOB + GMGN AI + Meteora DLMM + Uniswap LP Adapters Initialized.`);
+console.log(`[SECURITY SERVICES] GMGN + GoPlus Security (Robinhood Chain) Initialized.`);
+console.log(`[SCREENING AGENTS] Robinhood Meme + LP Robinhood + NFT Sniping Agents Initialized.`);
+console.log(`[SCREENING ADAPTERS] GMGN AI + Krystal + OpenSea + Relay + EVM Adapters Initialized.`);
 console.log(`[AI SERVICE] Configured with provider: ${aiService.getConfig().provider}, model: ${aiService.getConfig().modelName}`);
 
 const discordToken = process.env.DISCORD_BOT_TOKEN;
@@ -304,10 +273,7 @@ if (discordToken && clientId) {
         // Real portfolio equity -> drawdown (fail-soft: skip if data unavailable)
         try {
           let currentEquityUsd = 0;
-          const solBal = await walletService.getSolanaBalance();
-          const solPrice = await priceFeedService.getPrice('SOL');
-          if (solBal && solPrice !== null) currentEquityUsd += solBal.balance * solPrice;
-          const ethBal = await walletService.getEvmBalance(1);
+          const ethBal = await walletService.getEvmBalance(4663);
           const ethPrice = await priceFeedService.getPrice('ETH');
           if (ethBal && ethPrice !== null) currentEquityUsd += ethBal.balance * ethPrice;
           const openPositions = stateStore.getAllPositions();
@@ -336,16 +302,6 @@ if (discordToken && clientId) {
 
         let dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
 
-        const solanaDispatched = await dispatchDomain({
-          domain: 'meme-solana',
-          channelName: 'call-meme-solana',
-          isActive: () => hub.isAgentActive('meme-solana'),
-          runPass: () => withScreeningTimeout(solanaScreeningAgent.runScreeningPass(), 'meme-solana'),
-          keyReady: () => apiKeyGuard.checkDomainKeys('meme-solana'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-        });
-        dispatchedPayloads.push(...solanaDispatched);
-
         const robinhoodDispatched = await dispatchDomain({
           domain: 'meme-robinhood',
           channelName: 'call-meme-robinhood',
@@ -366,52 +322,12 @@ if (discordToken && clientId) {
         });
         dispatchedPayloads.push(...nftDispatched);
 
-        const predictionDispatched = await dispatchDomain({
-          domain: 'prediction',
-          channelName: 'call-prediction-markets',
-          isActive: () => hub.isAgentActive('prediction'),
-          runPass: () => withScreeningTimeout(polymarketAgent.runScreeningPass(), 'prediction'),
-          keyReady: () => apiKeyGuard.checkDomainKeys('prediction'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-        });
-        dispatchedPayloads.push(...predictionDispatched);
-
-        const perpsDispatched = await dispatchDomain({
-          domain: 'perps',
-          channelName: 'call-whale-tracking',
-          isActive: () => hub.isAgentActive('perps'),
-          runPass: () => withScreeningTimeout(perpsScreeningAgent.runScreeningPass(), 'perps'),
-          keyReady: () => apiKeyGuard.checkDomainKeys('perps'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-        });
-        dispatchedPayloads.push(...perpsDispatched);
-
-        const ctAlphaDispatched = await dispatchDomain({
-          domain: 'ct-alpha',
-          channelName: 'call-ct-alpha',
-          isActive: () => hub.isAgentActive('ct-alpha'),
-          runPass: () => withScreeningTimeout(ctAlphaAgent.runScreeningPass(), 'ct-alpha'),
-          keyReady: () => apiKeyGuard.checkDomainKeys('ct-alpha'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-        });
-        dispatchedPayloads.push(...ctAlphaDispatched);
-
-        const lpSolanaDispatched = await dispatchDomain({
-          domain: 'lp-solana',
-          channelName: 'call-lp-solana',
-          isActive: () => hub.isAgentActive('lp-solana'),
-          runPass: () => withScreeningTimeout(hub.runLPPass('lp-solana'), 'lp-solana'),
-          keyReady: () => ({ ready: true, statusMessage: '' }),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
-        });
-        dispatchedPayloads.push(...lpSolanaDispatched);
-
         const lpEvmDispatched = await dispatchDomain({
           domain: 'lp-robinhood',
           channelName: 'call-lp-robinhood',
           isActive: () => hub.isAgentActive('lp-robinhood'),
           runPass: () => withScreeningTimeout(hub.runLPPass('lp-robinhood'), 'lp-robinhood'),
-          keyReady: () => ({ ready: true, statusMessage: '' }),
+          keyReady: () => apiKeyGuard.checkDomainKeys('lp-robinhood'),
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpEvmDispatched);
@@ -445,10 +361,8 @@ if (discordToken && clientId) {
           // user. Flip AUTO_EXECUTE_ENABLED=true in .env to re-enable.
           const AUTO_EXECUTE_ENABLED = process.env.AUTO_EXECUTE_ENABLED === 'true';
           const autoExecDomain: string | undefined =
-            item.channelName === 'call-meme-solana' ? 'meme-solana' :
             item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
-            item.channelName === 'call-whale-tracking' ? 'perps' :
-            item.channelName === 'call-prediction-markets' ? 'prediction' :
+            item.channelName === 'call-nft-sniping' ? 'nft' :
             undefined;
           if (autoExecDomain && AUTO_EXECUTE_ENABLED) {
             const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
@@ -469,34 +383,22 @@ if (discordToken && clientId) {
                   await notifyControlRoom(client, 'risk:killswitch', `🚨 **KILL-SWITCH ACTIVE** — auto-execute ${autoExecDomain} ${item.payload.symbol} blocked.`);
                   break;
                 }
-                if (autoExecDomain === 'meme-solana' && item.payload.contractAddress) {
-                  const execRes = await solanaTradeAdapter.executeBuyToken({ outputMint: item.payload.contractAddress, amountSol: autoExec.maxTradeAmount || 0.1, slippageBps: 150 });
-                  console.log(`[AUTO-EXECUTE] meme-solana ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens}, impact=${execRes.priceImpactPercentage}%)`);
-                } else if (autoExecDomain === 'meme-robinhood' && item.payload.contractAddress) {
+                if (autoExecDomain === 'meme-robinhood' && item.payload.contractAddress) {
                   const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 });
                   console.log(`[AUTO-EXECUTE] meme-robinhood ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens})`);
-                } else if (autoExecDomain === 'perps' && isDryRun) {
-                  // Simulation-only: HyperliquidAdapter.placeOrder exists (DRY_RUN-capable) but
-                  // dispatch keeps a log-only simulation until live perps execution is enabled.
-                  const sim = parsePerpsSimulation(item.payload.title);
-                  console.log(`[AUTO-EXECUTE] perps ${item.payload.symbol}: SIMULATED ${sim.direction} ${autoExec.maxTradeAmount || 0.1} @ ${sim.leverage}x`);
-                } else if (autoExecDomain === 'prediction' && isDryRun) {
-                  // Simulation-only: PolymarketAdapter.placeBet exists (DRY_RUN-capable) but
-                  // dispatch keeps a log-only simulation of the standard 50 USDC bet.
-                  console.log(`[AUTO-EXECUTE] prediction ${item.payload.symbol}: SIMULATED ${item.payload.symbol} 50 USDC`);
                 }
 
                 // Record every auto-executed signal into the trade journal (real data).
                 // Simulated while DRY_RUN=true — journal keeps an OPEN entry for audit/tracking.
                 try {
                   const entryPrice = parseFloat(String(item.payload.priceUsd || '0').replace(/[^0-9.]/g, '')) || 0;
-                  const journalDomain = (item.payload.domain || 'MEME_SOLANA') as any;
+                  const journalDomain = (item.payload.domain || 'MEME_ROBINHOOD') as any;
                   tradeJournalService.recordTradeEntry({
                     id: `TRADE_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                     domain: journalDomain,
                     symbol: item.payload.symbol || 'TOKEN',
                     contractAddressOrId: item.payload.contractAddress || item.payload.symbol || 'N/A',
-                    chain: autoExecDomain === 'meme-solana' ? 'solana' : autoExecDomain === 'meme-robinhood' ? 'robinhood' : autoExecDomain === 'perps' ? 'hyperliquid' : 'polymarket',
+                    chain: autoExecDomain === 'meme-robinhood' ? 'robinhood' : 'nft',
                     entryTimestamp: new Date().toISOString(),
                     entryPriceUsdOrEth: entryPrice,
                     positionSizeUsd: (autoExec.maxTradeAmount || 0.1) * (entryPrice || 1),
@@ -538,9 +440,7 @@ if (discordToken && clientId) {
           }
 
           // 3. Register called tokens for wallet auto-tracking (own-position detection + exit alerts)
-          if (item.channelName === 'call-meme-solana' && item.payload.contractAddress) {
-            walletTracker.registerTrackedToken('sol', item.payload.contractAddress, item.payload.symbol);
-          } else if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
+          if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
           } else if (item.channelName === 'call-nft-sniping' && item.payload.symbol) {
             // NFT: register collection slug for user position monitoring (floor drop -20%, TP, etc.)
@@ -569,7 +469,7 @@ if (discordToken && clientId) {
         // Wallet Auto-Tracking: detect user's own positions + exit alerts
         try {
           const alerts = await walletTracker.syncPositions();
-          // PositionScanner: perps (Hyperliquid), LP solana (Meteora), prediction (Polymarket)
+          // PositionScanner: robinhood chain spot/LP positions (Robinhood Chain)
           const scannerAlerts = await positionScanner.scanAll();
           const allAlerts = [...alerts, ...scannerAlerts];
           if (allAlerts.length > 0) {

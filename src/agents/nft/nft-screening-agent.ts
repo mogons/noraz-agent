@@ -8,7 +8,7 @@ export interface NFTSnipingReport {
   collectionName: string;
   tokenId: string;
   name: string;
-  chain: 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'robinhood';
+  chain: 'robinhood';
   priceEth: number;
   floorPriceEth: number;
   floorSurge1hPct: number;
@@ -29,7 +29,7 @@ export interface NFTScreeningConfig {
   volSpikeThresholdRatio: number;   // REQUIRED filter: volume >= 2.0x baseline
   minSalesVelocity1h: number;       // REQUIRED filter: >= 5 sales/hour (genuinely active collection)
   passThreshold: number;            // confidence card gate (>= 80)
-  chains: string[];                 // multichain: ethereum, base, robinhood
+  chains: string[];                 // single chain: robinhood
   trendingLimitPerChain: number;    // top N trending collections per chain per pass
 }
 
@@ -38,7 +38,7 @@ const DEFAULT_CONFIG: NFTScreeningConfig = {
   volSpikeThresholdRatio: 2.0,
   minSalesVelocity1h: 5.0,
   passThreshold: 80,
-  chains: ['ethereum', 'base', 'robinhood'],
+  chains: ['robinhood'],
   trendingLimitPerChain: 5,
 };
 

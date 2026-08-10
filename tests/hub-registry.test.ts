@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AthenaHub } from '../src/orchestrator/hub.js';
-import { CTAlphaAgent } from '../src/agents/ct-alpha/ct-alpha-agent.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
-import type { MeteoraDLMMAdapter, MeteoraPoolSignal } from '../src/adapters/meteora-dlmm-adapter.js';
 import type { KrystalCloudAdapter, KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
 import type { GMGNAdapter, GMGNSecurityAudit } from '../src/adapters/gmgn-adapter.js';
 import type { TwitterService, TweetItem } from '../src/services/twitter-service.js';
@@ -20,29 +18,6 @@ const mkStubAgent = (domain: string, reports: AgentReport[] = []) => ({
   domain,
   runScreeningPass: vi.fn(async () => reports),
 } as unknown as ScreeningAgent);
-
-const mkMeteoraPool = (): MeteoraPoolSignal => ({
-  poolAddress: 'pool123',
-  pairName: 'SOL-USDC',
-  binStep: 1,
-  baseFeePercentage: 0.01,
-  tvlUsd: 150000,
-  activeTvlUsd: 120000,
-  volume1hUsd: 10000,
-  fee1hUsd: 30,
-  fees24hSol: 0.5,
-  feeAprPercentage: 35.2,
-  feesToTvlRatio1h: 0.0002,
-  volumeToTvlRatio1h: 0.067,
-  volumeToActiveTvlRatio1h: 0.083,
-  organicVolumeScore1h: 80,
-  aiRecommendation: 'Live Meteora DLMM pool (official API): SOL-USDC',
-});
-
-const mkMeteoraStub = (pools: MeteoraPoolSignal[]) => ({
-  fetchTopYieldPools: vi.fn(async () => pools),
-  filterHighYieldPools: vi.fn((p: MeteoraPoolSignal[]) => p),
-} as unknown as MeteoraDLMMAdapter);
 
 const mkKrystalPool = (over: Partial<KrystalPoolSignal> = {}): KrystalPoolSignal => ({
   poolAddress: '0xpool1',
@@ -182,25 +157,15 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(results).toEqual([]);
   });
 
-  it('alias "solana" resolves to meme-solana factory and returns its reports', async () => {
-    const stub = mkStubAgent('meme-solana', [mkReport('SOL')]);
-    const hub = new AthenaHub({ agentFactories: { 'meme-solana': () => stub } });
-    const results = await hub.triggerAgentPass('solana');
-    expect(stub.runScreeningPass).toHaveBeenCalledTimes(1);
-    expect(results).toHaveLength(1);
-    expect((results[0] as any).signal.symbol).toBe('SOL');
-  });
-
-  it('aliases "evm" and "base" resolve to meme-robinhood', async () => {
+  it('alias "evm" resolves to meme-robinhood', async () => {
     const stub = mkStubAgent('meme-robinhood', [mkReport('PEPE')]);
     const hub = new AthenaHub({ agentFactories: { 'meme-robinhood': () => stub } });
     expect(await hub.triggerAgentPass('evm')).toHaveLength(1);
-    expect(await hub.triggerAgentPass('base')).toHaveLength(1);
-    expect(stub.runScreeningPass).toHaveBeenCalledTimes(2);
+    expect(stub.runScreeningPass).toHaveBeenCalledTimes(1);
   });
 
-  it('all 8 registered domain ids are triggerable via factories', async () => {
-    const ids = ['meme-solana', 'meme-robinhood', 'perps', 'nft', 'prediction', 'ct-alpha', 'lp-solana', 'lp-robinhood'] as const;
+  it('all 3 registered domain ids are triggerable via factories', async () => {
+    const ids = ['meme-robinhood', 'nft', 'lp-robinhood'] as const;
     for (const id of ids) {
       const stub = mkStubAgent(id, [mkReport(id.toUpperCase())]);
       const hub = new AthenaHub({ agentFactories: { [id]: () => stub } });
@@ -209,43 +174,10 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     }
   });
 
-  it('channel name "call-whale-tracking" resolves to perps', async () => {
-    const stub = mkStubAgent('perps', [mkReport('BTC')]);
-    const hub = new AthenaHub({ agentFactories: { perps: () => stub } });
-    expect(await hub.triggerAgentPass('call-whale-tracking')).toHaveLength(1);
-  });
-
-  it('ct-alpha runs the real agent with injected fake TwitterService (DI, zero network) — NO-CALL MODE default', async () => {
-    const hub = new AthenaHub({
-      agentFactories: { 'ct-alpha': () => new CTAlphaAgent(mkFakeTwitter([mkTweet()])) },
-    });
-    const results = await hub.triggerAgentPass('ct-alpha');
-    // emitCalls default false: screening tetap jalan tapi output ditekan (0 call)
-    expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana wraps adapter flow into contract-shaped reports with payload', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken() }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(1);
-    const r = results[0];
-    expect(r.passed).toBe(true);
-    expect(r.confidence).toBe(80);
-    expect(r.reason).toContain('Meteora');
-    expect((r.signal as MeteoraPoolSignal).poolAddress).toBe('pool123');
-    expect(r.payload?.domain).toBe('LP_METEORA');
-    expect(r.payload?.network).toBe('Solana');
-    expect(r.payload?.title).toBe('SOL-USDC');
-  });
-
   it('lp-robinhood wraps Krystal pool data into LP_ROBINHOOD payload', async () => {
-    // Krystal adapter flow: fetch → filterHighYieldPools → payload LP
     const hub = new AthenaHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool()]),
-      gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }), // WETH = memeToken (base fallback) — MC besar
+      gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }),
     });
     const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(1);
@@ -261,8 +193,6 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood orders meme token first (WETH-PEPE pool -> token0=PEPE, title PEPE-WETH)', async () => {
-    // Uniswap v3 mengembalikan token0=WETH (base) — payload harus menaruh meme (PEPE) duluan,
-    // konsisten dengan LP solana (Chiikawa-SOL): title & detail ikut token meme.
     const hub = new AthenaHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -286,89 +216,15 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     expect(p.gmgnUrl).toContain('0xpepe');
   });
 
-  it('alias "meteora" resolves to lp-solana', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken() }),
-    });
-    expect(await hub.triggerAgentPass('meteora')).toHaveLength(1);
-  });
-
   // ── LP security gate (GMGN) ─────────────────────────────────────────────
 
-  const mkSolPoolWithToken = (): MeteoraPoolSignal => ({
-    ...mkMeteoraPool(),
-    tokenXAddress: 'tokX123',
-    tokenXSymbol: 'CHIIKAWA',
-    tokenYAddress: 'tokYsol',
-    tokenYSymbol: 'SOL',
-  });
-
-  it('lp-solana: token rug (GMGN) menolak pool', async () => {
+  it('lp-robinhood: audit tidak tersedia (null) → pool DITOLAK (fail-closed)', async () => {
     const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ rugRatio: 0.8 }) }),
+      krystalAdapter: mkKrystalStub([mkKrystalPool()]),
+      gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }, { '0xweth': null }),
     });
-    const results = await hub.triggerAgentPass('lp-solana');
+    const results = await hub.triggerAgentPass('lp-robinhood');
     expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana: token honeypot (GMGN) menolak pool', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ isHoneypot: true }) }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana: token dengan tax > 10% tetap lolos (tax gate dimatikan untuk LP)', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken({ sellTax: '15' }) }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(1);
-  });
-
-  it('lp-solana: token null di GMGN → pool DITOLAK (fail-closed audit)', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({}), // token tidak ditemukan
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana: audit keamanan honeypot (GMGN /token/security) menolak pool', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken() }, { tokX123: mkSafeAudit({ isHoneypot: true }) }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana: audit tidak tersedia (null) → pool DITOLAK (fail-closed)', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({ tokX123: mkGmgnToken() }, { tokX123: null }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(0);
-  });
-
-  it('lp-solana: token aman → post + label keamanan audit terisi', async () => {
-    const hub = new AthenaHub({
-      meteoraAdapter: mkMeteoraStub([mkSolPoolWithToken()]),
-      gmgnAdapter: mkGmgnStub({
-        tokX123: mkGmgnToken({ top10HolderRate: 0.15, bundlerRate: 0.02, ratTraderAmountRate: 0.05, devTeamHoldRate: 0.01 }),
-      }),
-    });
-    const results = await hub.triggerAgentPass('lp-solana');
-    expect(results).toHaveLength(1);
-    const label = results[0].payload?.securityScore ?? '';
-    expect(label).toContain('GMGN audit');
   });
 
   it('lp-robinhood: token meme honeypot menolak pool', async () => {
@@ -465,11 +321,11 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   it('factory exception is caught and returns [] (fail-closed)', async () => {
     const hub = new AthenaHub({
       agentFactories: {
-        'meme-solana': () => {
+        nft: () => {
           throw new Error('boom');
         },
       },
     });
-    expect(await hub.triggerAgentPass('solana')).toEqual([]);
+    expect(await hub.triggerAgentPass('nft')).toEqual([]);
   });
 });

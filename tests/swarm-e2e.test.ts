@@ -6,7 +6,7 @@ describe('Swarm E2E gate', () => {
     const swarm = new SwarmConsensusEngine();
     const res = swarm.evaluateSignal({
       symbol: 'TEST',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       contractAddress: '0x',
       liquidityUsd: 0,
       volume1hUsd: 0,
@@ -20,7 +20,7 @@ describe('Swarm E2E gate', () => {
     const swarm = new SwarmConsensusEngine();
     const res = swarm.evaluateSignal({
       symbol: 'REAL',
-      domain: 'MEME_SOLANA',
+      domain: 'MEME_ROBINHOOD',
       contractAddress: '0xreal',
       liquidityUsd: 50000,
       volume1hUsd: 100000,
