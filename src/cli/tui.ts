@@ -27,6 +27,10 @@ const C = {
   blue: '\x1b[34m',
 };
 
+function detectPm2(): boolean {
+  return Boolean(process.env.pm_id || process.env.PM2_DAEMON_HOME || process.argv.includes('--pm2'));
+}
+
 const ATHENA_PARTHENON_ASCII = `
 ${C.yellow}${C.bright}                   /\
                   /  \
@@ -52,11 +56,15 @@ export async function launchTUI(): Promise<void> {
     console.clear();
     console.log(ATHENA_PARTHENON_ASCII);
     console.log(`${C.cyan}${C.bright}========================================================================${C.reset}`);
-    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via call-card link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    const activeDomains = hub.getActiveDomains();
+    const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
+    const agentStatus = `🟢 ${activeDomains.length}/${AGENT_DOMAINS.length} agents active`;
+    console.log(`${C.yellow}🤖 Agents:${C.reset} ${agentStatus} | ${C.yellow}⏰ Olympian:${C.reset} ${detectPm2() ? 'PM2 daemon (Mount Olympus)' : 'local process'}`);
     console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
-    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Robinhood/EVM)`);
+    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Robinhood Chain)`);
     console.log(` ${C.green}[4]${C.reset} 🧠 Command Room Oracle Chat (Natural Language AI Hub)`);
     console.log(` ${C.green}[5]${C.reset} ⚙️ Global Risk Management & Position Size Safeguards`);
     console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Realized PnL Analytics (View Summary)`);
@@ -79,6 +87,15 @@ export async function launchTUI(): Promise<void> {
         console.log(`${C.cyan}=== 🔑 ATHENA TREASURY & BURNER WALLETS ===${C.reset}`);
         const hasEvm = walletService.hasWallet('evm');
         console.log(`• Robinhood (EVM) Wallet: ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
+        if (hasEvm) {
+          try {
+            const bal = await walletService.getEvmBalance(4663);
+            const balStr = bal ? bal.balance.toFixed(4) : 'unavailable';
+            console.log(`• Robinhood ETH Balance: ${C.green}${balStr} ETH${C.reset}`);
+          } catch (err: any) {
+            console.log(`• Robinhood ETH Balance: ${C.yellow}unavailable (${err?.message || 'read failed'})${C.reset}`);
+          }
+        }
         console.log('[1] Import / Replace EVM Private Key');
         console.log('[2] Remove / Clear EVM Private Key');
         console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
@@ -120,13 +137,35 @@ export async function launchTUI(): Promise<void> {
           let volume1hUsd = 0;
           let securityPassed = false;
           let socialHypeScore = 0;
+          let gmgnOk = false;
           try {
-            const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
-            const goplus = new GoPlusSecurityService();
-            const audit = await goplus.auditToken('robinhood', ca.trim());
-            securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
+            const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
+            const gmgn = new GMGNAdapter();
+            const [info, security] = await Promise.all([
+              gmgn.fetchTokenInfo('robinhood', ca.trim()),
+              gmgn.fetchTokenSecurity('robinhood', ca.trim()),
+            ]);
+            if (info || security) {
+              gmgnOk = true;
+              liquidityUsd = info?.liquidityUsd ?? 0;
+              volume1hUsd = info?.volume1hUsd ?? 0;
+              securityPassed = security
+                ? security.isHoneypot === false && !security.canNotSell && Number(security.buyTaxPct ?? 0) <= 5 && Number(security.sellTaxPct ?? 0) <= 5
+                : false;
+              if (info) socialHypeScore = Math.min(100, Math.round(60 + (info.volume1hUsd > 100000 ? 25 : 0)));
+            }
           } catch (err: any) {
-            console.log(`${C.red}⚠️ Real audit data unavailable: ${err?.message}${C.reset}`);
+            console.log(`${C.red}⚠️ GMGN audit unavailable: ${err?.message}${C.reset}`);
+          }
+          if (!gmgnOk) {
+            try {
+              const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
+              const goplus = new GoPlusSecurityService();
+              const audit = await goplus.auditToken('robinhood', ca.trim());
+              securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
+            } catch (err: any) {
+              console.log(`${C.red}⚠️ Real audit data unavailable: ${err?.message}${C.reset}`);
+            }
           }
           const res = swarmEngine.evaluateSignal({
             symbol: 'CUSTOM',
@@ -138,7 +177,8 @@ export async function launchTUI(): Promise<void> {
             socialHypeScore,
           });
           console.log(`\n${C.green}Athena Swarm Verdict:${C.reset}`);
-          console.log(`• Real Liquidity: $${liquidityUsd} | Real 1h Vol: $${volume1hUsd} | Security: ${securityPassed ? 'PASS' : 'UNAVAILABLE/FAIL'}`);
+          console.log(`• Real Liquidity: $${liquidityUsd.toFixed(2)} | Real 1h Vol: $${volume1hUsd.toFixed(2)}`);
+          console.log(`• Security: ${securityPassed ? C.green + 'PASS' : C.red + 'FAIL/UNAVAILABLE'}${C.reset} | Social Hype: ${socialHypeScore}/100`);
           console.log(`• Confidence Score: ${C.bright}${res.confidenceScore}%${C.reset} (${res.passed ? C.green + 'APPROVED (>=80%)' : C.red + 'REJECTED'}${C.reset})`);
           console.log(`• Audit Reasoning: ${res.reason}`);
         }
@@ -231,6 +271,9 @@ Current Operating Parameters:
         console.log(`• Max Position Size: $${risk.maxPositionSizeUsd} per trade`);
         console.log(`• Max Sector Exposure: ${risk.maxSectorExposurePercent}% | Max Correlated Positions: ${risk.maxCorrelatedPositions}`);
         console.log(`• Trading Paused: ${risk.paused ? 'YES (circuit breaker active)' : 'No'}`);
+        const { globalRiskEngineV2 } = await import('../orchestrator/risk-engine-v2.js');
+        const killSwitchActive = globalRiskEngineV2.checkKillSwitchStatus();
+        console.log(`• Aegis Kill-Switch: ${killSwitchActive ? C.red + 'ACTIVE (all trading halted)' + C.reset : C.green + 'INACTIVE' + C.reset}`);
         console.log(`• Position Manager: Auto TP (2x/3x), Stop Loss (-20%), Dynamic Trailing Stops`);
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
@@ -251,8 +294,15 @@ Current Operating Parameters:
 
       case '7':
         console.clear();
-        console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER ===${C.reset}`);
-        console.log(`${C.red}Aegis Shield engaged! All screening agents and pending orders halted!${C.reset}`);
+        console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER (AEGIS SHIELD) ===${C.reset}`);
+        const confirmHalt = (await prompt(`Engage Aegis Shield — pause ALL agents, disable auto-execute and activate the kill switch? (y/N): `)) || 'n';
+        if (confirmHalt.toLowerCase() === 'y') {
+          const res = hub.executeEmergencyCloseAll('User Manual Panic Button (TUI Parthenon)');
+          console.log(`${C.green}✅ Aegis Shield engaged: all sub-agents paused, auto-execute disabled, kill switch active.${C.reset}`);
+          console.log(`${C.yellow}ℹ️ ${res.message}${C.reset}`);
+        } else {
+          console.log(`${C.yellow}Circuit breaker not engaged.${C.reset}`);
+        }
         await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
         break;
 
