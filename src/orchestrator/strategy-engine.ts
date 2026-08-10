@@ -8,33 +8,46 @@ import type { AthenaStrategy, AthenaIndicator } from './strategy-types.js';
 const requireEsm = createRequire(import.meta.url);
 
 const PROJECT_ROOT = path.resolve(process.cwd());
-const STRATEGIES_DIR = path.join(PROJECT_ROOT, 'strategies');
-const INDICATORS_DIR = path.join(PROJECT_ROOT, 'indicators');
-const STRATEGIES_BACKUP_DIR = path.join(STRATEGIES_DIR, '.backup');
-const INDICATORS_BACKUP_DIR = path.join(INDICATORS_DIR, '.backup');
-const ACTIVE_FILE = path.join(STRATEGIES_DIR, '.active.json');
+const DEFAULT_STRATEGIES_DIR = path.join(PROJECT_ROOT, 'strategies');
+const DEFAULT_INDICATORS_DIR = path.join(PROJECT_ROOT, 'indicators');
 
 const SAFE_NAME_RE = /^[a-zA-Z0-9_-]+$/;
 
-function ensureDirs(): void {
-  for (const dir of [STRATEGIES_DIR, INDICATORS_DIR, STRATEGIES_BACKUP_DIR, INDICATORS_BACKUP_DIR]) {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
 export class StrategyEngine {
-  constructor() {
-    ensureDirs();
+  private readonly strategiesDir: string;
+  private readonly indicatorsDir: string;
+  private readonly strategiesBackupDir: string;
+  private readonly indicatorsBackupDir: string;
+  private readonly activeFile: string;
+
+  /**
+   * Hermetic override: tests can point the engine at temp dirs so write/
+   * activation never touches the real repo strategies/. Defaults to the
+   * canonical process.cwd()-based paths (backward compatible).
+   */
+  constructor(opts?: { strategiesDir?: string; indicatorsDir?: string }) {
+    this.strategiesDir = opts?.strategiesDir || DEFAULT_STRATEGIES_DIR;
+    this.indicatorsDir = opts?.indicatorsDir || DEFAULT_INDICATORS_DIR;
+    this.strategiesBackupDir = path.join(this.strategiesDir, '.backup');
+    this.indicatorsBackupDir = path.join(this.indicatorsDir, '.backup');
+    this.activeFile = path.join(this.strategiesDir, '.active.json');
+    this.ensureDirs();
+  }
+
+  private ensureDirs(): void {
+    for (const dir of [this.strategiesDir, this.indicatorsDir, this.strategiesBackupDir, this.indicatorsBackupDir]) {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    }
   }
 
   // ─── Listing / reading ───────────────────────────────────────────────
 
   public listStrategies(): Array<{ id: string; active: boolean }> {
-    ensureDirs();
+    this.ensureDirs();
     const activeMap = this.readActiveMap();
     const activeIds = Object.values(activeMap).filter((v): v is string => typeof v === 'string');
-    const files = fs.existsSync(STRATEGIES_DIR)
-      ? fs.readdirSync(STRATEGIES_DIR).filter((f) => f.endsWith('.mjs'))
+    const files = fs.existsSync(this.strategiesDir)
+      ? fs.readdirSync(this.strategiesDir).filter((f) => f.endsWith('.mjs'))
       : [];
     return files.map((f) => {
       const id = f.replace(/\.mjs$/, '');
@@ -44,7 +57,7 @@ export class StrategyEngine {
 
   public readStrategy(name: string): { success: boolean; message: string; data?: { content: string } } {
     if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Invalid strategy name (use alphanumeric, dash, underscore).' };
-    const file = path.join(STRATEGIES_DIR, `${name}.mjs`);
+    const file = path.join(this.strategiesDir, `${name}.mjs`);
     if (!fs.existsSync(file)) return { success: false, message: `Strategy ${name} not found.` };
     return { success: true, message: `Contents of strategy ${name}.`, data: { content: fs.readFileSync(file, 'utf-8') } };
   }
@@ -84,15 +97,15 @@ export class StrategyEngine {
   // ─── Write (sandbox + backup + validate + rollback) ──────────────────
 
   public writeStrategy(name: string, code: string): { success: boolean; message: string } {
-    return this.writeSandboxed(STRATEGIES_DIR, STRATEGIES_BACKUP_DIR, name, code, 'strategy');
+    return this.writeSandboxed(this.strategiesDir, this.strategiesBackupDir, name, code, 'strategy');
   }
 
   public writeIndicator(name: string, code: string): { success: boolean; message: string } {
-    return this.writeSandboxed(INDICATORS_DIR, INDICATORS_BACKUP_DIR, name, code, 'indicator');
+    return this.writeSandboxed(this.indicatorsDir, this.indicatorsBackupDir, name, code, 'indicator');
   }
 
   private writeSandboxed(dir: string, backupDir: string, name: string, code: string, kind: 'strategy' | 'indicator'): { success: boolean; message: string } {
-    ensureDirs();
+    this.ensureDirs();
     if (!SAFE_NAME_RE.test(name)) return { success: false, message: 'Invalid file name (alphanumeric, dash, underscore only).' };
     if (!code || !code.trim()) return { success: false, message: 'Empty code.' };
 
@@ -135,7 +148,7 @@ export class StrategyEngine {
   }
 
   public rollbackStrategy(name: string): { success: boolean; message: string } {
-    return this.rollbackFile(STRATEGIES_DIR, STRATEGIES_BACKUP_DIR, name);
+    return this.rollbackFile(this.strategiesDir, this.strategiesBackupDir, name);
   }
 
   private rollbackFile(dir: string, backupDir: string, name: string): { success: boolean; message: string } {
@@ -153,9 +166,9 @@ export class StrategyEngine {
   // ─── Active strategy per domain ──────────────────────────────────────
 
   private readActiveMap(): Record<string, string | boolean> {
-    if (!fs.existsSync(ACTIVE_FILE)) return {};
+    if (!fs.existsSync(this.activeFile)) return {};
     try {
-      return JSON.parse(fs.readFileSync(ACTIVE_FILE, 'utf-8'));
+      return JSON.parse(fs.readFileSync(this.activeFile, 'utf-8'));
     } catch {
       return {};
     }
@@ -163,7 +176,7 @@ export class StrategyEngine {
 
   private writeActiveMap(map: Record<string, string | boolean>): void {
     try {
-      fs.writeFileSync(ACTIVE_FILE, JSON.stringify(map, null, 2), 'utf-8');
+      fs.writeFileSync(this.activeFile, JSON.stringify(map, null, 2), 'utf-8');
     } catch (err: any) {
       console.warn(`[STRATEGY ENGINE] Failed to persist the active map: ${err.message}`);
     }
@@ -199,7 +212,7 @@ export class StrategyEngine {
       activeId = legacy ? legacy[0] : undefined;
     }
     if (activeId) {
-      const file = path.join(STRATEGIES_DIR, `${activeId}.mjs`);
+      const file = path.join(this.strategiesDir, `${activeId}.mjs`);
       if (fs.existsSync(file)) {
         try {
           const mod = this.loadModule(file);
@@ -212,7 +225,7 @@ export class StrategyEngine {
     // Fallback: domain-default strategy (e.g. meme-robinhood-default.mjs) is active
     // out-of-the-box when no explicit strategy has been set yet.
     const defaultId = `${this.domainKey(domain)}-default`;
-    const defaultFile = path.join(STRATEGIES_DIR, `${defaultId}.mjs`);
+    const defaultFile = path.join(this.strategiesDir, `${defaultId}.mjs`);
     if (fs.existsSync(defaultFile)) {
       try {
         const mod = this.loadModule(defaultFile);
@@ -225,7 +238,7 @@ export class StrategyEngine {
   }
 
   public getIndicator(id: string): AthenaIndicator | null {
-    const file = path.join(INDICATORS_DIR, `${id}.mjs`);
+    const file = path.join(this.indicatorsDir, `${id}.mjs`);
     if (!fs.existsSync(file)) return null;
     try {
       const mod = this.loadModule(file);

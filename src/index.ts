@@ -114,6 +114,17 @@ const positionScanner = new PositionScanner({ positionManager, walletService, st
 const walletTracker = new WalletTracker({ positionManager, stateStore, gmgn: new GMGNAdapter(), walletService, tradeJournal: tradeJournalService });
 
 const aiService = new AIService();
+
+// Startup strategy bootstrap: if strategies/custom-strategy-prompt.txt exists, generate
+// per-domain custom strategies via LLM (validated + activated). try/catch guarantees a
+// bootstrap failure never crashes boot — defaults stay active.
+try {
+  const { bootstrapCustomStrategies } = await import('./orchestrator/strategy-bootstrap.js');
+  await bootstrapCustomStrategies({ aiService });
+} catch (err: any) {
+  console.warn(`[STRATEGY BOOTSTRAP] Failed to bootstrap custom strategies: ${err.message}`);
+}
+
 const skillLoader = new SkillLoader();
 const openseaAdapter = new OpenSeaAdapter();
 const evmTradeAdapter = new EVMTradeAdapter();
