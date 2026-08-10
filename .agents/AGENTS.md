@@ -51,6 +51,7 @@ Athena/
 │   │   ├── hub.ts / risk-manager.ts / risk-engine-v2.ts
 │   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter Engine
 │   │   ├── swarm-learning.ts / strategy-engine.ts / strategy-types.ts
+│   │   ├── strategy-bootstrap.ts  # Preset/custom strategy selection + first-boot compile
 │   │   ├── agent-registry.ts / agent-runner.ts / dispatch.ts / tool-registry.ts
 │   ├── agents/                    # Specialized screening agents (shared contract)
 │   │   ├── shared/                # agent-contract.ts + gmgn-meme-helpers.ts
@@ -98,6 +99,8 @@ Athena/
 5. **Discord UX Standards:**
    - Use Discord Rich Embeds with clear color coding (🟢 Green for High Confidence Call, 🔴 Red for Warning/Risk, 🔵 Blue for Status Info).
    - Provide interactive Action Buttons (`BUY 0.5 ETH`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
+6. **Customizable Screening Strategies:**
+   - Screening strategies are fully customizable (wizard STEP 5.5: loosened default / standard / custom prompt / numeric editor); custom prompts compile to validated strategy `.mjs` at first boot with default fallback; swarm >= 80% floor never lowered.
 
 ---
 

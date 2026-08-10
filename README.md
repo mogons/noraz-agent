@@ -102,6 +102,27 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 
 ---
 
+## 🧠 Screening Strategies (Fully Customizable)
+
+Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5**) — you pick how aggressive Athena should be when hunting signals.
+
+- **Loosened Default (2x):** ~2x more signals than Standard — more frequent call cards, still gated by the **>= 80% quality floor**. Recommended for most users.
+- **Standard (strict):** Conservative hard gates (e.g. meme 1h volume ≥ $50k, LP TVL ≥ $20k, Fee/TVL > 4%) — fewer, higher-conviction calls.
+- **Custom Prompt:** Write screening rules in plain English (e.g. *"only CTO tokens with 2+ smart wallets, min $10k liq"*). Athena compiles your prompt into a **validated strategy `.mjs`** automatically on first boot after deploy, with a safe default fallback if compilation fails. Re-runnable anytime via chat: *"re-apply my strategy prompt"*.
+- **Advanced numeric editor:** Fine-tune every hard gate per agent directly (via wizard / control room).
+
+**Loosened defaults per agent:**
+
+| Agent | Hard gates (loosened default) |
+| :--- | :--- |
+| 🐸 **meme-robinhood** | 24h volume ≥ $25k · liquidity ≥ $5k · total fees ≥ $250 · security audit pass |
+| 💧 **lp-robinhood** | TVL ≥ $10k · 24h volume ≥ $100k · 24h Fee/TVL ≥ 2% · market cap ≥ $100k · security audit pass |
+| 🖼️ **nft** | Floor surge ≥ +10%/1h · volume spike ≥ 1.5x · sales velocity ≥ 3/h · security audit pass |
+
+> **Quality floor is never lowered:** the swarm **>= 80% confidence** gate and all security gates remain mandatory and **fail-closed** — missing data or failed audits always reject, regardless of preset.
+
+---
+
 ## 🚀 Quickstart
 
 ### Fresh install

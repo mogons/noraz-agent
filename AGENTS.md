@@ -55,6 +55,7 @@ Athena/
 │   │   ├── swarm-learning.ts      # Outcome-driven agent weight recalibration
 │   │   ├── strategy-engine.ts     # Sandboxed .mjs strategy loader (sanitized env)
 │   │   ├── strategy-types.ts      # Strategy context types (snake_case GMGN contract)
+│   │   ├── strategy-bootstrap.ts  # Preset/custom strategy selection + first-boot compile
 │   │   ├── agent-registry.ts      # Single source of truth for all 3 agent domains
 │   │   ├── agent-runner.ts        # LLM tool-call loop for chat/TUI/Telegram
 │   │   ├── dispatch.ts            # Per-domain dispatch + LP payload builder
@@ -131,6 +132,8 @@ Athena/
 5. **Discord UX Standards:**
    - Use Discord Rich Embeds with clear color coding (🟢 Green for High Confidence Call, 🔴 Red for Warning/Risk, 🔵 Blue for Status Info).
    - Provide interactive Action Buttons (`BUY 0.5 ETH`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
+6. **Customizable Screening Strategies:**
+   - Screening strategies are fully customizable (wizard STEP 5.5: loosened default / standard / custom prompt / numeric editor); custom prompts compile to validated strategy `.mjs` at first boot with default fallback; swarm >= 80% floor never lowered.
 
 ---
 

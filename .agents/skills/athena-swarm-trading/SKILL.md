@@ -17,12 +17,15 @@ Screening agents scan across 3 high-potential token opportunities:
 2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Established tokens (> 4h age) experiencing a sudden **+500% 1H volume surge**, **2+ GMGN Smart Wallet** accumulation, and dev 0% / CTO (Community Takeover).
 3. 🚀 **Volume Surge & Trend Breakouts:** Tokens breaking key resistance levels confirmed by 1H GMGN Smart Money Net Inflows.
 
+> **Configurable thresholds:** thresholds below are the **LOOSENED defaults (2x)** configured at onboarding; users can switch to Standard, edit numbers, or supply a custom strategy prompt (compiled by Athena after deploy). All gates fail-closed; swarm **>= 80% floor unchanged**.
+
 ### Layer 1: Quant & Liquidity Audit
 
 - **Timeframe Standard:** 1H (1-Hour rolling volume surge, fee velocity, and trend evaluation).
-- **Minimum Token Age:** **4.0 Hours (240 Minutes)** minimum age standard. NOTE: the agent config default is `minAgeHours=0` for degen early access (new tokens pass immediately — smart money/CTO/KOL decide); the age gate is only enforced when `minAgeHours > 0` is configured (e.g. via `set_screening_config` in the control room).
-- **Minimum Liquidity:** $25,000 USD (DEX pools). NOTE: agent default is `minLiquidityUsd=10000` — configurable.
-- **Volume Surge:** 1-Hour volume spike check (> 300% volume surge). NOTE: agent default gates real 1H volume at `minVolume1hUsd=50000` — configurable.
+- **Minimum Token Age:** loosened default **`minAgeHours=0`** — degen early access (new tokens pass immediately — smart money/CTO/KOL decide); the age gate is only enforced when `minAgeHours > 0` is configured (e.g. via `set_screening_config` in the control room). Standard preset: **4.0 Hours (240 Minutes)** minimum.
+- **Minimum Volume:** loosened default **24h volume ≥ $25,000** (Standard: 1H volume ≥ $50k with > 300% surge gate).
+- **Minimum Liquidity:** loosened default **$5,000 USD** (Standard: **$25,000 USD**).
+- **Minimum Fees:** loosened default **total fees ≥ $250** (Standard: stricter fee gate, configurable via numeric editor).
 - **Transaction Ratio:** Buy vs Sell transaction ratio evaluation (momentum requires buy dominance).
 
 ### Layer 2: Catalyst & Social Hype Audit
