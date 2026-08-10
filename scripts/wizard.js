@@ -209,6 +209,161 @@ async function askKeyWithBackup(label, prompt, currentValue, mandatory = false) 
   return { value, backups };
 }
 
+// ── Screening strategy configuration (STEP 5.5) ─────────────────────────
+const STRATEGY_DOMAINS = [
+  {
+    key: 'meme-robinhood',
+    label: 'Meme tokens (Robinhood Chain DEX)',
+    params: [
+      { name: 'minVolume24hUsd', label: 'Minimum 24h Volume (USD)', def: 25000, unit: 'USD', example: '100000 = $100k/day' },
+      { name: 'minLiquidityUsd', label: 'Minimum Liquidity (USD)', def: 5000, unit: 'USD', example: '50000 = $50k pool' },
+      { name: 'minTotalFeeUsd', label: 'Minimum Total Fees (USD)', def: 250, unit: 'USD', example: '1000 = $1k fees/day' },
+      { name: 'minVisitingCount', label: 'Minimum GMGN Visiting Count', def: 100, unit: 'count', example: '300 = well-watched token' },
+    ],
+  },
+  {
+    key: 'lp-robinhood',
+    label: 'Concentrated Liquidity pools (Uniswap v3 / Krystal)',
+    params: [
+      { name: 'minTvlUsd', label: 'Minimum Pool TVL (USD)', def: 10000, unit: 'USD', example: '50000 = $50k TVL' },
+      { name: 'minVol24hUsd', label: 'Minimum 24h Volume (USD)', def: 100000, unit: 'USD', example: '500000 = $500k/day' },
+      { name: 'minFeeTvlRatio24h', label: 'Minimum 24h Fee/TVL ratio (%)', def: 2, unit: '%', example: '4.0 = aggressive yield' },
+      { name: 'minMarketCapUsd', label: 'Minimum Meme-Token Market Cap (USD)', def: 100000, unit: 'USD', example: '500000 = $500k' },
+    ],
+  },
+  {
+    key: 'nft',
+    label: 'NFT collections (OpenSea)',
+    params: [
+      { name: 'minSurgePct', label: 'Minimum Floor Surge 1h (%)', def: 10, unit: '%', example: '25 = +25% in 1h' },
+      { name: 'minVolSpike', label: 'Minimum Volume Spike (x baseline)', def: 1.5, unit: 'x', example: '3.0 = 3x usual volume' },
+      { name: 'minVelocity1h', label: 'Minimum Sales Velocity (/hour)', def: 3, unit: '/h', example: '10 = 10 sales/h' },
+    ],
+  },
+];
+
+async function askNumeric(promptText, def, unit, example) {
+  let value = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const raw = (await askQuestion(`   ${promptText} [Default: ${def}] [Example: ${example}]: `)).trim();
+    if (raw === '') return def;
+    const parsed = Number(raw);
+    if (!isNaN(parsed) && parsed >= 0 && Number.isFinite(parsed)) { value = parsed; break; }
+    if (attempt === 0) console.log(`   ${C.yellow}Please enter a valid number (${unit}). Example: ${example}${C.reset}`);
+  }
+  return value === null ? def : value;
+}
+
+function buildCustomStrategyModule(domainKey, params, label) {
+  const lines = [];
+  for (const p of params) lines.push(`    ${p.name}: ${p.value},`);
+  const rules = params.map((p) => `    if (v.${p.name} !== null && v.${p.name} < p.${p.name}) return { confidence: 0, recommendedAction: 'SKIP', reason: 'Gate ${p.label} not met.' };`).join('\n');
+  return `export default {
+  id: '${domainKey}-custom',
+  name: '${label} (Custom)',
+  version: '1.0.0',
+  description: 'Custom numeric strategy generated from the onboarding wizard.',
+  params: {
+    passThreshold: 80,
+${lines.join('\n')}
+  },
+  evaluate(ctx) {
+    const p = this.params;
+    const v = ctx.${domainKey === 'nft' ? 'nft || {}' : 'gmgn || {}'};
+    const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+${rules}
+    if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: 'Security audit failed.' };
+    return { confidence: 80, recommendedAction: 'BUY', reason: 'All custom numeric gates passed.' };
+  },
+};
+`;
+}
+
+function writeActiveStrategyMap(map) {
+  const dir = path.join(process.cwd(), 'strategies');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, '.active.json'), JSON.stringify(map, null, 2), 'utf-8');
+}
+
+async function askStrategyConfig() {
+  console.log(`\n ${C.cyan}${C.bold}🧠 STEP 5.5: SCREENING STRATEGY${C.reset}`);
+  console.log('   How strict should Athena be when selecting signals?');
+  console.log('   [1] Loosened Default (2x) — more call signals, still >= 80% quality   [Default]');
+  console.log('   [2] Standard — strict thresholds (previous defaults)');
+  console.log('   [3] Custom Prompt — describe your ideal screening strategy in plain English;');
+  console.log('       Athena writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
+  console.log('   [4] Advanced — edit filter numbers per agent directly');
+  const choice = (await askQuestion('   Choice [Default 1]: ')) || '1';
+
+  const activeMap = {};
+  const domainDefaults = {
+    'meme-robinhood': 'meme-robinhood-default',
+    'lp-robinhood': 'lp-robinhood-default',
+    nft: 'nft-default',
+  };
+  const domainStandard = {
+    'meme-robinhood': 'meme-robinhood-standard',
+    'lp-robinhood': 'lp-robinhood-standard',
+    nft: 'nft-standard',
+  };
+
+  if (choice === '2') {
+    for (const d of STRATEGY_DOMAINS) activeMap[d.key] = domainStandard[d.key];
+    console.log(`   ${C.green}✓${C.reset} Standard presets activated (strict thresholds).`);
+    return { preset: 'standard', activeMap };
+  }
+
+  if (choice === '3') {
+    console.log(`\n   ${C.yellow}Write your strategy prompt (multi-line; finish with an empty line):${C.reset}`);
+    console.log(`   ${C.dim}Hint: mention filters like volume, liquidity, fees, market cap, TVL,`);
+    console.log(`   surge %, velocity, security rules, and how aggressive you want to be.${C.reset}`);
+    const lines = [];
+    let line = '';
+    do {
+      line = await askQuestion('   > ');
+      if (line.trim()) lines.push(line.trim());
+    } while (line.trim());
+    const prompt = lines.join('\n');
+    if (prompt) {
+      const dir = path.join(process.cwd(), 'strategies');
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'custom-strategy-prompt.txt'), prompt, 'utf-8');
+      console.log(`   ${C.green}✓${C.reset} Prompt saved to strategies/custom-strategy-prompt.txt — Athena will compile it after deploy.`);
+    } else {
+      console.log(`   ${C.yellow}Empty prompt — using loosened defaults.${C.reset}`);
+      for (const d of STRATEGY_DOMAINS) activeMap[d.key] = domainDefaults[d.key];
+      return { preset: 'loosened', activeMap };
+    }
+    for (const d of STRATEGY_DOMAINS) activeMap[d.key] = `${d.key}-custom`;
+    return { preset: 'custom', activeMap };
+  }
+
+  if (choice === '4') {
+    const edits = [];
+    for (const domain of STRATEGY_DOMAINS) {
+      console.log(`\n   ${C.cyan}${domain.label}${C.reset} — press ENTER to keep each default:`);
+      const values = {};
+      for (const p of domain.params) {
+        const val = await askNumeric(`${p.label} (${p.unit})`, p.def, p.unit, p.example);
+        values[p.name] = val;
+      }
+      const module = buildCustomStrategyModule(domain.key, domain.params.map((p) => ({ name: p.name, value: values[p.name], label: p.label })), domain.label);
+      const file = path.join(process.cwd(), 'strategies', `${domain.key}-custom.mjs`);
+      if (!fs.existsSync(path.dirname(file))) fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, module, 'utf-8');
+      activeMap[domain.key] = `${domain.key}-custom`;
+      edits.push(domain.key);
+    }
+    console.log(`\n   ${C.green}✓${C.reset} Custom numeric strategies written for: ${edits.join(', ')}`);
+    return { preset: 'custom', activeMap };
+  }
+
+  // Default: [1] loosened
+  for (const d of STRATEGY_DOMAINS) activeMap[d.key] = domainDefaults[d.key];
+  console.log(`   ${C.green}✓${C.reset} Loosened defaults (2x) activated — more signals, >= 80% quality floor.`);
+  return { preset: 'loosened', activeMap };
+}
+
 function drawProgressHeader(step, total, done) {
   const cells = [];
   for (let i = 1; i <= total; i++) {
@@ -281,7 +436,7 @@ async function runWizard() {
   }
 
   // 4. ATHENA'S REASONING ENGINE
-  drawProgressHeader(4, 8, 'AI provider & model');
+  drawProgressHeader(4, 9, 'AI provider & model');
   console.log(` ${C.cyan}${C.bold}🧠 STEP 4: ATHENA'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
   let existingProvider = existingEnv.AI_PROVIDER || '';
   let existingBaseUrl = existingEnv.AI_BASE_URL || '';
@@ -329,7 +484,7 @@ async function runWizard() {
   const combinedKeys = allKeys.join(',');
 
   // 5. MARKET DATA & SECURITY APIS (with backup key support)
-  drawProgressHeader(5, 8, 'market data & security APIs');
+  drawProgressHeader(5, 9, 'market data & security APIs');
   console.log(` ${C.cyan}${C.bold}📊 STEP 5: MARKET DATA & SECURITY APIS${C.reset}`);
   const gmgn = await askKeyWithBackup('GMGN', 'GMGN_API_KEY (smart-money/rank/security)', existingEnv.GMGN_API_KEY || '', true);
   const gmgnRh = { value: (await askQuestion(`  GMGN_API_KEY_ROBINHOOD (optional — dedicated robinhood key) [Default: ${existingEnv.GMGN_API_KEY_ROBINHOOD ? 'set' : 'none'}]: `)).trim() || existingEnv.GMGN_API_KEY_ROBINHOOD || '' };
@@ -337,6 +492,10 @@ async function runWizard() {
   const opensea = await askKeyWithBackup('OpenSea', 'OPENSEA_API_KEY (NFT floor & rarity — mandatory for NFT agent)', existingEnv.OPENSEA_API_KEY || '', true);
   const goplus = await askKeyWithBackup('GoPlus', 'GOPLUS_API_KEY (EVM security audit — mandatory for /audit)', existingEnv.GOPLUS_API_KEY || '', true);
   const uniswap = await askKeyWithBackup('Uniswap', 'UNISWAP_API_KEY (optional — real quote in dry-run buys)', existingEnv.UNISWAP_API_KEY || '', false);
+
+  // 5.5 SCREENING STRATEGY
+  const strategy = await askStrategyConfig();
+  let strategyPreset = strategy.preset;
 
   // 6. WEB3 RPC ENDPOINTS
   console.log('\n⚡ STEP 6: WEB3 RPC ENDPOINTS (Robinhood Chain — EVM L2, chain ID 4663, native ETH)');
@@ -372,6 +531,7 @@ async function runWizard() {
     AUTO_EXECUTE_ENABLED: autoExecuteEnabled,
     LOG_LEVEL: 'info',
     SIMULATION_BALANCE_ETH: simEthBalance.trim(),
+    STRATEGY_PRESET: strategyPreset,
     DISCORD_BOT_TOKEN: botToken.trim(),
     DISCORD_CLIENT_ID: clientId.trim(),
     DISCORD_CHANNEL_CONTROL_ROOM: controlRoomId.trim(),
@@ -415,6 +575,9 @@ async function runWizard() {
   const rows = [
     ['Operating Mode', isDryRun === 'true' ? `${C.green}SIMULATION (DRY_RUN)${C.reset}` : `${C.red}LIVE TRADING${C.reset}`],
     ['Auto-Execute', autoExecuteEnabled === 'true' ? `${C.yellow}ENABLED${C.reset}` : 'DISABLED (manual)'],
+    ['Strategy', strategyPreset === 'custom'
+      ? `${C.green}custom${C.reset} (${fs.existsSync(path.join(process.cwd(), 'strategies', 'custom-strategy-prompt.txt')) ? 'prompt saved' : 'numeric editor'})`
+      : strategyPreset === 'standard' ? 'standard (strict)' : `${C.green}loosened 2x${C.reset} (default)`],
     ['Discord', botToken ? `${C.green}✓${C.reset} token set` : `${C.red}✗${C.reset} not set`],
     ['Telegram', telegramToken ? `${C.green}✓${C.reset} token set` : `${C.dim}–${C.reset} not set`],
     ['AI Provider', `${provider} (${modelName})`],
@@ -433,6 +596,11 @@ async function runWizard() {
     console.log(`\n${C.yellow}Configuration discarded. Rerun 'athena wizard' when ready.${C.reset}`);
     rl.close();
     return;
+  }
+
+  if (strategy.activeMap && Object.keys(strategy.activeMap).length > 0) {
+    writeActiveStrategyMap(strategy.activeMap);
+    console.log(`${C.green}✓${C.reset} Screening strategy activated (strategies/.active.json).`);
   }
 
   // ── MERGE-BASED .env WRITE ─────────────────────────────────────────────
