@@ -27,7 +27,7 @@ const stubFetch = (data: unknown) =>
   }));
 
 describe('KrystalCloudAdapter', () => {
-  afterEach(() => { vi.unstubAllGlobals(); delete process.env.KRYSTAL_CLOUD_API_KEY; });
+  afterEach(() => { vi.unstubAllGlobals(); delete process.env.KRYSTAL_CLOUD_API_KEY; delete process.env.KRYSTAL_CLOUD_BACKUP_KEYS; });
 
   it('isConfigured false tanpa key (fail-closed)', () => {
     expect(new KrystalCloudAdapter().isConfigured()).toBe(false);
@@ -131,5 +131,21 @@ describe('KrystalCloudAdapter', () => {
     // lowFee (0x b) ditolak (feeTvl 0.33% < 4%); 0xa (5%) vs 0xc (4.5%) dedupe → 0xa menang (feeTvl tertinggi)
     expect(filtered.length).toBe(1);
     expect(filtered[0].poolAddress).toBe('0xa');
+  });
+
+  it('rotates to the backup key on 401 and succeeds', async () => {
+    process.env.KRYSTAL_CLOUD_API_KEY = 'kk1';
+    process.env.KRYSTAL_CLOUD_BACKUP_KEYS = 'kk2';
+    const adapter = new KrystalCloudAdapter();
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      calls++;
+      if (calls === 1) return new Response('{}', { status: 401 });
+      return new Response(JSON.stringify({ pools: [] }), { status: 200 });
+    }));
+    await adapter.fetchTopRobinhoodPools();
+    expect(calls).toBe(2);
+    vi.unstubAllGlobals();
+    delete process.env.KRYSTAL_CLOUD_BACKUP_KEYS;
   });
 });

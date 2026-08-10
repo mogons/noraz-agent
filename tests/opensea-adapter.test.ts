@@ -43,7 +43,7 @@ const mkSaleEvent = (over: any = {}) => ({
 });
 
 describe('OpenSeaAdapter', () => {
-  afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; });
+  afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; delete process.env.OPENSEA_BACKUP_KEYS; });
 
   it('fetchTrendingCollections: satu request untuk robinhood, parse slug/name/chain', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
@@ -193,5 +193,21 @@ describe('OpenSeaAdapter', () => {
     const res = await adapter.executeSwap({ chain: 'robinhood', fromToken: 'ETH', toToken: 'USDC', amount: 1.0 }, wallet);
     expect(res.success).toBe(false);
     expect(res.txHash).toBeUndefined();
+  });
+
+  it('rotates to the backup key on 401 and succeeds', async () => {
+    process.env.OPENSEA_API_KEY = 'pk1';
+    process.env.OPENSEA_BACKUP_KEYS = 'pk2';
+    const adapter = new OpenSeaAdapter();
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      calls++;
+      if (calls === 1) return new Response('{}', { status: 401 });
+      return new Response(JSON.stringify({ collections: [] }), { status: 200 });
+    }));
+    await adapter.fetchTrendingCollections();
+    expect(calls).toBe(2);
+    vi.unstubAllGlobals();
+    delete process.env.OPENSEA_BACKUP_KEYS;
   });
 });

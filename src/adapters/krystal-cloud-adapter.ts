@@ -9,6 +9,8 @@
  * incentives (farm rewards). No fabrication.
  */
 
+import { createApiKeyPool, loadApiKeyPool, type ApiKeyPool } from '../services/api-key-pool.js';
+
 export interface KrystalPoolSignal {
   poolAddress: string;
   pairName: string;
@@ -57,25 +59,41 @@ interface KrystalPool {
 
 export class KrystalCloudAdapter {
   private baseUrl = 'https://cloud-api.krystal.app';
-  private apiKey: string;
+  private keyPool: ApiKeyPool;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.KRYSTAL_CLOUD_API_KEY || '';
+    this.keyPool = apiKey
+      ? createApiKeyPool('KRYSTAL_CLOUD_API_KEY', [apiKey])
+      : loadApiKeyPool('KRYSTAL_CLOUD_API_KEY');
   }
 
   public isConfigured(): boolean {
-    return Boolean(this.apiKey);
+    return Boolean(this.keyPool.get());
   }
 
+  /**
+   * Request core with backup-key rotation: on HTTP 401/403 rotate to a
+   * backup key and retry once. Fail-closed: null when no key or all keys
+   * rejected; network errors / non-ok HTTP → null (never fabricated data).
+   */
   private async request<T>(path: string): Promise<T | null> {
-    if (!this.apiKey) return null;
+    const key = this.keyPool.get() || '';
+    if (!key) return null;
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
-        headers: { 'KC-APIKey': this.apiKey, 'Content-Type': 'application/json' },
+      const doFetch = (k: string) => fetch(`${this.baseUrl}${path}`, {
+        headers: { 'KC-APIKey': k, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(15000),
       });
+      let res = await doFetch(key);
+      if ((res.status === 401 || res.status === 403) && this.keyPool.size > 1) {
+        const next = this.keyPool.markFailed(`HTTP ${res.status}`);
+        if (next) {
+          res = await doFetch(next);
+          if (res.status === 401 || res.status === 403) return null;
+        }
+      }
       if (!res.ok) {
-        console.warn(`[KRYSTAL] HTTP ${res.status} for ${path}`);
+        console.warn(`[KRYSTAL] Request failed (fail-closed): HTTP ${res.status}`);
         return null;
       }
       return (await res.json()) as T;

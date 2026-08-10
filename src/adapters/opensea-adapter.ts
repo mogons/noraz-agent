@@ -1,5 +1,6 @@
 import type { WalletService } from '../services/wallet-service.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
+import { createApiKeyPool, loadApiKeyPool, type ApiKeyPool } from '../services/api-key-pool.js';
 
 /**
  * Whale sweep info — FACTUAL from the events API (not an estimate):
@@ -62,15 +63,37 @@ const CHAIN_MAP: Record<string, { id: number; name: string; slug: string }> = {
 };
 
 export class OpenSeaAdapter {
-  private apiKey?: string;
+  private keyPool: ApiKeyPool;
   private isDryRun: boolean;
 
   /** Chains being screened (OpenSea ChainIdentifier, including robinhood). */
   public readonly supportedChains = ['robinhood'] as const;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.OPENSEA_API_KEY;
+    this.keyPool = apiKey
+      ? createApiKeyPool('OPENSEA_API_KEY', [apiKey])
+      : loadApiKeyPool('OPENSEA_API_KEY');
     this.isDryRun = isDryRunMode();
+  }
+
+  /**
+   * Fetch with the active pool key; on HTTP 401/403 rotate to a backup key
+   * and retry once. Fail-closed: null when no key or all keys rejected.
+   */
+  private async fetchWithKey<T>(build: (key: string) => { url: string; init: RequestInit }): Promise<Response | null> {
+    const key = this.keyPool.get() || '';
+    if (!key) return null;
+    const { url, init } = build(key);
+    let res = await fetch(url, init);
+    if ((res.status === 401 || res.status === 403) && this.keyPool.size > 1) {
+      const next = this.keyPool.markFailed(`HTTP ${res.status}`);
+      if (next) {
+        const retry = build(next);
+        res = await fetch(retry.url, retry.init);
+        if (res.status === 401 || res.status === 403) return null;
+      }
+    }
+    return res;
   }
 
   /**
@@ -83,14 +106,13 @@ export class OpenSeaAdapter {
     chains: readonly string[] = this.supportedChains,
     limit = 5
   ): Promise<Array<{ slug: string; name: string; chain: string }>> {
-    if (!this.apiKey) return [];
     try {
-      const res = await fetch(
-        `https://api.opensea.io/api/v2/collections/trending?timeframe=one_hour&chains=${encodeURIComponent(chains.join(','))}&limit=${limit}`,
-        { headers: { 'accept': 'application/json', 'x-api-key': this.apiKey }, signal: AbortSignal.timeout(15000) }
-      );
-      if (!res.ok) {
-        console.warn(`[OPENSEA ADAPTER] trending HTTP ${res.status}`);
+      const res = await this.fetchWithKey((key) => ({
+        url: `https://api.opensea.io/api/v2/collections/trending?timeframe=one_hour&chains=${encodeURIComponent(chains.join(','))}&limit=${limit}`,
+        init: { headers: { 'accept': 'application/json', 'x-api-key': key }, signal: AbortSignal.timeout(15000) },
+      }));
+      if (!res || !res.ok) {
+        console.warn(`[OPENSEA ADAPTER] trending HTTP ${res?.status ?? 'n/a'}`);
         return [];
       }
       const data: any = await res.json();
@@ -146,13 +168,13 @@ export class OpenSeaAdapter {
     }
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (this.apiKey) headers['x-api-key'] = this.apiKey;
+      const res = await this.fetchWithKey((key) => ({
+        url: `https://api.opensea.io/api/v2/swap/quote?chain=${chainInfo.slug}&from_token=${fromSymbol}&to_token=${toSymbol}&amount=${amount}`,
+        init: { headers: { 'Content-Type': 'application/json', 'x-api-key': key } },
+      }));
 
-      const res = await fetch(`https://api.opensea.io/api/v2/swap/quote?chain=${chainInfo.slug}&from_token=${fromSymbol}&to_token=${toSymbol}&amount=${amount}`, { headers });
-
-      if (!res.ok) {
-        throw new Error(`OpenSea Swap API returned HTTP ${res.status}`);
+      if (!res || !res.ok) {
+        throw new Error(`OpenSea Swap API returned HTTP ${res?.status ?? 'unknown'}`);
       }
 
       const data = await res.json() as Record<string, unknown>;
@@ -260,15 +282,18 @@ export class OpenSeaAdapter {
    * Fail-closed per endpoint: unavailable data = 0/false (never fabricated).
    */
   public async fetchFloorSnipingSignals(collectionSlug: string = 'pudgypenguins', chain: string = 'robinhood'): Promise<OpenSeaNFTSignal[]> {
-    if (!this.apiKey) {
+    if (!this.keyPool.get()) {
       console.log(`[OPENSEA ADAPTER] No API key configured for ${collectionSlug}. Returning empty.`);
       return [];
     }
-    const headers = { 'accept': 'application/json', 'x-api-key': this.apiKey };
+    const headers = { 'accept': 'application/json', 'x-api-key': this.keyPool.get() || '' };
     try {
       // ── 1. Stats: floor + 24h volume/sales + 6-day baseline (REAL data from intervals) ──
-      const statsRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`, { headers, signal: AbortSignal.timeout(15000) });
-      if (!statsRes.ok) throw new Error(`OpenSea stats HTTP ${statsRes.status}`);
+      const statsRes = await this.fetchWithKey((key) => ({
+        url: `https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`,
+        init: { headers: { 'accept': 'application/json', 'x-api-key': key }, signal: AbortSignal.timeout(15000) },
+      }));
+      if (!statsRes || !statsRes.ok) throw new Error(`OpenSea stats HTTP ${statsRes?.status ?? 'n/a'}`);
       const statsData: any = await statsRes.json();
       const total = statsData?.total || {};
       const floorPriceEth = Number(total.floor_price) || 0;
