@@ -347,6 +347,15 @@ export class StateStore {
     this.scheduleSave();
   }
 
+  public getSignalLedger(domain?: string, limit = 50): SignalLedgerEntry[] {
+    let list = this.state.signalLedger || [];
+    if (domain) {
+      const norm = domain.toLowerCase().trim();
+      list = list.filter((e) => e.domain.toLowerCase() === norm || e.sourceAgent.toLowerCase() === norm);
+    }
+    return list.slice(-limit).reverse();
+  }
+
   // ==========================================
   // PERSISTENT SIGNAL DEDUP
   // ==========================================
@@ -413,3 +422,6 @@ export class StateStore {
     this.scheduleSave();
   }
 }
+
+export const globalStateStore = new StateStore();
+export const stateStore = globalStateStore;
