@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { createApiKeyPool, loadApiKeyPool, type ApiKeyPool } from '../services/api-key-pool.js';
 
 export type Chain = 'robinhood';
 export type RankInterval = '1m' | '5m' | '1h' | '6h' | '24h';
@@ -125,7 +126,7 @@ export type GMGNTokenSignal = GMGNRawToken & {
 
 export class GMGNAdapter {
   private baseUrl = 'https://openapi.gmgn.ai';
-  private apiKey?: string;
+  private keyPool: ApiKeyPool;
 
   /** Security audit cache — module-level, shared across ALL adapter instances. */
   private static securityCache = new Map<string, { audit: GMGNSecurityAudit; at: number }>();
@@ -165,7 +166,9 @@ export class GMGNAdapter {
   }
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.GMGN_API_KEY;
+    this.keyPool = apiKey
+      ? createApiKeyPool('GMGN_API_KEY', [apiKey])
+      : loadApiKeyPool('GMGN_API_KEY');
   }
 
   private async gmgnRequest<T>(
@@ -175,7 +178,7 @@ export class GMGNAdapter {
     body?: unknown,
     retries = 1
   ): Promise<T | null> {
-    const key = this.apiKey || process.env.GMGN_API_KEY || '';
+    const key = this.keyPool.get() || '';
     if (!key) return null;
     const doRequest = async (attemptsLeft: number): Promise<T | null> => {
       const timestamp = Math.floor(Date.now() / 1000);
@@ -194,7 +197,7 @@ export class GMGNAdapter {
       try {
         const res = await fetch(url, {
           method,
-          headers: { 'X-APIKEY': key, 'Content-Type': 'application/json', 'User-Agent': 'athena/1.0' },
+          headers: { 'X-APIKEY': this.keyPool.get() || key, 'Content-Type': 'application/json', 'User-Agent': 'athena/1.0' },
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
         if (res.status === 429) {
@@ -217,7 +220,17 @@ export class GMGNAdapter {
             await new Promise((r) => setTimeout(r, waitMs));
             return doRequest(attemptsLeft - 1);
           }
+          if (banned) this.keyPool.markFailed('rate limit banned');
           console.warn(`[GMGN] Rate limited${banned ? ' (BANNED)' : ''} — skip ${subPath}, retry on the next pass (~5m).`);
+          return null;
+        }
+        if (res.status === 401 || res.status === 403) {
+          const next = this.keyPool.markFailed(`HTTP ${res.status} on ${subPath}`);
+          if (next && next !== key && attemptsLeft > 0) {
+            console.warn(`[GMGN] Rotated to backup key — retrying ${subPath} once.`);
+            return doRequest(attemptsLeft - 1);
+          }
+          console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`);
           return null;
         }
         if (!res.ok) { console.warn(`[GMGN] HTTP ${res.status} for ${subPath}`); return null; }

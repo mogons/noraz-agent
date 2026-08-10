@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GMGNAdapter } from '../src/adapters/gmgn-adapter.js';
 
 describe('GMGNAdapter (OpenAPI)', () => {
-  afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; delete process.env.GMGN_REQUEST_SPACING_MS; });
+  afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; delete process.env.GMGN_BACKUP_KEYS; delete process.env.GMGN_REQUEST_SPACING_MS; });
 
   it('returns [] without an API key (fail-closed)', async () => {
     const adapter = new GMGNAdapter();
@@ -363,5 +363,24 @@ describe('GMGNAdapter (OpenAPI)', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
     const adapter = new GMGNAdapter();
     expect(await adapter.fetchTrackTrades('robinhood', 'kol')).toEqual([]);
+  });
+
+  it('rotates to the backup key on HTTP 401 and retries once', async () => {
+    process.env.GMGN_API_KEY = 'primary-key';
+    process.env.GMGN_BACKUP_KEYS = 'backup-key';
+    const adapter = new GMGNAdapter();
+    let calls = 0;
+    const headers: Array<Record<string, string>> = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: any, init: any) => {
+      calls++;
+      headers.push(init.headers);
+      if (calls === 1) return new Response('{"code":401}', { status: 401 });
+      return new Response(JSON.stringify({ code: 0, data: { data: { rank: [{ address: 'rot1', symbol: 'ROT' }] } } }), { status: 200 });
+    }));
+    const res = await adapter.fetchRank('robinhood');
+    expect(calls).toBe(2);
+    expect(headers[1]['X-APIKEY']).toBe('backup-key');
+    expect(res).toHaveLength(1);
+    expect(res[0].symbol).toBe('ROT');
   });
 });
