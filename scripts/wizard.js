@@ -120,22 +120,11 @@ async function pickFromList(title, items, defaultIdx = 0, suffixNote = '') {
   return items[defaultIdx][0];
 }
 
-async function askModelPicker(presetKey, existingModelName, existingProviderKey) {
-  let preset = PROVIDER_PRESETS[presetKey];
-  if (!preset) {
-    for (const p of Object.values(PROVIDER_PRESETS)) {
-      const sub = p.sub && p.sub.find((s) => s.key === presetKey);
-      if (sub) { preset = { label: sub.label, models: sub.models, freeNote: p.freeNote || '' }; break; }
-    }
-  }
-  if (!preset) return existingModelName || '';
-  const isDefaultModel = existingProviderKey === presetKey && existingModelName;
-  const models = preset.models;
-  const defaultIdx = isDefaultModel
-    ? Math.max(models.findIndex(([m]) => m === existingModelName), 0)
-    : 0;
-  const note = preset.freeNote || '';
-  return pickFromList(`Select ${preset.label} model:`, models, defaultIdx, note);
+async function askModelPicker({ models, label, defaultModelId, providerKey, freeNote = '' }, existingModelName, existingProviderKey) {
+  if (!Array.isArray(models) || models.length === 0) return existingModelName || defaultModelId || '';
+  const target = (existingProviderKey === providerKey && existingModelName) ? existingModelName : defaultModelId;
+  const defaultIdx = Math.max(models.findIndex(([m]) => m === target), 0);
+  return pickFromList(`Select ${label} model:`, models, defaultIdx, freeNote);
 }
 
 async function askAiProviderConfig(existingProvider, existingBaseUrl, existingModelName) {
@@ -157,25 +146,40 @@ async function askAiProviderConfig(existingProvider, existingBaseUrl, existingMo
   }
   const chosen = menuKeys[parseInt(choice, 10) - 1] || 'custom';
   if (chosen === 'custom') {
-    const baseUrl = await askQuestion(`   Base URL (required): `);
-    const modelName = await askQuestion(`   Model ID (required): `);
-    return { provider: 'custom', baseUrl: baseUrl.trim(), modelName: modelName.trim(), keyHint: '' };
+    let baseUrl = '';
+    for (let attempt = 0; attempt < 2 && !baseUrl; attempt++) {
+      const input = (await askQuestion(`   Base URL (required): `)).trim();
+      if (input) { baseUrl = input; continue; }
+      if (attempt === 0) console.log(`   ${C.yellow}Base URL is required — please enter it.${C.reset}`);
+    }
+    let modelName = '';
+    for (let attempt = 0; attempt < 2 && !modelName; attempt++) {
+      const input = (await askQuestion(`   Model ID (required): `)).trim();
+      if (input) { modelName = input; continue; }
+      if (attempt === 0) console.log(`   ${C.yellow}Model ID is required — please enter it.${C.reset}`);
+    }
+    return { provider: 'custom', baseUrl, modelName, keyHint: '' };
   }
   let preset = PROVIDER_PRESETS[chosen];
+  let presetModels, presetLabel, presetDefaultModel;
   if (preset.sub) {
     console.log(`\n ${C.cyan}${preset.label} — select billing:${C.reset}`);
     preset.sub.forEach((s, i) => console.log(`   [${i + 1}] ${s.label}`));
     const subChoice = (await askQuestion(`   Choice [Default 1]: `)) || '1';
     const sub = preset.sub[parseInt(subChoice, 10) - 1] || preset.sub[0];
     providerKey = sub.key; baseUrl = sub.baseUrl; keyHint = sub.keyHint || '';
-    preset = { models: sub.models, label: sub.label };
+    presetModels = sub.models; presetLabel = sub.label; presetDefaultModel = sub.models[0][0];
   } else {
     providerKey = chosen; baseUrl = preset.baseUrl; keyHint = '';
+    presetModels = preset.models; presetLabel = preset.label; presetDefaultModel = preset.model;
   }
   const defaultUrl = (existingBaseUrl && existingBaseUrl.includes(new URL(baseUrl).hostname)) ? existingBaseUrl : baseUrl;
   const urlIn = await askQuestion(`   API endpoint [ENTER = default ${defaultUrl}]: `);
   baseUrl = urlIn.trim() || defaultUrl;
-  modelName = await askModelPicker(providerKey, existingModelName, existingProvider);
+  modelName = await askModelPicker(
+    { models: presetModels, label: presetLabel, defaultModelId: presetDefaultModel, providerKey, freeNote: preset.freeNote || '' },
+    existingModelName, existingProvider,
+  );
   return { provider: providerKey, baseUrl, modelName, keyHint };
 }
 
@@ -414,7 +418,7 @@ async function runWizard() {
     ['Discord', botToken ? `${C.green}✓${C.reset} token set` : `${C.red}✗${C.reset} not set`],
     ['Telegram', telegramToken ? `${C.green}✓${C.reset} token set` : `${C.dim}–${C.reset} not set`],
     ['AI Provider', `${provider} (${modelName})`],
-    ['AI Keys', `${allKeys.length} primary + ${backupCfgEntries.length} backup`],
+    ['AI Keys', `${allKeys.length} total (${backupCfgEntries.length} backup)`],
     ['GMGN', gmgn.value ? `${C.green}✓${C.reset} +${gmgn.backups.length} backup` : `${C.red}✗${C.reset}`],
     ['Krystal', krystal.value ? `${C.green}✓${C.reset} +${krystal.backups.length} backup` : `${C.red}✗${C.reset}`],
     ['OpenSea', opensea.value ? `${C.green}✓${C.reset} +${opensea.backups.length} backup` : `${C.red}✗${C.reset}`],
