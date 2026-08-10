@@ -145,6 +145,9 @@ describe('KrystalCloudAdapter', () => {
     }));
     await adapter.fetchTopRobinhoodPools();
     expect(calls).toBe(2);
+    const secondInit = vi.mocked(fetch).mock.calls[1][1] as RequestInit;
+    const secondHeaders = (secondInit?.headers ?? {}) as Record<string, string>;
+    expect(secondHeaders['KC-APIKey']).toBe('kk2');
     vi.unstubAllGlobals();
     delete process.env.KRYSTAL_CLOUD_BACKUP_KEYS;
   });

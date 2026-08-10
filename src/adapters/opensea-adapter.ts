@@ -286,12 +286,12 @@ export class OpenSeaAdapter {
       console.log(`[OPENSEA ADAPTER] No API key configured for ${collectionSlug}. Returning empty.`);
       return [];
     }
-    const headers = { 'accept': 'application/json', 'x-api-key': this.keyPool.get() || '' };
+    const authHeaders = (): Record<string, string> => ({ 'accept': 'application/json', 'x-api-key': this.keyPool.get() || '' });
     try {
       // ── 1. Stats: floor + 24h volume/sales + 6-day baseline (REAL data from intervals) ──
-      const statsRes = await this.fetchWithKey((key) => ({
+      const statsRes = await this.fetchWithKey(() => ({
         url: `https://api.opensea.io/api/v2/collections/${collectionSlug}/stats`,
-        init: { headers: { 'accept': 'application/json', 'x-api-key': key }, signal: AbortSignal.timeout(15000) },
+        init: { headers: authHeaders(), signal: AbortSignal.timeout(15000) },
       }));
       if (!statsRes || !statsRes.ok) throw new Error(`OpenSea stats HTTP ${statsRes?.status ?? 'n/a'}`);
       const statsData: any = await statsRes.json();
@@ -313,7 +313,7 @@ export class OpenSeaAdapter {
       // ── 2. Floor price history: last 1-hour surge (REAL time-series) ──
       let floorSurge1hPct = 0;
       try {
-        const fpRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/floor_prices?timeframe=one_day&resolution=25`, { headers, signal: AbortSignal.timeout(15000) });
+        const fpRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}/floor_prices?timeframe=one_day&resolution=25`, { headers: authHeaders(), signal: AbortSignal.timeout(15000) });
         if (fpRes.ok) {
           const fpData: any = await fpRes.json();
           const pts: any[] = Array.isArray(fpData?.floor_prices) ? fpData.floor_prices : [];
@@ -336,7 +336,7 @@ export class OpenSeaAdapter {
       // ── 2b. Verified badge: safelist_request_status === 'verified' (fail-closed false) ──
       let isVerified = false;
       try {
-        const colRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}`, { headers, signal: AbortSignal.timeout(15000) });
+        const colRes = await fetch(`https://api.opensea.io/api/v2/collections/${collectionSlug}`, { headers: authHeaders(), signal: AbortSignal.timeout(15000) });
         if (colRes.ok) {
           const colData: any = await colRes.json();
           isVerified = colData?.safelist_request_status === 'verified';
@@ -352,7 +352,7 @@ export class OpenSeaAdapter {
       let eventsAvailable = false;
       try {
         const after = Math.floor(Date.now() / 1000) - 4 * 3600;
-        const evRes = await fetch(`https://api.opensea.io/api/v2/events/collection/${collectionSlug}?event_type=sale&after=${after}&limit=200`, { headers, signal: AbortSignal.timeout(15000) });
+        const evRes = await fetch(`https://api.opensea.io/api/v2/events/collection/${collectionSlug}?event_type=sale&after=${after}&limit=200`, { headers: authHeaders(), signal: AbortSignal.timeout(15000) });
         if (evRes.ok) {
           const evData: any = await evRes.json();
           const events: any[] = Array.isArray(evData?.asset_events) ? evData.asset_events : [];

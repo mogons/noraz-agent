@@ -207,6 +207,9 @@ describe('OpenSeaAdapter', () => {
     }));
     await adapter.fetchTrendingCollections();
     expect(calls).toBe(2);
+    const secondInit = vi.mocked(fetch).mock.calls[1][1] as RequestInit;
+    const secondHeaders = (secondInit?.headers ?? {}) as Record<string, string>;
+    expect(secondHeaders['x-api-key']).toBe('pk2');
     vi.unstubAllGlobals();
     delete process.env.OPENSEA_BACKUP_KEYS;
   });
