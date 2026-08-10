@@ -1,3 +1,5 @@
+import { loadApiKeyPool, type ApiKeyPool } from './api-key-pool.js';
+
 export interface GoPlusTokenSecurity {
   isHoneypot: boolean;
   buyTaxPct: number;
@@ -28,6 +30,7 @@ const CHAIN_ID_MAP: Record<EvmChain, number> = {
 
 export class GoPlusSecurityService {
   private baseUrl = 'https://api.gopluslabs.io/api/v1';
+  private keyPool: ApiKeyPool = loadApiKeyPool('GOPLUS_API_KEY');
 
   /**
    * Screening path — conservative fail-closed: honeypot => null (rejected).
@@ -47,14 +50,24 @@ export class GoPlusSecurityService {
   public async auditTokenFull(chain: EvmChain, contractAddress: string): Promise<GoPlusTokenSecurity | null> {
     const chainId = CHAIN_ID_MAP[chain];
     if (!chainId) return null;
+    const apiKey = this.keyPool.get() || '';
+    const buildUrl = (k: string) => {
+      let url = `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`;
+      if (k && !k.includes('YOUR_') && !k.includes('placeholder') && !k.includes('mock')) {
+        url += `&api_key=${encodeURIComponent(k)}`;
+      }
+      return url;
+    };
     try {
       // GoPlus accepts the API key as `api_key` query param; Authorization header is rejected (code 4012).
-      let url = `${this.baseUrl}/token_security/${chainId}?contract_addresses=${contractAddress}`;
-      const apiKey = process.env.GOPLUS_API_KEY;
-      if (apiKey && !apiKey.includes('YOUR_') && !apiKey.includes('placeholder') && !apiKey.includes('mock')) {
-        url += `&api_key=${encodeURIComponent(apiKey)}`;
+      let res = await fetch(buildUrl(apiKey), { headers: { 'Content-Type': 'application/json' } });
+      if ((res.status === 401 || res.status === 403) && this.keyPool.size > 1) {
+        const next = this.keyPool.markFailed(`HTTP ${res.status}`);
+        if (next) {
+          res = await fetch(buildUrl(next), { headers: { 'Content-Type': 'application/json' } });
+          if (res.status === 401 || res.status === 403) return null;
+        }
       }
-      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) return null;
       const data = (await res.json()) as { code?: number; result?: Record<string, any> };
       if (data.code && data.code !== 1) return null;

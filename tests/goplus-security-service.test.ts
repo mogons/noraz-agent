@@ -36,4 +36,21 @@ describe('GoPlusSecurityService', () => {
     const svc = new GoPlusSecurityService();
     expect(await svc.auditToken('base', '0xabc')).toBeNull();
   });
+
+  it('rotates to the backup key on 401 and succeeds', async () => {
+    process.env.GOPLUS_API_KEY = 'gk1';
+    process.env.GOPLUS_BACKUP_KEYS = 'gk2';
+    const svc = new GoPlusSecurityService();
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      calls++;
+      if (calls === 1) return new Response('{}', { status: 401 });
+      return new Response(JSON.stringify({ code: 1, result: {} }), { status: 200 });
+    }));
+    await svc.auditTokenFull('robinhood', '0xabc');
+    expect(calls).toBe(2);
+    vi.unstubAllGlobals();
+    delete process.env.GOPLUS_API_KEY;
+    delete process.env.GOPLUS_BACKUP_KEYS;
+  });
 });

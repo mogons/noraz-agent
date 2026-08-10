@@ -1,5 +1,6 @@
 import type { WalletService } from '../services/wallet-service.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
+import { loadApiKeyPool, type ApiKeyPool } from '../services/api-key-pool.js';
 
 export interface EVMTradeRequest {
   chain: string;
@@ -39,6 +40,7 @@ const CHAIN_ID_MAP: Record<string, number> = {
 
 export class EVMTradeAdapter {
   private isDryRun: boolean;
+  private uniswapKeyPool: ApiKeyPool = loadApiKeyPool('UNISWAP_API_KEY');
 
   constructor() {
     this.isDryRun = isDryRunMode();
@@ -59,7 +61,9 @@ export class EVMTradeAdapter {
       console.log(`[EVM ADAPTER] DRY_RUN=true -> Fetching REAL Uniswap API quote (no broadcast)...`);
 
       // Fail closed: entry is not usable without a quote API key.
-      if (!process.env.UNISWAP_API_KEY) {
+      const key = this.uniswapKeyPool.get() || '';
+      if (!key) {
+        console.warn('UNISWAP_API_KEY missing — cannot fetch real quote. Set UNISWAP_API_KEY in .env (dry-run stays simulated).');
         return {
           success: false,
           chain: String(request.chain),
@@ -74,19 +78,31 @@ export class EVMTradeAdapter {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 10_000);
       try {
-        const quoteRes = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
+        const quoteBody = {
+          tokenIn: '0x0000000000000000000000000000000000000000', // native ETH
+          tokenOut: request.tokenAddress,
+          amount: BigInt(Math.round(request.amountEth * 1e18)).toString(),
+          type: 'EXACT_INPUT',
+          chainId: this.parseChainId(request.chain),
+          configs: [{ protocols: ['V2','V3','V4'], routingType: 'CLASSIC', enableUniversalRouter: true }],
+        };
+        let quoteRes = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-api-key': process.env.UNISWAP_API_KEY || '', 'accept': 'application/json' },
-          body: JSON.stringify({
-            tokenIn: '0x0000000000000000000000000000000000000000', // native ETH
-            tokenOut: request.tokenAddress,
-            amount: BigInt(Math.round(request.amountEth * 1e18)).toString(),
-            type: 'EXACT_INPUT',
-            chainId: this.parseChainId(request.chain),
-            configs: [{ protocols: ['V2','V3','V4'], routingType: 'CLASSIC', enableUniversalRouter: true }],
-          }),
+          headers: { 'content-type': 'application/json', 'x-api-key': key, 'accept': 'application/json' },
+          body: JSON.stringify(quoteBody),
           signal: controller.signal,
         });
+        if ((quoteRes.status === 401 || quoteRes.status === 403) && this.uniswapKeyPool.size > 1) {
+          const next = this.uniswapKeyPool.markFailed(`HTTP ${quoteRes.status}`);
+          if (next) {
+            quoteRes = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'x-api-key': next, 'accept': 'application/json' },
+              body: JSON.stringify(quoteBody),
+              signal: controller.signal,
+            });
+          }
+        }
         clearTimeout(timer);
         if (!quoteRes.ok) {
           return { success: false, chain: String(request.chain), inputEth: request.amountEth, outputTokens: 0, dexUsed: dexName, simulated: true, error: `Uniswap API Quote Failed: ${await quoteRes.text()}` };

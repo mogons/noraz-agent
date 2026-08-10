@@ -249,13 +249,13 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
 
   it('18b. EVM Adapter Dry-Run Buy: realistic Uniswap API quote (simulated, no broadcast)', async () => {
     const { EVMTradeAdapter } = await import('../src/adapters/evm-adapter.js');
-    const adapter = new EVMTradeAdapter();
     const prevKey = process.env.UNISWAP_API_KEY;
     const request = { chain: 'robinhood' as const, tokenAddress: '0x000000000000000000000000000000000000dEaD', amountEth: 0.1, slippagePercentage: 1.5 };
 
     // Without UNISWAP_API_KEY the dry-run fails closed with a clear error (no network needed).
+    // Adapter loads its key pool at construction, so build a fresh adapter per env state.
     delete process.env.UNISWAP_API_KEY;
-    const noKeyRes = await adapter.executeBuyToken(request);
+    const noKeyRes = await new EVMTradeAdapter().executeBuyToken(request);
     expect(noKeyRes.success).toBe(false);
     expect(noKeyRes.simulated).toBe(true);
     expect(noKeyRes.error).toContain('UNISWAP_API_KEY');
@@ -267,7 +267,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       headers: { 'content-type': 'application/json' },
     })) as unknown as typeof fetch;
     process.env.UNISWAP_API_KEY = 'test_key_123';
-    const stubRes = await adapter.executeBuyToken(request);
+    const stubRes = await new EVMTradeAdapter().executeBuyToken(request);
     globalThis.fetch = originalFetch;
     if (prevKey !== undefined) process.env.UNISWAP_API_KEY = prevKey; else delete process.env.UNISWAP_API_KEY;
 
