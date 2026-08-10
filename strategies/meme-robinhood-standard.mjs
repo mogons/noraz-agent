@@ -1,26 +1,26 @@
 export default {
-  id: 'meme-robinhood-default',
-  name: 'Robinhood Meme CTO/Revival/Momentum',
+  id: 'meme-robinhood-standard',
+  name: 'Robinhood Meme CTO/Revival/Momentum (Standard — strict thresholds)',
   version: '1.0.0',
   description:
-    'Loosened default (2x): more signals, still >= 80 quality floor. ' +
+    'Standard preset: strict thresholds (previous defaults). ' +
     'Detects CTO (community takeover), Revival (dead token waking up), ' +
     'and Momentum (volume/hype pump) signals from real GMGN fields. Deterministic scoring, no LLM. ' +
     'Fail-closed: missing fields contribute 0; signals below 80 are SKIP. ' +
     'Degen early: age & fee gates off by default (0) — smart money/CTO/KOL jadi penentu.',
   params: {
     passThreshold: 80,
-    minVolume24hUsd: 25000,
-    minLiquidityUsd: 5000,
+    minVolume24hUsd: 50000,
+    minLiquidityUsd: 10000,
     minAgeHours: 0,
-    maxRugRatio: 0.4,
-    maxRatTraderRate: 0.4,
-    maxTop10HolderRate: 0.5,
-    minVisitingCount: 100,
+    maxRugRatio: 0.3,
+    maxRatTraderRate: 0.3,
+    maxTop10HolderRate: 0.4,
+    minVisitingCount: 200,
     maxTwitterRenameCount: 3,
     maxTwitterDelPostCount: 5,
     maxTwitterCreateTokenCount: 10,
-    minTotalFeeUsd: 250,
+    minTotalFeeUsd: 500,
   },
   evaluate(ctx) {
     const p = this.params;

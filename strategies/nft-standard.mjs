@@ -1,21 +1,21 @@
 export default {
-  id: 'nft-default',
-  name: 'NFT Floor Momentum + Whale Sweep',
+  id: 'nft-standard',
+  name: 'NFT Floor Momentum + Whale Sweep (Standard — strict thresholds)',
   version: '2.0.0',
   description:
-    'Loosened default (2x): more signals, still >= 80 quality floor. ' +
+    'Standard preset: strict thresholds (previous defaults). ' +
     'Default NFT strategy: hard filters (not scoring) for EVM collections on OpenSea. ' +
-    'All mandatory: min floor 0.01 ETH (fail-closed if missing), floor surge >= 10% 1h, ' +
-    'volume spike >= 1.5x baseline, sales velocity >= 3/h, collection security audit harus pass. ' +
+    'All mandatory: min floor 0.01 ETH (fail-closed if missing), floor surge >= 20% 1h, ' +
+    'volume spike >= 2.0x baseline, sales velocity >= 5/h, collection security audit harus pass. ' +
     'Whale sweep & verified = bonus info di card. ' +
     'Deterministic confidence: 80 (all filters passed) + 10 whale sweep + 10 verified, cap 100. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
     passThreshold: 80,
     minFloorEth: 0.01,
-    minSurgePct: 10,
-    minVolSpike: 1.5,
-    minVelocity1h: 3.0,
+    minSurgePct: 20,
+    minVolSpike: 2.0,
+    minVelocity1h: 5.0,
   },
   evaluate(ctx) {
     const p = this.params;

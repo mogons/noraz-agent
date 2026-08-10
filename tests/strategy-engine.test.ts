@@ -113,3 +113,38 @@ describe('StrategyEngine', () => {
     expect(out.length).toBe(30);
   });
 });
+
+describe('customizable presets', () => {
+  const engine = new StrategyEngine();
+
+  it('loads the loosened defaults for all three domains', () => {
+    const meme = engine.getActiveStrategy('meme-robinhood');
+    const nft = engine.getActiveStrategy('nft');
+    const lp = engine.getActiveStrategy('lp-robinhood');
+    expect(meme?.params.minVolume24hUsd).toBe(25000);
+    expect(meme?.params.minLiquidityUsd).toBe(5000);
+    expect(nft?.params.minSurgePct).toBe(10);
+    expect(lp?.params.minTvlUsd).toBe(10000);
+    expect(lp?.params.minFeeTvlRatio24h).toBe(0.02);
+  });
+
+  it('standard presets exist and keep the strict values', () => {
+    const files = fs.readdirSync('strategies').filter((f) => f.endsWith('.mjs'));
+    expect(files).toContain('meme-robinhood-standard.mjs');
+    expect(files).toContain('nft-standard.mjs');
+    expect(files).toContain('lp-robinhood-standard.mjs');
+  });
+
+  it('LP loosened strategy rejects below gates (fail-closed) and passes a healthy pool', () => {
+    const strat = engine.getActiveStrategy('lp-robinhood');
+    const evalFn = (pool: Record<string, unknown>) => strat!.evaluate({
+      domain: 'lp-robinhood', symbol: 'PEPE', contractAddress: '0x1', priceUsd: 0,
+      liquidityUsd: pool.tvlUsd as number, volume24hUsd: pool.volume24hUsd as number,
+      volume1hUsd: 0, smartMoneyCount: 0, securityAuditPassed: true, socialHypeScore: 60, pool,
+    });
+    expect(evalFn({ tvlUsd: 5000, volume24hUsd: 500000, feesToTvlRatio24h: 0.1, marketCapUsd: 500000 }).recommendedAction).toBe('SKIP');
+    expect(evalFn({ tvlUsd: 50000, volume24hUsd: 500000, feesToTvlRatio24h: 0.05, marketCapUsd: 500000 }).recommendedAction).toBe('BUY');
+    expect(evalFn({ tvlUsd: 50000, volume24hUsd: 500000, feesToTvlRatio24h: 0.01, marketCapUsd: 500000 }).recommendedAction).toBe('SKIP');
+    expect(evalFn({ tvlUsd: 50000, volume24hUsd: 500000, feesToTvlRatio24h: 0.05, marketCapUsd: 50000 }).recommendedAction).toBe('SKIP');
+  });
+});
