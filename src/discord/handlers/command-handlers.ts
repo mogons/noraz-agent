@@ -267,7 +267,7 @@ export async function handleChatInput(
       const dryRun = isDryRunMode();
       const autoExecute = process.env.AUTO_EXECUTE_ENABLED === 'true';
       const active = hub.getActiveDomains();
-      const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY'];
+      const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY'];
       const keys = keyNames.map((k) => {
         const v = process.env[k];
         return `• \`${k}\`: ${v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock') ? '✅ SET' : '❌ not set'}`;

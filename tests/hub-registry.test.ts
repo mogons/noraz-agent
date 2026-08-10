@@ -3,7 +3,6 @@ import { AthenaHub } from '../src/orchestrator/hub.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
 import type { KrystalCloudAdapter, KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
 import type { GMGNAdapter, GMGNSecurityAudit } from '../src/adapters/gmgn-adapter.js';
-import type { TwitterService, TweetItem } from '../src/services/twitter-service.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -128,25 +127,6 @@ const mkGmgnToken = (over: Record<string, any> = {}): any => ({
   name: 'Chiikawa',
   ...over,
 });
-
-// NOTE: the healthy text intentionally avoids 'ai'/'agent'/'yield'/'airdrop'/'farm'
-// so category resolution lands on SMART_CT_CALL (deterministic, mirrors ct-alpha tests).
-const mkTweet = (over: Partial<TweetItem> = {}): TweetItem => ({
-  id: 't1',
-  text: 'Major rotation brewing — smart money positioning $ROT8, do not sleep on this one',
-  authorUsername: 'ct_whale',
-  authorName: 'CT Whale',
-  likes: 800,
-  retweets: 150,
-  replies: 30,
-  createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
-  url: 'https://x.com/ct_whale/status/t1',
-  ...over,
-});
-
-const mkFakeTwitter = (tweets: TweetItem[]) => ({
-  searchTweets: vi.fn(async () => tweets),
-} as unknown as TwitterService);
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 

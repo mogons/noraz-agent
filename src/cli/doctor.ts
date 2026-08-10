@@ -11,7 +11,6 @@ export async function runAthenaDoctor(): Promise<void> {
     { name: 'AI_API_KEY / AI_API_KEYS', val: process.env.AI_API_KEYS || process.env.AI_API_KEY, required: true },
     { name: 'GMGN_API_KEY', val: process.env.GMGN_API_KEY, required: false },
     { name: 'OPENSEA_API_KEY', val: process.env.OPENSEA_API_KEY, required: false },
-    { name: 'TWEX_API_KEY', val: process.env.TWEX_API_KEY || process.env.TWITTER_BEARER_TOKEN, required: false },
     { name: 'GOPLUS_API_KEY', val: process.env.GOPLUS_API_KEY, required: false },
     { name: 'DISCORD_BOT_TOKEN', val: process.env.DISCORD_BOT_TOKEN, required: false },
     { name: 'TELEGRAM_BOT_TOKEN', val: process.env.TELEGRAM_BOT_TOKEN, required: false },

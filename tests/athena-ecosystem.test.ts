@@ -125,34 +125,6 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(dropRes.reason).toContain('FLOOR DROP WARNING (-20%)');
   });
 
-  it('9. Twitter Service: fail-closed without key, real data with key', async () => {
-    const { TwitterService } = await import('../src/services/twitter-service.js');
-
-    // Without a TWEX key -> no fabricated tweets
-    const noKeySvc = new TwitterService();
-    const empty = await noKeySvc.getHypeScore('ATHENA');
-    expect(Array.isArray(empty.topTweets)).toBe(true);
-    expect(empty.topTweets.length).toBe(0);
-
-    // With a stubbed real TwexAPI response -> parsed real fields
-    process.env.TWEX_API_KEY = 'twex-test';
-    const nowIso = new Date().toISOString();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{
-        id: 't1', text: '$ATHENA pumping', author: { username: 'whale_user', name: 'Whale' },
-        public_metrics: { like_count: 200, retweet_count: 60, reply_count: 15 },
-        created_at: nowIso,
-      }],
-    }));
-    const keyedSvc = new TwitterService();
-    const hype = await keyedSvc.getHypeScore('ATHENA');
-    vi.unstubAllGlobals();
-    expect(hype.topTweets.length).toBe(1);
-    expect(hype.topTweets[0].authorUsername).toBe('whale_user');
-    expect(hype.sentimentScore).toBeGreaterThanOrEqual(0);
-  });
-
   it('10. Trade Journal Service: starts empty and records real trades', async () => {
     const { TradeJournalService } = await import('../src/services/trade-journal-service.js');
     const journal = new TradeJournalService();

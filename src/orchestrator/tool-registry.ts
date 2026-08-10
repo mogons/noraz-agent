@@ -23,7 +23,7 @@ const PROTECTED_ENV_KEYS = [
 /** Keys settable via set_api_key (API credentials only — never mode/private/infra). */
 const SETTABLE_ENV_KEYS = [
   'AI_API_KEY', 'AI_API_KEYS', 'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
-  'GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'TWITTER_BEARER_TOKEN', 'GOPLUS_API_KEY',
+  'GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY',
   'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY',
 ];
 
@@ -140,7 +140,7 @@ export class ToolRegistry {
             },
             modelName: {
               type: 'string',
-              description: 'Specific model identifier (e.g. meta-llama/llama-3.3-70b-instruct:free, gpt-4o, claude-3-5-sonnet-20241022).',
+              description: 'Specific model identifier (e.g. meta-llama/llama-3.3-70b-instruct:free, gpt-5.2-chat, claude-sonnet-5).',
             },
           },
         },
@@ -183,7 +183,7 @@ export class ToolRegistry {
       },
       {
         name: 'set_api_key',
-        description: 'Set and persist an API key or environment variable at runtime (e.g. GMGN_API_KEY, OPENSEA_API_KEY, TWEX_API_KEY).',
+        description: 'Set and persist an API key or environment variable at runtime (e.g. GMGN_API_KEY, OPENSEA_API_KEY, KRYSTAL_CLOUD_API_KEY).',
         parameters: {
           type: 'object',
           properties: {
@@ -522,7 +522,7 @@ export class ToolRegistry {
           const dryRun = process.env.DRY_RUN !== 'false';
           const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
           const active = this.orchestrator.getActiveDomains();
-          const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'TWEX_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'EVM_ROBINHOOD_RPC_URL'];
+          const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'EVM_ROBINHOOD_RPC_URL'];
           const keys = keyNames.map((k) => {
             const v = process.env[k];
             const set = Boolean(v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock'));

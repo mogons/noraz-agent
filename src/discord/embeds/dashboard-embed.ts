@@ -16,7 +16,6 @@ export interface DashboardEmbedOptions {
 }
 
 export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOptions = {}) {
-  const isTwexSet = Boolean(process.env.TWEX_API_KEY);
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 
