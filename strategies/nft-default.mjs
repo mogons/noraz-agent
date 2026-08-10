@@ -6,8 +6,9 @@ export default {
     'Loosened default (2x): more signals, still >= 80 quality floor. ' +
     'Default NFT strategy: hard filters (not scoring) for EVM collections on OpenSea. ' +
     'All mandatory: min floor 0.01 ETH (fail-closed if missing), floor surge >= 10% 1h, ' +
-    'volume spike >= 1.5x baseline, sales velocity >= 3/h, collection security audit harus pass. ' +
-    'Whale sweep & verified = bonus info di card. ' +
+    'volume spike >= 1.5x baseline, sales velocity >= 3/h, collection security audit must pass. ' +
+    'Whale sweep & verified = bonus info on the card. ' +
+    'Agent prefilter seeded from params: surge >= 10%, volume spike >= 1.5x, velocity >= 3/h. ' +
     'Deterministic confidence: 80 (all filters passed) + 10 whale sweep + 10 verified, cap 100. ' +
     'Deterministic, no LLM. Signals below 80 are SKIP.',
   params: {
@@ -16,6 +17,9 @@ export default {
     minSurgePct: 10,
     minVolSpike: 1.5,
     minVelocity1h: 3.0,
+    prefilterSurgePct: 10,
+    prefilterVolSpike: 1.5,
+    prefilterVelocity1h: 3,
   },
   evaluate(ctx) {
     const p = this.params;

@@ -90,8 +90,18 @@ export async function bootstrapCustomStrategies(opts: {
       if (!write.success) throw new Error(write.message);
       const act = engine.setActiveStrategy(domain, `${domain}-custom`);
       if (!act.success) throw new Error(act.message);
+      // Smoke-evaluate: the activated strategy must not throw on an empty ctx
+      // (valid shape alone is not enough — a runtime crash would kill screening).
+      // Fail-closed: any throw = failure → file removed, default stays active.
+      try {
+        const loaded = engine.getActiveStrategy(domain);
+        if (!loaded?.evaluate) throw new Error('activated strategy not loadable');
+        engine.runStrategySafely(loaded, 'evaluate', {});
+      } catch (smokeErr: any) {
+        throw new Error(`smoke evaluate failed: ${smokeErr?.message || String(smokeErr)}`);
+      }
       generated.push(`${domain}-custom`);
-      log(`${domain}-custom generated, validated and activated.`);
+      log(`${domain}-custom generated, validated, smoke-evaluated and activated.`);
     } catch (err: any) {
       failed.push(domain);
       log(`${domain} custom strategy failed (${err?.message || String(err)}) — keeping default.`);

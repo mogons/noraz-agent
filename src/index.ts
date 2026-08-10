@@ -129,10 +129,19 @@ const skillLoader = new SkillLoader();
 const openseaAdapter = new OpenSeaAdapter();
 const evmTradeAdapter = new EVMTradeAdapter();
 
-// Apply persisted per-domain screening overrides (set via chat `set_screening_config`)
+// Apply persisted per-domain screening overrides (set via chat `set_screening_config`).
+// Agent-level prefilter/hard-gate thresholds are seeded from the ACTIVE strategy's
+// prefilter* params (loosened presets take effect at runtime); fallback = config.
 const savedScreeningConfigs = stateStore.getScreeningConfigs();
-const robinhoodScreeningAgent = new RobinhoodScreeningAgent(savedScreeningConfigs['meme-robinhood'] as any);
-const nftScreeningAgent = new NFTScreeningAgent(openseaAdapter);
+const robinhoodScreeningAgent = new RobinhoodScreeningAgent(
+  savedScreeningConfigs['meme-robinhood'] as any,
+  () => strategyEngine.getActiveStrategy('meme-robinhood')?.params ?? {},
+);
+const nftScreeningAgent = new NFTScreeningAgent(
+  openseaAdapter,
+  undefined,
+  () => strategyEngine.getActiveStrategy('nft')?.params ?? {},
+);
 
 // Wire shared adapters + singleton agent instances into the Hub
 hub.attachAgentFactories({

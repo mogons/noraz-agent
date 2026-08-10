@@ -27,6 +27,8 @@ prisma/dev.db
 
 # Strategy Engine runtime state
 strategies/.active.json
+strategies/*-custom.mjs
+strategies/custom-strategy-prompt.txt
 
 # Logs & Diagnostics
 logs/

@@ -122,7 +122,8 @@ export function applySignalBoost(
 export function preFilterToken(
   t: GMGNRawToken,
   config: MemePreFilterConfig,
-  nativePriceUsd: number | null = null
+  nativePriceUsd: number | null = null,
+  opts: { securityGate?: SecurityGateOptions } = {}
 ): { ok: boolean; reason: string } {
   const fail = (reason: string) => ({ ok: false as const, reason: `⛔ ${t.symbol}: ${reason}` });
   if (t.source === 'dexscreener') {
@@ -146,7 +147,7 @@ export function preFilterToken(
   if (t.marketCapUsd < config.minMarketCapUsd) return fail(`market cap $${(t.marketCapUsd/1000).toFixed(1)}k < $${config.minMarketCapUsd/1000}k.`);
   // GMGN security gate (honeypot, tax, rug, insider, top-10, wash) — shared
   // with the LP agent so security thresholds stay in one source.
-  const sec = securityGateToken(t);
+  const sec = securityGateToken(t, opts.securityGate);
   if (!sec.ok) return fail(sec.reasons.join(' '));
   // Total fees gate OPTIONAL: only checked when minTotalFeeUsd > 0. 0 = off (alpha early;
   // new tokens have small fees but the volume gate already filters out dead tokens).

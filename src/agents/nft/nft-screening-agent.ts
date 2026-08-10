@@ -63,11 +63,29 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
   private adapter: OpenSeaAdapter;
   private strategyEngine: StrategyEngine;
   private config: NFTScreeningConfig;
+  private strategyParams?: () => Record<string, unknown>;
 
-  constructor(adapter?: OpenSeaAdapter, config?: Partial<NFTScreeningConfig>) {
+  constructor(adapter?: OpenSeaAdapter, config?: Partial<NFTScreeningConfig>, strategyParams?: () => Record<string, unknown>) {
     this.adapter = adapter || new OpenSeaAdapter();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.strategyParams = strategyParams;
+  }
+
+  /**
+   * Hard-filter thresholds seeded from the ACTIVE strategy's prefilter* params
+   * when available (loosened presets take effect at runtime); fallback = the
+   * current config values.
+   */
+  private hardFilterThresholds(): { surgePct: number; volSpike: number; velocity1h: number } {
+    const sp = this.strategyParams ? this.strategyParams() : {};
+    const num = (v: unknown, fallback: number): number =>
+      typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback;
+    return {
+      surgePct: num(sp.prefilterSurgePct, this.config.floorSurgeThresholdPct),
+      volSpike: num(sp.prefilterVolSpike, this.config.volSpikeThresholdRatio),
+      velocity1h: num(sp.prefilterVelocity1h, this.config.minSalesVelocity1h),
+    };
   }
 
    /**
@@ -76,14 +94,15 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     * Whale sweep & verified = additional info, not filters.
     */
   public evaluateListing(signal: OpenSeaNFTSignal): NFTSnipingReport | null {
+    const h = this.hardFilterThresholds();
     // 1. Floor Price Pump Surge Check (>= +20% in 1h) — REQUIRED
-    const isFloorSurge = signal.floorSurge1hPct >= this.config.floorSurgeThresholdPct;
+    const isFloorSurge = signal.floorSurge1hPct >= h.surgePct;
 
     // 2. Volume Explosion Spike Check (>= 2.0x baseline) — REQUIRED
-    const isVolumeSpike = signal.volumeSpike1hRatio >= this.config.volSpikeThresholdRatio;
+    const isVolumeSpike = signal.volumeSpike1hRatio >= h.volSpike;
 
     // 3. Sales Velocity Check (>= 5 sales/hour) — REQUIRED
-    const isHighVelocity = signal.salesVelocity1h >= this.config.minSalesVelocity1h;
+    const isHighVelocity = signal.salesVelocity1h >= h.velocity1h;
 
     // 4. Verified Whale Sweep Check — factual, info only: a single buyer bought >= 3 NFTs within 1 hour
     const isWhaleSweep = signal.isWhaleSweep && Boolean(signal.whaleInfo);
@@ -199,7 +218,7 @@ export class NFTScreeningAgent implements ScreeningAgent<NFTSnipingReport> {
     const floorOk = report.floorPriceEth > 0.01;
     const velocityOk = report.salesVelocity1h > 0;
     // All hard filters are required in evaluateListing — momentumOk is always true for valid reports.
-    const momentumOk = report.isWhaleSweep || report.isFloorSurge || report.isVolumeSpike || report.salesVelocity1h >= this.config.minSalesVelocity1h;
+    const momentumOk = report.isWhaleSweep || report.isFloorSurge || report.isVolumeSpike || report.salesVelocity1h >= this.hardFilterThresholds().velocity1h;
     return floorOk && velocityOk && momentumOk;
   }
 

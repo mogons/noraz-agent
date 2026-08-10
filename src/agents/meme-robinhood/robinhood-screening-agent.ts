@@ -3,7 +3,7 @@ import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
 import { createDedupe, preFilterToken, detectMemeSignal, volume24hOf, buildSignalBoostMap, applySignalBoost, toStrategyGmgn, buildMemeThesis, isGraduatedToken, validateMemeConfigUpdate, securityAuditGate, buildTrackAccumulation, trackAccumulationLabel } from '../shared/gmgn-meme-helpers.js';
-import type { SignalBoostMap, TrackAccumulation } from '../shared/gmgn-meme-helpers.js';
+import type { SignalBoostMap, TrackAccumulation, MemePreFilterConfig } from '../shared/gmgn-meme-helpers.js';
 
 export interface RobinhoodSignal {
   token: GMGNRawToken;
@@ -59,14 +59,16 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
   private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: RobinhoodScreeningConfig;
+  private strategyParams?: () => Record<string, unknown>;
   private dedupeTokens = createDedupe();
 
-  constructor(config?: Partial<RobinhoodScreeningConfig>) {
+  constructor(config?: Partial<RobinhoodScreeningConfig>, strategyParams?: () => Record<string, unknown>) {
     // Separate GMGN key for robinhood (per-key rate limit): fallback to
     // GMGN_API_KEY when GMGN_API_KEY_ROBINHOOD is not yet set.
     this.gmgn = new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.strategyParams = strategyParams;
   }
 
   /**
@@ -183,9 +185,30 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     return out;
   }
 
-  /** Fail-closed pre-filter (pure math; native price fetched once per pass) */
+  /**
+   * Fail-closed pre-filter (pure math; native price fetched once per pass).
+   * Thresholds are seeded from the ACTIVE strategy's prefilter* params when
+   * available (loosened presets take effect at runtime); fallback = config.
+   */
   public preFilter(t: GMGNRawToken, nativePriceUsd: number | null = null): { ok: boolean; reason: string } {
-    return preFilterToken(t, this.config, nativePriceUsd);
+    const sp = this.strategyParams ? this.strategyParams() : {};
+    const num = (v: unknown, fallback: number): number =>
+      typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback;
+    const overrides: Partial<MemePreFilterConfig> = {
+      minVolume1hUsd: num(sp.prefilterVolume1hUsd, this.config.minVolume1hUsd),
+      minLiquidityUsd: num(sp.prefilterLiquidityUsd, this.config.minLiquidityUsd),
+      minTotalFeeUsd: num(sp.prefilterTotalFeeUsd, this.config.minTotalFeeUsd),
+      maxRugRatio: num(sp.prefilterRugRatio, this.config.maxRugRatio),
+      maxRatTraderRate: num(sp.prefilterRatTraderRate, this.config.maxRatTraderRate),
+      maxTop10HolderRate: num(sp.prefilterTop10HolderRate, this.config.maxTop10HolderRate),
+    };
+    return preFilterToken(t, { ...this.config, ...overrides }, nativePriceUsd, {
+      securityGate: {
+        maxRugRatio: overrides.maxRugRatio,
+        maxRatTraderRate: overrides.maxRatTraderRate,
+        maxTop10HolderRate: overrides.maxTop10HolderRate,
+      },
+    });
   }
 
   /** Detect signal type + deterministic confidence (0-100) */
