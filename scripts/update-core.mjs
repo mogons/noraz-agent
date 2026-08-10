@@ -80,7 +80,7 @@ export async function runAthenaUpdate({ noRestart = false, cwd = REPO_ROOT } = {
   // 5b. Olympian notifications (Telegram + Discord webhook) — non-fatal
   try {
     const { notifyUpdate } = await import('./notify-update.mjs');
-    await notifyUpdate({ ok: allOk, restartOk: true, steps: log, noRestart });
+    await notifyUpdate({ ok: allOk, restartOk: null, steps: log, noRestart });
   } catch (err) {
     console.warn(`⚠ Deploy notification failed (non-fatal): ${err.message}`);
   }

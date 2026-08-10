@@ -70,7 +70,7 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
 
   // Dropdown Select Menu to Toggle Agents
   const CATEGORY_EMOJI: Record<string, string> = {
-    MEME: '🐣', LP: '💧', PERPS: '📈', NFT: '🖼️', PREDICTION: '🎯', CT_ALPHA: '💡',
+    MEME: '🐣', LP: '💧', NFT: '🖼️',
   };
   const agentSelect = new StringSelectMenuBuilder()
     .setCustomId('select_toggle_agent')

@@ -108,12 +108,12 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 
 ```bash
 # Linux / macOS / VPS
-git clone https://github.com/dizcorvus/Athena.git
+git clone https://github.com/dizcorvus/athena-ai-robinhood-chain.git
 cd Athena
 bash setup.sh              # one-click: install deps, build, wizard, launch guide
 
 # Windows (PowerShell)
-git clone https://github.com/dizcorvus/Athena.git
+git clone https://github.com/dizcorvus/athena-ai-robinhood-chain.git
 cd Athena
 .\setup.bat
 ```
@@ -121,7 +121,7 @@ cd Athena
 Or manually:
 
 ```bash
-git clone https://github.com/dizcorvus/Athena.git
+git clone https://github.com/dizcorvus/athena-ai-robinhood-chain.git
 cd Athena
 npm install
 npm run build              # or: athena build

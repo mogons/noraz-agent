@@ -4,13 +4,13 @@
  */
 export async function notifyUpdate({ ok, restartOk, steps = [], noRestart = false }) {
   const lines = steps.map((s) => `• ${s.label}: ${s.ok ? '✅' : '❌'}`).join('\n');
-  const status = ok && restartOk ? '✅ COMPLETE' : ok ? '⚠️ COMPLETE (restart pending)' : '❌ FAILED';
+  const status = restartOk === null ? '⚠️ COMPLETE (restart scheduled — confirm after boot)' : ok && restartOk ? '✅ COMPLETE' : ok ? '⚠️ COMPLETE (restart pending)' : '❌ FAILED';
   const text = [
     `⚡ Olympian Update — Athena self-update ${status}`,
     `Repo: ${process.cwd()}`,
     '',
     lines,
-    noRestart ? '⏭ PM2 restart skipped (--no-restart).' : (restartOk ? '🔄 PM2 agent restarted — new code is live on Mount Olympus.' : '⚠ PM2 restart failed — run `athena deploy` manually.'),
+    restartOk === null ? '🔄 PM2 restart scheduled — final status is reported to Discord after boot.' : noRestart ? '⏭ PM2 restart skipped (--no-restart).' : restartOk ? '🔄 PM2 agent restarted — new code is live on Mount Olympus.' : '⚠ PM2 restart failed — run `athena deploy` manually.',
     ok ? '' : '🩺 Tip: run `athena doctor` to diagnose.',
   ].join('\n');
 
