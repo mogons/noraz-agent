@@ -12,7 +12,7 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 3. Specialist Screening Sub-Agents:
    - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain DEX tokens; hard gate real 1H volume >= $50k + smart money/CTO/KOL required + GMGN /token/security audit (fail-closed) + smart-money trade feed as candidate booster.
    - Robinhood LP Velocity Engine (#call-lp-robinhood): Robinhood Chain Uniswap v3 concentrated liquidity via Krystal (24h Fee/TVL > 4%, TVL >= $20k, velocity); meme token must pass GMGN security audit (fail-closed).
-   - NFT Sniping Agent (#call-nft-sniping): OpenSea Robinhood Chain floor drop & rare trait alert loops.
+   - NFT Sniping Agent (#call-nft-robinhood): OpenSea Robinhood Chain floor drop & rare trait alert loops.
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Direct On-Chain Execution: /swap and /send on Robinhood Chain via Relay.link and OpenSea API v2.
 6. Custom Screening Strategies: Users can configure screening strictness during onboarding

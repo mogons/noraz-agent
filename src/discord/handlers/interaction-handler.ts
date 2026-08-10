@@ -42,7 +42,7 @@ export function isAthenaChannel(interaction: Interaction): boolean {
     'audit-on-demand',
     'call-meme-robinhood',
     'call-lp-robinhood',
-    'call-nft-sniping',
+    'call-nft-robinhood',
     'call-alpha-robinhood',
     'athena-logs',
     'athena-journal',

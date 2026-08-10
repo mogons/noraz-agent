@@ -37,7 +37,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 | Pillar | Role | What it does |
 | :--- | :--- | :--- |
 | 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Four specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x), and **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
-| 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-sniping`, `#call-alpha-robinhood`). **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
+| 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`). **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
 | ⚡ **Olympian** — The Operations | Deploy & Maintain | **PM2 24/7 daemon** (`athena deploy`), self-update engine (`athena update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `athena doctor` full diagnostics, and interactive **`athena onboard`** wizard. |
 
 ---
@@ -74,7 +74,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
                 └────────────────┬───────────────────┘
                                  │ only ≥ 80% confidence
                                  ▼
-     Discord Call Channels: #call-meme-robinhood · #call-lp-robinhood · #call-nft-sniping
+     Discord Call Channels: #call-meme-robinhood · #call-lp-robinhood · #call-nft-robinhood
                                  │
                                  ▼
                      WALLET TRACKER (holdings lifecycle)
@@ -92,7 +92,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 | 1 | 🛡️ **3-Layer Swarm Consensus** | Quant & Liquidity, Catalyst & Sentiment, Security Audit — **≥ 80% confidence** required before any call card is posted. |
 | 2 | 🔷 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 24h volume ≥ $50k**, fail-closed. |
 | 3 | 💧 **Robinhood LP Velocity Engine** (`#call-lp-robinhood`) | Concentrated-liquidity (Uniswap V3) high-yield pools via **Krystal Cloud** (`ethereum@4663`); **24h Fee/TVL > 4%**, **TVL ≥ $20k**, volume velocity, GMGN security re-check. |
-| 4 | 🖼️ **NFT Sniper** (`#call-nft-sniping`) | OpenSea REST v2 floor & rarity sniping; hard filters floor surge **≥ +20%/1h**, volume **≥ 2.0x**, sales **≥ 5/h**; whale sweep & verified badge as card info. |
+| 4 | 🖼️ **NFT Sniper** (`#call-nft-robinhood`) | OpenSea REST v2 floor & rarity sniping; hard filters floor surge **≥ +20%/1h**, volume **≥ 2.0x**, sales **≥ 5/h**; whale sweep & verified badge as card info. |
 | 5 | 💬 **Natural-Language Command Room** | Chat with Athena in `#athena-control-room` — swap/send/bridge intents, audits, alerts, and strategy questions via the agent tool loop. |
 | 6 | ⚙️ **22 Slash Commands** | Full command surface: wallets, screening control, audits, price/alert tools, journal, update, emergency cancel, and more (see table below). |
 | 7 | 📈 **Position Manager** | Auto-sell targets: TP **+100% (2x)** / **+200% (3x)**, **SL -20%**, dynamic trailing stops, LP out-of-range warnings, NFT floor-drop alerts. |

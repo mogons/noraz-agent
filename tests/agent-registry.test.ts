@@ -11,7 +11,7 @@ describe('agent registry', () => {
   it('getAgentDomain resolves canonical id, aliases, and channel names', () => {
     expect(getAgentDomain('meme-robinhood')?.channel).toBe('call-meme-robinhood');
     expect(getAgentDomain('evm-meme')?.id).toBe('meme-robinhood');
-    expect(getAgentDomain('call-nft-sniping')?.id).toBe('nft');
+    expect(getAgentDomain('call-nft-robinhood')?.id).toBe('nft');
     expect(getAgentDomain('unknown-agent')).toBeUndefined();
   });
 

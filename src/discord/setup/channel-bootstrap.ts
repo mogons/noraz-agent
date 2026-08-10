@@ -64,7 +64,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   );
 
   const nftId = await getOrCreateChannel(
-    'call-nft-sniping',
+    'call-nft-robinhood',
     '🖼️ NFT Floor Price & Rarity Sniping Alerts (OpenSea EVM)'
   );
 

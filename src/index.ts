@@ -338,7 +338,7 @@ if (discordToken && clientId) {
 
         const nftDispatched = await dispatchDomain({
           domain: 'nft',
-          channelName: 'call-nft-sniping',
+          channelName: 'call-nft-robinhood',
           isActive: () => hub.isAgentActive('nft'),
           runPass: () => withScreeningTimeout(nftScreeningAgent.runScreeningPass(), 'nft'),
           keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
@@ -394,7 +394,7 @@ if (discordToken && clientId) {
           const AUTO_EXECUTE_ENABLED = isAutoExecute() || process.env.AUTO_EXECUTE_ENABLED === 'true';
           const autoExecDomain: string | undefined =
             item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
-            item.channelName === 'call-nft-sniping' ? 'nft' :
+            item.channelName === 'call-nft-robinhood' ? 'nft' :
             undefined;
           if (autoExecDomain && AUTO_EXECUTE_ENABLED && !isSignalOnly()) {
             const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
@@ -474,7 +474,7 @@ if (discordToken && clientId) {
           // 3. Register called tokens for wallet auto-tracking (own-position detection + exit alerts)
           if ((item.channelName === 'call-meme-robinhood' || item.channelName === 'call-lp-robinhood') && item.payload.contractAddress) {
             walletTracker.registerTrackedToken('robinhood', item.payload.contractAddress, item.payload.symbol);
-          } else if (item.channelName === 'call-nft-sniping' && item.payload.symbol) {
+          } else if (item.channelName === 'call-nft-robinhood' && item.payload.symbol) {
             // NFT: register collection slug for user position monitoring (floor drop -20%, TP, etc.)
             stateStore.setTrackedNftCollection(item.payload.symbol.toLowerCase());
             console.log(`[POSITION MONITOR] NFT collection di-track: ${item.payload.symbol}`);

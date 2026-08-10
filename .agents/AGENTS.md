@@ -13,7 +13,7 @@ Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines proje
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 4 domains):
   - `#call-meme-robinhood` (Robinhood Chain EVM DEX tokens / GMGN OpenAPI + GoPlus security)
   - `#call-lp-robinhood` (Robinhood Chain Concentrated Liquidity Velocity Signals / Krystal Cloud)
-  - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea REST v2)
+  - `#call-nft-robinhood` (EVM NFT floor & rarity alerts / OpenSea REST v2)
   - `#call-alpha-robinhood` (1-hour Robinhood Chain Alpha Scraper / optional official X API v2)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops).
 

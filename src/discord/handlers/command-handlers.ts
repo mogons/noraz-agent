@@ -164,7 +164,8 @@ export async function handleChatInput(
     const channelDomainMap: Record<string, { agent: string; name: string }> = {
       'call-meme-robinhood': { agent: 'meme-robinhood', name: 'Robinhood Meme Agent' },
       'call-lp-robinhood': { agent: 'lp-robinhood', name: 'Robinhood LP Agent' },
-      'call-nft-sniping': { agent: 'nft', name: 'NFT Sniping Agent' },
+      'call-nft-robinhood': { agent: 'nft', name: 'NFT Sniping Agent' },
+      'call-alpha-robinhood': { agent: 'alpha-robinhood', name: 'Alpha Scraper Agent' },
     };
 
     let targetAgent = explicitAgent;

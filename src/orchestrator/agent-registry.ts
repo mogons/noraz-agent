@@ -39,7 +39,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     id: 'nft',
     displayName: 'NFT-SNIPING',
     name: 'Robinhood Chain NFT Floor & Rarity Sniping (OpenSea)',
-    channel: 'call-nft-sniping',
+    channel: 'call-nft-robinhood',
     aliases: ['opensea', 'nft-sniper'],
     requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
     category: 'NFT',
