@@ -51,6 +51,7 @@ swarmEngine.attachStateStore(stateStore);
 // Wire sandboxed StrategyEngine into Swarm Consensus (active strategy can adjust confidence)
 const strategyEngine = new StrategyEngine();
 SwarmConsensusEngine.setStrategyProvider((domain: string) => strategyEngine.getActiveStrategy(domain));
+hub.setStrategyProvider((domain: string) => strategyEngine.getActiveStrategy(domain));
 
 function gateSignal(payload: any): boolean {
   const res = swarmEngine.evaluateSignal({

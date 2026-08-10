@@ -308,4 +308,32 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     });
     expect(await hub.triggerAgentPass('nft')).toEqual([]);
   });
+
+  it('lp-robinhood uses active strategy params (loosened default passes $15k TVL / 3% fee pool)', async () => {
+    const { StrategyEngine } = await import('../src/orchestrator/strategy-engine.js');
+    // Loosened default (lp-robinhood-default): TVL >= $10k, vol >= $100k,
+    // Fee/TVL >= 2%, MC >= $100k — this pool would fail the strict fallback
+    // (MC $150k < $200k) but passes once the strategy provider is wired.
+    const hub = new AthenaHub({
+      krystalAdapter: mkKrystalStub([mkKrystalPool({
+        pairName: 'WETH-PEPE',
+        token0Symbol: 'WETH',
+        token1Symbol: 'PEPE',
+        token0Address: '0xweth',
+        token1Address: '0xpepe',
+        tvlUsd: 15000,
+        volume24hUsd: 150000,
+        feesToTvlRatio24h: 0.03,
+      })]),
+      gmgnAdapter: mkGmgnStub({ '0xpepe': mkGmgnToken({ marketCapUsd: 150000 }) }),
+    });
+    hub.setStrategyProvider((domain: string) => new StrategyEngine().getActiveStrategy(domain));
+    const results = await hub.triggerAgentPass('lp-robinhood');
+    expect(results).toHaveLength(1);
+    const r = results[0];
+    expect(r.passed).toBe(true);
+    expect(r.confidence).toBe(80);
+    expect(r.payload?.symbol).toBe('PEPE');
+    expect(r.payload?.title).toBe('PEPE-WETH');
+  });
 });

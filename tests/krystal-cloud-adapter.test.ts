@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { KrystalCloudAdapter } from '../src/adapters/krystal-cloud-adapter.js';
+import { KrystalCloudAdapter, type KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
 
 const mkPool = (over: Record<string, unknown> = {}) => ({
   chain: { name: 'Robinhood', id: 4663 },
@@ -131,6 +131,21 @@ describe('KrystalCloudAdapter', () => {
     // lowFee (0x b) ditolak (feeTvl 0.33% < 4%); 0xa (5%) vs 0xc (4.5%) dedupe → 0xa menang (feeTvl tertinggi)
     expect(filtered.length).toBe(1);
     expect(filtered[0].poolAddress).toBe('0xa');
+  });
+
+  it('filterHighYieldPools honors injected looser thresholds', () => {
+    process.env.KRYSTAL_CLOUD_API_KEY = 'test';
+    const adapter = new KrystalCloudAdapter();
+    // Distinct token pairs: per-pair dedupe must not collapse the loose assertion.
+    const pools = [
+      { poolAddress: '0x1', token0Symbol: 'WETH', token1Symbol: 'PEPE', tvlUsd: 15000, feesToTvlRatio24h: 0.03 } as unknown as KrystalPoolSignal,
+      { poolAddress: '0x2', token0Symbol: 'WETH', token1Symbol: 'FLOKI', tvlUsd: 50000, feesToTvlRatio24h: 0.05 } as unknown as KrystalPoolSignal,
+    ];
+    const strict = adapter.filterHighYieldPools(pools);
+    expect(strict.length).toBe(1);
+    expect(strict[0].poolAddress).toBe('0x2');
+    const loose = adapter.filterHighYieldPools(pools, { minTvlUsd: 10000, minFeeTvlRatio24h: 0.02 });
+    expect(loose.length).toBe(2);
   });
 
   it('rotates to the backup key on 401 and succeeds', async () => {

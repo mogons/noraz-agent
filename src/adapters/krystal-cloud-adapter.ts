@@ -173,18 +173,24 @@ export class KrystalCloudAdapter {
   /**
    * High-yield filter — Robinhood LP velocity with REAL data:
    * - fee1h >= $50 (real — calibrated 2026-08-09: $7 was too low)
-   * - 24h Fee/TVL > 4% (real)
+   * - 24h Fee/TVL > minFeeTvlRatio24h (default 4%, real)
    * - volume/activeTvl >= 100% per 1h (velocity, real fee_rate)
-   * - tvl >= $20k (already filtered server-side, still checked here)
+   * - tvl >= minTvlUsd (default $20k, already filtered server-side, still checked here)
    * - dedupe per pair (1 best pool per token pair)
    * Pool age & token verified are unavailable on Krystal — skipped.
+   * Thresholds can be injected from an active strategy (hub runLPPass).
    */
-  public filterHighYieldPools(pools: KrystalPoolSignal[]): KrystalPoolSignal[] {
+  public filterHighYieldPools(
+    pools: KrystalPoolSignal[],
+    opts: { minTvlUsd?: number; minFeeTvlRatio24h?: number } = {}
+  ): KrystalPoolSignal[] {
+    const minTvlUsd = opts.minTvlUsd ?? 20000;
+    const minFeeTvlRatio24h = opts.minFeeTvlRatio24h ?? 0.04;
     const bestByPair = new Map<string, KrystalPoolSignal>();
     for (const pool of pools) {
-      if (pool.tvlUsd < 20000) continue;
+      if (pool.tvlUsd < minTvlUsd) continue;
       if (pool.fee1hUsd < 50) continue;
-      if (pool.feesToTvlRatio24h <= 0.04) continue;
+      if (pool.feesToTvlRatio24h <= minFeeTvlRatio24h) continue;
       if (pool.volumeToActiveTvlRatio1h < 1.0) continue;
 
       const pairKey = `${pool.token0Symbol}-${pool.token1Symbol}`.toUpperCase();

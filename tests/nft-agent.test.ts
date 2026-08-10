@@ -241,10 +241,10 @@ describe('nft-default strategy', () => {
     expect(ev.reason).toContain('0.01');
   });
 
-  it('SKIP when floor surge below 20% gate', () => {
-    const ev = strat.evaluate({ ...healthy, floorSurge1hPct: 15 });
+  it('SKIP when floor surge below 10% gate (loosened default)', () => {
+    const ev = strat.evaluate({ ...healthy, floorSurge1hPct: 5 });
     expect(ev.recommendedAction).toBe('SKIP');
-    expect(ev.reason).toContain('20');
+    expect(ev.reason).toContain('10');
   });
 
   it('SKIP when salesVelocity1h missing or below minVelocity1h (5/h)', () => {
