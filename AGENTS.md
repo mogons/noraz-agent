@@ -93,7 +93,7 @@ Athena/
 │   │   ├── goplus-security-service.ts # GoPlus (EVM)
 │   │   ├── token-audit-service.ts # On-demand audit pipeline
 │   │   ├── ai-service.ts          # Multi-provider LLM failover
-│   │   ├── ai-key-pool/api-key-pool.ts # Stackable API keys + backup rotation
+│   │   ├── api-key-pool.ts         # Stackable API keys + backup rotation
 │   │   ├── api-key-guard.ts       # Key leak prevention guard
 │   │   ├── session-memory.ts      # Audit memory for chat context
 │   │   ├── cron-scheduler.ts      # Process-wide cron singleton
