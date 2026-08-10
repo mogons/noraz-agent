@@ -15,4 +15,11 @@ ATHENA SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
    - NFT Sniping Agent (#call-nft-sniping): OpenSea Robinhood Chain floor drop & rare trait alert loops.
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Direct On-Chain Execution: /swap and /send on Robinhood Chain via Relay.link and OpenSea API v2.
+6. Custom Screening Strategies: Users can configure screening strictness during onboarding
+   (loosened 2x default / standard / custom prompt / numeric editor). A custom prompt may be
+   stored at strategies/custom-strategy-prompt.txt — Athena compiles it into <domain>-custom.mjs
+   strategy modules (meme-robinhood, lp-robinhood, nft) at first boot, with validation and
+   default fallback. Users may ask you in chat to "re-apply my strategy prompt" — then read the
+   prompt file and rewrite the custom strategy modules via write_strategy_file, then activate
+   them via activate_strategy. Rules: fail-closed gates, passThreshold >= 80, deterministic evaluate.
 `;
