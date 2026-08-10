@@ -1,5 +1,5 @@
 export interface AIProviderConfig {
-  provider: 'openrouter' | 'openai' | 'anthropic' | 'opencode' | 'codingplan' | 'zai' | 'deepseek' | 'custom';
+  provider: 'openrouter' | 'openai' | 'anthropic' | 'opencode' | 'codingplan' | 'zai' | 'deepseek' | 'minimax' | 'gemini' | 'custom';
   apiKeys: string[]; // Stacked list of primary & backup API keys
   baseUrl?: string;
   modelName: string;
@@ -49,12 +49,14 @@ export class AIService {
   }
 
   private static PROVIDER_DEFAULTS: Record<string, { baseUrl: string; modelName: string }> = {
-    anthropic: { baseUrl: 'https://api.anthropic.com/v1', modelName: 'claude-3-5-sonnet-20241022' },
-    openai: { baseUrl: 'https://api.openai.com/v1', modelName: 'gpt-4o' },
+    anthropic: { baseUrl: 'https://api.anthropic.com/v1', modelName: 'claude-sonnet-5' },
+    openai: { baseUrl: 'https://api.openai.com/v1', modelName: 'gpt-5.2-chat' },
     opencode: { baseUrl: 'https://opencode.ai/zen/go/v1', modelName: 'deepseek-v4-pro' },
-    codingplan: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' },
-    zai: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' },
-    deepseek: { baseUrl: 'https://api.deepseek.com/v1', modelName: 'deepseek-chat' },
+    codingplan: { baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-5.2' },
+    zai: { baseUrl: 'https://api.z.ai/api/paas/v4', modelName: 'glm-4.7' },
+    deepseek: { baseUrl: 'https://api.deepseek.com', modelName: 'deepseek-v4-flash' },
+    minimax: { baseUrl: 'https://api.minimax.chat/v1', modelName: 'MiniMax-M3' },
+    gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', modelName: 'gemini-2.5-pro' },
     openrouter: { baseUrl: 'https://openrouter.ai/api/v1', modelName: 'openrouter/auto' },
     custom: { baseUrl: 'https://openrouter.ai/api/v1', modelName: 'deepseek/deepseek-chat' },
   };

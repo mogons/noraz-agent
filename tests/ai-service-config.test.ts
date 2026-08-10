@@ -15,7 +15,7 @@ describe('AIService per-key config', () => {
     vi.stubEnv('AI_KEY_2_MODEL_NAME', 'deepseek-v4-flash');
     const cfg = new AIService().getConfig();
     expect(cfg.keyConfigs.length).toBe(2);
-    expect(cfg.keyConfigs[0]).toMatchObject({ provider: 'zai', baseUrl: 'https://api.z.ai/api/coding/paas/v4', modelName: 'glm-4.7' });
+    expect(cfg.keyConfigs[0]).toMatchObject({ provider: 'zai', baseUrl: 'https://api.z.ai/api/paas/v4', modelName: 'glm-4.7' });
     expect(cfg.keyConfigs[1]).toMatchObject({ provider: 'opencode', baseUrl: 'https://opencode.ai/zen/go/v1', modelName: 'deepseek-v4-flash' });
   });
 
@@ -59,5 +59,18 @@ describe('AIService per-key config', () => {
     expect(cfg.provider).toBe('opencode');
     expect(cfg.keyConfigs[0]).toMatchObject({ provider: 'opencode', modelName: 'deepseek-v4-flash' });
     expect(cfg.keyConfigs[1]).toMatchObject({ provider: 'opencode', modelName: 'deepseek-v4-flash' });
+  });
+
+  it('minimax and gemini providers resolve their defaults', () => {
+    vi.stubEnv('AI_API_KEY', 'x');
+    vi.stubEnv('AI_PROVIDER', 'minimax');
+    delete process.env.AI_BASE_URL; delete process.env.AI_MODEL_NAME;
+    let svc = new AIService();
+    expect(svc.getConfig().baseUrl).toBe('https://api.minimax.chat/v1');
+    expect(svc.getConfig().modelName).toBe('MiniMax-M3');
+    vi.stubEnv('AI_PROVIDER', 'gemini');
+    svc = new AIService();
+    expect(svc.getConfig().baseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai');
+    expect(svc.getConfig().modelName).toBe('gemini-2.5-pro');
   });
 });
