@@ -10,6 +10,9 @@ vi.mock('node:child_process', () => ({
 
 describe('runAthenaUpdate', () => {
   beforeEach(() => {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_CHAT_ID;
+    delete process.env.DISCORD_DEPLOY_WEBHOOK_URL;
     mockExecSync.mockReset();
     mockExecSync.mockImplementation(() => '');
     mockSpawn.mockReset();
