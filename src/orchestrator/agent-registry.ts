@@ -50,7 +50,7 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     name: 'Robinhood Chain Alpha Scraper & X-Search',
     channel: 'call-alpha-robinhood',
     aliases: ['alpha', 'rh-alpha', 'alpha-scraper', 'x-alpha'],
-    requiredKeys: ['AI_API_KEY'],
+    requiredKeys: ['X_API_BEARER_TOKEN', 'AI_API_KEY'],
     category: 'ALPHA',
   },
 ];

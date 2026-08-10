@@ -19,7 +19,7 @@ export class AlphaRobinhoodScreeningAgent implements ScreeningAgent<AlphaRobinho
   private goplusService = new GoPlusSecurityService();
 
   public isHealthy(): boolean {
-    return true;
+    return this.xApiAdapter.isConfigured();
   }
 
   public async runScreeningPass(): Promise<AgentReport<AlphaRobinhoodSignal>[]> {

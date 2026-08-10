@@ -20,11 +20,15 @@ describe('XApiAdapter & AlphaRobinhoodScreeningAgent Test Suite', () => {
     expect(result.error).toContain('Official X_API_BEARER_TOKEN is not configured');
   });
 
-  it('AlphaRobinhoodScreeningAgent initializes with domain alpha-robinhood', () => {
+  it('AlphaRobinhoodScreeningAgent initializes with domain alpha-robinhood and reflects X API status', () => {
     const agent = new AlphaRobinhoodScreeningAgent();
     expect(agent.domain).toBe('alpha-robinhood');
     expect(agent.name).toBe('Robinhood Chain Alpha Scraper Agent');
-    expect(agent.isHealthy()).toBe(true);
+    expect(agent.isHealthy()).toBe(false);
+
+    process.env.X_API_BEARER_TOKEN = 'test_token_123';
+    const activeAgent = new AlphaRobinhoodScreeningAgent();
+    expect(activeAgent.isHealthy()).toBe(true);
   });
 
   it('AlphaRobinhoodScreeningAgent handles offline/empty network gracefully', async () => {
