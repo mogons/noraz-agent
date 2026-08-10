@@ -87,15 +87,16 @@ switch (subCommand) {
   case '-h':
   default:
     console.log(`
-🏛️ ATHENA CLI COMMAND CHEATSHEET:
+🏛️ ATHENA CLI — PARTHENON COMMAND CHEATSHEET:
 
-  athena run (or athena)     - Launch Athena Multi-Agent Engine (Development / Live Bot)
-  athena wizard (or setup)   - Launch Interactive Configuration Wizard for .env & Tokens
-  athena terminal (or tui)   - Launch Parthenon Interactive Terminal TUI
-  athena deploy              - Deploy 24/7 Background Daemon via PM2 Process Manager
-  athena test                - Run Automated Unit Test Suite (Vitest)
-  athena build               - Compile TypeScript Codebase into /dist
-  athena update              - Pull Latest Git Updates, Install, & Re-build
+  athena run (or athena)     - Launch Athena (dev / live bot)
+  athena wizard (or setup)   - Parthenon onboarding wizard (.env + providers + backups)
+  athena terminal (or tui)   - Open the Parthenon command-center TUI
+  athena deploy              - ⛰️ Olympian: deploy 24/7 via PM2 (Mount Olympus)
+  athena update              - ⛰️ Olympian: git pull + install + rebuild + notify (Telegram/Discord)
+  athena doctor              - ⛰️ Olympian: run the diagnostic doctor
+  athena test                - Run the Vitest suite
+  athena build               - Compile TypeScript into /dist
 `);
     break;
 }
