@@ -1,249 +1,320 @@
-# 🏛️ ATHENA AI: Robinhood Chain Edition
+# 🏛️ ATHENA AI — Robinhood Chain Edition
 
 ```
-                   /\
-                  /  \
-                 / /\ \
-                / /  \ \
-               / /____\ \
-              /__________\
-             |  |  ||  |  |
-             |  |  ||  |  |
-      🏛️  PARTHENON OF ATHENA  🏛️
-  Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem
-                [ Robinhood Chain EVM ]
+                          /\
+                         /  \
+                        / /\ \
+                       / /  \ \
+                      / /____\ \
+                     /__________\
+                    |   |  ||  |   |
+                    |   |  ||  |   |
+        ________________________________
+       |                                |
+       |   🦉 PARTHENON OF ATHENA 🦉   |
+       |_____________________________ ___|
+                    |  |    |  |
+                    |  |    |  |
+        Autonomous Multi-Agent Crypto Intelligence
+              & Trading Ecosystem
+       built exclusively for Robinhood Chain (EVM)
 ```
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-v22%2B-green.svg)](https://nodejs.org/)
+**Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem** — built exclusively for **Robinhood Chain (EVM L2, chain ID 4663, native ETH)**, operated through a **Discord Command Center**, an **Interactive Terminal TUI**, and a **Telegram Notification Bridge**.
+
+Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal generation** from **execution** — signal cards are delivered to Discord with audit data and one-click links, while execution stays under your control via `DRY_RUN` and manual confirmation.
+
+[![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663%20%7C%20ETH-7b5cff.svg)](https://robinhoodchain.blockscout.com)
+[![Node](https://img.shields.io/badge/Node.js-%3E%3D22.12-green.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-Vitest%20Suite-brightgreen.svg)](https://vitest.dev/)
 [![Discord](https://img.shields.io/badge/Discord-v14.18-5865F2.svg)](https://discord.js.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-**Athena AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center (`#athena-control-room`)**, **Interactive Terminal TUI**, and **Telegram Notification Bridge**.
-
-Athena segregates **24/7 Market Screening & 3-Layer Swarm Consensus Signal Generation** from **Trade Execution, Auto-Sell Position Management, and Natural Language AI Diagnostics**.
 
 ---
 
-## 🌟 Key Features & Specialized Sub-Agents
+## 🦉🏛️⚡ The Three Pillars
 
-1. **🏛️ Athena Core Hub Agent (`#athena-control-room`)**: Handles natural language user chat, portfolio tracking, global risk management, trade execution, custom price alerts (`/alert`), and AI trade audits.
-2. **🛡️ 3-Layer Swarm Consensus Engine**: Evaluates candidate signals through Quant & Liquidity, Catalyst & Sentiment, and Security Audits requiring a **>= 80% Confidence Score** before posting to Discord/Telegram.
-3. **🔷 Robinhood Chain Meme Agent (`#call-meme-robinhood`)**: Screens Robinhood Chain L2 & EVM DEX tokens with GoPlus Anti-Honeypot security checks; hard gate volume 1h real >= $50k.
-4. **💧 Robinhood Chain LP Velocity Engine (`#call-lp-robinhood`)**: Fast-harvesting Concentrated Liquidity signals for Robinhood Chain & EVM CLMM (Uniswap/Aerodrome) via **Krystal Cloud** DeFi data (24h Fee/TVL > 4%, Fee 1h >= $50, TVL >= $20k, Velocity volume/active TVL >= 1.0).
-5. **🖼️ EVM NFT Momentum Agent (`#call-nft-sniping`)**: Hard-filter momentum calls — floor pump >= +20% 1h, volume spike >= 2.0x, sales velocity >= 5/h (semua wajib); whale sweep & OpenSea verified badge sebagai info di card.
-6. **🌉 Direct Multi-Provider On-Chain Execution & Relay / OpenSea Engine (`wallet-service.ts`, `relay-adapter.ts`, `opensea-adapter.ts`)**: Direct programmatic transaction signing via in-memory `WalletService` for token swaps (`/swap`), transfers (`/send`), and cross-chain bridging (`/bridge`) with **dual-engine fallback routing** across **Relay.link** and **OpenSea API v2 DEX Aggregator** (supporting ERC-8257 AI Agent Tool Discovery) — Robinhood Chain (EVM, chain ID 4663, native ETH) & EVM.
-7. **🐦 Twitter / X Social Intelligence (`twitter-service.ts`)**: Integrated with **TwexAPI (`https://twexapi.io`)** and GMGN AI for live X sentiment scoring, contract address search, and influencer mention counts.
-8. **📊 Trade Journaling & Analytics Engine (`trade-journal-service.ts`)**: Auto-logs all open/closed positions, calculates Win Rate %, Total Realized PnL ($), best/worst trades, and exports `athena_trade_journal.csv` for Excel & Notion.
-9. **💾 Local Database File Persistence (`state-store.ts`)**: Atomic file persistence (`database/athena_state.json`) preserving wallet keys, active alerts, trade history, agent states, and signal ledger across bot reboots.
-10. **🩺 Diagnostic Doctor (`athena doctor`)**: Runs a full system health check — API keys, sub-agent statuses, risk state, and connectivity.
+| Pillar | Role | What it does |
+| :--- | :--- | :--- |
+| 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Three specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **1h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), and **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x, sales velocity ≥ 5/h). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
+| 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 3 dedicated call channels. **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
+| ⚡ **Olympian** — The Operations | Deploy & Maintain | **PM2 24/7 daemon** (`athena deploy`), self-update engine (`athena update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `athena doctor` full diagnostics, and one-click **setup scripts** for Linux (`setup.sh`) and Windows (`setup.bat`). |
 
 ---
 
-## 📐 System Architecture Diagram
+## 🗺️ System Architecture
 
 ```
-                    +-----------------------------------+
-                    |    USER INTERFACE PLATFORMS       |
-                    | (Discord / Telegram / Terminal TUI)|
-                    +-----------------+-----------------+
-                                      |
-                    +-----------------v-----------------+
-                    |      ATHENA CORE ORCHESTRATOR     |
-                    | (#athena-control-room & Hub Exec)  |
-                    |  (risk gate · swarm gate · dedup)  |
-                    +-----------------+-----------------+
-                                      |
-   +---------------------+---------------------+
-   |                     |                     |
-+--v----------+  +-------v---------+  +-------v---------+
-| EVM Meme    |  | NFT Agent       |  | LP Robinhood    |
-| Agent       |  | (OpenSea REST)  |  | Engine          |
-| (GMGN/      |  |                 |  | (Krystal Cloud  |
-|  GoPlus)    |  |                 |  |  CLMM)          |
-+--+----------+  +-------+---------+  +-------+---------+
-   |                     |                     |
-   +---------------------+---------------------+
-                          |
-              +-----------v-----------+
-              |  SWARM CONSENSUS      |
-              |  ENGINE (>= 80 gate)  |
-              +-----------+-----------+
-                          |
-                          v
-    Discord Signal Channels (#call-meme-robinhood, #call-lp-robinhood, #call-nft-sniping)
+                        USER INTERFACE PLATFORMS
+           (Discord Command Center · Terminal TUI · Telegram Bridge)
+                                   │
+                                   ▼
+                ┌───────────────────────────────────┐
+                │        PART HENON HUB             │
+                │   #athena-control-room · chat      │
+                │   risk gate · global risk engine   │
+                │   wallet service · trade journal   │
+                └──────────────────┬────────────────┘
+                                   │ candidate signals
+        ┌──────────────────────────┼──────────────────────────┐
+        ▼                          ▼                          ▼
+┌──────────────┐         ┌──────────────────┐         ┌──────────────┐
+│  MEME AGENT  │         │   LP VELOCITY    │         │  NFT AGENT   │
+│ meme-robinhood│        │  lp-robinhood     │        │    nft       │
+│ GMGN + GoPlus│         │  Krystal Cloud   │         │   OpenSea    │
+│ vol 1h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
+│              │         │ TVL ≥ $20k       │         │ vol ≥ 2.0x   │
+│              │         │                  │         │ sales ≥ 5/h  │
+└──────┬───────┘         └────────┬─────────┘         └──────┬───────┘
+       └──────────────────────────┼──────────────────────────┘
+                                  ▼
+                ┌────────────────────────────────────┐
+                │   SWARM CONSENSUS ENGINE (≥ 80%)   │
+                │  Quant · Catalyst · Security Audit │
+                └────────────────┬───────────────────┘
+                                 │ only ≥ 80% confidence
+                                 ▼
+     Discord Call Channels: #call-meme-robinhood · #call-lp-robinhood · #call-nft-sniping
+                                 │
+                                 ▼
+                     WALLET TRACKER (holdings lifecycle)
+                                 │
+                                 ▼
+              POSITION MANAGER (TP 2x/3x · SL -20% · trailing)
 ```
 
 ---
 
-## 💬 Complete Interactive Commands & Features Table
+## ✨ Feature Grid
 
-| Category | Command | Subcommands / Format | Description |
-| :--- | :--- | :--- | :--- |
-| **Control Dashboard** | `/menu` / `/dashboard` | Direct Command | Opens the Master Interactive Control Center Embed with Action Buttons & Agent Select Dropdown |
-| **Trade Journal** | `/journal` | `summary`, `history`, `export` | View Win-Rate %, PnL summary, recent trades, & download `athena_trade_journal.csv` |
-| **Price Alerts** | `/alert` | `set`, `list`, `cancel` | Manage custom real-time price alerts & notifications |
-| **Sub-Agent Toggles** | `/screening` | `start`, `stop`, `status`, `trigger` | Toggle 24/7 background sub-agents (`meme-robinhood`, `lp-robinhood`, `nft`) |
-| **Burner Wallets** | `/wallet` | `setup`, `list`, `replace`, `remove`, `balance`, `withdraw` | Manage EVM burner wallets & view ETH balances |
-| **Token Audit** | `/analyze` | `contract:<CA>` | Force 12-point on-demand audit for Robinhood Chain/EVM token |
-| **Quick Price Check** | `/price` | `token:<symbol/CA>` | Quick token price, 24h change, and market cap lookup |
-| **Quick Dex Chart** | `/chart` | `token:<symbol/CA>` | Quick chart & DexScreener visual link generator |
-| **Holder Breakdown** | `/holders` | `contract:<CA>` | Top Holders audit & insider ownership breakdown |
-| **Smart Money Scan** | `/wallets` | `contract:<CA>` | Top Wallets & Smart Money activity scan |
-| **Pump.fun Tracker** | `/pump` | `contract:<CA>` | Pump.fun Bonding Curve progress & graduation tracker |
-| **Value Converter** | `/convert` | `amount:<n> symbol:<s>` | Quick token value & USD converter |
-| **Cross-Chain Bridge** | `/bridge` | `origin:<chain> destination:<chain> amount:<n> token:<symbol>` | Relay.link & OpenSea DEX Aggregator intent-based cross-chain bridge & direct execution (Robinhood Chain & EVM — ETH, USDC) |
-| **Token Swap** | `/swap` | `from:<token> to:<token> amount:<n> chain:<chain>` | Multi-provider (Relay.link + OpenSea API v2) token swap with automatic fallback & direct on-chain signing |
-| **Token Send** | `/send` | `to:<address> amount:<n> token:<symbol> chain:<chain>` | Direct token transfer to another wallet via Relay.link / OpenSea with fee estimation |
-| **Config & Channels** | `/config`, `/channel` | `risk`, `create`, `rearrange` | Update drawdown limits & auto-arrange Discord channel layout |
-| **System Upgrade** | `/update` | Direct Command | Pull latest codebase from Git, re-build TypeScript, & soft-restart bot |
-| **Emergency Halt** | `/cancel` | `all` | Emergency Aegis Circuit Breaker to halt orders & screening |
-| **Natural Language** | Chat | *"swap 0.5 ETH ke USDC"*, *"kirim 1 ETH ke 0x..."* | Natural language bridge, swap, send & price alert parser in `#athena-control-room` |
+| # | Feature | Description |
+| :-: | :--- | :--- |
+| 1 | 🛡️ **3-Layer Swarm Consensus** | Quant & Liquidity, Catalyst & Sentiment, Security Audit — **≥ 80% confidence** required before any call card is posted. |
+| 2 | 🔷 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 1h volume ≥ $50k**, fail-closed. |
+| 3 | 💧 **Robinhood LP Velocity Engine** (`#call-lp-robinhood`) | Concentrated-liquidity (Uniswap V3) high-yield pools via **Krystal Cloud** (`ethereum@4663`); **24h Fee/TVL > 4%**, **TVL ≥ $20k**, volume velocity, GMGN security re-check. |
+| 4 | 🖼️ **NFT Sniper** (`#call-nft-sniping`) | OpenSea REST v2 floor & rarity sniping; hard filters floor surge **≥ +20%/1h**, volume **≥ 2.0x**, sales **≥ 5/h**; whale sweep & verified badge as card info. |
+| 5 | 💬 **Natural-Language Command Room** | Chat with Athena in `#athena-control-room` — swap/send/bridge intents, audits, alerts, and strategy questions via the agent tool loop. |
+| 6 | ⚙️ **22 Slash Commands** | Full command surface: wallets, screening control, audits, price/alert tools, journal, update, emergency cancel, and more (see table below). |
+| 7 | 📈 **Position Manager** | Auto-sell targets: TP **+100% (2x)** / **+200% (3x)**, **SL -20%**, dynamic trailing stops, LP out-of-range warnings, NFT floor-drop alerts. |
+| 8 | 📊 **Trade Journal & Analytics** | Open/close audit trail with win-rate, PnL, and CSV export for Excel/Notion. |
+| 9 | 🔒 **Security-First Design** | `DRY_RUN=true` default, global circuit breaker, sandboxed strategy modules (sanitized `process.env`), prompt-injection hardening, backup API key rotation. |
+| 10 | ⚡ **Olympian Ops** | PM2 24/7 deploy, `athena update` self-updater with Telegram + Discord webhook notifications, `athena doctor`, Linux/Windows setup scripts. |
 
 ---
 
-## 💻 Hardware & VPS Specification Recommendations
+## 🚀 Quickstart
 
-Athena is engineered with an asynchronous Node.js Event Loop architecture and local deterministic mathematics, rendering it highly resource-efficient without requiring expensive GPUs or heavy server specs.
+### Fresh install
 
-| Resource | Recommended VPS / Server Spec | Minimum Spec | Key Recommendations |
-| :--- | :--- | :--- | :--- |
-| 🐧 **Operating System** | **Ubuntu 22.04 / 24.04 LTS 64-bit** | Windows 10/11, macOS, Debian 12 | Ubuntu 22.04 or 24.04 LTS are fully supported for 24/7 VPS daemons |
-| ⚡ **CPU / Processor** | **1 vCPU / Core** | 1 vCPU / Core | 1 Core easily handles all 3 screening loops asynchronously |
-| 🧠 **Memory (RAM)** | **2 GB RAM** | 1 GB RAM | 2 GB RAM provides 100% headroom with zero OOM crash risk |
-| 💾 **Storage (Disk)** | **20 – 40 GB SSD / NVMe** | 15 GB SSD | Stores local database state, trade logs, and `/dist` bundle |
-| 🛑 **Control Panel** | **None (Plain OS Only)** | None | **Do NOT install cPanel/Plesk** to save ~1GB RAM for Athena |
+```bash
+# Linux / macOS / VPS
+git clone https://github.com/dizcorvus/Athena.git
+cd Athena
+bash setup.sh              # one-click: install deps, build, wizard, launch guide
 
----
-
-## ⚡ Quickstart & Copy-Pasteable Setup Guide
-
-### Method A: One-Click Automatic Installer (Recommended)
-
-#### 🪟 Windows (PowerShell / CMD)
-Copy and paste this single block into your PowerShell or CMD terminal:
-
-```powershell
+# Windows (PowerShell)
 git clone https://github.com/dizcorvus/Athena.git
 cd Athena
 .\setup.bat
 ```
 
-#### 🐧 Linux / macOS / VPS Server
-Copy and paste this single block into your bash terminal:
+Or manually:
 
-```bash
-git clone https://github.com/dizcorvus/Athena.git
-cd Athena
-bash deploy.sh
-```
-
----
-
-### Method B: Manual Step-by-Step Installation
-
-If you prefer to execute commands step-by-step manually, copy and paste each command block in sequence:
-
-#### Step 1: Clone Repository & Install Dependencies
 ```bash
 git clone https://github.com/dizcorvus/Athena.git
 cd Athena
 npm install
-npm link
+npm run build              # or: athena build
+athena wizard              # interactive .env setup (tokens, RPC, API keys)
+athena run                 # development / live bot
 ```
 
-#### Step 2: Configure Environment Credentials (`.env`)
-Launch the interactive configuration wizard to generate your `.env` file automatically:
-```bash
-athena wizard
-```
-*(Alternatively, copy template manually: `cp .env.example .env` and fill in `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID`)*
+> **Invite the bot:** use the Discord OAuth2 URL with `applications.commands` + bot scopes. On first launch Athena **auto-creates** the command-center category, 5 channels, and registers all 22 slash commands — zero manual channel setup.
 
-#### Step 3: Build & Verify Codebase
-Compile TypeScript into production JS and run test verification:
-```bash
-athena build
-athena test
-```
-
-#### Step 4: Launch Athena Ecosystem
-Choose your preferred launch mode:
+### Update
 
 ```bash
-# Option 1: Development Mode (Hot-Reloading in terminal)
-athena run
-
-# Option 2: Interactive Parthenon Terminal TUI
-athena terminal
-
-# Option 3: Production 24/7 Background Process on VPS (PM2)
-athena deploy
+athena update              # git stash → pull → npm install → build → detached PM2 restart
 ```
 
-#### Step 5: Update Codebase in Future
-Whenever you pull new updates from Git:
-```bash
-athena update
-```
+Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`) and an optional **Discord webhook** (`DISCORD_DEPLOY_WEBHOOK_URL`).
 
-### CLI Cheatsheet
+---
+
+## ⌨️ CLI Commands (`athena`)
+
+| Command | Aliases | Description |
+| :--- | :--- | :--- |
+| `athena run` | `dev`, `start` | Launch the Athena engine (development / live bot, hot reload) |
+| `athena wizard` | `setup`, `config` | Interactive `.env` configuration wizard |
+| `athena terminal` | `tui` | Parthenon interactive Terminal TUI |
+| `athena deploy` | `pm2` | Deploy 24/7 background daemon via PM2 |
+| `athena test` | — | Run the Vitest unit test suite |
+| `athena build` | — | Compile TypeScript into `/dist` |
+| `athena update` | — | Pull latest code, reinstall, rebuild, restart (notifies Telegram/Discord webhook) |
+| `athena doctor` | `check` | Full diagnostics: API keys, agent states, risk state, connectivity |
+| `athena help` | `-h`, `--help` | Show the CLI cheatsheet |
+
+---
+
+## 🤖 Discord Slash Commands (22)
 
 | Command | Description |
 | :--- | :--- |
-| `athena run` (or `athena`) | Launch Athena (development / live bot) |
-| `athena wizard` (or `setup`) | Interactive configuration wizard for `.env` |
-| `athena terminal` (or `tui`) | Parthenon interactive terminal TUI |
-| `athena deploy` | Deploy 24/7 background daemon via PM2 |
-| `athena test` | Run automated unit test suite |
-| `athena build` | Compile TypeScript into `/dist` |
-| `athena update` | Pull latest Git updates, install & rebuild |
-| `athena doctor` (or `check`) | Run system diagnostics |
+| `/wallet` | Manage burner wallets: `setup`, `list`, `replace`, `remove`, `balance`, `withdraw` |
+| `/analyze` | On-demand 3-layer audit for a token Contract Address |
+| `/screening` | Control 24/7 agents: `start`, `stop`, `status`, `trigger` |
+| `/cancel` | Emergency halt: `all` |
+| `/config` | Runtime config: `risk`, `status` |
+| `/health` | Per-agent heartbeat check (HEALTHY / DEGRADED / UNRESPONSIVE) |
+| `/strategy` | Manage strategy modules: `list`, `view`, `activate`, `rollback` |
+| `/channel` | Create / rearrange channels: `create`, `rearrange` |
+| `/price` | Quick price, 24h change & market cap lookup |
+| `/chart` | Quick chart & DexScreener link |
+| `/holders` | Top Holders audit & insider ownership breakdown |
+| `/wallets` | Top Wallets & Smart Money activity scan |
+| `/pump` | Robinhood Chain token momentum, holder & liquidity tracker |
+| `/convert` | Token value & USD converter |
+| `/alert` | Price alerts: `set`, `list`, `cancel` |
+| `/menu` | Interactive Athena Control Center dashboard |
+| `/dashboard` | Interactive Athena Control Center dashboard |
+| `/journal` | Trade journal: `summary`, `history`, `export` (CSV) |
+| `/update` | Pull latest code, rebuild, soft-restart |
+| `/bridge` | Cross-chain bridge quote & Relay.link execution link |
+| `/swap` | Swap via Relay.link (same-chain / cross-chain) |
+| `/send` | Send/transfer tokens to another wallet via Relay.link |
 
 ---
 
-## 🤖 Automatic Platform Provisioning (Discord & Telegram)
+## 📢 Auto-Created Channels (5)
 
-Upon executing `athena run` or `athena deploy`, Athena automatically provisions sub-channels on both Discord & Telegram:
+On launch, Athena creates the **`🏛️ ATHENA COMMAND CENTER`** category and 5 text channels:
 
-### 👾 Discord Server Setup & Auto-Channel Creation
-1. **Create Discord Server:** Click `+` (Add a Server) in Discord to create a server (takes 2 seconds).
-2. **Invite Bot:** Open this OAuth2 link in your browser to invite your bot:
-   `https://discord.com/api/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&permissions=8&scope=bot%20applications.commands`
-3. **Automatic Channel Creation:** Launch `athena run` or `athena deploy`. Athena automatically creates Category **`🏛️ ATHENA COMMAND CENTER`**, 5 Text Channels (`#athena-control-room`, `#audit-on-demand`, `#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-sniping`), and registers all 22 Slash Commands. Zero manual channel setup required!
+| Channel | Purpose |
+| :--- | :--- |
+| `#athena-control-room` | Core command hub — chat, wallet management, risk configuration |
+| `#audit-on-demand` | Paste any Robinhood Chain / EVM Contract Address for an instant audit |
+| `#call-meme-robinhood` | High-confidence Robinhood Chain meme signal calls (GMGN + security audit) |
+| `#call-lp-robinhood` | High-yield Robinhood Chain concentrated-liquidity calls (Krystal / Uniswap V3) |
+| `#call-nft-sniping` | NFT floor price & rarity sniping alerts (OpenSea) |
 
----
-
-### 📱 Telegram Group Setup & Auto-Forum Topics Creation
-1. **Create Telegram Group & Enable Topics:** Create a Telegram Group, open **Group Settings** ➡️ Enable **Topics / Forum Mode**, and add your bot as Admin.
-2. **Set Chat ID:** Get your Group Chat ID (e.g. `-100123456789`) via [@userinfobot](https://t.me/userinfobot) and set `TELEGRAM_CHAT_ID` in `.env`.
-3. **Automatic Sub-Topic Creation:** Launch `athena run` or `athena deploy`. Athena automatically calls Telegram API to **create 5 Forum Sub-Topics** (`athena-control-room`, `audit-on-demand`, `call-meme-robinhood`, `call-lp-robinhood`, `call-nft-sniping`) and routes each domain signal to its dedicated sub-topic automatically!
-*(Note: If using a Private Chat DM, signals and the interactive touch control dashboard arrive directly in your DM chat)*.
+**Call cards** are Discord embeds with market metrics, security/holder audit fields, an AI thesis, and action **links** — `🌐 Trade on Uniswap`, `📊 Chart on DexScreener`, `🔍 View on Krystal`, `📊 View Collection on OpenSea` — plus `⏸️ Pause` buttons. Cards never contain BUY buttons: execution is manual via those links (or `DRY_RUN` simulations), unless you explicitly enable auto-execution.
 
 ---
 
-## 🛡️ Security & Safety Rules
+## 🔐 Environment Variables
 
-- **Dry-Run Safeguard Default**: `DRY_RUN=true` environment flag ensures no live blockchain transactions are sent without explicit confirmation.
-- **Global Aegis Circuit Breaker**: Automatic trading lock if daily portfolio drawdown exceeds the configured limit.
-- **Burner Wallet Cap**: Live trading agents strictly operate on isolated burner wallets with capped funds.
-- **Sandboxed Strategies**: User/LLM-authored strategy `.mjs` modules run with a sanitized `process.env` — they can never read private keys or API secrets.
-- **Prompt-Injection Hardening**: Token names/symbols/tweets are sanitized before rendering into Discord embeds; `set_api_key` is restricted to an allowlist (mode/private-key/infra keys are blocked).
+Primary keys are set in `.env` (see `.env.example`). Every provider key accepts a `_BACKUP_KEYS` comma-separated companion — sub-agents auto-rotate to backups on 401/403/429.
+
+| Variable | Description |
+| :--- | :--- |
+| `DRY_RUN` | `true` = safe simulation (default); `false` = live transactions possible |
+| `AUTO_EXECUTE_ENABLED` | Default `false` — bot is a screener/caller; execution stays manual |
+| `DISCORD_BOT_TOKEN` / `DISCORD_CLIENT_ID` | Discord bot credentials |
+| `DISCORD_CHANNEL_CONTROL_ROOM` | ID of `#athena-control-room` |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Telegram notification bridge + bot polling |
+| `DISCORD_DEPLOY_WEBHOOK_URL` | Optional Discord webhook for Olympian deploy notifications |
+| `EVM_ROBINHOOD_RPC_URL` | Canonical Robinhood Chain RPC (`https://rpc.mainnet.chain.robinhood.com`) |
+| `EVM_RPC_URL` | Generic EVM fallback RPC |
+| `RPC_FAILOVER_URLS` | JSON pool of backup RPCs (auto-failover) |
+| `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEYS` / `AI_API_KEY` / `AI_MODEL_NAME` | Multi-provider LLM with per-key failover (`anthropic`, `openai`, `openrouter`, etc.) |
+| `GMGN_API_KEY` / `GMGN_API_KEY_ROBINHOOD` | GMGN OpenAPI (smart-money, rank, trenches, token security) |
+| `OPENSEA_API_KEY` | NFT floor/rarity + swap aggregator (nft agent) |
+| `GOPLUS_API_KEY` | EVM token security audit (GoPlus) |
+| `UNISWAP_API_KEY` | Uniswap Trade API — Robinhood/EVM swap entry |
+| `KRYSTAL_CLOUD_API_KEY` | Krystal Cloud DeFi data — Robinhood LP pools (`ethereum@4663`), required for the LP agent |
+| `GMGN_BACKUP_KEYS`, `KRYSTAL_CLOUD_BACKUP_KEYS`, `OPENSEA_BACKUP_KEYS`, `GOPLUS_BACKUP_KEYS`, `UNISWAP_BACKUP_KEYS` | Backup keys, auto-rotated on rate-limit/401/403 |
+| `EVM_PRIVATE_KEY` | Trading wallet private key (keep `DRY_RUN=true` while testing) |
+| `EVM_PRIORITY_FEE_GWEI` / `SIMULATION_BALANCE_ETH` | Execution tuning / simulated balance |
+| `API_PORT` | Athena REST API (health + analytics), default 3000 |
 
 ---
 
-## ⚠️ Financial Disclaimer
+## 📁 Project Structure
+
+```
+Athena/
+├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/doctor)
+├── scripts/
+│   ├── wizard.js                  # interactive .env setup
+│   ├── update-core.mjs            # self-update engine (stash → pull → install → build → restart)
+│   └── notify-update.mjs          # Olympian deploy notifications (Telegram + Discord webhook)
+├── setup.sh / setup.bat / deploy.sh  # one-click installers / deploy helper
+├── src/
+│   ├── index.ts                   # bot initialization & client launcher
+│   ├── orchestrator/
+│   │   ├── hub.ts                 # AthenaHub: agent states, risk gate, LP pass, on-demand screening
+│   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter (≥ 80% gate)
+│   │   ├── swarm-learning.ts      # outcome-driven agent weight recalibration
+│   │   ├── risk-manager.ts        # drawdown / position-size / correlation guards
+│   │   ├── risk-engine-v2.ts      # circuit breaker
+│   │   ├── strategy-engine.ts     # sandboxed strategy loader (sanitized env)
+│   │   ├── agent-registry.ts      # single source of truth for the 3 agent domains
+│   │   ├── agent-runner.ts        # LLM tool-call loop (chat/TUI/Telegram)
+│   │   ├── dispatch.ts            # per-domain dispatch + payload builder
+│   │   └── tool-registry.ts       # LLM function-calling tools
+│   ├── agents/
+│   │   ├── shared/                # agent contract + GMGN prefilter/dedupe helpers
+│   │   ├── meme-robinhood/        # Robinhood Chain EVM DEX screening (GMGN + GoPlus)
+│   │   └── nft/                   # EVM NFT floor & rarity screening (OpenSea)
+│   ├── adapters/
+│   │   ├── evm-adapter.ts         # EVM swaps/sends (viem)
+│   │   ├── relay-adapter.ts       # Relay.link quote/swap/send
+│   │   ├── gmgn-adapter.ts        # GMGN OpenAPI
+│   │   ├── krystal-cloud-adapter.ts # Krystal Cloud DeFi data (Robinhood LP pools)
+│   │   └── opensea-adapter.ts     # NFT floor signals + swap aggregator
+│   ├── position/position-manager.ts  # auto TP/SL & trailing stop management
+│   ├── discord/
+│   │   ├── commands/              # 22 slash command definitions
+│   │   ├── handlers/              # interactions, buttons, message NLU
+│   │   ├── embeds/                # call cards, dashboard embeds
+│   │   └── setup/channel-bootstrap.ts  # auto-creates the 5 channels
+│   ├── services/                  # state store, price feed, wallet, trade journal,
+│   │                              # GoPlus, AI failover, session memory, cron, health, RPC failover
+│   ├── telegram/telegram-service.ts  # notification bridge + bot polling
+│   ├── cli/                       # terminal TUI + diagnostic doctor
+│   └── api/server.ts              # minimal REST server (health + analytics)
+├── strategies/                    # strategy .mjs modules (per-domain, swappable)
+├── indicators/                    # custom technical indicator .mjs modules
+├── tests/                         # Vitest suite (unit + swarm e2e)
+├── database/                      # persistent JSON state (gitignored)
+├── .env.example                   # environment template
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## ❓ FAQ
+
+**1. What is Robinhood Chain?**
+Robinhood Chain is an EVM Layer-2 network — **chain ID 4663, native token ETH** — with the canonical RPC `https://rpc.mainnet.chain.robinhood.com` (Blockscout explorer: `https://robinhoodchain.blockscout.com`). It is the sole target chain of this edition of Athena.
+
+**2. Is `DRY_RUN` safe?**
+Yes. `DRY_RUN=true` (the default) guarantees **no live blockchain transactions** — swaps, sends and withdrawals are simulated, and call cards only provide execution *links*. Only when you explicitly set `DRY_RUN=false` (and optionally `AUTO_EXECUTE_ENABLED`) can real transactions be signed. Always test with `DRY_RUN=true` first.
+
+**3. How do backup keys work?**
+Each provider key has a `_BACKUP_KEYS` companion (e.g. `GMGN_BACKUP_KEYS`). The API key pool loads the primary plus comma-separated backups and **auto-rotates to the next key on 401/403/429** responses, keeping screening alive through rate limits. AI keys support the same pattern via `AI_API_KEYS`.
+
+**4. How do I make the repo public?**
+Before publishing, verify `.gitignore` excludes `.env` (all variants), `database/*.json` (wallet keys, state, trade history), `dist/`, `node_modules/`, and runtime logs. Run `git status` to confirm no secrets are tracked, then remove any secret history if the repo was ever private with secrets committed. Never commit private keys, mnemonics, or API tokens.
+
+**5. Where are keys stored?**
+Credentials live in the local `.env` file (loaded via `dotenv`); runtime-set keys are persisted back to `.env` by the API key guard. Wallet private keys are held **in memory** by the WalletService and mirrored in the gitignored `database/athena_state.json`. Nothing is uploaded or stored remotely.
+
+---
+
+## ⚠️ Risk Disclaimer
 
 > [!WARNING]
-> **NOT FINANCIAL ADVICE (NFA)**  
-> The software, signals, AI summaries, and quantitative heuristics provided by Athena are strictly for educational, research, and informational purposes. Cryptocurrency, meme tokens, and NFTs involve extreme volatility and high risk of capital loss. Never trade with funds you cannot afford to lose. Always perform your own independent research (DYOR).
+> **NOT FINANCIAL ADVICE (NFA).** Athena AI is an experimental research and education tool. Cryptocurrency, meme tokens, concentrated-liquidity positions, and NFTs are extremely volatile and you can lose your entire capital. Athena runs in **`DRY_RUN` mode by default** and never sends live transactions unless you explicitly disable it — but even then, past signal accuracy is no guarantee of future performance. Always trade with funds you can afford to lose, use capped burner wallets, and do your own research (DYOR) before any decision.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the terms of the [MIT License](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-*Athena Multi-Agent Ecosystem • Built with Precision, Wisdom, and High Alpha.* 🌿🏛️
+*Built with precision, wisdom, and high alpha — under the watch of Athena.* 🦉🏛️⚡
