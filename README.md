@@ -36,7 +36,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 
 | Pillar | Role | What it does |
 | :--- | :--- | :--- |
-| 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Three specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **1h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), and **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x, sales velocity ≥ 5/h). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
+| 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Three specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), and **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x, sales velocity ≥ 5/h). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
 | 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 3 dedicated call channels. **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
 | ⚡ **Olympian** — The Operations | Deploy & Maintain | **PM2 24/7 daemon** (`athena deploy`), self-update engine (`athena update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `athena doctor` full diagnostics, and one-click **setup scripts** for Linux (`setup.sh`) and Windows (`setup.bat`). |
 
@@ -62,7 +62,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 │  MEME AGENT  │         │   LP VELOCITY    │         │  NFT AGENT   │
 │ meme-robinhood│        │  lp-robinhood     │        │    nft       │
 │ GMGN + GoPlus│         │  Krystal Cloud   │         │   OpenSea    │
-│ vol 1h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
+│ vol 24h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
 │              │         │ TVL ≥ $20k       │         │ vol ≥ 2.0x   │
 │              │         │                  │         │ sales ≥ 5/h  │
 └──────┬───────┘         └────────┬─────────┘         └──────┬───────┘
@@ -90,7 +90,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 | # | Feature | Description |
 | :-: | :--- | :--- |
 | 1 | 🛡️ **3-Layer Swarm Consensus** | Quant & Liquidity, Catalyst & Sentiment, Security Audit — **≥ 80% confidence** required before any call card is posted. |
-| 2 | 🔷 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 1h volume ≥ $50k**, fail-closed. |
+| 2 | 🔷 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 24h volume ≥ $50k**, fail-closed. |
 | 3 | 💧 **Robinhood LP Velocity Engine** (`#call-lp-robinhood`) | Concentrated-liquidity (Uniswap V3) high-yield pools via **Krystal Cloud** (`ethereum@4663`); **24h Fee/TVL > 4%**, **TVL ≥ $20k**, volume velocity, GMGN security re-check. |
 | 4 | 🖼️ **NFT Sniper** (`#call-nft-sniping`) | OpenSea REST v2 floor & rarity sniping; hard filters floor surge **≥ +20%/1h**, volume **≥ 2.0x**, sales **≥ 5/h**; whale sweep & verified badge as card info. |
 | 5 | 💬 **Natural-Language Command Room** | Chat with Athena in `#athena-control-room` — swap/send/bridge intents, audits, alerts, and strategy questions via the agent tool loop. |
@@ -107,7 +107,7 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5**) — you pick how aggressive Athena should be when hunting signals.
 
 - **Loosened Default (2x):** ~2x more signals than Standard — more frequent call cards, still gated by the **>= 80% quality floor**. Recommended for most users.
-- **Standard (strict):** Conservative hard gates (e.g. meme 1h volume ≥ $50k, LP TVL ≥ $20k, Fee/TVL > 4%) — fewer, higher-conviction calls.
+- **Standard (strict):** Conservative hard gates (e.g. meme 24h volume ≥ $50k, LP TVL ≥ $20k, Fee/TVL > 4%) — fewer, higher-conviction calls.
 - **Custom Prompt:** Write screening rules in plain English (e.g. *"only CTO tokens with 2+ smart wallets, min $10k liq"*). Athena compiles your prompt into a **validated strategy `.mjs`** automatically on first boot after deploy, with a safe default fallback if compilation fails. Re-runnable anytime via chat: *"re-apply my strategy prompt"*.
 - **Advanced numeric editor:** Fine-tune every hard gate per agent directly (via wizard / control room).
 

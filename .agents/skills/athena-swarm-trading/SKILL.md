@@ -13,19 +13,19 @@ This skill defines the operational standards, decision pipelines, and multi-agen
 
 Screening agents scan across 3 high-potential token opportunities:
 
-1. 🐣 **Established Launches & CTO Tokens:** Robinhood DEX tokens with minimum **4 Hours Age**, active DEX liquidity, and a Community Takeover (CTO) or dev-closed profile.
-2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Established tokens (> 4h age) experiencing a sudden **+500% 1H volume surge**, **2+ GMGN Smart Wallet** accumulation, and dev 0% / CTO (Community Takeover).
+1. 🐣 **Established Launches & CTO Tokens:** Robinhood DEX tokens with active DEX liquidity and a Community Takeover (CTO) or dev-closed profile (no age gate — `minAgeHours=0` in both presets).
+2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Established tokens (>= 4h age) with a sudden **1H price move > +50%**, **2+ GMGN Smart Wallet** accumulation, and dev 0% / CTO (Community Takeover).
 3. 🚀 **Volume Surge & Trend Breakouts:** Tokens breaking key resistance levels confirmed by 1H GMGN Smart Money Net Inflows.
 
 > **Configurable thresholds:** thresholds below are the **LOOSENED defaults (2x)** configured at onboarding; users can switch to Standard, edit numbers, or supply a custom strategy prompt (compiled by Athena after deploy). All gates fail-closed; swarm **>= 80% floor unchanged**.
 
 ### Layer 1: Quant & Liquidity Audit
 
-- **Timeframe Standard:** 1H (1-Hour rolling volume surge, fee velocity, and trend evaluation).
-- **Minimum Token Age:** loosened default **`minAgeHours=0`** — degen early access (new tokens pass immediately — smart money/CTO/KOL decide); the age gate is only enforced when `minAgeHours > 0` is configured (e.g. via `set_screening_config` in the control room). Standard preset: **4.0 Hours (240 Minutes)** minimum.
-- **Minimum Volume:** loosened default **24h volume ≥ $25,000** (Standard: 1H volume ≥ $50k with > 300% surge gate).
-- **Minimum Liquidity:** loosened default **$5,000 USD** (Standard: **$25,000 USD**).
-- **Minimum Fees:** loosened default **total fees ≥ $250** (Standard: stricter fee gate, configurable via numeric editor).
+- **Timeframe:** 24H (24-hour rolling volume, liquidity, and trend evaluation).
+- **Minimum Token Age:** loosened default **`minAgeHours=0`** — degen early access (new tokens pass immediately — smart money/CTO/KOL decide); the age gate is only enforced when `minAgeHours > 0` is configured (e.g. via `set_screening_config` in the control room). Standard preset: **`minAgeHours=0` too** — the age gate is off in both presets; the Revival signal type still requires tokens >= 4h old.
+- **Minimum Volume:** loosened default **24h volume ≥ $25,000** (Standard: **24h volume ≥ $50,000**). Both are plain 24h gates — no hourly-volume or surge-ratio gate exists.
+- **Minimum Liquidity:** loosened default **$5,000 USD** (Standard: **$10,000 USD**).
+- **Minimum Fees:** loosened default **total fees ≥ $250** (Standard: **total fees ≥ $500**; the gate only enforces when configured > 0).
 - **Transaction Ratio:** Buy vs Sell transaction ratio evaluation (momentum requires buy dominance).
 
 ### Layer 2: Catalyst & Social Hype Audit
