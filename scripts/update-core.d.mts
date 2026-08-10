@@ -14,4 +14,4 @@ export interface AthenaUpdateResult {
   log: UpdateStepLog[];
 }
 
-export declare function runAthenaUpdate(opts?: { noRestart?: boolean; cwd?: string }): AthenaUpdateResult;
+export declare function runAthenaUpdate(opts?: { noRestart?: boolean; cwd?: string }): Promise<AthenaUpdateResult>;

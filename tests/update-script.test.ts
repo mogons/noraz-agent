@@ -16,9 +16,9 @@ describe('runAthenaUpdate', () => {
     mockSpawn.mockImplementation(() => ({ unref: vi.fn(), on: vi.fn() }));
   });
 
-  it('runs stash (only when dirty), pull, install, build, then schedules pm2 restart via detached spawn', () => {
+  it('runs stash (only when dirty), pull, install, build, then schedules pm2 restart via detached spawn', async () => {
     mockExecSync.mockImplementationOnce(() => ' M src/x.ts\n'); // dirty worktree
-    const result = runAthenaUpdate({ cwd: '/repo' });
+    const result = await runAthenaUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -36,9 +36,9 @@ describe('runAthenaUpdate', () => {
     expect(result.restartOk).toBe(true);
   });
 
-  it('skips stash when the worktree is clean', () => {
+  it('skips stash when the worktree is clean', async () => {
     mockExecSync.mockImplementationOnce(() => ''); // clean
-    const result = runAthenaUpdate({ cwd: '/repo' });
+    const result = await runAthenaUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -46,25 +46,25 @@ describe('runAthenaUpdate', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('skips pm2 restart when noRestart is set', () => {
-    const result = runAthenaUpdate({ cwd: '/repo', noRestart: true });
+  it('skips pm2 restart when noRestart is set', async () => {
+    const result = await runAthenaUpdate({ cwd: '/repo', noRestart: true });
     expect(mockSpawn).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
   });
 
-  it('reports ok=false and continues when npm install fails', () => {
+  it('reports ok=false and continues when npm install fails', async () => {
     mockExecSync
       .mockImplementationOnce(() => '') // clean
       .mockImplementationOnce(() => '') // pull
       .mockImplementationOnce(() => { throw new Error('install failed'); }); // npm install
-    const result = runAthenaUpdate({ cwd: '/repo' });
+    const result = await runAthenaUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls).toContain('npm run build'); // build still attempted
     expect(result.ok).toBe(false);
   });
 
-  it('continues past a failed stash pop (conflict tolerated)', () => {
+  it('continues past a failed stash pop (conflict tolerated)', async () => {
     mockExecSync
       .mockImplementationOnce(() => ' M src/x.ts') // dirty
       .mockImplementationOnce(() => '') // stash push ok
@@ -72,7 +72,37 @@ describe('runAthenaUpdate', () => {
       .mockImplementationOnce(() => { throw new Error('conflict'); }) // stash pop fails
       .mockImplementationOnce(() => '') // npm install
       .mockImplementationOnce(() => ''); // build
-    const result = runAthenaUpdate({ cwd: '/repo' });
+    const result = await runAthenaUpdate({ cwd: '/repo' });
     expect(result.ok).toBe(true); // pop failure is tolerated
   });
+});
+
+import { notifyUpdate } from '../scripts/notify-update.mjs';
+
+it('notifyUpdate sends Telegram + Discord webhook payloads and never throws', async () => {
+  const calls: Array<{ url: string; body: any }> = [];
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: any) => {
+    calls.push({ url, body: JSON.parse(init?.body || '{}') });
+    return new Response('{"ok":true}', { status: 200 });
+  }));
+  process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
+  process.env.TELEGRAM_CHAT_ID = 'tg-chat';
+  process.env.DISCORD_DEPLOY_WEBHOOK_URL = 'https://discord.com/api/webhooks/1/2';
+  await notifyUpdate({ ok: true, restartOk: true, steps: [{ label: 'git pull', ok: true }, { label: 'npm run build', ok: true }] });
+  expect(calls.length).toBe(2);
+  expect(calls[0].url).toContain('api.telegram.org');
+  expect(calls[0].body.chat_id).toBe('tg-chat');
+  expect(calls[1].url).toContain('api/webhooks');
+  expect(calls[1].body.embeds[0].title).toContain('Complete');
+  delete process.env.TELEGRAM_BOT_TOKEN; delete process.env.TELEGRAM_CHAT_ID; delete process.env.DISCORD_DEPLOY_WEBHOOK_URL;
+  vi.unstubAllGlobals();
+});
+
+it('notifyUpdate tolerates missing envs (no fetch, no throw)', async () => {
+  delete process.env.TELEGRAM_BOT_TOKEN; delete process.env.TELEGRAM_CHAT_ID; delete process.env.DISCORD_DEPLOY_WEBHOOK_URL;
+  const spy = vi.fn();
+  vi.stubGlobal('fetch', spy);
+  await expect(notifyUpdate({ ok: false, restartOk: false, steps: [] })).resolves.toBeUndefined();
+  expect(spy).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });
