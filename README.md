@@ -36,9 +36,9 @@ Athena separates **24/7 market screening + 3-Layer Swarm Consensus signal genera
 
 | Pillar | Role | What it does |
 | :--- | :--- | :--- |
-| 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Three specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), and **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x, sales velocity ≥ 5/h). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
-| 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 3 dedicated call channels. **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
-| ⚡ **Olympian** — The Operations | Deploy & Maintain | **PM2 24/7 daemon** (`athena deploy`), self-update engine (`athena update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `athena doctor` full diagnostics, and one-click **setup scripts** for Linux (`setup.sh`) and Windows (`setup.bat`). |
+| 🦉 **Athena** — The Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Four specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x), and **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
+| 🏛️ **Parthenon** — The Command Center | Control & Chat | **Discord**: `#athena-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-sniping`, `#call-alpha-robinhood`). **Terminal TUI** (`athena terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
+| ⚡ **Olympian** — The Operations | Deploy & Maintain | **PM2 24/7 daemon** (`athena deploy`), self-update engine (`athena update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `athena doctor` full diagnostics, and interactive **`athena onboard`** wizard. |
 
 ---
 
@@ -146,11 +146,11 @@ git clone https://github.com/dizcorvus/athena-ai-robinhood-chain.git
 cd Athena
 npm install
 npm run build              # or: athena build
-athena wizard              # interactive .env setup (tokens, RPC, API keys)
+athena onboard            # interactive .env setup (tokens, RPC, X API v2, API keys)
 athena run                 # development / live bot
 ```
 
-> **Invite the bot:** use the Discord OAuth2 URL with `applications.commands` + bot scopes. On first launch Athena **auto-creates** the command-center category, 5 channels, and registers all 22 slash commands — zero manual channel setup.
+> **Invite the bot:** use the Discord OAuth2 URL with `applications.commands` + bot scopes. On first launch Athena **auto-creates** the command-center category, 6 channels, and registers all 22 slash commands — zero manual channel setup.
 
 ### Update
 
@@ -167,7 +167,7 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | Command | Aliases | Description |
 | :--- | :--- | :--- |
 | `athena run` | `dev`, `start` | Launch the Athena engine (development / live bot, hot reload) |
-| `athena wizard` | `setup`, `config` | Interactive `.env` configuration wizard (modes, TP/SL, API keys) |
+| `athena onboard` | `wizard`, `setup`, `config` | Interactive `.env` onboarding wizard (modes, TP/SL, X API v2, API keys) |
 | `athena terminal` | `tui` | Parthenon interactive Terminal TUI |
 | `athena deploy` | `pm2` | Deploy 24/7 background daemon via PM2 |
 | `athena test` | — | Run the Vitest unit test suite |

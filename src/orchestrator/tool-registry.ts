@@ -237,6 +237,16 @@ export class ToolRegistry {
         parameters: { type: 'object', properties: {} },
       },
       {
+        name: 'search_x_alpha',
+        description: 'Search recent Twitter/X tweets for Robinhood Chain alpha tokens using official X API v2.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query string (e.g. "robinhood chain OR #robinhoodchain").' },
+          },
+        },
+      },
+      {
         name: 'get_system_health',
         description: 'Show system health: per-agent heartbeat status (HEALTHY/DEGRADED/UNRESPONSIVE).',
         parameters: { type: 'object', properties: {} },
@@ -363,6 +373,27 @@ export class ToolRegistry {
             success: true,
             message: `Triggered screening pass for ${agentId}. Found ${signals.length} candidate signals.`,
             data: signals,
+          };
+        }
+
+        case 'search_x_alpha': {
+          const { XApiAdapter } = await import('../adapters/x-api-adapter.js');
+          const adapter = new XApiAdapter();
+          const res = await adapter.searchRobinhoodAlpha(args?.query || 'robinhood chain OR #robinhoodchain OR "robinhood dex"');
+          if (!res.success) {
+            return { success: false, message: res.error || 'Failed to search X API.' };
+          }
+          return {
+            success: true,
+            message: `Found ${res.totalVolume} recent tweets matching "${args?.query || 'robinhood chain'}" via official X API v2.`,
+            data: {
+              tweets: res.tweets.map(t => ({
+                text: t.text,
+                contractAddresses: t.contractAddresses,
+                tickers: t.tickerSymbols,
+                metrics: { likes: t.likeCount, retweets: t.retweetCount },
+              })),
+            },
           };
         }
 

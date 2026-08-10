@@ -6,6 +6,7 @@ export interface ChannelSetupResult {
   memeEvmId: string;
   lpEvmId: string;
   nftId: string;
+  alphaEvmId: string;
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
@@ -67,6 +68,11 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     '🖼️ NFT Floor Price & Rarity Sniping Alerts (OpenSea EVM)'
   );
 
+  const alphaEvmId = await getOrCreateChannel(
+    'call-alpha-robinhood',
+    '🚀 1-Hour Robinhood Chain Alpha Scraper & X (Twitter) Social Sentiment Calls'
+  );
+
   console.log('[DISCORD BOOTSTRAP] All Robinhood Chain Athena channels are ready!');
 
   return {
@@ -75,5 +81,6 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     memeEvmId,
     lpEvmId,
     nftId,
+    alphaEvmId,
   };
 }

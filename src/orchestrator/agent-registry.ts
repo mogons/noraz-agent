@@ -1,9 +1,10 @@
 export type AgentDomainId =
   | 'meme-robinhood'
   | 'lp-robinhood'
-  | 'nft';
+  | 'nft'
+  | 'alpha-robinhood';
 
-export type AgentCategory = 'MEME' | 'LP' | 'NFT';
+export type AgentCategory = 'MEME' | 'LP' | 'NFT' | 'ALPHA';
 
 export interface AgentDomainInfo {
   id: AgentDomainId;
@@ -42,6 +43,15 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     aliases: ['opensea', 'nft-sniper'],
     requiredKeys: ['OPENSEA_API_KEY', 'AI_API_KEY'],
     category: 'NFT',
+  },
+  {
+    id: 'alpha-robinhood',
+    displayName: 'ALPHA-ROBINHOOD',
+    name: 'Robinhood Chain Alpha Scraper & X-Search',
+    channel: 'call-alpha-robinhood',
+    aliases: ['alpha', 'rh-alpha', 'alpha-scraper', 'x-alpha'],
+    requiredKeys: ['AI_API_KEY'],
+    category: 'ALPHA',
   },
 ];
 

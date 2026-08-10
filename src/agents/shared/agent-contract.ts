@@ -1,4 +1,4 @@
-export type CallDomain = 'MEME_ROBINHOOD' | 'NFT' | 'LP_ROBINHOOD';
+export type CallDomain = 'MEME_ROBINHOOD' | 'NFT' | 'LP_ROBINHOOD' | 'ALPHA_ROBINHOOD';
 
 /** Whale tracking: a single open position >= threshold belonging to one smart trader. */
 export interface WhaleTraderEntry {

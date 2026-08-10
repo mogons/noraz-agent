@@ -10,10 +10,11 @@ Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines proje
 
 - **Core Hub Agent (`#athena-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
-- **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 3 domains):
+- **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 4 domains):
   - `#call-meme-robinhood` (Robinhood Chain EVM DEX tokens / GMGN OpenAPI + GoPlus security)
   - `#call-lp-robinhood` (Robinhood Chain Concentrated Liquidity Velocity Signals / Krystal Cloud)
   - `#call-nft-sniping` (EVM NFT floor & rarity alerts / OpenSea REST v2)
+  - `#call-alpha-robinhood` (1-hour Robinhood Chain Alpha Scraper / optional official X API v2)
 - **Position Manager:** Handles post-execution auto-sell targets (Take Profit, Stop Loss, Trailing Stops).
 
 ---

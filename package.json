@@ -9,6 +9,7 @@
   },
   "scripts": {
     "athena": "node ./bin/athena.js",
+    "onboard": "node scripts/wizard.js",
     "wizard": "node scripts/wizard.js",
     "config": "node scripts/wizard.js",
     "dev": "tsx watch src/index.ts",

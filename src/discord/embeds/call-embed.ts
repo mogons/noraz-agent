@@ -30,6 +30,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     MEME_ROBINHOOD: 0x3498db,
     NFT: 0x9b59b6,
     LP_ROBINHOOD: 0x00ffaa,
+    ALPHA_ROBINHOOD: 0xf1c40f,
   };
 
   const confidenceStr = payload.confidenceScore ? `${payload.confidenceScore}% CONFIDENCE` : 'HIGH CONFIDENCE';

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Athena self-update core — single source of truth for both entry points:
  *   - CLI: `athena update` (bin/athena.js -> npm run update)

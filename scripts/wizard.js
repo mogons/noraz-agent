@@ -536,6 +536,21 @@ async function runWizard() {
   }
   const combinedKeys = allKeys.join(',');
 
+  // 4.5 OFFICIAL X (TWITTER) API V2 ALPHA SCRAPER (OPTIONAL)
+  console.log(`\n ${C.cyan}${C.bold}🐦 STEP 4.5: OFFICIAL X (TWITTER) API V2 ALPHA SCRAPER (OPTIONAL)${C.reset}`);
+  console.log('   Enable Robinhood Chain social sentiment & tweet searching via official X API v2?');
+  const enableXChoice = (await askQuestion('   Enable X (Twitter) Alpha Scraper? (y/N) [Default N]: ')) || 'n';
+  let enableXScraper = 'false';
+  let xApiBearerToken = existingEnv.X_API_BEARER_TOKEN || '';
+  let xBackupKeys = [];
+
+  if (enableXChoice.toLowerCase() === 'y') {
+    enableXScraper = 'true';
+    const xKeyRes = await askKeyWithBackup('X (Twitter) API v2', 'X_API_BEARER_TOKEN (Official X API v2 Bearer Token)', xApiBearerToken, true);
+    xApiBearerToken = xKeyRes.value.trim();
+    xBackupKeys = xKeyRes.backups;
+  }
+
   // 5. MARKET DATA & SECURITY APIS (with backup key support)
   drawProgressHeader(5, 9, 'market data & security APIs');
   console.log(` ${C.cyan}${C.bold}📊 STEP 5: MARKET DATA & SECURITY APIS${C.reset}`);
@@ -638,6 +653,9 @@ async function runWizard() {
     GOPLUS_BACKUP_KEYS: goplus.backups.join(','),
     UNISWAP_API_KEY: uniswap.value.trim(),
     UNISWAP_BACKUP_KEYS: uniswap.backups.join(','),
+    ENABLE_X_ALPHA_SCRAPER: enableXScraper,
+    X_API_BEARER_TOKEN: xApiBearerToken,
+    X_API_BACKUP_KEYS: xBackupKeys.join(','),
     EVM_RPC_URL: evmRobinhoodRpcUrl.trim(),
     EVM_ROBINHOOD_RPC_URL: evmRobinhoodRpcUrl.trim(),
     EVM_PRIVATE_KEY: evmPrivateKey.trim(),

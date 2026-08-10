@@ -43,6 +43,7 @@ export function isAthenaChannel(interaction: Interaction): boolean {
     'call-meme-robinhood',
     'call-lp-robinhood',
     'call-nft-sniping',
+    'call-alpha-robinhood',
     'athena-logs',
     'athena-journal',
   ];

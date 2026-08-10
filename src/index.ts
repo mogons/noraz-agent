@@ -22,6 +22,7 @@ import { EVMTradeAdapter } from './adapters/evm-adapter.js';
 import { GMGNAdapter } from './adapters/gmgn-adapter.js';
 import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
+import { AlphaRobinhoodScreeningAgent } from './agents/alpha-robinhood/alpha-screening-agent.js';
 import { priceAlertService, tradeJournalService, walletService, priceFeedService } from './discord/handlers/interaction-handler.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
@@ -142,11 +143,13 @@ const nftScreeningAgent = new NFTScreeningAgent(
   undefined,
   () => strategyEngine.getActiveStrategy('nft')?.params ?? {},
 );
+const alphaRobinhoodScreeningAgent = new AlphaRobinhoodScreeningAgent();
 
 // Wire shared adapters + singleton agent instances into the Hub
 hub.attachAgentFactories({
   'meme-robinhood': () => robinhoodScreeningAgent,
   nft: () => nftScreeningAgent,
+  'alpha-robinhood': () => alphaRobinhoodScreeningAgent,
 });
 
 // Attach StateStore to all persistent services
@@ -352,6 +355,16 @@ if (discordToken && clientId) {
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpEvmDispatched);
+
+        const alphaDispatched = await dispatchDomain({
+          domain: 'alpha-robinhood',
+          channelName: 'call-alpha-robinhood',
+          isActive: () => hub.isAgentActive('alpha-robinhood'),
+          runPass: () => withScreeningTimeout(alphaRobinhoodScreeningAgent.runScreeningPass(), 'alpha-robinhood'),
+          keyReady: () => apiKeyGuard.checkDomainKeys('alpha-robinhood'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+        });
+        dispatchedPayloads.push(...alphaDispatched);
 
         // Real Swarm Consensus gate (>= 80%): every signal must pass with real data
         dispatchedPayloads = dispatchedPayloads.filter((item) => gateSignal(item.payload));

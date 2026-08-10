@@ -44,10 +44,11 @@ switch (subCommand) {
     runCommand('npx', ['tsx', 'watch', 'src/index.ts']);
     break;
 
+  case 'onboard':
   case 'wizard':
   case 'setup':
   case 'config':
-    console.log('🧙‍♂️ Launching Athena Interactive Setup Wizard...\n');
+    console.log('🧙‍♂️ Launching Athena Interactive Onboarding Wizard...\n');
     runCommand('node', ['scripts/wizard.js']);
     break;
 
@@ -99,7 +100,7 @@ switch (subCommand) {
 🏛️ ATHENA CLI — PARTHENON COMMAND CHEATSHEET:
 
   athena run (or athena)     - Launch Athena (dev / live bot)
-  athena wizard (or setup)   - Parthenon onboarding wizard (.env + providers + backups)
+  athena onboard (or wizard) - Parthenon onboarding wizard (.env + providers + backups)
   athena terminal (or tui)   - Open the Parthenon command-center TUI
   athena deploy              - ⛰️ Olympian: deploy 24/7 via PM2 (Mount Olympus)
   athena update              - ⛰️ Olympian: git pull + install + rebuild + notify (Telegram/Discord)
