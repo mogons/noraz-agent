@@ -15,7 +15,7 @@ import {
   ButtonStyle,
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
-import { isDryRun as isDryRunMode } from '../../config/config.js';
+import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
 import { TradeJournalService } from '../../services/trade-journal-service.js';
@@ -253,21 +253,26 @@ export async function handleChatInput(
     const subcommand = interaction.options.getSubcommand();
     if (subcommand === 'risk') {
       const risk = hub.getRiskManager().getRiskState();
+      const tp1 = process.env.DEFAULT_TP1_PCT || '100';
+      const tp2 = process.env.DEFAULT_TP2_PCT || '200';
+      const sl = process.env.DEFAULT_SL_PCT || '-50';
       const fmtUsd = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
       await interaction.reply({
         content:
-          `⚙️ **ATHENA LIVE RISK SETTINGS**\n` +
+          `⚙️ **ATHENA LIVE RISK & AUTO TP/SL SETTINGS**\n` +
+          `• **Execution Mode:** \`${getExecutionMode()}\` (Primary Venue: \`Uniswap V3 • Robinhood Chain\`)\n` +
+          `• **Auto TP Targets:** TP1: \`+${tp1}%\` | TP2: \`+${tp2}%\` | SL: \`${sl}%\`\n` +
           `• **Max Drawdown Limit:** \`${risk.maxDrawdownLimitPct}%\` (current drawdown: \`${risk.currentDrawdownPct ?? 0}%\`)\n` +
           `• **Max Position Size:** \`${fmtUsd(risk.maxPositionSizeUsd)}\` per trade\n` +
           `• **Trading Paused:** \`${risk.paused ? 'YES 🚨' : 'No'}\` | Max Sector Exposure: \`${risk.maxSectorExposurePercent}%\`\n\n` +
-          `> 💡 Adjust via chat: *"Athena, set max drawdown 30%"* or *"Athena, set position size 500"*.`,
+          `> 💡 Adjust via chat: *"Athena, set max drawdown 20%"* or *"Athena, set position size 500"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'status') {
-      const dryRun = isDryRunMode();
-      const autoExecute = process.env.AUTO_EXECUTE_ENABLED === 'true';
+      const mode = getExecutionMode();
+      const walletAddr = process.env.EVM_WALLET_ADDRESS || (walletService.hasWallet('evm') ? walletService.getEvmAddress() : 'None configured');
       const active = hub.getActiveDomains();
-      const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY', 'AI_API_KEY'];
+      const keyNames = ['GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'KRYSTAL_CLOUD_API_KEY', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY', 'UNISWAP_API_KEY', 'AI_API_KEY'];
       const keys = keyNames.map((k) => {
         const v = process.env[k];
         return `• \`${k}\`: ${v && !v.includes('YOUR_') && !v.includes('placeholder') && !v.includes('mock') ? '✅ SET' : '❌ not set'}`;
@@ -275,8 +280,10 @@ export async function handleChatInput(
       await interaction.reply({
         content:
           `🖥️ **ATHENA RUNTIME CONFIGURATION**\n\n` +
-          `**Mode:** \`${autoExecute ? 'AUTO_EXECUTE' : 'MANUAL_EXECUTION'}\` | Dry-Run: \`${dryRun ? 'ON (safe)' : 'OFF (live)'}\`\n` +
-          `**Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
+          `• **Execution Mode:** \`${mode}\`\n` +
+          `• **Primary Swap Venue:** \`Uniswap V3 (Robinhood Chain EVM L2 #4663)\`\n` +
+          `• **Tracked Wallet Address:** \`${walletAddr}\`\n` +
+          `• **Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
           `**API Keys:**\n${keys}\n\n` +
           `> 💡 Set keys via chat: *"Athena, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
         ephemeral: true,
@@ -466,41 +473,6 @@ export async function handleChatInput(
         ephemeral: true,
       });
     }
-  } else if (commandName === 'bridge') {
-    const origin = interaction.options.getString('origin', true);
-    const destination = interaction.options.getString('destination', true);
-    const amount = interaction.options.getNumber('amount', true);
-    const token = interaction.options.getString('token') || 'ETH';
-
-    const relayAdapter = new RelayAdapter();
-    const result = await relayAdapter.executeBridge({
-      originChain: origin,
-      destinationChain: destination,
-      amount,
-      tokenSymbol: token,
-    }, walletService);
-
-    const embed = new EmbedBuilder()
-      .setTitle(`🌐 RELAY.LINK CROSS-CHAIN BRIDGE DIRECT EXECUTION`)
-      .setColor(0x0052FF)
-      .setDescription(
-        `🌉 **Bridging:** \`${result.amountIn} ${result.tokenSymbol}\` from **${result.originChainName}** ➡️ **${result.destinationChainName}**\n\n` +
-        `📥 **Expected Output:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
-        `💸 **Relayer & Gas Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
-        `🔑 **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
-        `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
-        `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Intent)`' : '`Live Broadcast`'}`
-      )
-      .setFooter({ text: 'Powered by Relay.link Direct Intent Engine • Athena Multi-Agent Hub' });
-
-    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setLabel(`View on Explorer`)
-        .setStyle(ButtonStyle.Link)
-        .setURL(result.explorerUrl || result.relayWebUrl)
-    );
-
-    await interaction.reply({ embeds: [embed], components: [actionRow] });
   } else if (commandName === 'swap') {
     const from = interaction.options.getString('from', true);
     const to = interaction.options.getString('to', true);

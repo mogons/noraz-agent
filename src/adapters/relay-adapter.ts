@@ -146,84 +146,7 @@ export class RelayAdapter {
     }
   }
 
-  public async getBridgeQuote(request: RelayQuoteRequest): Promise<RelayQuoteResult> {
-    const origin = this.parseChain(request.originChain);
-    const destination = this.parseChain(request.destinationChain);
-    const tokenSymbol = (request.tokenSymbol || 'ETH').toUpperCase();
-    const amount = request.amount;
 
-    console.log(`[RELAY ADAPTER] Requesting Relay Intent Quote: ${amount} ${tokenSymbol} from ${origin.name} (${origin.id}) -> ${destination.name} (${destination.id})`);
-
-    const relayWebUrl = this.constructRelayUrl(origin.id, destination.id, amount, tokenSymbol);
-
-    if (this.isDryRun) {
-      console.log(`[RELAY ADAPTER] DRY_RUN=true -> Generating Relay Intent Quote Simulation...`);
-      return {
-        success: true,
-        originChainName: origin.name,
-        originChainId: origin.id,
-        destinationChainName: destination.name,
-        destinationChainId: destination.id,
-        amountIn: amount,
-        expectedAmountOut: Number((amount * 0.9985).toFixed(6)), // 0.15% fee
-        tokenSymbol,
-        feeUsd: 1.25,
-        estimatedDurationSeconds: 12,
-        relayWebUrl,
-        simulated: true,
-      };
-    }
-
-    const res = await this.callRelayQuote({
-      user: request.userAddress || '0x0000000000000000000000000000000000000000',
-      originChainId: origin.id,
-      destinationChainId: destination.id,
-      currency: tokenSymbol,
-      amount: (amount * 1e18).toString(),
-    });
-
-    if (!res.ok) {
-      return {
-        success: false,
-        originChainName: origin.name,
-        originChainId: origin.id,
-        destinationChainName: destination.name,
-        destinationChainId: destination.id,
-        amountIn: amount,
-        expectedAmountOut: 0,
-        tokenSymbol,
-        feeUsd: 0,
-        estimatedDurationSeconds: 0,
-        relayWebUrl,
-        simulated: false,
-        error: res.err || 'Relay quote unavailable.',
-      };
-    }
-
-    const data = res.data as Record<string, unknown>;
-    const details = data.details as Record<string, unknown> | undefined;
-    const fees = data.fees as Record<string, unknown> | undefined;
-    const currencyOut = details?.currencyOut as Record<string, unknown> | undefined;
-    const relayer = fees?.relayer as Record<string, unknown> | undefined;
-    const expectedOut = currencyOut?.amount ? Number(currencyOut.amount) / 1e18 : 0;
-    const feeUsd = relayer?.amountUsd ? Number(relayer.amountUsd) : 0;
-    const timeSec = details?.timeEstimate ? Number(details.timeEstimate) : 0;
-
-    return {
-      success: true,
-      originChainName: origin.name,
-      originChainId: origin.id,
-      destinationChainName: destination.name,
-      destinationChainId: destination.id,
-      amountIn: amount,
-      expectedAmountOut: expectedOut,
-      tokenSymbol,
-      feeUsd,
-      estimatedDurationSeconds: timeSec,
-      relayWebUrl,
-      simulated: false,
-    };
-  }
 
   /**
    * Get a swap quote via Relay.link unified quote API.
@@ -409,29 +332,7 @@ export class RelayAdapter {
     };
   }
 
-  /**
-   * Direct execution of Bridge request using WalletService + EVM adapters.
-   */
-  public async executeBridge(request: RelayQuoteRequest, walletService?: any): Promise<RelayQuoteResult & { txHash?: string; explorerUrl?: string }> {
-    const quote = await this.getBridgeQuote(request);
-    
-    if (this.isDryRun) {
-      const simHash = `sim_bridge_${quote.originChainId}_${quote.destinationChainId}_${Date.now()}`;
-      const explorerUrl = walletService ? walletService.getExplorerUrl(quote.originChainId, simHash) : `https://robinhoodchain.blockscout.com/tx/${simHash}`;
-      return {
-        ...quote,
-        txHash: simHash,
-        explorerUrl,
-      };
-    }
 
-    // Honest stub: live bridge execution is not enabled. Never fabricate a fill.
-    return {
-      ...quote,
-      success: false,
-      error: 'Live bridge execution not enabled for Robinhood Chain. Configure DRY_RUN=false and execution wallet first.',
-    };
-  }
 
   /**
    * Direct execution of Swap request using WalletService + EVM adapters.

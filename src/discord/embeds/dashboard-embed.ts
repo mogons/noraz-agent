@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
 import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
-import { isDryRun as isDryRunMode } from '../../config/config.js';
+import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 
 export interface DashboardEmbedOptions {
   ethBalance?: string | null;
@@ -22,8 +22,11 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
   const getStatusBadge = (domain: string) => (hub.isAgentActive(domain) ? '`🟢 RUNNING`' : '`🔴 PAUSED`');
 
   const risk = hub.getRiskManager().getRiskState();
-  const executionMode = isDryRunMode() ? 'DRY_RUN (Safe Simulation)' : 'LIVE';
-  const drawdownStr = `Current Drawdown: \`${risk.currentDrawdownPct.toFixed(1)}%\` (Max: \`${risk.maxDrawdownLimitPct.toFixed(1)}%\`)`;
+  const executionMode = getExecutionMode();
+  const tp1 = process.env.DEFAULT_TP1_PCT || '100';
+  const tp2 = process.env.DEFAULT_TP2_PCT || '200';
+  const sl = process.env.DEFAULT_SL_PCT || '-50';
+  const drawdownStr = `Current Drawdown: \`${risk.currentDrawdownPct.toFixed(1)}%\` (Max Limit: \`${risk.maxDrawdownLimitPct.toFixed(1)}%\`)`;
   const ethBalanceStr = opts.ethBalance ?? '`— (unavailable)`';
   const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
@@ -38,7 +41,8 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
       {
         name: '⚙️ Operating Mode & Risk Safeguards',
         value:
-          `• **Execution Mode:** \`${executionMode}\`\n` +
+          `• **Execution Mode:** \`${executionMode}\` (Primary Venue: \`Uniswap V3 • Robinhood Chain\`)\n` +
+          `• **Auto TP/SL Targets:** TP1: \`+${tp1}%\` | TP2: \`+${tp2}%\` | SL: \`${sl}%\`\n` +
           `• ${drawdownStr}`,
         inline: false,
       },
@@ -62,10 +66,9 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
         value:
           `• **Robinhood Chain EVM Balance:** ${ethBalanceStr}\n` +
           `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
-        inline: false,
       }
     )
-    .setFooter({ text: 'Athena Multi-Agent Intelligence System • Operates in Safe Mode by default' })
+    .setFooter({ text: 'Athena Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
     .setTimestamp();
 
   // Dropdown Select Menu to Toggle Agents

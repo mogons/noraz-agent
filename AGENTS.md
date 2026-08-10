@@ -24,12 +24,18 @@ Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines proje
 - **Config:** `dotenv` (.env files, never committed)
 - **Discord Bot SDK:** `discord.js` (v14+)
 - **Target Chain:** Robinhood Chain (EVM L2) — chain ID **4663**, native token **ETH**, canonical RPC `https://rpc.mainnet.chain.robinhood.com`, explorer `https://robinhoodchain.blockscout.com`
+- **Primary DEX Venue:** Uniswap V3 Router (Robinhood Chain EVM L2 #4663) — primary venue for meme tokens, swaps, and LP positions. Single-chain focus (cross-chain bridge removed).
+- **Execution Modes (`EXECUTION_MODE`):**
+  - `AUTO_EXECUTE`: Real on-chain trading via Uniswap V3 / Viem client when Swarm Consensus $\ge 80\%$ and Risk Manager checks pass. Requires `EVM_PRIVATE_KEY`.
+  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `athena_state.json`.
+  - `SIGNAL_ONLY`: Intelligence Hub mode posting screening call cards to Discord and auto-tracking wallet position holdings via `EVM_WALLET_ADDRESS`.
 - **Blockchain & Crypto Web3 SDKs:**
   - `viem` (EVM reads/signs)
+  - Uniswap V3 Gateway API (`https://trade-api.gateway.uniswap.org/v1`)
   - GMGN OpenAPI (smart-money / rank / trenches / token security audit)
   - Krystal Cloud DeFi Data API (Robinhood LP pools, `ethereum@4663`)
   - OpenSea REST API v2 (EVM NFTs + swap aggregator)
-  - Relay.link (swap / send / bridge quotes & execution)
+  - Relay.link (token send & secondary swap fallback)
 - **Security Audit APIs:** GoPlus Security API (EVM) + GMGN `/v1/token/security`
 - **AI Engine:** OpenRouter / OpenAI / Anthropic Node SDK
 - **Database & State:** Local JSON file persistence (`database/athena_state.json`)
@@ -46,7 +52,7 @@ Athena/
 │   └── skills/                    # Athena-specific skills (swarm trading, gmgn)
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
-│   ├── config/config.ts           # Env/config validation
+│   ├── config/config.ts           # Env/config validation & execution mode helpers
 │   ├── orchestrator/              # Athena Core Hub & Global Risk Engine
 │   │   ├── hub.ts                 # AthenaHub: agent states, risk gate, on-demand passes
 │   │   ├── risk-manager.ts        # Drawdown / position-size / correlation guards
@@ -67,8 +73,8 @@ Athena/
 │   │   ├── meme-robinhood/        # Robinhood Chain EVM DEX screening (GMGN + GoPlus)
 │   │   └── nft/                   # EVM NFT floor & rarity screening (OpenSea)
 │   ├── adapters/                  # Web3 & Exchange execution adapters
-│   │   ├── evm-adapter.ts         # EVM swaps/sends
-│   │   ├── relay-adapter.ts       # Relay.link quote/swap/send + token maps
+│   │   ├── evm-adapter.ts         # EVM Uniswap V3 swaps & sends
+│   │   ├── relay-adapter.ts       # Relay.link token send & swap fallback
 │   │   ├── gmgn-adapter.ts        # GMGN OpenAPI (rank/trenches/signals/audit)
 │   │   ├── krystal-cloud-adapter.ts # Krystal Cloud DeFi data (Robinhood LP pools)
 │   │   └── opensea-adapter.ts     # NFT floor signals + swap aggregator
@@ -108,8 +114,8 @@ Athena/
 │   └── api/                       # Minimal REST server (health + analytics)
 ├── strategies/                    # User/LLM-authored strategy .mjs modules
 ├── indicators/                    # Custom technical indicator .mjs modules
-├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/doctor)
-├── scripts/                       # wizard.js (env setup), update-core.mjs (git pull+rebuild), notify-update.mjs
+├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/uninstall/doctor)
+├── scripts/                       # wizard.js (env setup), update-core.mjs, uninstall.mjs, notify-update.mjs
 ├── tests/                         # Full Vitest suite
 ├── deploy.sh / setup.sh / setup.bat # PM2 deploy + platform bootstrap
 ├── .env.example                   # Environment variable template
@@ -123,8 +129,8 @@ Athena/
 
 1. **Modular Multi-Agent Isolation:**
    - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Discord call channels or `Athena Core Hub`.
-2. **Safety & Dry-Run First:**
-   - Every trading adapter MUST support a `DRY_RUN` environment check. Never send live transactions unless `DRY_RUN=false` is explicitly set and confirmed.
+2. **Safety & Execution Modes First:**
+   - Every trading adapter MUST check `getExecutionMode()`. Live trades occur only in `AUTO_EXECUTE` mode with verified private keys. `DRY_RUN` uses real Uniswap API market pricing without broadcasting. `SIGNAL_ONLY` tracks holdings without executing.
 3. **Swarm Consensus Validation:**
    - Require >= 80% confidence score across Quant, Catalyst, and Security audits before delivering signal cards.
 4. **Strict TypeScript Typing:**
@@ -151,15 +157,19 @@ npm run build
 
 # Run unit tests
 npm test
+
+# Clean uninstall
+athena uninstall   # or: npm run uninstall
 ```
 
 ---
 
 ## 6. Onboarding & Update Flow
 
-- **Onboarding (`athena wizard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Discord/Telegram credentials, and API keys — never skip it on a fresh clone.
+- **Onboarding (`athena wizard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Execution Mode selection (`DRY_RUN`, `SIGNAL_ONLY`, `AUTO_EXECUTE`), Auto TP/SL targets, Discord/Telegram credentials, and API keys (`UNISWAP_API_KEY`, etc.) — never skip it on a fresh clone.
 - **Update (`athena update` / `npm run update`):** `scripts/update-core.mjs` performs git pull + install + rebuild + service restart, and notifies via Telegram/Discord webhook (`DISCORD_DEPLOY_WEBHOOK_URL`).
 - **Deploy (`athena deploy`):** PM2 daemon via `deploy.sh` / `npm run deploy` (Mount Olympus — 24/7 background process).
+- **Uninstall (`athena uninstall` / `npm run uninstall`):** `scripts/uninstall.mjs` safely stops PM2 background processes, resets state, and purges `.env` credentials & build artifacts.
 
 ---
 

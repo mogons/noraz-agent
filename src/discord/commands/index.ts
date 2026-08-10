@@ -271,13 +271,7 @@ export const slashCommands = [
     .setName('update')
     .setDescription('Pull latest Athena codebase from Git, re-build TypeScript, and soft-restart'),
 
-  new SlashCommandBuilder()
-    .setName('bridge')
-    .setDescription('Get instant cross-chain bridge quote & 1-click Relay.link execution link')
-    .addStringOption(opt => opt.setName('origin').setDescription('Origin chain (e.g. ethereum, robinhood)').setRequired(true))
-    .addStringOption(opt => opt.setName('destination').setDescription('Destination chain (e.g. robinhood, ethereum)').setRequired(true))
-    .addNumberOption(opt => opt.setName('amount').setDescription('Amount to bridge').setRequired(true))
-    .addStringOption(opt => opt.setName('token').setDescription('Token symbol (e.g. ETH, USDC)')),
+
 
   new SlashCommandBuilder()
     .setName('swap')

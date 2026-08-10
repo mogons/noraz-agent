@@ -2,12 +2,14 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
-import fileURLToPath from 'url';
+import { fileURLToPath } from 'url';
 
 const args = process.argv.slice(2);
 const subCommand = (args[0] || 'run').toLowerCase();
 
-const rootDir = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
 
 console.log(`
                    /\\
@@ -82,6 +84,13 @@ switch (subCommand) {
     runCommand('npx', ['tsx', 'src/cli/doctor.ts']);
     break;
 
+  case 'uninstall':
+  case 'purge':
+  case 'clean-all':
+    console.log('🧹 Launching Athena Clean Uninstaller...\n');
+    runCommand('node', ['scripts/uninstall.mjs', ...args.slice(1)]);
+    break;
+
   case 'help':
   case '--help':
   case '-h':
@@ -94,6 +103,7 @@ switch (subCommand) {
   athena terminal (or tui)   - Open the Parthenon command-center TUI
   athena deploy              - ⛰️ Olympian: deploy 24/7 via PM2 (Mount Olympus)
   athena update              - ⛰️ Olympian: git pull + install + rebuild + notify (Telegram/Discord)
+  athena uninstall (or purge)- 🧹 Parthenon clean uninstaller (reset state & PM2)
   athena doctor              - ⛰️ Olympian: run the diagnostic doctor
   athena test                - Run the Vitest suite
   athena build               - Compile TypeScript into /dist

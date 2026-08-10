@@ -167,18 +167,21 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | Command | Aliases | Description |
 | :--- | :--- | :--- |
 | `athena run` | `dev`, `start` | Launch the Athena engine (development / live bot, hot reload) |
-| `athena wizard` | `setup`, `config` | Interactive `.env` configuration wizard |
+| `athena wizard` | `setup`, `config` | Interactive `.env` configuration wizard (modes, TP/SL, API keys) |
 | `athena terminal` | `tui` | Parthenon interactive Terminal TUI |
 | `athena deploy` | `pm2` | Deploy 24/7 background daemon via PM2 |
 | `athena test` | — | Run the Vitest unit test suite |
 | `athena build` | — | Compile TypeScript into `/dist` |
 | `athena update` | — | Pull latest code, reinstall, rebuild, restart (notifies Telegram/Discord webhook) |
+| `athena uninstall` | `purge`, `clean-all` | Clean uninstaller: stop PM2 daemons, wipe database state, purge `.env` & dist |
 | `athena doctor` | `check` | Full diagnostics: API keys, agent states, risk state, connectivity |
 | `athena help` | `-h`, `--help` | Show the CLI cheatsheet |
 
 ---
 
 ## 🤖 Discord Slash Commands (22)
+
+> 🏛️ **Channel Restriction:** All slash commands and interactive UI controls are restricted to channels inside the **`🏛️ ATHENA COMMAND CENTER`** category (e.g. `#athena-control-room`) to prevent cluttering external server channels.
 
 | Command | Description |
 | :--- | :--- |
@@ -201,9 +204,8 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | `/dashboard` | Interactive Athena Control Center dashboard |
 | `/journal` | Trade journal: `summary`, `history`, `export` (CSV) |
 | `/update` | Pull latest code, rebuild, soft-restart |
-| `/bridge` | Cross-chain bridge quote & Relay.link execution link |
-| `/swap` | Swap via Relay.link (same-chain / cross-chain) |
-| `/send` | Send/transfer tokens to another wallet via Relay.link |
+| `/swap` | Swap tokens via Uniswap V3 Router on Robinhood Chain L2 (#4663) |
+| `/send` | Direct native token send/transfer to another EVM address |
 
 ---
 

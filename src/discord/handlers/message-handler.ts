@@ -203,45 +203,15 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1b. Detect if user is asking to Bridge tokens (e.g., "bridge 0.5 ETH ke Robinhood lewat Relay")
-  const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('relay');
+  // 1b. Detect if user is asking to Bridge tokens (inform single-chain Robinhood focus)
+  const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('bridging');
   if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
-    const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
-    const relayAdapter = new RelayAdapter();
-
-    const chains = ['ethereum', 'eth', 'robinhood'];
-    const foundChains = chains.filter(c => lowerQuery.includes(c));
-    const origin = foundChains[0] || 'ethereum';
-    const destination = foundChains[1] || 'robinhood';
-
-    const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
-    const amount = numbers && numbers.length > 0 ? parseFloat(numbers[0]) : 0.1;
-    const token = lowerQuery.includes('usdc') ? 'USDC' : 'ETH';
-
-    const result = await relayAdapter.executeBridge({
-      originChain: origin,
-      destinationChain: destination,
-      amount,
-      tokenSymbol: token,
-    }, walletService);
-
-    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setLabel(`View on Explorer`)
-        .setStyle(ButtonStyle.Link)
-        .setURL(result.explorerUrl || result.relayWebUrl)
-    );
-
     await message.reply({
       content:
-        `🌉 **ATHENA RELAY.LINK CROSS-CHAIN BRIDGE DIRECT EXECUTION**\n\n` +
-        `• **Bridging:** \`${result.amountIn} ${result.tokenSymbol}\` from **${result.originChainName}** ➡️ **${result.destinationChainName}**\n` +
-        `• **Expected Received:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
-        `• **Relayer & Gas Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
-        `• **Tx Hash:** \`${result.txHash || 'Simulated'}\`\n` +
-        `• **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Intent)`' : '`Live Broadcast`'}\n\n` +
-        `Click below to view transaction details:`,
-      components: [actionRow],
+        `ℹ️ **Athena AI is specialized natively for Robinhood Chain (EVM L2 #4663).**\n` +
+        `Cross-chain bridging is disabled. For on-chain trading and transfers, use:\n` +
+        `• \`/swap\` — Swap tokens on Robinhood Chain via Uniswap V3 Router\n` +
+        `• \`/send\` — Transfer native ETH or ERC20 tokens to another wallet address`,
     });
     return;
   }

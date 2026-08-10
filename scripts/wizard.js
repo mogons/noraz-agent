@@ -544,7 +544,7 @@ async function runWizard() {
   const krystal = await askKeyWithBackup('Krystal Cloud', 'KRYSTAL_CLOUD_API_KEY (LP pool data — mandatory for LP agent)', existingEnv.KRYSTAL_CLOUD_API_KEY || '', true);
   const opensea = await askKeyWithBackup('OpenSea', 'OPENSEA_API_KEY (NFT floor & rarity — mandatory for NFT agent)', existingEnv.OPENSEA_API_KEY || '', true);
   const goplus = await askKeyWithBackup('GoPlus', 'GOPLUS_API_KEY (EVM security audit — mandatory for /audit)', existingEnv.GOPLUS_API_KEY || '', true);
-  const uniswap = await askKeyWithBackup('Uniswap', 'UNISWAP_API_KEY (optional — real quote in dry-run buys)', existingEnv.UNISWAP_API_KEY || '', false);
+  const uniswap = await askKeyWithBackup('Uniswap V3 API', 'UNISWAP_API_KEY (Uniswap V3 Developer API — required for real-market quotes in DRY_RUN & AUTO_EXECUTE)', existingEnv.UNISWAP_API_KEY || '', false);
 
   // 5.5 SCREENING STRATEGY
   const strategy = await askStrategyConfig();
@@ -558,30 +558,59 @@ async function runWizard() {
   const inputRhRpc = await askQuestion(` 1. EVM_ROBINHOOD_RPC_URL (Robinhood Chain RPC — used for on-chain swaps & honeypot checks)${defaultRhRpc}: `);
   evmRobinhoodRpcUrl = inputRhRpc.trim() || evmRobinhoodRpcUrl;
 
-  // 7. BURNER WALLET (EVM)
-  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLET (EVM — Robinhood Chain)');
-  console.log('   ⚠️  Wallet key is stored ONLY in .env on this machine. Use burner wallets with capped funds.');
+  // 7. BURNER WALLET / ADDRESS (EVM — Robinhood Chain)
+  console.log('\n👛 STEP 7: ON-CHAIN BURNER WALLET / ADDRESS (EVM — Robinhood Chain)');
+  console.log('   ⚠️  Private Key is required ONLY for AUTO_EXECUTE mode. DRY_RUN & SIGNAL_ONLY can use Wallet Address only.');
   let evmPrivateKey = existingEnv.EVM_PRIVATE_KEY || '';
+  let evmWalletAddress = existingEnv.EVM_WALLET_ADDRESS || '';
 
-  const defaultEvmPk = evmPrivateKey ? ` [ALREADY SET: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional — required only for live on-chain EVM execution]';
+  const defaultEvmPk = evmPrivateKey ? ` [ALREADY SET: ${evmPrivateKey.slice(0, 8)}...]` : ' [Optional for DRY_RUN/SIGNAL_ONLY — ENTER to skip]';
   const inputEvmPk = await askQuestion(` 1. EVM_PRIVATE_KEY${defaultEvmPk}: `);
   evmPrivateKey = inputEvmPk.trim() || evmPrivateKey;
 
-  // 8. OPERATING MODE
-  console.log('\n⚙️ STEP 8: OPERATING MODE & SIMULATION BALANCE');
-  const dryRunChoice = await askQuestion(' 1. Run agents in Simulation Mode (DRY_RUN)? (Y/n) [Default Y]: ') || 'y';
-  const isDryRun = dryRunChoice.toLowerCase() !== 'n' ? 'true' : 'false';
+  const defaultEvmAddr = evmWalletAddress ? ` [ALREADY SET: ${evmWalletAddress}]` : ' [Optional — public wallet address for position tracking]';
+  const inputEvmAddr = await askQuestion(` 2. EVM_WALLET_ADDRESS${defaultEvmAddr}: `);
+  evmWalletAddress = inputEvmAddr.trim() || evmWalletAddress;
 
-  const autoExecChoice = await askQuestion(' 2. Enable AUTO-EXECUTE (bot executes trades itself)? (y/N) [Default N — manual execution, safest]: ') || 'n';
-  const autoExecuteEnabled = autoExecChoice.toLowerCase() === 'y' ? 'true' : 'false';
+  // 8. OPERATING MODE & RISK CONTROLS
+  console.log('\n⚙️ STEP 8: OPERATING MODE & AUTO TP/SL RISK CONTROLS');
+  console.log(' [1] DRY_RUN — Safe realistic simulation with real market quotes & fees (Address only, Default)');
+  console.log(' [2] SIGNAL_ONLY — Parthenon Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
+  console.log(' [3] AUTO_EXECUTE — Autonomous Trading via Uniswap V3 (Private Key required)');
+  const modeInput = (await askQuestion(' Selection (1/2/3) [Default 1]: ')) || '1';
+
+  let execMode = 'DRY_RUN';
+  if (modeInput === '2') execMode = 'SIGNAL_ONLY';
+  if (modeInput === '3') execMode = 'AUTO_EXECUTE';
+
+  const isDryRunStr = execMode === 'AUTO_EXECUTE' ? 'false' : 'true';
+  const autoExecEnabled = execMode === 'AUTO_EXECUTE' ? 'true' : 'false';
+
+  console.log(`\n 🛡️  Default Risk & Auto TP/SL Management Settings:`);
+  const tp1Input = await askQuestion(`   - TP1 Target % [Default +100%]: `);
+  const defaultTp1 = tp1Input.trim() ? Number(tp1Input.trim()) : 100;
+
+  const tp2Input = await askQuestion(`   - TP2 Target % [Default +200%]: `);
+  const defaultTp2 = tp2Input.trim() ? Number(tp2Input.trim()) : 200;
+
+  const slInput = await askQuestion(`   - SL Target % [Default -50%]: `);
+  const defaultSl = slInput.trim() ? Number(slInput.trim()) : -50;
+
+  const drawdownInput = await askQuestion(`   - Max Portfolio Drawdown Limit % [Default 15%]: `);
+  const maxDrawdown = drawdownInput.trim() ? Number(drawdownInput.trim()) : 15;
 
   const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
-  const simEthBalance = await askQuestion(` 3. Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
+  const simEthBalance = await askQuestion(`   - Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
 
   const updates = {
     NODE_ENV: 'production',
-    DRY_RUN: isDryRun,
+    EXECUTION_MODE: execMode,
+    DRY_RUN: isDryRunStr,
     AUTO_EXECUTE_ENABLED: autoExecuteEnabled,
+    DEFAULT_TP1_PCT: String(defaultTp1),
+    DEFAULT_TP2_PCT: String(defaultTp2),
+    DEFAULT_SL_PCT: String(defaultSl),
+    MAX_DRAWDOWN_LIMIT_PCT: String(maxDrawdown),
     LOG_LEVEL: 'info',
     SIMULATION_BALANCE_ETH: simEthBalance.trim(),
     STRATEGY_PRESET: strategyPreset,
@@ -612,6 +641,7 @@ async function runWizard() {
     EVM_RPC_URL: evmRobinhoodRpcUrl.trim(),
     EVM_ROBINHOOD_RPC_URL: evmRobinhoodRpcUrl.trim(),
     EVM_PRIVATE_KEY: evmPrivateKey.trim(),
+    EVM_WALLET_ADDRESS: evmWalletAddress.trim(),
   };
 
   // Per-key backup config: AI_KEY_N_PROVIDER / AI_KEY_N_BASE_URL / AI_KEY_N_MODEL_NAME (slot = position in AI_API_KEYS)
@@ -626,8 +656,10 @@ async function runWizard() {
   console.log(`${C.magenta}${C.bold} ⚠️  TRIAL OF CONFIGURATION — REVIEW SUMMARY${C.reset}`);
   console.log(`${C.magenta}${C.bold}========================================================${C.reset}`);
   const rows = [
-    ['Operating Mode', isDryRun === 'true' ? `${C.green}SIMULATION (DRY_RUN)${C.reset}` : `${C.red}LIVE TRADING${C.reset}`],
-    ['Auto-Execute', autoExecuteEnabled === 'true' ? `${C.yellow}ENABLED${C.reset}` : 'DISABLED (manual)'],
+    ['Execution Mode', execMode === 'AUTO_EXECUTE' ? `${C.red}AUTO_EXECUTE (LIVE UNISWAP TRADING)${C.reset}` : execMode === 'SIGNAL_ONLY' ? `${C.cyan}SIGNAL_ONLY (INTELLIGENCE HUB)${C.reset}` : `${C.green}DRY_RUN (SIMULATION)${C.reset}`],
+    ['Primary Swap Venue', 'Uniswap V3 (Robinhood Chain L2)'],
+    ['Auto TP / SL', `TP1: +${defaultTp1}% | TP2: +${defaultTp2}% | SL: ${defaultSl}%`],
+    ['Max Drawdown', `${maxDrawdown}%`],
     ['Strategy', strategyPreset === 'custom'
       ? `${C.green}custom${C.reset} (${fs.existsSync(path.join(process.cwd(), 'strategies', 'custom-strategy-prompt.txt')) ? 'prompt saved' : 'numeric editor'})`
       : strategyPreset === 'standard' ? 'standard (strict)' : `${C.green}loosened 2x${C.reset} (default)`],
@@ -641,7 +673,7 @@ async function runWizard() {
     ['GoPlus', goplus.value ? `${C.green}✓${C.reset} +${goplus.backups.length} backup` : `${C.red}✗${C.reset}`],
     ['Uniswap', uniswap.value ? `${C.green}✓${C.reset} +${uniswap.backups.length} backup` : `${C.dim}–${C.reset} optional`],
     ['Robinhood RPC', evmRobinhoodRpcUrl],
-    ['EVM Wallet', evmPrivateKey ? `${C.green}✓${C.reset} configured` : `${C.dim}–${C.reset} not set`],
+    ['EVM Wallet Address', evmWalletAddress ? evmWalletAddress : (evmPrivateKey ? `${C.green}✓${C.reset} PK set` : `${C.dim}–${C.reset} not set`)],
   ];
   for (const [label, val] of rows) console.log(`   ${label.padEnd(16)} ${val}`);
   const confirmWrite = (await askQuestion(`\n   Save this configuration to .env? (Y/n) [Default Y]: `)) || 'y';

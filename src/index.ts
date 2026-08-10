@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { isDryRun as isDryRunMode } from './config/config.js';
+import { isDryRun as isDryRunMode, getExecutionMode, isAutoExecute, isSignalOnly } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
 import type { CallCardPayload as CallSignalPayload } from './agents/shared/agent-contract.js';
@@ -38,8 +38,8 @@ console.log('----------------------------------------------------');
 console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
 console.log('----------------------------------------------------');
 
-const isDryRun = isDryRunMode();
-console.log(`[CONFIG] DRY_RUN Mode: ${isDryRun ? 'ENABLED (Safe Mode)' : 'DISABLED (LIVE TRADING)'}`);
+const execMode = getExecutionMode();
+console.log(`[CONFIG] Athena Execution Mode: ${execMode} (Primary Swap Venue: Uniswap V3 on Robinhood Chain #4663)`);
 
 // Initialize persistent StateStore (survives bot restarts)
 const stateStore = new StateStore();
@@ -377,15 +377,13 @@ if (discordToken && clientId) {
           recentSignals.set(dedupKey, now);
           stateStore.setDedupEntry(dedupKey, now);
 
-          // AUTO-EXECUTE — LOCKED OFF by default (manual-execution mode).
-          // The bot is a screener/caller only: every execution is done by the
-          // user. Flip AUTO_EXECUTE_ENABLED=true in .env to re-enable.
-          const AUTO_EXECUTE_ENABLED = process.env.AUTO_EXECUTE_ENABLED === 'true';
+          // Execution Mode check: AUTO_EXECUTE executes live trades, DRY_RUN simulates with real market quotes, SIGNAL_ONLY skips trade execution.
+          const AUTO_EXECUTE_ENABLED = isAutoExecute() || process.env.AUTO_EXECUTE_ENABLED === 'true';
           const autoExecDomain: string | undefined =
             item.channelName === 'call-meme-robinhood' ? 'meme-robinhood' :
             item.channelName === 'call-nft-sniping' ? 'nft' :
             undefined;
-          if (autoExecDomain && AUTO_EXECUTE_ENABLED) {
+          if (autoExecDomain && AUTO_EXECUTE_ENABLED && !isSignalOnly()) {
             const autoExec = hub.isAutoExecuteEnabled(autoExecDomain);
             if (autoExec.enabled) {
               try {
@@ -405,7 +403,7 @@ if (discordToken && clientId) {
                   break;
                 }
                 if (autoExecDomain === 'meme-robinhood' && item.payload.contractAddress) {
-                  const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 });
+                  const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 }, walletService);
                   console.log(`[AUTO-EXECUTE] meme-robinhood ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens})`);
                 }
 

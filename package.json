@@ -18,6 +18,8 @@
     "start": "node dist/index.js",
     "deploy": "npm install && npm run build && (npx pm2 delete athena-agent || true) && npx pm2 start dist/index.js --name athena-agent --update-env",
     "update": "node scripts/update-core.mjs",
+    "uninstall": "node scripts/uninstall.mjs",
+    "clean": "node scripts/uninstall.mjs",
     "test": "vitest run"
   },
   "keywords": [

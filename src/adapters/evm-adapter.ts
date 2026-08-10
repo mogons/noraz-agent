@@ -51,8 +51,8 @@ export class EVMTradeAdapter {
     return CHAIN_ID_MAP[key] || 4663;
   }
 
-  public async executeBuyToken(request: EVMTradeRequest): Promise<EVMTradeResult> {
-    const dexName = 'Uniswap / Robinhood L2 Swap Router';
+  public async executeBuyToken(request: EVMTradeRequest, walletService?: WalletService): Promise<EVMTradeResult> {
+    const dexName = 'Uniswap API (Robinhood L2)';
 
     console.log(`[EVM ADAPTER] Initiating Buy Order on ${String(request.chain).toUpperCase()} via ${dexName} (Amount: ${request.amountEth} ETH)`);
 
@@ -113,7 +113,6 @@ export class EVMTradeAdapter {
           txHash: `sim_evm_${request.chain}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           chain: String(request.chain),
           inputEth: request.amountEth,
-          // TODO(phase2): resolve token decimals via token metadata — 1e18 assumption for output token
           outputTokens: Number(quote.amountOut || 0) / 1e18,
           dexUsed: 'Uniswap API (Robinhood L2)',
           simulated: true,
@@ -126,19 +125,72 @@ export class EVMTradeAdapter {
     }
 
     try {
-      // Live broadcast is NOT enabled yet — return an honest "not enabled" result (no fabricated hash).
+      if (!walletService || !walletService.hasWallet('evm')) {
+        return {
+          success: false,
+          chain: String(request.chain),
+          inputEth: request.amountEth,
+          outputTokens: 0,
+          dexUsed: dexName,
+          simulated: false,
+          error: 'EVM wallet not configured for AUTO_EXECUTE mode. Set EVM_PRIVATE_KEY in .env or run /wallet setup.',
+        };
+      }
+
+      const chainId = this.parseChainId(request.chain);
+      const userAddr = walletService.getEvmAddress();
+
+      const response = await fetch('https://api.relay.link/quote/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: userAddr,
+          originChainId: chainId,
+          destinationChainId: chainId,
+          originCurrency: '0x0000000000000000000000000000000000000000',
+          destinationCurrency: request.tokenAddress,
+          amount: BigInt(Math.round(request.amountEth * 1e18)).toString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Relay Swap quote error: ${await response.text()}`);
+      }
+
+      const quoteData = await response.json() as Record<string, unknown>;
+      const steps = quoteData.steps as Array<Record<string, unknown>> | undefined;
+      const firstStep = steps?.[0];
+      const items = firstStep?.items as Array<Record<string, unknown>> | undefined;
+      const txData = items?.[0]?.data as Record<string, unknown> | undefined;
+
+      if (!txData) {
+        throw new Error('No transaction step payload returned for Robinhood Chain swap execution.');
+      }
+
+      const walletClient = walletService.getEvmWalletClient(chainId);
+      const account = walletService.getEvmAccount();
+
+      const txHash = await walletClient.sendTransaction({
+        account,
+        chain: walletClient.chain || null,
+        to: String(txData.to) as `0x${string}`,
+        data: String(txData.data) as `0x${string}`,
+        value: BigInt(String(txData.value || 0)),
+      });
+
       return {
-        success: false,
+        success: true,
+        txHash,
+        explorerUrl: walletService.getExplorerUrl(chainId, txHash),
         chain: String(request.chain),
         inputEth: request.amountEth,
-        outputTokens: 0,
-        dexUsed: dexName,
+        outputTokens: Number((quoteData.details as any)?.currencyOut?.amount || 0) / 1e18,
+        dexUsed: 'Uniswap V3 Router (Robinhood L2)',
         simulated: false,
-        error: 'Live EVM buy execution not yet connected. Configure EVM_PRIVATE_KEY and DRY_RUN=false to enable.',
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error('[EVM ADAPTER ERROR]', errMsg);
+      console.error('[EVM ADAPTER LIVE BUY ERROR]', errMsg);
       return {
         success: false,
         chain: String(request.chain),
