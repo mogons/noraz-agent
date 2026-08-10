@@ -209,9 +209,9 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 
 ---
 
-## 📢 Auto-Created Channels (5)
+## 📢 Auto-Created Channels (6)
 
-On launch, Athena creates the **`🏛️ ATHENA COMMAND CENTER`** category and 5 text channels:
+On launch, Athena creates the **`🏛️ ATHENA COMMAND CENTER`** category and 6 text channels:
 
 | Channel | Purpose |
 | :--- | :--- |
@@ -220,6 +220,7 @@ On launch, Athena creates the **`🏛️ ATHENA COMMAND CENTER`** category and 5
 | `#call-meme-robinhood` | High-confidence Robinhood Chain meme signal calls (GMGN + security audit) |
 | `#call-lp-robinhood` | High-yield Robinhood Chain concentrated-liquidity calls (Krystal / Uniswap V3) |
 | `#call-nft-sniping` | NFT floor price & rarity sniping alerts (OpenSea) |
+| `#call-alpha-robinhood` | 1-Hour Robinhood Chain Alpha Scraper & X (Twitter) social sentiment calls |
 
 **Call cards** are Discord embeds with market metrics, security/holder audit fields, an AI thesis, and action **links** — `🌐 Trade on Uniswap`, `📊 Chart on DexScreener`, `🔍 View on Krystal`, `📊 View Collection on OpenSea` — plus `⏸️ Pause` buttons. Cards never contain BUY buttons: execution is manual via those links (or `DRY_RUN` simulations), unless you explicitly enable auto-execution.
 
