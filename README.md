@@ -244,13 +244,31 @@ Primary keys are set in `.env` (see `.env.example`). Every provider key accepts 
 | `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEYS` / `AI_API_KEY` / `AI_MODEL_NAME` | Multi-provider LLM with per-key failover (`anthropic`, `openai`, `openrouter`, etc.) |
 | `GMGN_API_KEY` / `GMGN_API_KEY_ROBINHOOD` | GMGN OpenAPI (smart-money, rank, trenches, token security) |
 | `OPENSEA_API_KEY` | NFT floor/rarity + swap aggregator (nft agent) |
+| `X_API_BEARER_TOKEN` | Official X (Twitter) API v2 Bearer Token — required for `#call-alpha-robinhood` sub-agent social sentiment search |
 | `GOPLUS_API_KEY` | EVM token security audit (GoPlus) |
 | `UNISWAP_API_KEY` | Uniswap Trade API — Robinhood/EVM swap entry |
 | `KRYSTAL_CLOUD_API_KEY` | Krystal Cloud DeFi data — Robinhood LP pools (`ethereum@4663`), required for the LP agent |
-| `GMGN_BACKUP_KEYS`, `KRYSTAL_CLOUD_BACKUP_KEYS`, `OPENSEA_BACKUP_KEYS`, `GOPLUS_BACKUP_KEYS`, `UNISWAP_BACKUP_KEYS` | Backup keys, auto-rotated on rate-limit/401/403 |
+| `GMGN_BACKUP_KEYS`, `KRYSTAL_CLOUD_BACKUP_KEYS`, `OPENSEA_BACKUP_KEYS`, `GOPLUS_BACKUP_KEYS`, `UNISWAP_BACKUP_KEYS`, `X_API_BACKUP_KEYS` | Backup keys, auto-rotated on rate-limit/401/403 |
 | `EVM_PRIVATE_KEY` | Trading wallet private key (keep `DRY_RUN=true` while testing) |
 | `EVM_PRIORITY_FEE_GWEI` / `SIMULATION_BALANCE_ETH` | Execution tuning / simulated balance |
-| `API_PORT` | Athena REST API (health + analytics), default 3000 |
+| `API_PORT` | Athena Web Dashboard REST API port (default `3000`) |
+| `ATHENA_API_KEY` | Optional security key for REST API guard (`X-Athena-Api-Key` or `Bearer <key>`) |
+
+---
+
+## 📡 Web Dashboard REST API
+
+Athena ships with a native, zero-dependency REST API server (`src/api/server.ts`) designed for web dashboard and frontend integration (e.g. Next.js, React, Vue, or Mobile Apps). Includes **CORS headers (`Access-Control-Allow-Origin: *`)** and optional API Key protection (`ATHENA_API_KEY`).
+
+| Endpoint | Method | Purpose |
+| :--- | :---: | :--- |
+| **`/api/status`** (or `/health`) | `GET` | Execution mode, active sub-agents, market regime, kill-switch status, and connected API keys |
+| **`/api/calls`** | `GET` | Historical signal calls evaluated by Swarm Consensus across all 4 sub-agents (`?domain=alpha-robinhood&limit=50`) |
+| **`/api/positions`** | `GET` | Active token positions, LP positions, and NFT positions with PnL and TP/SL milestones |
+| **`/api/executions`** | `GET` | Trade journal ledger entries, win-rate, total PnL, and transaction stats |
+| **`/api/alerts`** | `GET` | Active custom price alerts set by users |
+| **`/api/agents/toggle`** | `POST` | Enable or pause a specific sub-agent domain (`{ "domain": "alpha-robinhood", "active": true }`) |
+| **`/api/command`** | `POST` | Execute ToolRegistry actions directly from web UI inputs (`{ "command": "pause_sub_agent", "args": { "agentId": "nft" } }`) |
 
 ---
 

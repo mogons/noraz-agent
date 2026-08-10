@@ -80,7 +80,7 @@ Athena/
 │   │   ├── skill-loader / rpc-failover / technical-indicators
 │   ├── cli/                       # Terminal TUI + diagnostic doctor
 │   ├── telegram/                  # Telegram notification bridge + bot polling
-│   └── api/                       # Minimal REST server (health + analytics)
+│   └── api/                       # Native Web Dashboard REST server (status, calls, positions, executions, alerts, toggle, command)
 ├── strategies/                    # User/LLM-authored strategy .mjs modules
 ├── indicators/                    # Custom technical indicator .mjs modules
 ├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/uninstall/doctor)
