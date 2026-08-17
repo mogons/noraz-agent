@@ -5,12 +5,10 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "opencat": "./bin/opencat.js",
-    "athena": "./bin/athena.js"
+    "opencat": "./bin/opencat.js"
   },
   "scripts": {
     "opencat": "node ./bin/opencat.js",
-    "athena": "node ./bin/athena.js",
     "onboard": "node scripts/wizard.js",
     "wizard": "node scripts/wizard.js",
     "config": "node scripts/wizard.js",

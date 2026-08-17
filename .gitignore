@@ -71,4 +71,18 @@ nft-scanner-test.json
 database/nft-scanner-test.json
 
 # Local design & insight documents (local workspace only — not for public repo)
-DESIGN.md
+DESIGN.md
+
+# Test & Coverage
+coverage/
+*.lcov
+.nyc_output/
+vitest.config.ts.timestamp*
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Temp files
+tmp/
+temp/
+
