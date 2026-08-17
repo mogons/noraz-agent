@@ -1,4 +1,4 @@
-import { AthenaHub } from '../orchestrator/hub.js';
+import { OpenCatHub } from '../orchestrator/hub.js';
 
 export async function runOpenCatDoctor(): Promise<void> {
   console.log('\n======================================================');
@@ -46,7 +46,7 @@ export async function runOpenCatDoctor(): Promise<void> {
 
   // 3. Sub-Agent Statuses
   console.log('\n🐾 3. SUB-AGENT 24/7 SCREENING STATUSES:');
-  const hub = new AthenaHub();
+  const hub = new OpenCatHub();
   const statuses = hub.getAgentStatuses();
   for (const [name, state] of Object.entries(statuses)) {
     console.log(`   • ${name.toUpperCase().padEnd(20)}: ${state.active ? '🟢 ACTIVE (24/7 Background Running)' : '🔴 PAUSED'}`);
@@ -56,8 +56,6 @@ export async function runOpenCatDoctor(): Promise<void> {
   console.log('✅ Opencat diagnostic check completed successfully!');
   console.log('======================================================\n');
 }
-
-export const runAthenaDoctor = runOpenCatDoctor;
 
 if (process.argv[1] && process.argv[1].includes('doctor')) {
   runOpenCatDoctor().catch(console.error);

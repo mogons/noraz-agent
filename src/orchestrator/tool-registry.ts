@@ -1,4 +1,4 @@
-import type { OpenCatHub, AthenaHub } from './hub.js';
+import type { OpenCatHub } from './hub.js';
 import type { AIService } from '../services/ai-service.js';
 import { StrategyEngine } from './strategy-engine.js';
 import { globalRiskEngineV2 } from './risk-engine-v2.js';
@@ -42,8 +42,6 @@ export interface OpenCatToolDefinition {
     required?: string[];
   };
 }
-
-export type AthenaToolDefinition = OpenCatToolDefinition;
 
 export class ToolRegistry {
   private orchestrator?: OpenCatHub;
@@ -311,7 +309,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Strategy file name without extension (alphanumeric, dash, underscore only).' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an AthenaStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
           },
           required: ['name', 'code'],
         },
@@ -323,7 +321,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Indicator file name without extension.' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an AthenaIndicator: { id, name, version, calculate(candles) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatIndicator: { id, name, version, calculate(candles) }.' },
           },
           required: ['name', 'code'],
         },

@@ -168,8 +168,6 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | `opencat doctor` | `check` | Full diagnostics: API keys, agent states, risk state, connectivity |
 | `opencat help` | `-h`, `--help` | Show the CLI cheatsheet |
 
-> *Note: `athena` commands remain fully aliased to `opencat` for backward compatibility.*
-
 ---
 
 ## 🤖 Discord Slash Commands (22)
@@ -245,7 +243,7 @@ Primary keys are set in `.env` (see `.env.example`). Every provider key accepts 
 | `EVM_PRIVATE_KEY` | Trading wallet private key (keep `DRY_RUN=true` while testing) |
 | `EVM_PRIORITY_FEE_GWEI` / `SIMULATION_BALANCE_ETH` | Execution tuning / simulated balance |
 | `API_PORT` | OpenCat Web Dashboard REST API port (default `3000`) |
-| `OPENCAT_API_KEY` / `ATHENA_API_KEY` | Optional security key for REST API guard (`X-OpenCat-Api-Key` or `Bearer <key>`) |
+| `OPENCAT_API_KEY` | Optional security key for REST API guard (`X-OpenCat-Api-Key` or `Bearer <key>`) |
 
 ---
 
@@ -280,7 +278,7 @@ Yes. `DRY_RUN=true` (the default) guarantees **no live blockchain transactions**
 Each provider key has a `_BACKUP_KEYS` companion (e.g. `GMGN_BACKUP_KEYS`). The API key pool loads the primary plus comma-separated backups and **auto-rotates to the next key on 401/403/429** responses, keeping screening alive through rate limits. AI keys support the same pattern via `AI_API_KEYS`.
 
 **5. Where are keys stored?**
-Credentials live in the local `.env` file (loaded via `dotenv`); runtime-set keys are persisted back to `.env` by the API key guard. Wallet private keys are held **in memory** by the WalletService and mirrored in the gitignored `database/athena_state.json`. Nothing is uploaded or stored remotely.
+Credentials live in the local `.env` file (loaded via `dotenv`); runtime-set keys are persisted back to `.env` by the API key guard. Wallet private keys are held **in memory** by the WalletService and mirrored in the gitignored `database/opencat_state.json`. Nothing is uploaded or stored remotely.
 
 ---
 

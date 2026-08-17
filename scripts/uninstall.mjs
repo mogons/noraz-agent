@@ -88,7 +88,7 @@ async function main() {
   // 1. PM2 Process Stop & Delete
   console.log(` ${C.bold}[1/5] Stopping PM2 Background Process...${C.reset}`);
   try {
-    execSync('npx pm2 delete opencat-agent || npx pm2 delete athena-agent', { stdio: 'ignore' });
+    execSync('npx pm2 delete opencat-agent', { stdio: 'ignore' });
     console.log(` ${C.green}✓${C.reset} PM2 daemon ${C.bold}opencat-agent${C.reset} stopped and deleted.`);
   } catch (_err) {
     console.log(` ${C.gray}•${C.reset} No active PM2 process named 'opencat-agent' found.`);
@@ -124,7 +124,6 @@ async function main() {
   removePath('dist', 'Compiled TypeScript JavaScript output');
   removePath('.tmp', 'Temporary file cache');
   removePath('opencat.log', 'Console process log');
-  removePath('athena.log', 'Console process log');
   removePath('pm2-error.log', 'PM2 error log');
   removePath('pm2-out.log', 'PM2 output log');
 

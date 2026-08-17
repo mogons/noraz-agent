@@ -87,8 +87,7 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
   // 6. Restart pm2 (unless --no-restart)
   let restartOk = true;
   if (!noRestart) {
-    console.log('\n▶ Restart PM2 agent (detached — the update process is not killed by itself)');
-    const pm2Cmd = 'pm2 restart opencat-agent --update-env || npx pm2 restart opencat-agent --update-env || pm2 restart athena-agent --update-env || npx pm2 restart athena-agent --update-env';
+    const pm2Cmd = 'pm2 restart opencat-agent --update-env || npx pm2 restart opencat-agent --update-env';
     try {
       const child = spawn('sh', ['-c', `sleep 3 && ${pm2Cmd}`], {
         detached: true,
@@ -133,7 +132,7 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
   return { ok: allOk, restartOk, log };
 }
 
-export const runAthenaUpdate = runOpenCatUpdate;
+export const runUpdate = runOpenCatUpdate;
 
 // CLI entry: only runs when executed directly (not when imported)
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

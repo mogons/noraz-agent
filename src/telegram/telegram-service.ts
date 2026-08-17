@@ -1,4 +1,4 @@
-import { OpenCatHub, AthenaHub } from '../orchestrator/hub.js';
+import { OpenCatHub } from '../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 import { WalletService, globalWalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
@@ -163,7 +163,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
 🤖 _Sent via OpenCat Swarm Consensus_`;
 
-    const threadId = topicName ? (this.topics.get(topicName.toLowerCase()) || this.topics.get('opencat-control-room') || this.topics.get('athena-control-room')) : undefined;
+    const threadId = topicName ? (this.topics.get(topicName.toLowerCase()) || this.topics.get('opencat-control-room')) : undefined;
     return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
@@ -207,7 +207,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       ],
     };
 
-    const threadId = this.topics.get('opencat-control-room') || this.topics.get('athena-control-room');
+    const threadId = this.topics.get('opencat-control-room');
     return this.sendMessage(text, 'Markdown', replyMarkup, threadId);
   }
 

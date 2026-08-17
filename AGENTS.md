@@ -28,7 +28,7 @@ Welcome to **Opencat AI (Robinhood Chain Edition)**! This document outlines proj
 - **Primary DEX Venue:** Uniswap V3 Router (Robinhood Chain EVM L2 #4663) — primary venue for meme tokens, swaps, and LP positions. Single-chain focus (cross-chain bridge removed).
 - **Execution Modes (`EXECUTION_MODE`):**
   - `AUTO_EXECUTE`: Real on-chain trading via Uniswap V3 / Viem client when Swarm Consensus $\ge 80\%$ and Risk Manager checks pass. Requires `EVM_PRIVATE_KEY`.
-  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `database/athena_state.json`.
+  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `database/opencat_state.json`.
   - `SIGNAL_ONLY`: Intelligence Hub mode posting screening call cards to Discord and auto-tracking wallet position holdings via `EVM_WALLET_ADDRESS`.
 - **Blockchain & Crypto Web3 SDKs:**
   - `viem` (EVM reads/signs)
@@ -39,7 +39,7 @@ Welcome to **Opencat AI (Robinhood Chain Edition)**! This document outlines proj
   - Relay.link (token send & secondary swap fallback)
 - **Security Audit APIs:** GoPlus Security API (EVM) + GMGN `/v1/token/security`
 - **AI Engine:** OpenRouter / OpenAI / Anthropic Node SDK
-- **Database & State:** Local JSON file persistence (`database/athena_state.json`)
+- **Database & State:** Local JSON file persistence (`database/opencat_state.json`)
 - **Protocol:** Model Context Protocol (MCP)
 
 ---
@@ -55,7 +55,7 @@ Opencat AI (Robinhood Chain)/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── config/config.ts           # Env/config validation & execution mode helpers
 │   ├── orchestrator/              # OpenCat Core Hub & Global Risk Engine
-│   │   ├── hub.ts                 # AthenaHub: agent states, risk gate, on-demand passes
+│   │   ├── hub.ts                 # OpenCatHub: agent states, risk gate, on-demand passes
 │   │   ├── risk-manager.ts        # Drawdown / position-size / correlation guards
 │   │   ├── risk-engine-v2.ts      # Kill-switch circuit breaker (singleton)
 │   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter Engine
@@ -117,7 +117,6 @@ Opencat AI (Robinhood Chain)/
 ├── strategies/                    # User/LLM-authored strategy .mjs modules
 ├── indicators/                    # Custom technical indicator .mjs modules
 ├── bin/opencat.js                 # `opencat` CLI (run/onboard/terminal/deploy/test/build/update/uninstall/doctor)
-├── bin/athena.js                  # Backward-compat alias CLI
 ├── scripts/                       # wizard.js (env setup), update-core.mjs, uninstall.mjs, notify-update.mjs
 ├── tests/                         # Full Vitest suite
 ├── deploy.sh / setup.sh / setup.bat # PM2 deploy + platform bootstrap

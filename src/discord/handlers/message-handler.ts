@@ -1,5 +1,5 @@
 import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
 
@@ -32,7 +32,7 @@ export function splitDiscordMessage(text: string, maxLen = 1950): string[] {
 
 export async function handleControlRoomMessage(
   message: Message,
-  hub: AthenaHub,
+  hub: OpenCatHub,
   aiService: AIService
 ): Promise<void> {
   const userQuery = message.content.trim();

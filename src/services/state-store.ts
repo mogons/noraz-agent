@@ -78,8 +78,6 @@ export interface OpenCatPersistedState {
 
 const CURRENT_VERSION = 2;
 
-export type AthenaPersistedState = OpenCatPersistedState;
-
 export class StateStore {
   private dbFilePath: string;
   private state: OpenCatPersistedState;
@@ -92,14 +90,9 @@ export class StateStore {
       fs.mkdirSync(dbDir, { recursive: true });
     }
     const defaultNewPath = path.join(dbDir, 'opencat_state.json');
-    const legacyPath = path.join(dbDir, 'athena_state.json');
 
     if (filePath) {
       this.dbFilePath = filePath;
-    } else if (fs.existsSync(defaultNewPath)) {
-      this.dbFilePath = defaultNewPath;
-    } else if (fs.existsSync(legacyPath)) {
-      this.dbFilePath = legacyPath;
     } else {
       this.dbFilePath = defaultNewPath;
     }

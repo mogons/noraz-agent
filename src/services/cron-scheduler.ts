@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { OpenCatHub, AthenaHub } from '../orchestrator/hub.js';
+import type { OpenCatHub } from '../orchestrator/hub.js';
 
 export interface ScheduledTask {
   id: string;

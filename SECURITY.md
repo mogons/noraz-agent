@@ -11,7 +11,7 @@ Opencat AI takes security and smart contract safety with the utmost seriousness.
 3. **Fail-Closed Security Audit**: Any token flagged as a Honeypot, Blacklisted, Transfer-Pausable, or having unrenounced malicious mint authority is immediately rejected.
 4. **Circuit Breaker & 9-Lives Risk Engine (`RiskEngineV2`)**: Automatic global drawdown caps, per-trade position limits, and instantaneous emergency kill-switches halt execution if risk thresholds are breached.
 5. **Zero API Key Leakage (`ApiKeyGuardService`)**: Private keys and sensitive API credentials are kept in local `.env` files (never committed to version control). LLM function calls and prompt inputs are sanitized to prevent prompt-injection key extraction.
-6. **REST API Guard (`OPENCAT_API_KEY` / `ATHENA_API_KEY`)**: When exposing the native REST API (`src/api/server.ts`), requests can be authenticated via `X-OpenCat-Api-Key` or Bearer tokens with full CORS header isolation.
+6. **REST API Guard (`OPENCAT_API_KEY`)**: When exposing the native REST API (`src/api/server.ts`), requests can be authenticated via `X-OpenCat-Api-Key` or Bearer tokens with full CORS header isolation.
 
 ---
 

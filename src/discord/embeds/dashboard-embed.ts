@@ -6,7 +6,7 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
-import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub } from '../../orchestrator/hub.js';
 import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 

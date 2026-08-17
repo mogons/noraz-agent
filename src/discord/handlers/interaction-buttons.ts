@@ -12,7 +12,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
 } from 'discord.js';
-import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub } from '../../orchestrator/hub.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 import { priceAlertService, walletService, buildDashboardOptions } from './command-handlers.js';
 
@@ -49,7 +49,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
   }
 }
 
-export async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: AthenaHub): Promise<void> {
+export async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: OpenCatHub): Promise<void> {
   if (interaction.customId === 'select_toggle_agent') {
     const selectedAgent = interaction.values[0];
     const currentState = hub.isAgentActive(selectedAgent);
@@ -61,7 +61,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction,
   }
 }
 
-export async function handleButtonPress(interaction: ButtonInteraction, hub: AthenaHub): Promise<void> {
+export async function handleButtonPress(interaction: ButtonInteraction, hub: OpenCatHub): Promise<void> {
   const customId = interaction.customId;
 
   if (customId === 'btn_setup_api_keys') {

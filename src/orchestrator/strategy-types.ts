@@ -27,8 +27,6 @@ export interface OpenCatStrategy {
   evaluate(context: StrategyContext): StrategyEvaluation;
 }
 
-export type AthenaStrategy = OpenCatStrategy;
-
 export interface Candle {
   time: number;
   open: number;
@@ -45,4 +43,3 @@ export interface OpenCatIndicator {
   calculate(candles: Candle[]): number[];
 }
 
-export type AthenaIndicator = OpenCatIndicator;

@@ -44,7 +44,7 @@ export class XApiAdapter {
         success: false,
         tweets: [],
         totalVolume: 0,
-        error: 'Official X_API_BEARER_TOKEN is not configured. Enable in athena onboard or set X_API_BEARER_TOKEN in .env.',
+        error: 'Official X_API_BEARER_TOKEN is not configured. Enable in opencat onboard or set X_API_BEARER_TOKEN in .env.',
       };
     }
 
@@ -57,7 +57,7 @@ export class XApiAdapter {
       let response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
-          'User-Agent': 'AthenaAI-Robinhood/1.0.0',
+          'User-Agent': 'OpenCatAI-Robinhood/1.0.0',
         },
         signal: controller.signal,
       });
@@ -68,7 +68,7 @@ export class XApiAdapter {
           response = await fetch(endpoint, {
             headers: {
               'Authorization': `Bearer ${nextKey}`,
-              'User-Agent': 'AthenaAI-Robinhood/1.0.0',
+              'User-Agent': 'OpenCatAI-Robinhood/1.0.0',
             },
             signal: controller.signal,
           });

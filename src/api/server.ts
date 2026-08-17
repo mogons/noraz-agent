@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { AthenaHub } from '../orchestrator/hub.js';
+import { OpenCatHub } from '../orchestrator/hub.js';
 import { globalHealthWatcher } from '../services/health-watcher.js';
 import { globalMarketRegimeFilter } from '../services/market-regime.js';
 import { globalRiskEngineV2 } from '../orchestrator/risk-engine-v2.js';
@@ -29,14 +29,14 @@ export class OpenCatRESTServer {
     });
   }
 
-  public start(hub: AthenaHub): void {
+  public start(hub: OpenCatHub): void {
     this.toolRegistry.attachOrchestrator(hub);
 
     this.server = http.createServer(async (req, res) => {
       // Set CORS Headers for website integration
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCat-Api-Key, X-Athena-Api-Key');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCat-Api-Key');
       res.setHeader('Content-Type', 'application/json');
 
       // Handle CORS Preflight
@@ -46,10 +46,10 @@ export class OpenCatRESTServer {
         return;
       }
 
-      // API Key Authentication Guard (if OPENCAT_API_KEY / ATHENA_API_KEY is configured)
-      const authKey = process.env.OPENCAT_API_KEY || process.env.ATHENA_API_KEY;
+      // API Key Authentication Guard (if OPENCAT_API_KEY is configured)
+      const authKey = process.env.OPENCAT_API_KEY;
       if (authKey && authKey.trim() !== '') {
-        const clientKey = req.headers['x-opencat-api-key'] || req.headers['x-athena-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+        const clientKey = req.headers['x-opencat-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
         if (clientKey !== authKey) {
           res.statusCode = 401;
           res.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or missing API Key' }));
@@ -221,8 +221,6 @@ export class OpenCatRESTServer {
     });
   }
 }
-
-export const AthenaRESTServer = OpenCatRESTServer;
 
 function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {

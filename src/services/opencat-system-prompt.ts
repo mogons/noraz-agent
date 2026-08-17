@@ -12,7 +12,7 @@ OPENCAT SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
 3. Specialist Screening Sub-Agents:
    - Robinhood Meme Agent (#call-meme-robinhood): Robinhood Chain DEX tokens; hard gate real 1H volume >= $50k + smart money/CTO/KOL required + GMGN /token/security audit (fail-closed) + smart-money trade feed as candidate booster.
    - Robinhood LP Velocity Engine (#call-lp-robinhood): Robinhood Chain Uniswap v3 concentrated liquidity via Krystal (24h Fee/TVL > 4%, TVL >= $20k, velocity); meme token must pass GMGN security audit (fail-closed).
-   - NFT Sniping Agent (#call-nft-robinhood): OpenSea Robinhood Chain floor drop & rare trait alert loops (OpenCats 24x24 & EVM collections).
+   - NFT Sniping Agent (#call-nft-robinhood): OpenSea Robinhood Chain floor drop & rare trait alert loops (Robinhood EVM NFT collections).
    - Alpha Scraper Agent (#call-alpha-robinhood): 1-hour Robinhood Chain Alpha & Twitter/X sentiment signals.
 4. Position Manager: Post-execution auto-sell targets (Take Profit 2x/3x, Stop Loss -20%, Dynamic Trailing Stops).
 5. Direct On-Chain Execution: /swap and /send on Robinhood Chain via Relay.link and OpenSea API v2.
@@ -25,4 +25,3 @@ OPENCAT SYSTEM ARCHITECTURE & SELF-KNOWLEDGE:
    them via activate_strategy. Rules: fail-closed gates, passThreshold >= 80, deterministic evaluate.
 `;
 
-export const ATHENA_SYSTEM_PROMPT_BASE = OPENCAT_SYSTEM_PROMPT_BASE;

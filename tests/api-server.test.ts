@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { OpenCatRESTServer, AthenaRESTServer } from '../src/api/server.js';
+import { OpenCatRESTServer } from '../src/api/server.js';
 import { OpenCatHub } from '../src/orchestrator/hub.js';
 
 describe('OpenCatRESTServer Test Suite', () => {
@@ -9,7 +9,6 @@ describe('OpenCatRESTServer Test Suite', () => {
 
   beforeEach(async () => {
     delete process.env.OPENCAT_API_KEY;
-    delete process.env.ATHENA_API_KEY;
     process.env.API_PORT = String(testPort);
     hub = new OpenCatHub();
     server = new OpenCatRESTServer(testPort);
@@ -93,9 +92,5 @@ describe('OpenCatRESTServer Test Suite', () => {
       headers: { 'X-OpenCat-Api-Key': 'secret_key_123' },
     });
     expect(authRes.status).toBe(200);
-  });
-
-  it('Maintains AthenaRESTServer backwards compatibility', () => {
-    expect(AthenaRESTServer).toBe(OpenCatRESTServer);
   });
 });

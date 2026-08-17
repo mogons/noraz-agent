@@ -21,8 +21,6 @@ export interface OpenCatHubOptions {
   gmgnAdapter?: GMGNAdapter;
 }
 
-export type AthenaHubOptions = OpenCatHubOptions;
-
 export interface HubStrategyLike {
   params?: Record<string, unknown>;
   evaluate?: (ctx: any) => any;
@@ -427,8 +425,6 @@ export class OpenCatHub {
   }
 }
 
-export type AthenaHub = OpenCatHub;
-export const AthenaHub = OpenCatHub;
 
 
 

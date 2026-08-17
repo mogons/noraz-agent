@@ -4,7 +4,7 @@
  * backward compatibility with existing consumers (index.ts, message-handler.ts).
  */
 import { Interaction } from 'discord.js';
-import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
 import {
   priceAlertService,
@@ -33,39 +33,33 @@ export function isOpenCatChannel(interaction: Interaction): boolean {
   const channelName = (channel.name || '').toLowerCase();
   const parentName = ('parent' in channel && channel.parent?.name) ? channel.parent.name.toLowerCase() : '';
 
-  // 1. Belongs to Category "🐾 OPENCAT COMMAND CENTER" or legacy "ATHENA COMMAND CENTER"
-  if (parentName.includes('opencat command center') || parentName.includes('athena command center')) return true;
+  // 1. Belongs to Category "🐾 OPENCAT COMMAND CENTER"
+  if (parentName.includes('opencat command center')) return true;
 
-  // 2. Standard OpenCat / Athena channel names
+  // 2. Standard OpenCat channel names
   const KNOWN_CHANNELS = [
     'opencat-control-room',
-    'athena-control-room',
     'opencat-audit',
     'audit-on-demand',
-    'athena-audit',
     'call-meme-robinhood',
     'call-lp-robinhood',
     'call-nft-robinhood',
     'call-alpha-robinhood',
     'opencat-logs',
     'opencat-journal',
-    'athena-logs',
-    'athena-journal',
   ];
 
   if (KNOWN_CHANNELS.includes(channelName)) return true;
 
   // 3. Custom created channel prefixes
-  if (channelName.startsWith('opencat-') || channelName.startsWith('athena-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
+  if (channelName.startsWith('opencat-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
 
   return false;
 }
 
-export const isAthenaChannel = isOpenCatChannel;
-
 export async function handleInteraction(
   interaction: Interaction,
-  hub: AthenaHub,
+  hub: OpenCatHub,
   aiService: AIService
 ): Promise<void> {
   try {
@@ -73,7 +67,7 @@ export async function handleInteraction(
     if (interaction.isChatInputCommand() || interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
       if (!isOpenCatChannel(interaction)) {
         if (interaction.isRepliable()) {
-          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencat-control-room' || c.name === 'athena-control-room');
+          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencat-control-room');
           const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#opencat-control-room**';
           await interaction.reply({
             content: `🐾 **OpenCat Channel Restriction Notice:**\n` +

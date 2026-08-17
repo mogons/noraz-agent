@@ -3,7 +3,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
-import type { OpenCatStrategy, OpenCatIndicator, AthenaStrategy, AthenaIndicator } from './strategy-types.js';
+import type { OpenCatStrategy, OpenCatIndicator } from './strategy-types.js';
 
 const requireEsm = createRequire(import.meta.url);
 

@@ -14,7 +14,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js';
-import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub } from '../../orchestrator/hub.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
@@ -43,7 +43,7 @@ export async function buildDashboardOptions(): Promise<import('../embeds/dashboa
 
 export async function handleChatInput(
   interaction: ChatInputCommandInteraction,
-  hub: AthenaHub
+  hub: OpenCatHub
 ): Promise<void> {
   const commandName = interaction.commandName;
 

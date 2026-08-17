@@ -348,11 +348,11 @@ function writeActiveStrategyMap(map) {
 
 async function askStrategyConfig() {
   console.log(`\n ${C.cyan}${C.bold}🧠 STEP 5.5: SCREENING STRATEGY${C.reset}`);
-  console.log('   How strict should Athena be when selecting signals?');
+  console.log('   How strict should OpenCat be when selecting signals?');
   console.log('   [1] Loosened Default (2x) — more call signals, still >= 80% quality   [Default]');
   console.log('   [2] Standard — strict thresholds (previous defaults)');
   console.log('   [3] Custom Prompt — describe your ideal screening strategy in plain English;');
-  console.log('       Athena writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
+  console.log('       OpenCat writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
   console.log('   [4] Advanced — edit filter numbers per agent directly');
   const choice = (await askQuestion('   Choice [Default 1]: ')) || '1';
 
@@ -488,7 +488,7 @@ ${C.lime}    ( (  )   (  ) )
     const inputClient = await askQuestion(` 2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
 
-    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #athena-control-room]';
+    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #opencat-control-room]';
     const inputCtrl = await askQuestion(` 3. Enter DISCORD_CHANNEL_CONTROL_ROOM (channel ID)${defaultCtrlMsg}: `);
     controlRoomId = inputCtrl.trim() || controlRoomId;
   }
@@ -505,9 +505,9 @@ ${C.lime}    ( (  )   (  ) )
     telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
-  // 4. ATHENA'S REASONING ENGINE
+  // 4. OPENCAT'S REASONING ENGINE
   drawProgressHeader(4, 9, 'AI provider & model');
-  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: ATHENA'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
+  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: OPENCAT'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
   let existingProvider = existingEnv.AI_PROVIDER || '';
   let existingBaseUrl = existingEnv.AI_BASE_URL || '';
   let existingModelName = existingEnv.AI_MODEL_NAME || '';

@@ -14,7 +14,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   // 1. Check or Create Category "🐾 OPENCAT COMMAND CENTER"
   let category = guild.channels.cache.find(
-    c => c.type === ChannelType.GuildCategory && (c.name.toLowerCase().includes('opencat command center') || c.name.toLowerCase().includes('athena command center'))
+    c => c.type === ChannelType.GuildCategory && c.name.toLowerCase().includes('opencat command center')
   );
 
   if (!category) {
@@ -45,14 +45,13 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   const controlRoomId = await getOrCreateChannel(
     'opencat-control-room',
-    '🐾 OpenCat Core Command Hub - Chat with AI, wallet management, & risk configuration.',
-    ['athena-control-room']
+    '🐾 OpenCat Core Command Hub - Chat with AI, wallet management, & risk configuration.'
   );
 
   const auditOnDemandId = await getOrCreateChannel(
     'opencat-audit',
     '🔎 On-Demand Token Audit Channel - Paste any Robinhood Chain / EVM Contract Address (CA) here for instant 12-point audit!',
-    ['audit-on-demand', 'athena-audit']
+    ['audit-on-demand']
   );
 
   const memeEvmId = await getOrCreateChannel(

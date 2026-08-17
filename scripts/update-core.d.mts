@@ -14,7 +14,6 @@ export interface OpenCatUpdateResult {
   log: UpdateStepLog[];
 }
 
-export type AthenaUpdateResult = OpenCatUpdateResult;
-
 export declare function runOpenCatUpdate(opts?: { noRestart?: boolean; cwd?: string }): Promise<OpenCatUpdateResult>;
-export declare function runAthenaUpdate(opts?: { noRestart?: boolean; cwd?: string }): Promise<AthenaUpdateResult>;
+export declare function runUpdate(opts?: { noRestart?: boolean; cwd?: string }): Promise<OpenCatUpdateResult>;
+

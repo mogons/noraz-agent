@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runOpenCatUpdate, runAthenaUpdate } from '../scripts/update-core.mjs';
+import { runOpenCatUpdate, runUpdate } from '../scripts/update-core.mjs';
 
 const mockExecSync = vi.fn();
 const mockSpawn = vi.fn(() => ({ unref: vi.fn(), on: vi.fn() }));
@@ -71,9 +71,9 @@ describe('runOpenCatUpdate', () => {
     expect(step?.ok).toBe(false);
   });
 
-  it('maintains backwards compatibility alias runAthenaUpdate', async () => {
+  it('maintains runUpdate alias', async () => {
     mockExecSync.mockImplementationOnce(() => '');
-    const result = await runAthenaUpdate({ cwd: '/repo', noRestart: true });
+    const result = await runUpdate({ cwd: '/repo', noRestart: true });
     expect(result.ok).toBe(true);
   });
 });

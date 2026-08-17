@@ -3,8 +3,7 @@ import path from 'path';
 import { isDryRun as isDryRunMode, getExecutionMode, isAutoExecute, isSignalOnly } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
-import type { CallCardPayload as CallSignalPayload } from './agents/shared/agent-contract.js';
-import { OpenCatHub, AthenaHub } from './orchestrator/hub.js';
+import { OpenCatHub } from './orchestrator/hub.js';
 import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
@@ -71,7 +70,7 @@ function gateSignal(payload: any): boolean {
   return res.passed;
 }
 
-// Rate-limited Discord notification to #athena-control-room (never spam)
+// Rate-limited Discord notification to #opencat-control-room (never spam)
 const controlRoomNotifyCooldown = new Map<string, number>();
 const CONTROL_ROOM_NOTIFY_MS = 10 * 60 * 1000; // max 1 notif per key per 10 minutes
 
@@ -96,7 +95,7 @@ async function notifyControlRoom(client: any, key: string, content: string): Pro
   controlRoomNotifyCooldown.set(key, now);
   try {
     const channel = client.channels.cache.find(
-      (c: any) => c.type === ChannelType.GuildText && c.name === 'athena-control-room'
+      (c: any) => c.type === ChannelType.GuildText && c.name === 'opencat-control-room'
     );
     if (channel && 'send' in channel) {
       await channel.send(content);
@@ -178,7 +177,7 @@ if (discordToken && clientId) {
     ],
     rest: {
       // Naikkan timeout REST Discord (default 10s) — VPS pernah timeout saat
-      // restart + bootstrap + reply bersamaan, bikin "Athena is thinking..."
+      // restart + bootstrap + reply bersamaan, bikin "OpenCat is thinking..."
       timeout: 30000,
     },
   });
@@ -198,14 +197,14 @@ if (discordToken && clientId) {
         const stepLines = (report.steps || []).map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
         const restartLine = report.restartOk
           ? '🔄 **PM2 agent restarted — new code is live.**'
-          : '⚠ **PM2 restart failed** — run `athena deploy` manually.';
+          : '⚠ **PM2 restart failed** — run `opencat deploy` manually.';
         const controlRoomId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
         const channel = controlRoomId
           ? client.channels.cache.get(controlRoomId)
-          : client.channels.cache.find((c: any) => c.name === 'athena-control-room');
+          : client.channels.cache.find((c: any) => c.name === 'opencat-control-room');
         if (channel && 'send' in channel) {
           await channel.send(
-            `${report.ok ? '✅' : '❌'} **Athena Self-Update ${report.ok ? 'Complete' : 'GAGAL'}**\n\n` +
+            `${report.ok ? '✅' : '❌'} **OpenCat Self-Update ${report.ok ? 'Complete' : 'GAGAL'}**\n\n` +
             `${stepLines}\n${restartLine}`
           );
           console.log('[UPDATE REPORT] Laporan update dikirim ke control room.');
@@ -260,7 +259,7 @@ if (discordToken && clientId) {
             const currentPx = alert.lastTriggeredPriceUsd || alert.targetPriceUsd;
             if (channel && 'send' in channel) {
               await channel.send(
-                `🔔 **ATHENA PRICE ALERT TRIGGERED!**\n\n` +
+                `🔔 **OPENCAT PRICE ALERT TRIGGERED!**\n\n` +
                 `📈 **Asset:** \`${alert.symbol}/USDT\`\n` +
                 `💵 **Target Price Hit:** \`$${alert.targetPriceUsd.toLocaleString()} USD\` (Current: \`$${currentPx.toLocaleString()} USD\`)\n` +
                 `👤 **Alert for:** <@${alert.userId}>\n` +
@@ -324,7 +323,7 @@ if (discordToken && clientId) {
           console.warn(`[MARKET REGIME] Update failed: ${regimeErr.message}`);
         }
 
-        let dispatchedPayloads: Array<{ payload: CallSignalPayload; channelName: string; rawReason: string }> = [];
+        let dispatchedPayloads: Array<{ payload: import('./agents/shared/agent-contract.js').CallCardPayload; channelName: string; rawReason: string }> = [];
 
         const robinhoodDispatched = await dispatchDomain({
           domain: 'meme-robinhood',
@@ -547,8 +546,8 @@ console.log('[SYSTEM] Setup complete. All OpenCat modules ready.');
 console.log('[STATE STORE] Persistent state engine active — positions, alerts, and journal survive restarts.');
 
 // Start OpenCat Telemetry & REST API Server
-import { AthenaRESTServer } from './api/server.js';
-const apiServer = new AthenaRESTServer();
+import { OpenCatRESTServer } from './api/server.js';
+const apiServer = new OpenCatRESTServer();
 apiServer.start(hub);
 
 // Graceful Shutdown: flush pending state writes to disk before exit
