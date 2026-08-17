@@ -69,3 +69,6 @@ skills/loop-budget/
 
 nft-scanner-test.json
 database/nft-scanner-test.json
+
+# Local design & insight documents (local workspace only — not for public repo)
+DESIGN.md
