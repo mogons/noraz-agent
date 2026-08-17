@@ -26,12 +26,13 @@ export function encodeSymbolForUrl(symbol: string | undefined | null): string {
 }
 
 export function buildCallEmbed(payload: CallSignalPayload) {
-  // OpenCats 24x24 NFT Master Color Palette
+  // OpenCats Master Color Palette
   const colorMap: Record<CallSignalPayload['domain'], number> = {
     MEME_ROBINHOOD: 0xffb7b2,  // Pastel Pink
     NFT: 0xd6c7ff,             // Lavender Purple
     LP_ROBINHOOD: 0x80deea,    // Retro Cyan
     ALPHA_ROBINHOOD: 0xfff59d, // Pastel Yellow
+    WHALE_ETH: 0x4fc3f7,       // Whale Sky Blue
   };
 
   const confidenceStr = payload.confidenceScore ? `${payload.confidenceScore}% CONFIDENCE` : 'HIGH CONFIDENCE';
@@ -42,6 +43,67 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     .setFooter({ text: '🐾 OpenCat Intelligence System • Robinhood Chain #4663' });
 
   const buttonsRow = new ActionRowBuilder<ButtonBuilder>();
+
+  // ==========================================
+  // DOMAIN: WHALE TRACKING (HYPERLIQUID ETH)
+  // ==========================================
+  if (payload.domain === 'WHALE_ETH') {
+    embed.setTitle(`🐋 OPENCAT WHALE WATCH: ${sanitizeEmbedField(payload.symbol, 20)}`);
+
+    const report = payload.whaleReport;
+    const fmtM = (v: number) => (v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
+    const netStr = report ? `${report.netUsd >= 0 ? '🟢 +' : '🔴 '}${fmtM(Math.abs(report.netUsd))}` : 'N/A';
+
+    if (report) {
+      embed.addFields(
+        { name: '⚖️ Net Positioning', value: `${netStr} (${report.longCount} long vs ${report.shortCount} short trader)`, inline: true },
+        { name: '📊 Long / Short', value: `Long **${fmtM(report.totalLongUsd)}**\nShort **${fmtM(report.totalShortUsd)}**`, inline: true },
+        { name: '🔗 Source', value: 'Hyperliquid PvP Leaderboard (30d)', inline: true }
+      );
+
+      const traderLines = (entries: Array<{ address: string; sizeUsd: number; returnPct: number }>, dir: string) =>
+        entries.map((t) => {
+          const short = `${t.address.slice(0, 6)}…${t.address.slice(-4)}`;
+          const pct = t.returnPct ? ` (PvP ${t.returnPct.toFixed(1)}%)` : '';
+          return `${dir} **${fmtM(t.sizeUsd)}** — [${short}](https://app.hyperliquid.xyz/explorer/address/${t.address})${pct}`;
+        });
+
+      const longLines = traderLines(report.longTraders, '🟢');
+      const shortLines = traderLines(report.shortTraders, '🔴');
+
+      if (longLines.length > 0) {
+        embed.addFields({ name: `🧭 Long Positions (≥ $1M)`, value: longLines.join('\n'), inline: false });
+      }
+      if (shortLines.length > 0) {
+        embed.addFields({ name: `🧭 Short Positions (≥ $1M)`, value: shortLines.join('\n'), inline: false });
+      }
+      if (report.spotFlow.length > 0) {
+        embed.addFields({
+          name: '📈 Spot Flow (5m, ≥ $100k)',
+          value: report.spotFlow
+            .map((f) => `**${sanitizeEmbedField(f.market, 24)}**: Buy ${fmtM(f.buyUsd)} | Sell ${fmtM(f.sellUsd)} (${f.fillCount} fill)`)
+            .join('\n'),
+          inline: false,
+        });
+      }
+    }
+
+    embed.addFields({ name: '💡 AI Thesis & Summary', value: sanitizeEmbedField(payload.aiThesis, 500), inline: false });
+
+    const hyperliquidUrl = payload.dexScreenerUrl || `https://app.hyperliquid.xyz/trade/${payload.symbol}`;
+    buttonsRow.addComponents(
+      new ButtonBuilder()
+        .setLabel('🚀 Trade on Hyperliquid')
+        .setURL(hyperliquidUrl)
+        .setStyle(ButtonStyle.Link),
+      new ButtonBuilder()
+        .setCustomId('pause_channel_whale-eth')
+        .setLabel('⏸️ Pause Whale Tracking')
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    return { embeds: [embed], components: [buttonsRow] };
+  }
 
   // ==========================================
   // DOMAIN: CONCENTRATED LIQUIDITY (LP_ROBINHOOD)

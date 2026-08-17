@@ -4,7 +4,7 @@ import { getAgentDomain, normalizeDomainKey, AGENT_DOMAINS } from '../src/orches
 describe('agent registry', () => {
   it('contains all Robinhood Chain agent domains with channels', () => {
     expect(AGENT_DOMAINS.map((d) => d.id).sort()).toEqual(
-      ['alpha-robinhood', 'lp-robinhood', 'meme-robinhood', 'nft'].sort()
+      ['alpha-robinhood', 'lp-robinhood', 'meme-robinhood', 'nft', 'whale-eth'].sort()
     );
   });
 

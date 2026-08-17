@@ -2,9 +2,10 @@ export type AgentDomainId =
   | 'meme-robinhood'
   | 'lp-robinhood'
   | 'nft'
-  | 'alpha-robinhood';
+  | 'alpha-robinhood'
+  | 'whale-eth';
 
-export type AgentCategory = 'MEME' | 'LP' | 'NFT' | 'ALPHA';
+export type AgentCategory = 'MEME' | 'LP' | 'NFT' | 'ALPHA' | 'WHALE';
 
 export interface AgentDomainInfo {
   id: AgentDomainId;
@@ -52,6 +53,15 @@ export const AGENT_DOMAINS: AgentDomainInfo[] = [
     aliases: ['alpha', 'rh-alpha', 'alpha-scraper', 'x-alpha'],
     requiredKeys: ['X_API_BEARER_TOKEN', 'AI_API_KEY'],
     category: 'ALPHA',
+  },
+  {
+    id: 'whale-eth',
+    displayName: 'WHALE-ETH',
+    name: 'Hyperliquid ETH Whale & Smart-Money Positioning',
+    channel: 'call-whale-eth',
+    aliases: ['whale', 'eth-whale', 'hyperliquid', 'whale-tracking', 'whale-eth'],
+    requiredKeys: [],
+    category: 'WHALE',
   },
 ];
 

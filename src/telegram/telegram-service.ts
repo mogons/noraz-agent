@@ -87,6 +87,7 @@ export class TelegramService {
       'call-lp-robinhood',
       'call-nft-robinhood',
       'call-alpha-robinhood',
+      'call-whale-eth',
     ];
 
     const results: Record<string, number | null> = {};

@@ -26,8 +26,8 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 
 | Component | Role | What it does |
 | :--- | :--- | :--- |
-| 🐾 **OpenCat Core** — Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Four specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x), and **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
-| 🎮 **Command Center** — Multi-Platform | Discord · Terminal · Telegram | **1. Discord**: `#opencat-control-room` natural-language chat, `#opencat-audit` token auditor, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`).<br>**2. Terminal TUI** (`opencat terminal`): Full interactive standalone console with live token audits, screening triggers, strategy switcher, treasury & portfolio management without Discord.<br>**3. Telegram Bridge**: Real-time signal alert broadcast cards with quick inline action buttons and interactive callback dashboard. |
+| 🐾 **OpenCat Core** — Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Five specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x), **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search), and **whale-eth** (Hyperliquid ETH smart money & institutional perps/spot order flow tracking). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
+| 🎮 **Command Center** — Multi-Platform | Discord · Terminal · Telegram | **1. Discord**: `#opencat-control-room` natural-language chat, `#opencat-audit` token auditor, portfolio & risk views, **22 slash commands**, interactive dashboard, and 5 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`, `#call-whale-eth`).<br>**2. Terminal TUI** (`opencat terminal`): Full interactive standalone console with live token audits, screening triggers, strategy switcher, treasury & portfolio management without Discord.<br>**3. Telegram Bridge**: Real-time signal alert broadcast cards with quick inline action buttons and interactive callback dashboard. |
 | ⚡ **Cat Den Ops** — Deploy & Maintain | Daemon & Health | **PM2 24/7 daemon** (`opencat deploy`), self-update engine (`opencat update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `opencat doctor` full diagnostics, and interactive **`opencat onboard`** wizard. |
 
 ---
@@ -46,18 +46,17 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
                   │   wallet service · trade journal  │
                   └──────────────────┬────────────────┘
                                      │ candidate signals
-          ┌──────────────────────────┼──────────────────────────┐
-          ▼                          ▼                          ▼
-  ┌──────────────┐         ┌──────────────────┐         ┌──────────────┐
-  │  MEME AGENT  │         │   LP VELOCITY    │         │  NFT AGENT   │
-  │ meme-robinhood│        │  lp-robinhood     │        │    nft       │
-  │ GMGN + GoPlus│         │  Krystal Cloud   │         │   OpenSea    │
-  │ vol 24h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
-  │              │         │ TVL ≥ $20k       │         │ vol ≥ 2.0x   │
-  │              │         │                  │         │ sales ≥ 5/h  │
-  └──────┬───────┘         └────────┬─────────┘         └──────┬───────┘
-         └──────────────────────────┼──────────────────────────┘
-                                    ▼
+    ┌────────────────┬───────────────┼───────────────┬────────────────┐
+    ▼                ▼               ▼               ▼                ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  MEME AGENT  │ │ LP VELOCITY  │ │  NFT AGENT   │ │ ALPHA SCRAPER│ │ ETH WHALES   │
+│meme-robinhood│ │ lp-robinhood │ │    nft       │ │alpha-robinhood│ │ whale-eth    │
+│ GMGN + GoPlus│ │ Krystal Cloud│ │   OpenSea    │ │X API v2 / Web│ │ Hyperliquid  │
+│vol 24h ≥ $50k│ │Fee/TVL > 4%  │ │floor +20%/1h │ │1h rh alpha   │ │perps ≥ $1M   │
+│              │ │TVL ≥ $20k    │ │sales ≥ 5/h   │ │sentiment high│ │spot ≥ $100k  │
+└──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+       └────────────────┴───────────────┼────────────────┴────────────────┘
+                                        ▼
                   ┌────────────────────────────────────┐
                   │   SWARM CONSENSUS ENGINE (≥ 80%)   │
                   │  Quant · Catalyst · Security Audit │
@@ -65,7 +64,7 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
                                    │ only ≥ 80% confidence
                                    ▼
          MULTI-PLATFORM DISPATCH (Discord · Terminal TUI · Telegram)
-  • Discord:  #call-meme-robinhood · #call-lp-robinhood · #call-nft-robinhood · #call-alpha-robinhood
+  • Discord:  #call-meme-robinhood · #call-lp-robinhood · #call-nft-robinhood · #call-alpha-robinhood · #call-whale-eth
   • Terminal: Interactive TUI Live Feed, Audits & Chat (opencat terminal)
   • Telegram: Real-Time Signal Alert Cards & Interactive Inline Menu
                                    │
@@ -86,12 +85,13 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 | 2 | 🌸 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 24h volume ≥ $50k**, fail-closed. |
 | 3 | 🌊 **Robinhood LP Velocity Engine** (`#call-lp-robinhood`) | Concentrated-liquidity (Uniswap V3) high-yield pools via **Krystal Cloud** (`ethereum@4663`); **24h Fee/TVL > 4%**, **TVL ≥ $20k**, volume velocity, GMGN security re-check. |
 | 4 | 🔮 **NFT Sniper** (`#call-nft-robinhood`) | OpenSea REST v2 floor & rarity sniping; hard filters floor surge **≥ +20%/1h**, volume **≥ 2.0x**, sales **≥ 5/h**; whale sweep & verified badge as card info. |
-| 5 | 💬 **Natural-Language Command Room** | Chat with OpenCat in `#opencat-control-room` — swap/send intents, audits, alerts, and strategy questions via the agent tool loop. |
-| 6 | ⚙️ **22 Slash Commands** | Full command surface: wallets, screening control, audits, price/alert tools, journal, update, emergency cancel, and more. |
-| 7 | 📈 **Position Manager** | Auto-sell targets: TP **+100% (2x)** / **+200% (3x)**, **SL -20%**, dynamic trailing stops, LP out-of-range warnings, NFT floor-drop alerts. |
-| 8 | 📊 **Trade Journal & Analytics** | Open/close audit trail with win-rate, PnL, and CSV export for Excel/Notion. |
-| 9 | 🔒 **Security-First Design** | `DRY_RUN=true` default, 9-Lives circuit breaker, sandboxed strategy modules (sanitized `process.env`), prompt-injection hardening, backup API key rotation. |
-| 10 | ⚡ **Cat Den Ops** | PM2 24/7 deploy, `opencat update` self-updater with Telegram + Discord webhook notifications, `opencat doctor`, Linux/Windows setup scripts. |
+| 5 | 🐋 **ETH Whale Tracker** (`#call-whale-eth`) | Hyperliquid L1 institutional positioning & smart money tracker; monitors open perps positions (≥ $1M), direction flips, and large spot order flow (≥ $100k). |
+| 6 | 💬 **Natural-Language Command Room** | Chat with OpenCat in `#opencat-control-room` — swap/send intents, audits, alerts, and strategy questions via the agent tool loop. |
+| 7 | ⚙️ **22 Slash Commands** | Full command surface: wallets, screening control, audits, price/alert tools, journal, update, emergency cancel, and more. |
+| 8 | 📈 **Position Manager** | Auto-sell targets: TP **+100% (2x)** / **+200% (3x)**, **SL -20%**, dynamic trailing stops, LP out-of-range warnings, NFT floor-drop alerts. |
+| 9 | 📊 **Trade Journal & Analytics** | Open/close audit trail with win-rate, PnL, and CSV export for Excel/Notion. |
+| 10 | 🔒 **Security-First Design** | `DRY_RUN=true` default, 9-Lives circuit breaker, sandboxed strategy modules (sanitized `process.env`), prompt-injection hardening, backup API key rotation. |
+| 11 | ⚡ **Cat Den Ops** | PM2 24/7 deploy, `opencat update` self-updater with Telegram + Discord webhook notifications, `opencat doctor`, Linux/Windows setup scripts. |
 
 ---
 
@@ -100,7 +100,7 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5**) — you pick how aggressive OpenCat should be when hunting signals.
 
 - **Loosened Default (2x):** ~2x more signals than Standard — more frequent call cards, still gated by the **>= 80% quality floor**. Recommended for most users.
-- **Standard (strict):** Conservative hard gates (e.g. meme 24h volume ≥ $50k, LP TVL ≥ $20k, Fee/TVL > 4%) — fewer, higher-conviction calls.
+- **Standard (strict):** Conservative hard gates (e.g. meme 24h volume ≥ $50k, LP TVL ≥ $20k, Fee/TVL > 4%, Whale perps ≥ $1M) — fewer, higher-conviction calls.
 - **Custom Prompt:** Write screening rules in plain English (e.g. *"only CTO tokens with 2+ smart wallets, min $10k liq"*). OpenCat compiles your prompt into a **validated strategy `.mjs`** automatically on first boot after deploy, with a safe default fallback if compilation fails. Re-runnable anytime via chat: *"re-apply my strategy prompt"*.
 - **Advanced numeric editor:** Fine-tune every hard gate per agent directly (via wizard / control room).
 
@@ -111,6 +111,7 @@ Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5
 | 🌸 **meme-robinhood** | 24h volume ≥ $25k · liquidity ≥ $5k · total fees ≥ $250 · security audit pass |
 | 🌊 **lp-robinhood** | TVL ≥ $10k · 24h volume ≥ $100k · 24h Fee/TVL ≥ 2% · market cap ≥ $100k · security audit pass |
 | 🔮 **nft** | Floor surge ≥ +10%/1h · volume spike ≥ 1.5x · sales velocity ≥ 3/h · security audit pass |
+| 🐋 **whale-eth** | Min perps position ≥ $500k · min spot fill ≥ $50k · min whale count 1 |
 
 > **Quality floor is never lowered:** the swarm **>= 80% confidence** gate and all security gates remain mandatory and **fail-closed** — missing data or failed audits always reject, regardless of preset.
 

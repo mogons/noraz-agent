@@ -19,9 +19,11 @@ import { SkillLoader } from './services/skill-loader.js';
 import { OpenSeaAdapter } from './adapters/opensea-adapter.js';
 import { EVMTradeAdapter } from './adapters/evm-adapter.js';
 import { GMGNAdapter } from './adapters/gmgn-adapter.js';
+import { HyperliquidAdapter } from './adapters/hyperliquid-adapter.js';
 import { RobinhoodScreeningAgent } from './agents/meme-robinhood/robinhood-screening-agent.js';
 import { NFTScreeningAgent } from './agents/nft/nft-screening-agent.js';
 import { AlphaRobinhoodScreeningAgent } from './agents/alpha-robinhood/alpha-screening-agent.js';
+import { WhaleScreeningAgent } from './agents/whale-eth/whale-screening-agent.js';
 import { priceAlertService, tradeJournalService, walletService, priceFeedService } from './discord/handlers/interaction-handler.js';
 import { TelegramService } from './telegram/telegram-service.js';
 import { StateStore } from './services/state-store.js';
@@ -143,12 +145,15 @@ const nftScreeningAgent = new NFTScreeningAgent(
   () => strategyEngine.getActiveStrategy('nft')?.params ?? {},
 );
 const alphaRobinhoodScreeningAgent = new AlphaRobinhoodScreeningAgent();
+const hyperliquidAdapter = new HyperliquidAdapter();
+const whaleScreeningAgent = new WhaleScreeningAgent(hyperliquidAdapter);
 
 // Wire shared adapters + singleton agent instances into the Hub
 hub.attachAgentFactories({
   'meme-robinhood': () => robinhoodScreeningAgent,
   nft: () => nftScreeningAgent,
   'alpha-robinhood': () => alphaRobinhoodScreeningAgent,
+  'whale-eth': () => whaleScreeningAgent,
 });
 
 // Attach StateStore to all persistent services
@@ -161,8 +166,8 @@ const loadedSkills = skillLoader.loadAllSkills();
 
 console.log(`[SKILL SYSTEM] Active skills loaded: ${loadedSkills.length} (${loadedSkills.map(s => s.name).join(', ')})`);
 console.log(`[SECURITY SERVICES] GMGN + GoPlus Security (Robinhood Chain) Initialized.`);
-console.log(`[SCREENING AGENTS] Robinhood Meme + LP Robinhood + NFT Sniping Agents Initialized.`);
-console.log(`[SCREENING ADAPTERS] GMGN AI + Krystal + OpenSea + Relay + EVM Adapters Initialized.`);
+console.log(`[SCREENING AGENTS] Robinhood Meme + LP Robinhood + NFT Sniping + Alpha + ETH Whale Tracking Agents Initialized.`);
+console.log(`[SCREENING ADAPTERS] GMGN AI + Krystal + OpenSea + Relay + Hyperliquid + EVM Adapters Initialized.`);
 console.log(`[AI SERVICE] Configured with provider: ${aiService.getConfig().provider}, model: ${aiService.getConfig().modelName}`);
 
 const discordToken = process.env.DISCORD_BOT_TOKEN;
@@ -364,6 +369,16 @@ if (discordToken && clientId) {
           onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
         });
         dispatchedPayloads.push(...alphaDispatched);
+
+        const whaleDispatched = await dispatchDomain({
+          domain: 'whale-eth',
+          channelName: 'call-whale-eth',
+          isActive: () => hub.isAgentActive('whale-eth'),
+          runPass: () => withScreeningTimeout(whaleScreeningAgent.runScreeningPass(), 'whale-eth'),
+          keyReady: () => apiKeyGuard.checkDomainKeys('whale-eth'),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+        });
+        dispatchedPayloads.push(...whaleDispatched);
 
         // Real Swarm Consensus gate (>= 80%): every signal must pass with real data
         dispatchedPayloads = dispatchedPayloads.filter((item) => gateSignal(item.payload));

@@ -7,6 +7,7 @@ export interface ChannelSetupResult {
   lpEvmId: string;
   nftId: string;
   alphaEvmId: string;
+  whaleEthId: string;
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
@@ -74,6 +75,11 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     '☀️ 1-Hour Robinhood Chain Alpha Scraper & X (Twitter) Social Sentiment Calls'
   );
 
+  const whaleEthId = await getOrCreateChannel(
+    'call-whale-eth',
+    '🐋 Smart Trader & Whale Tracking on Hyperliquid (ETH Perps & Spot Flow)'
+  );
+
   console.log('[DISCORD BOOTSTRAP] All Robinhood Chain OpenCat channels are ready!');
 
   return {
@@ -83,5 +89,6 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     lpEvmId,
     nftId,
     alphaEvmId,
+    whaleEthId,
   };
 }

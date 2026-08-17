@@ -5,7 +5,7 @@ import type { AIService } from '../services/ai-service.js';
 
 const DEFAULT_STRATEGIES_DIR = path.join(process.cwd(), 'strategies');
 const PROMPT_FILE = 'custom-strategy-prompt.txt';
-const DOMAINS = ['meme-robinhood', 'lp-robinhood', 'nft'];
+const DOMAINS = ['meme-robinhood', 'lp-robinhood', 'nft', 'whale-eth'];
 
 const STRATEGY_RULES = `
 You are writing an OpenCatStrategy .mjs module for the Opencat screening engine.
@@ -24,6 +24,7 @@ Export a default object: { id, name, version, description, params, evaluate(ctx)
     marketCapUsd, feeTier, apr24h, farmApr24h, volumeToActiveTvlRatio1h) + ctx.securityAuditPassed.
   - nft: ctx.floorPriceEth, ctx.priceEth, ctx.floorSurge1hPct, ctx.volumeSpike1hRatio, ctx.salesVelocity1h,
     ctx.isWhaleSweep, ctx.isVerified.
+  - whale-eth: ctx.whale (totalLongUsd, totalShortUsd, netUsd, longCount, shortCount, spotFlow).
 Return ONLY the .mjs code, no markdown fences, no commentary.
 `;
 

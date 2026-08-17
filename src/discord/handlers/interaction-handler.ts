@@ -45,6 +45,7 @@ export function isOpenCatChannel(interaction: Interaction): boolean {
     'call-lp-robinhood',
     'call-nft-robinhood',
     'call-alpha-robinhood',
+    'call-whale-eth',
     'opencat-logs',
     'opencat-journal',
   ];
