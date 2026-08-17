@@ -31,10 +31,10 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
   const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
   const embed = new EmbedBuilder()
-    .setTitle('🏛️ ATHENA MULTI-AGENT CONTROL CENTER')
-    .setColor(0x00ffaa)
+    .setTitle('🐾 OPENCAT MULTI-AGENT CONTROL CENTER 🐾')
+    .setColor(0xccff00)
     .setDescription(
-      'Welcome to the **Athena Autonomous Multi-Agent Command Center**.\n' +
+      'Welcome to the **Opencat Autonomous Multi-Agent Command Center**.\n' +
       'Control screening agents, risk limits, price alerts, API keys, and burner wallets interactively below.'
     )
     .addFields(
@@ -49,10 +49,10 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
       {
         name: '🤖 24/7 Robinhood Chain Specialist Sub-Agents Status (PAUSED by Default)',
         value:
-          `• 🔷 **Robinhood Meme Agent:** ${getStatusBadge('meme-robinhood')}\n` +
-          `• 💧 **Robinhood LP Velocity Agent:** ${getStatusBadge('lp-robinhood')}\n` +
-          `• 🖼️ **NFT Sniping Agent:** ${getStatusBadge('nft')}\n` +
-          `• 🚀 **Alpha Scraper & X-Search Agent:** ${getStatusBadge('alpha-robinhood')}`,
+          `• 🌸 **Robinhood Meme Agent:** ${getStatusBadge('meme-robinhood')}\n` +
+          `• 🌊 **Robinhood LP Velocity Agent:** ${getStatusBadge('lp-robinhood')}\n` +
+          `• 🔮 **NFT Sniping Agent:** ${getStatusBadge('nft')}\n` +
+          `• ☀️ **Alpha Scraper & X-Search Agent:** ${getStatusBadge('alpha-robinhood')}`,
         inline: false,
       },
       {
@@ -70,12 +70,12 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
           `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
       }
     )
-    .setFooter({ text: 'Athena Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
+    .setFooter({ text: '🐾 OpenCat Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
     .setTimestamp();
 
   // Dropdown Select Menu to Toggle Agents
   const CATEGORY_EMOJI: Record<string, string> = {
-    MEME: '🐣', LP: '💧', NFT: '🖼️', ALPHA: '🚀',
+    MEME: '🌸', LP: '🌊', NFT: '🔮', ALPHA: '☀️',
   };
   const agentSelect = new StringSelectMenuBuilder()
     .setCustomId('select_toggle_agent')
@@ -103,40 +103,41 @@ export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOp
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⏸️'),
     new ButtonBuilder()
-      .setCustomId('btn_emergency_stop')
-      .setLabel('Emergency Stop')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🛑')
-  );
-
-  // Row 2: Quick Action Buttons
-  const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId('btn_setup_api_keys')
-      .setLabel('Setup API Keys')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('btn_view_wallets')
-      .setLabel('Wallet Balances')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔑'),
-    new ButtonBuilder()
-      .setCustomId('btn_view_alerts')
-      .setLabel('Active Alerts')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔔'),
-    new ButtonBuilder()
       .setCustomId('btn_refresh_dashboard')
-      .setLabel('Refresh Menu')
+      .setLabel('Refresh Status')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🔄')
   );
 
-  const rowDropdown = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(agentSelect);
+  // Row 2: Select Menu
+  const row2 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(agentSelect);
+
+  // Row 3: Quick Action Buttons
+  const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('btn_wallet_summary')
+      .setLabel('Treasury Wallets')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔑'),
+    new ButtonBuilder()
+      .setCustomId('btn_view_journal')
+      .setLabel('Trade Journal')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📊'),
+    new ButtonBuilder()
+      .setCustomId('btn_active_alerts')
+      .setLabel('Price Alerts')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔔'),
+    new ButtonBuilder()
+      .setCustomId('btn_kill_switch_halt')
+      .setLabel('Emergency Halt')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🛑')
+  );
 
   return {
     embeds: [embed],
-    components: [rowDropdown, row1, row2],
+    components: [row1, row2, row3],
   };
 }

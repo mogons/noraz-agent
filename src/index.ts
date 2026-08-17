@@ -36,11 +36,11 @@ const telegramService = new TelegramService();
 const apiKeyGuard = new ApiKeyGuardService();
 
 console.log('----------------------------------------------------');
-console.log('🏛️ ATHENA MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
+console.log('🐾 OPENCAT MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
 console.log('----------------------------------------------------');
 
 const execMode = getExecutionMode();
-console.log(`[CONFIG] Athena Execution Mode: ${execMode} (Primary Swap Venue: Uniswap V3 on Robinhood Chain #4663)`);
+console.log(`[CONFIG] OpenCat Execution Mode: ${execMode} (Primary Swap Venue: Uniswap V3 on Robinhood Chain #4663)`);
 
 // Initialize persistent StateStore (survives bot restarts)
 const stateStore = new StateStore();
@@ -527,7 +527,7 @@ if (discordToken && clientId) {
   client.on('messageCreate', (message) => {
     const controlRoomChannelId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
     if (isControlRoomChannel(controlRoomChannelId, message)) {
-      handleControlRoomMessage(message, aiService, hub);
+      handleControlRoomMessage(message, hub, aiService);
     }
   });
 
@@ -543,10 +543,10 @@ function isControlRoomChannel(configuredId: string | undefined, message: any): b
   return message.channelId === configuredId;
 }
 
-console.log('[SYSTEM] Setup complete. All Athena modules ready.');
+console.log('[SYSTEM] Setup complete. All OpenCat modules ready.');
 console.log('[STATE STORE] Persistent state engine active — positions, alerts, and journal survive restarts.');
 
-// Start Athena 2.0 Telemetry & REST API Server
+// Start OpenCat Telemetry & REST API Server
 import { AthenaRESTServer } from './api/server.js';
 const apiServer = new AthenaRESTServer();
 apiServer.start(hub);

@@ -37,6 +37,8 @@ export interface AthenaToolDefinition {
   };
 }
 
+export type OpenCatToolDefinition = AthenaToolDefinition;
+
 export class ToolRegistry {
   private orchestrator?: AthenaHub;
   private aiService?: AIService;

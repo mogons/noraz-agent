@@ -53,7 +53,7 @@ export async function handleChatInput(
       const isReplace = subcommand === 'replace';
       const modal = new ModalBuilder()
         .setCustomId('wallet_setup_modal')
-        .setTitle(isReplace ? '🔄 Replace Athena Burner Wallet' : '🔑 Athena Burner Wallet Setup');
+        .setTitle(isReplace ? '🔄 Replace OpenCat Burner Wallet' : '🔑 OpenCat Burner Wallet Setup');
 
       const pkInput = new TextInputBuilder()
         .setCustomId('wallet_pk')
@@ -77,7 +77,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `📋 **REGISTERED ATHENA BURNER WALLETS**\n\n` +
+        content: `📋 **REGISTERED OPENCAT BURNER WALLETS**\n\n` +
           `• **Robinhood Chain (EVM) Wallet:** ${evmAddr}\n\n` +
           `💡 *Use \`/wallet replace\` to swap the private key, or \`/wallet remove\` to delete the wallet.*`,
         ephemeral: true,
@@ -110,7 +110,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `💼 **Athena Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
+        content: `💼 **OpenCat Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
           `• Robinhood Wallet: ${evmAddrStr} | Balance: ${evmBalStr}`,
         ephemeral: true,
       });
@@ -152,7 +152,7 @@ export async function handleChatInput(
     const audit = await runTokenAudit(contract);
 
     await interaction.editReply({
-      content: `🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
+      content: `🔎 **OPENCAT ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
     });
   } else if (commandName === 'screening') {
     await interaction.deferReply({ ephemeral: false });
@@ -202,7 +202,7 @@ export async function handleChatInput(
       await interaction.editReply({
         content: `⚠️ **Channel Misalignment Notice:**\n` +
           `Channel <#${interaction.channelId}> is dedicated to **${currentChannelMapping.name}** (\`${currentChannelMapping.agent}\`).\n\n` +
-          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#athena-control-room**!`,
+          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#opencat-control-room**!`,
       });
       return;
     }
@@ -233,7 +233,7 @@ export async function handleChatInput(
         : `🟡 **${activeCount}/3 Sub-Agents Active** — Partial screening running.`;
 
       await interaction.editReply(
-        `## 📡 Athena Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
+        `## 🐾 OpenCat Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
         `> 💡 Use \`/screening start\` or \`/screening stop\` in a dedicated channel to toggle individual agents.`
       );
     } else if (subcommand === 'trigger') {
@@ -260,13 +260,13 @@ export async function handleChatInput(
       const fmtUsd = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
       await interaction.reply({
         content:
-          `⚙️ **ATHENA LIVE RISK & AUTO TP/SL SETTINGS**\n` +
+          `⚙️ **OPENCAT LIVE RISK & AUTO TP/SL SETTINGS**\n` +
           `• **Execution Mode:** \`${getExecutionMode()}\` (Primary Venue: \`Uniswap V3 • Robinhood Chain\`)\n` +
           `• **Auto TP Targets:** TP1: \`+${tp1}%\` | TP2: \`+${tp2}%\` | SL: \`${sl}%\`\n` +
           `• **Max Drawdown Limit:** \`${risk.maxDrawdownLimitPct}%\` (current drawdown: \`${risk.currentDrawdownPct ?? 0}%\`)\n` +
           `• **Max Position Size:** \`${fmtUsd(risk.maxPositionSizeUsd)}\` per trade\n` +
           `• **Trading Paused:** \`${risk.paused ? 'YES 🚨' : 'No'}\` | Max Sector Exposure: \`${risk.maxSectorExposurePercent}%\`\n\n` +
-          `> 💡 Adjust via chat: *"Athena, set max drawdown 20%"* or *"Athena, set position size 500"*.`,
+          `> 💡 Adjust via chat: *"OpenCat, set max drawdown 20%"* or *"OpenCat, set position size 500"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'status') {
@@ -280,13 +280,13 @@ export async function handleChatInput(
       }).join('\n');
       await interaction.reply({
         content:
-          `🖥️ **ATHENA RUNTIME CONFIGURATION**\n\n` +
+          `🖥️ **OPENCAT RUNTIME CONFIGURATION**\n\n` +
           `• **Execution Mode:** \`${mode}\`\n` +
           `• **Primary Swap Venue:** \`Uniswap V3 (Robinhood Chain EVM L2 #4663)\`\n` +
           `• **Tracked Wallet Address:** \`${walletAddr}\`\n` +
           `• **Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
           `**API Keys:**\n${keys}\n\n` +
-          `> 💡 Set keys via chat: *"Athena, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
+          `> 💡 Set keys via chat: *"OpenCat, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
         ephemeral: true,
       });
     }
@@ -298,8 +298,8 @@ export async function handleChatInput(
       .join('\n');
     await interaction.reply({
       content:
-        `🩺 **ATHENA SYSTEM HEALTH**\n\n${lines}\n\n` +
-        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs athena-agent`.'),
+        `🩺 **OPENCAT SYSTEM HEALTH**\n\n${lines}\n\n` +
+        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs opencat-agent`.'),
       ephemeral: false,
     });
   } else if (commandName === 'strategy') {
@@ -310,7 +310,7 @@ export async function handleChatInput(
       const list = engine.listStrategies();
       const lines = list.map((s: any) => `• **${s.id}** — ${s.name}${s.active ? ' `🟢 ACTIVE`' : ''}`).join('\n');
       await interaction.reply({
-        content: `🧠 **ATHENA STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"Athena, create strategy X"*.`,
+        content: `🧠 **OPENCAT STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"OpenCat, create strategy X"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'view') {
@@ -340,7 +340,7 @@ export async function handleChatInput(
       });
       await interaction.reply(`📁 **Channel Created:** <#${newChannel.id}> (\`#${channelName}\`) is ready for your personal notes!`);
     } else if (subcommand === 'rearrange') {
-      await interaction.reply('✨ **Athena Channel Arrangement:** Command Center channels are organized neatly in sequence.');
+      await interaction.reply('✨ **OpenCat Channel Arrangement:** Command Center channels are organized neatly in sequence.');
     }
   } else if (commandName === 'price') {
     const token = interaction.options.getString('token', true);
@@ -395,7 +395,7 @@ export async function handleChatInput(
       });
 
       await interaction.reply({
-        content: `🔔 **Price Alert Set Successfully!**\n• **Asset:** \`${alert.symbol}\`\n• **Target Price:** \`$${alert.targetPriceUsd.toLocaleString()} USD\`\n• **Trigger Condition:** Price goes \`${alert.direction}\` target\n• **ID:** \`${alert.id}\`\nAthena will notify <@${interaction.user.id}> as soon as price reaches target!`,
+        content: `🔔 **Price Alert Set Successfully!**\n• **Asset:** \`${alert.symbol}\`\n• **Target Price:** \`$${alert.targetPriceUsd.toLocaleString()} USD\`\n• **Trigger Condition:** Price goes \`${alert.direction}\` target\n• **ID:** \`${alert.id}\`\nOpenCat will notify <@${interaction.user.id}> as soon as price reaches target! 🐾`,
       });
     } else if (subcommand === 'list') {
       const alerts = priceAlertService.listAlerts(interaction.user.id);
@@ -427,7 +427,7 @@ export async function handleChatInput(
       const stats = tradeJournalService.getSummaryStats();
       await interaction.reply({
         content:
-          `📊 **ATHENA TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
+          `📊 **OPENCAT TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
           `• **Total Trades Logged:** \`${stats.totalTrades}\` (\`${stats.openTradesCount}\` Open, \`${stats.winCount + stats.lossCount}\` Closed)\n` +
           `• **Win Rate:** \`${stats.winRatePct.toFixed(1)}%\` (${stats.winCount} Wins / ${stats.lossCount} Losses)\n` +
           `• **Total Realized PnL:** \`+$${stats.totalRealizedPnlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD\`\n` +
@@ -444,21 +444,21 @@ export async function handleChatInput(
       }).join('\n');
 
       await interaction.reply({
-        content: `📋 **RECENT ATHENA TRADES (${trades.length}):**\n${historyText}`,
+        content: `📋 **RECENT OPENCAT TRADES (${trades.length}):**\n${historyText}`,
       });
     } else if (subcommand === 'export') {
       const csvData = tradeJournalService.exportCsv();
       const buffer = Buffer.from(csvData, 'utf-8');
-      const attachment = new AttachmentBuilder(buffer, { name: 'athena_trade_journal.csv' });
+      const attachment = new AttachmentBuilder(buffer, { name: 'opencat_trade_journal.csv' });
 
       await interaction.reply({
-        content: '📄 **Athena Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
+        content: '📄 **OpenCat Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
         files: [attachment],
       });
     }
   } else if (commandName === 'update') {
     await interaction.reply({
-      content: '🔄 **Athena Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
+      content: '🔄 **OpenCat Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
       ephemeral: true,
     });
 
@@ -466,11 +466,11 @@ export async function handleChatInput(
     // end, which kills this very process — so we can never await a followUp
     // after the restart. We only report failures that happen BEFORE the restart.
     try {
-      const { runAthenaUpdate } = await import('../../../scripts/update-core.mjs');
-      runAthenaUpdate({ noRestart: false });
+      const { runOpenCatUpdate } = await import('../../../scripts/update-core.mjs');
+      runOpenCatUpdate({ noRestart: false });
     } catch (err: any) {
       await interaction.followUp({
-        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs athena-agent`' + `.`,
+        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs opencat-agent`' + `.`,
         ephemeral: true,
       });
     }
@@ -499,7 +499,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Swap)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Swap Engine • Athena Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Swap Engine • OpenCat Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -535,7 +535,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Transfer)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Transfer Engine • Athena Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Transfer Engine • OpenCat Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()

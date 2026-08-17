@@ -1,6 +1,6 @@
-# Contributing to Athena AI (Robinhood Chain Edition)
+# Contributing to Opencat AI (Robinhood Chain Edition)
 
-Thank you for your interest in contributing to **Athena AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
+Thank you for your interest in contributing to **Opencat AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
 
 ---
 
@@ -13,14 +13,14 @@ Thank you for your interest in contributing to **Athena AI**! We welcome bug fix
 ### 2. Environment Setup
 ```bash
 # Clone the repository
-git clone https://github.com/dizcorvus/athena-ai-robinhood-chain.git
-cd athena-ai-robinhood-chain
+git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
+cd opencat-ai-robinhood-chain
 
 # Install dependencies
 npm install
 
 # Run interactive onboarding wizard
-athena onboard   # or: npm run onboard
+opencat onboard   # or: npm run wizard
 ```
 
 ---

@@ -1,4 +1,4 @@
-import { Guild, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { Guild, ChannelType } from 'discord.js';
 
 export interface ChannelSetupResult {
   controlRoomId: string;
@@ -10,25 +10,25 @@ export interface ChannelSetupResult {
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
-  console.log(`[DISCORD BOOTSTRAP] Checking & auto-creating Athena channels in guild: "${guild.name}"...`);
+  console.log(`[DISCORD BOOTSTRAP] Checking & auto-creating OpenCat channels in guild: "${guild.name}"...`);
 
-  // 1. Check or Create Category "🏛️ ATHENA COMMAND CENTER"
+  // 1. Check or Create Category "🐾 OPENCAT COMMAND CENTER"
   let category = guild.channels.cache.find(
-    c => c.type === ChannelType.GuildCategory && c.name.toLowerCase().includes('athena command center')
+    c => c.type === ChannelType.GuildCategory && (c.name.toLowerCase().includes('opencat command center') || c.name.toLowerCase().includes('athena command center'))
   );
 
   if (!category) {
     category = await guild.channels.create({
-      name: '🏛️ ATHENA COMMAND CENTER',
+      name: '🐾 OPENCAT COMMAND CENTER',
       type: ChannelType.GuildCategory,
     });
-    console.log('[DISCORD BOOTSTRAP] Created Category: "🏛️ ATHENA COMMAND CENTER"');
+    console.log('[DISCORD BOOTSTRAP] Created Category: "🐾 OPENCAT COMMAND CENTER"');
   }
 
   // Helper to get or create channel under category
-  const getOrCreateChannel = async (name: string, topic: string) => {
+  const getOrCreateChannel = async (name: string, topic: string, altNames: string[] = []) => {
     let channel = guild.channels.cache.find(
-      c => c.type === ChannelType.GuildText && c.name === name
+      c => c.type === ChannelType.GuildText && (c.name === name || altNames.includes(c.name))
     );
 
     if (!channel) {
@@ -44,8 +44,9 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   };
 
   const controlRoomId = await getOrCreateChannel(
-    'athena-control-room',
-    '⚙️ Athena Core Command Hub - Chat with AI, wallet management, & risk configuration.'
+    'opencat-control-room',
+    '🐾 OpenCat Core Command Hub - Chat with AI, wallet management, & risk configuration.',
+    ['athena-control-room']
   );
 
   const auditOnDemandId = await getOrCreateChannel(
@@ -55,25 +56,25 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   const memeEvmId = await getOrCreateChannel(
     'call-meme-robinhood',
-    '🔷 High-Confidence Robinhood Chain Meme Signal Calls (Robinhood Chain L2 DEX)'
+    '🌸 High-Confidence Robinhood Chain Meme Signal Calls (Robinhood Chain L2 DEX)'
   );
 
   const lpEvmId = await getOrCreateChannel(
     'call-lp-robinhood',
-    '💧 High-Yield Robinhood Chain Concentrated Liquidity Calls (Uniswap V3 / Aerodrome)'
+    '🌊 High-Yield Robinhood Chain Concentrated Liquidity Calls (Uniswap V3 / Aerodrome)'
   );
 
   const nftId = await getOrCreateChannel(
     'call-nft-robinhood',
-    '🖼️ NFT Floor Price & Rarity Sniping Alerts (OpenSea EVM)'
+    '🔮 NFT Floor Price & Rarity Sniping Alerts (OpenCats 24x24 & OpenSea EVM)'
   );
 
   const alphaEvmId = await getOrCreateChannel(
     'call-alpha-robinhood',
-    '🚀 1-Hour Robinhood Chain Alpha Scraper & X (Twitter) Social Sentiment Calls'
+    '☀️ 1-Hour Robinhood Chain Alpha Scraper & X (Twitter) Social Sentiment Calls'
   );
 
-  console.log('[DISCORD BOOTSTRAP] All Robinhood Chain Athena channels are ready!');
+  console.log('[DISCORD BOOTSTRAP] All Robinhood Chain OpenCat channels are ready!');
 
   return {
     controlRoomId,

@@ -1,9 +1,9 @@
 ---
-name: athena-swarm-trading
-description: Autonomous multi-agent crypto trading skill for Robinhood Chain EVM DEX tokens and NFTs using 3-layer Swarm Consensus, Discord Command Center, and Position Management (Legacy Alias for OpenCat Swarm Trading).
+name: opencat-swarm-trading
+description: Autonomous multi-agent crypto trading skill for Robinhood Chain EVM DEX tokens and NFTs using 3-layer Swarm Consensus, Discord Command Center, and Position Management.
 ---
 
-# OpenCat / Athena Swarm Trading & Intelligence Skill
+# OpenCat Swarm Trading & Intelligence Skill
 
 This skill defines the operational standards, decision pipelines, and multi-agent coordination rules for the **Opencat AI (Robinhood Chain Edition)** ecosystem.
 

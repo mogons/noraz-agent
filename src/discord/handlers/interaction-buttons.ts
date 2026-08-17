@@ -31,7 +31,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
     }
 
     await interaction.reply({
-      content: `✅ **Burner Wallet Private Key Configured in Athena Runtime Memory!**\n• Chain: \`${chainType.toUpperCase()}\`${addressStr}\n• Security Note: Key is stored 100% in-memory and will never be written to disk or logs.`,
+      content: `✅ **Burner Wallet Private Key Configured in OpenCat Runtime Memory!**\n• Chain: \`${chainType.toUpperCase()}\`${addressStr}\n• Security Note: Key is stored 100% in-memory and will never be written to disk or logs.`,
       ephemeral: true,
     });
   } else if (interaction.customId === 'api_setup_modal') {
@@ -67,7 +67,7 @@ export async function handleButtonPress(interaction: ButtonInteraction, hub: Ath
   if (customId === 'btn_setup_api_keys') {
     const modal = new ModalBuilder()
       .setCustomId('api_setup_modal')
-      .setTitle('⚙️ Athena API Key Setup');
+      .setTitle('⚙️ OpenCat API Key Setup');
 
     const openseaInput = new TextInputBuilder()
       .setCustomId('opensea_key')

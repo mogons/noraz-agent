@@ -23,6 +23,7 @@ build/
 *.sqlite3
 database/*.json
 database/athena_state.json*
+database/opencat_state.json*
 prisma/dev.db
 
 # Strategy Engine runtime state

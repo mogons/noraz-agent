@@ -8,7 +8,7 @@ const PROMPT_FILE = 'custom-strategy-prompt.txt';
 const DOMAINS = ['meme-robinhood', 'lp-robinhood', 'nft'];
 
 const STRATEGY_RULES = `
-You are writing an AthenaStrategy .mjs module for the Athena screening engine.
+You are writing an OpenCatStrategy .mjs module for the Opencat screening engine.
 Export a default object: { id, name, version, description, params, evaluate(ctx) }.
 - id MUST be '<domain>-custom'.
 - params MUST include passThreshold (keep 80).
@@ -79,7 +79,7 @@ export async function bootstrapCustomStrategies(opts: {
       log(`Generating custom strategy for ${domain}...`);
       const code = await ai.generateCompletion(
         [
-          { role: 'system', content: 'You are Athena, the strategy compiler. Write valid strategy modules only.' },
+          { role: 'system', content: 'You are OpenCat, the strategy compiler. Write valid strategy modules only.' },
           { role: 'user', content: `${STRATEGY_RULES}\n\nUser strategy prompt:\n${prompt}\n\nDomain: ${domain}` },
         ],
         1500,

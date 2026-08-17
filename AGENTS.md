@@ -1,14 +1,14 @@
-# AGENTS.md - Athena AI (Robinhood Chain Edition) Guidelines & Agent Instructions
+# AGENTS.md - Opencat AI (Robinhood Chain Edition) Guidelines & Agent Instructions
 
-Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
+Welcome to **Opencat AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
 
 ---
 
 ## 1. Project Overview
 
-**Athena AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
+**Opencat AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
 
-- **Core Hub Agent (`#athena-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
+- **Core Hub Agent (`#opencat-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 4 domains):
   - `#call-meme-robinhood` (Robinhood Chain EVM DEX tokens / GMGN OpenAPI + GoPlus security)
@@ -28,7 +28,7 @@ Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines proje
 - **Primary DEX Venue:** Uniswap V3 Router (Robinhood Chain EVM L2 #4663) — primary venue for meme tokens, swaps, and LP positions. Single-chain focus (cross-chain bridge removed).
 - **Execution Modes (`EXECUTION_MODE`):**
   - `AUTO_EXECUTE`: Real on-chain trading via Uniswap V3 / Viem client when Swarm Consensus $\ge 80\%$ and Risk Manager checks pass. Requires `EVM_PRIVATE_KEY`.
-  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `athena_state.json`.
+  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `database/athena_state.json`.
   - `SIGNAL_ONLY`: Intelligence Hub mode posting screening call cards to Discord and auto-tracking wallet position holdings via `EVM_WALLET_ADDRESS`.
 - **Blockchain & Crypto Web3 SDKs:**
   - `viem` (EVM reads/signs)
@@ -47,14 +47,14 @@ Welcome to **Athena AI (Robinhood Chain Edition)**! This document outlines proje
 ## 3. Directory Layout (verified against `git ls-files` — real paths only)
 
 ```
-Athena/
+Opencat AI (Robinhood Chain)/
 ├── .agents/
 │   ├── AGENTS.md                  # Project rules & coding guidelines
-│   └── skills/                    # Athena-specific skills (swarm trading, gmgn)
+│   └── skills/                    # Opencat-specific skills (swarm trading, gmgn)
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── config/config.ts           # Env/config validation & execution mode helpers
-│   ├── orchestrator/              # Athena Core Hub & Global Risk Engine
+│   ├── orchestrator/              # OpenCat Core Hub & Global Risk Engine
 │   │   ├── hub.ts                 # AthenaHub: agent states, risk gate, on-demand passes
 │   │   ├── risk-manager.ts        # Drawdown / position-size / correlation guards
 │   │   ├── risk-engine-v2.ts      # Kill-switch circuit breaker (singleton)
@@ -101,7 +101,8 @@ Athena/
 │   │   ├── goplus-security-service.ts # GoPlus (EVM)
 │   │   ├── token-audit-service.ts # On-demand audit pipeline
 │   │   ├── ai-service.ts          # Multi-provider LLM failover
-│   │   ├── api-key-pool.ts         # Stackable API keys + backup rotation
+│   │   ├── opencat-system-prompt.ts # Master OpenCat AI persona prompt
+│   │   ├── api-key-pool.ts        # Stackable API keys + backup rotation
 │   │   ├── api-key-guard.ts       # Key leak prevention guard
 │   │   ├── session-memory.ts      # Audit memory for chat context
 │   │   ├── cron-scheduler.ts      # Process-wide cron singleton
@@ -115,7 +116,8 @@ Athena/
 │   └── api/                       # Native Web Dashboard REST server (status, calls, positions, executions, alerts, toggle, command)
 ├── strategies/                    # User/LLM-authored strategy .mjs modules
 ├── indicators/                    # Custom technical indicator .mjs modules
-├── bin/athena.js                  # `athena` CLI (run/wizard/terminal/deploy/test/build/update/uninstall/doctor)
+├── bin/opencat.js                 # `opencat` CLI (run/onboard/terminal/deploy/test/build/update/uninstall/doctor)
+├── bin/athena.js                  # Backward-compat alias CLI
 ├── scripts/                       # wizard.js (env setup), update-core.mjs, uninstall.mjs, notify-update.mjs
 ├── tests/                         # Full Vitest suite
 ├── deploy.sh / setup.sh / setup.bat # PM2 deploy + platform bootstrap
@@ -129,7 +131,7 @@ Athena/
 ## 4. Coding Conventions & Best Practices
 
 1. **Modular Multi-Agent Isolation:**
-   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Discord call channels or `Athena Core Hub`.
+   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Discord call channels or `OpenCat Core Hub`.
 2. **Safety & Execution Modes First:**
    - Every trading adapter MUST check `getExecutionMode()`. Live trades occur only in `AUTO_EXECUTE` mode with verified private keys. `DRY_RUN` uses real Uniswap API market pricing without broadcasting. `SIGNAL_ONLY` tracks holdings without executing.
 3. **Swarm Consensus Validation:**
@@ -137,8 +139,8 @@ Athena/
 4. **Strict TypeScript Typing:**
    - Avoid using `any`. Define clear interfaces for Token Signals, Audit Results, Swarm Scores, Discord Command Contexts, and Position States.
 5. **Discord UX Standards:**
-   - Use Discord Rich Embeds with clear color coding (🟢 Green for High Confidence Call, 🔴 Red for Warning/Risk, 🔵 Blue for Status Info).
-   - Provide interactive Action Buttons (`BUY 0.5 ETH`, `PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
+   - Use Discord Rich Embeds with clear color coding (🟢 `#CCFF00` Robinhood Hero Green, 🌸 `#FFB7B2` Meme, 🔮 `#D6C7FF` NFT, 🌊 `#80DEEA` LP, 🔴 `#E53935` Risk/Warning, 🔵 `#80DEEA` Status Info).
+   - Provide interactive Action Buttons (`PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
 6. **Customizable Screening Strategies:**
    - Screening strategies are fully customizable (wizard STEP 5.5: loosened default / standard / custom prompt / numeric editor); custom prompts compile to validated strategy `.mjs` at first boot with default fallback; swarm >= 80% floor never lowered.
 
@@ -160,17 +162,17 @@ npm run build
 npm test
 
 # Clean uninstall
-athena uninstall   # or: npm run uninstall
+opencat uninstall   # or: npm run uninstall
 ```
 
 ---
 
 ## 6. Onboarding & Update Flow
 
-- **Onboarding (`athena wizard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Execution Mode selection (`DRY_RUN`, `SIGNAL_ONLY`, `AUTO_EXECUTE`), Auto TP/SL targets, Discord/Telegram credentials, and API keys (`UNISWAP_API_KEY`, etc.) — never skip it on a fresh clone.
-- **Update (`athena update` / `npm run update`):** `scripts/update-core.mjs` performs git pull + install + rebuild + service restart, and notifies via Telegram/Discord webhook (`DISCORD_DEPLOY_WEBHOOK_URL`).
-- **Deploy (`athena deploy`):** PM2 daemon via `deploy.sh` / `npm run deploy` (Mount Olympus — 24/7 background process).
-- **Uninstall (`athena uninstall` / `npm run uninstall`):** `scripts/uninstall.mjs` safely stops PM2 background processes, resets state, and purges `.env` credentials & build artifacts.
+- **Onboarding (`opencat onboard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Execution Mode selection (`DRY_RUN`, `SIGNAL_ONLY`, `AUTO_EXECUTE`), Auto TP/SL targets, Discord/Telegram credentials, and API keys (`UNISWAP_API_KEY`, etc.) — never skip it on a fresh clone.
+- **Update (`opencat update` / `npm run update`):** `scripts/update-core.mjs` performs git pull + install + rebuild + service restart, and notifies via Telegram/Discord webhook (`DISCORD_DEPLOY_WEBHOOK_URL`).
+- **Deploy (`opencat deploy`):** PM2 daemon via `deploy.sh` / `npm run deploy` (Cat Den — 24/7 background process).
+- **Uninstall (`opencat uninstall` / `npm run uninstall`):** `scripts/uninstall.mjs` safely stops PM2 background processes, resets state, and purges `.env` credentials & build artifacts.
 
 ---
 

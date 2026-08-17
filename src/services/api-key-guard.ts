@@ -42,7 +42,7 @@ export class ApiKeyGuardService {
     }
 
     if (missingKeys.length > 0) {
-      const statusMessage = `⛔ [API KEY GUARD] Sub-agent "${req.name}" is HALTED. Missing required API keys: ${missingKeys.join(', ')}. Please set API keys via chat ("Athena, set ${missingKeys[0]}=...") or wizard before running.`;
+      const statusMessage = `⛔ [API KEY GUARD] Sub-agent "${req.name}" is HALTED. Missing required API keys: ${missingKeys.join(', ')}. Please set API keys via chat ("OpenCat, set ${missingKeys[0]}=...") or wizard before running.`;
       return { ready: false, missingKeys, statusMessage };
     }
 

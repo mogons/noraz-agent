@@ -26,19 +26,20 @@ export function encodeSymbolForUrl(symbol: string | undefined | null): string {
 }
 
 export function buildCallEmbed(payload: CallSignalPayload) {
+  // OpenCats 24x24 NFT Master Color Palette
   const colorMap: Record<CallSignalPayload['domain'], number> = {
-    MEME_ROBINHOOD: 0x3498db,
-    NFT: 0x9b59b6,
-    LP_ROBINHOOD: 0x00ffaa,
-    ALPHA_ROBINHOOD: 0xf1c40f,
+    MEME_ROBINHOOD: 0xffb7b2,  // Pastel Pink
+    NFT: 0xd6c7ff,             // Lavender Purple
+    LP_ROBINHOOD: 0x80deea,    // Retro Cyan
+    ALPHA_ROBINHOOD: 0xfff59d, // Pastel Yellow
   };
 
   const confidenceStr = payload.confidenceScore ? `${payload.confidenceScore}% CONFIDENCE` : 'HIGH CONFIDENCE';
 
   const embed = new EmbedBuilder()
-    .setColor(colorMap[payload.domain] || 0x0099ff)
+    .setColor(colorMap[payload.domain] || 0xccff00)
     .setTimestamp()
-    .setFooter({ text: 'Athena Intelligence System • DRY_RUN MODE ACTIVE' });
+    .setFooter({ text: '🐾 OpenCat Intelligence System • Robinhood Chain #4663' });
 
   const buttonsRow = new ActionRowBuilder<ButtonBuilder>();
 
@@ -46,7 +47,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN: CONCENTRATED LIQUIDITY (LP_ROBINHOOD)
   // ==========================================
   if (payload.domain === 'LP_ROBINHOOD') {
-    embed.setTitle(`💧 ATHENA ROBINHOOD LP OPPORTUNITY: ${payload.title}`);
+    embed.setTitle(`💧 OPENCAT ROBINHOOD LP OPPORTUNITY: ${payload.title}`);
 
     if (payload.contractAddress) {
       embed.addFields({ name: '📍 Pool Address', value: `\`${payload.contractAddress}\``, inline: false });
@@ -131,7 +132,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN: NFT SNIPING (OPENSEA)
   // ==========================================
   if (payload.domain === 'NFT') {
-    embed.setTitle(`🖼️ ATHENA NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
+    embed.setTitle(`🖼️ OPENCAT NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
 
     const safeNftSymbol = sanitizeEmbedField(payload.symbol, 40);
     const safeNetwork = sanitizeEmbedField(payload.network, 20) || 'N/A';
@@ -171,7 +172,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // ==========================================
   const safeTitle = sanitizeEmbedField(payload.title);
   const safeSymbol = sanitizeEmbedField(payload.symbol, 32);
-  embed.setTitle(`🔷 ATHENA ROBINHOOD MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`);
+  embed.setTitle(`🐾 OPENCAT ROBINHOOD MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`);
 
   if (payload.contractAddress) {
     const ageStr = payload.tokenAge ? ` • ⏱️ **Age:** ${payload.tokenAge}` : '';

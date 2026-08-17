@@ -12,8 +12,16 @@ const rl = readline.createInterface({
 const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const C = {
-  reset: '\x1b[0m', bold: '\x1b[1m', green: '\x1b[32m', yellow: '\x1b[33m',
-  red: '\x1b[31m', cyan: '\x1b[36m', magenta: '\x1b[35m', dim: '\x1b[2m',
+  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
+  green: '\x1b[38;2;0;230;118m',    // #00E676 Jade Spirit
+  lime: '\x1b[38;2;204;255;0m',     // #CCFF00 Robinhood Green
+  pink: '\x1b[38;2;255;183;178m',   // #FFB7B2 Pastel Pink
+  lavender: '\x1b[38;2;214;199;255m',// #D6C7FF Lavender Purple
+  cyan: '\x1b[38;2;128;222;234m',   // #80DEEA Retro Cyan
+  yellow: '\x1b[38;2;255;245;157m', // #FFF59D Pastel Yellow
+  gold: '\x1b[38;2;255;215;0m',     // #FFD700 Golden Fortune
+  red: '\x1b[38;2;229;57;53m',      // #E53935 Maneki-Neko Red
+  magenta: '\x1b[38;2;123;31;162m', // #7B1FA2 Royal Violet
 };
 
 const PROVIDER_PRESETS = {
@@ -381,7 +389,7 @@ async function askStrategyConfig() {
       const dir = path.join(process.cwd(), 'strategies');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'custom-strategy-prompt.txt'), prompt, 'utf-8');
-      console.log(`   ${C.green}✓${C.reset} Prompt saved to strategies/custom-strategy-prompt.txt — Athena will compile it after deploy.`);
+      console.log(`   ${C.green}✓${C.reset} Prompt saved to strategies/custom-strategy-prompt.txt — Opencat will compile it after deploy.`);
     } else {
       console.log(`   ${C.yellow}Empty prompt — using loosened defaults.${C.reset}`);
       for (const d of STRATEGY_DOMAINS) activeMap[d.key] = domainDefaults[d.key];
@@ -421,18 +429,27 @@ function drawProgressHeader(step, total, done) {
   const cells = [];
   for (let i = 1; i <= total; i++) {
     if (i < step) cells.push(`${C.green}${i}✓${C.reset}`);
-    else if (i === step) cells.push(`${C.bold}${C.cyan}[${i}]${C.reset}`);
+    else if (i === step) cells.push(`${C.bold}${C.lime}[${i}]${C.reset}`);
     else cells.push(`${C.dim}${i}${C.reset}`);
   }
-  console.log(`\n${C.magenta}${C.bold}🏛️  PARTHENON OF ATHENA — MASTER ONBOARDING${C.reset}`);
+  console.log(`\n${C.lime}${C.bold}🐾  OPENCAT AI — MASTER ONBOARDING WIZARD${C.reset}`);
   console.log(` ${C.cyan}Step ${step} of ${total} — ${done ? C.green + 'configuring ' + done : 'beginning'}${C.reset}`);
   console.log(` ${cells.join(' ')}\n`);
 }
 
 async function runWizard() {
-  console.log('\n======================================================');
-  console.log('🏛️ ATHENA MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD');
-  console.log('======================================================\n');
+  console.log(`
+${C.lime}${C.bold}       /\\_____/\\
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCAT AI ONBOARDING WIZARD 🐾${C.reset}
+${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Robinhood Chain Multi-Agent Trading Swarm${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}EVM L2 #4663 • Native ETH • Uniswap V3${C.reset}
+${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
+${C.lime}    ( (  )   (  ) )
+   (__(__)___(__)__)${C.reset}
+`);
+  console.log(`${C.lime}========================================================================${C.reset}`);
+  console.log(`${C.lime}🐾 OPENCAT MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD 🐾${C.reset}`);
+  console.log(`${C.lime}========================================================================${C.reset}\n`);
   console.log('💡 Note: API keys are MANDATORY for their respective sub-agents to run. Press ENTER to keep existing values.\n');
 
   let existingEnv = {};
@@ -590,7 +607,7 @@ async function runWizard() {
   // 8. OPERATING MODE & RISK CONTROLS
   console.log('\n⚙️ STEP 8: OPERATING MODE & AUTO TP/SL RISK CONTROLS');
   console.log(' [1] DRY_RUN — Safe realistic simulation with real market quotes & fees (Address only, Default)');
-  console.log(' [2] SIGNAL_ONLY — Parthenon Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
+  console.log(' [2] SIGNAL_ONLY — OpenCat Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
   console.log(' [3] AUTO_EXECUTE — Autonomous Trading via Uniswap V3 (Private Key required)');
   const modeInput = (await askQuestion(' Selection (1/2/3) [Default 1]: ')) || '1';
 
@@ -696,7 +713,7 @@ async function runWizard() {
   for (const [label, val] of rows) console.log(`   ${label.padEnd(16)} ${val}`);
   const confirmWrite = (await askQuestion(`\n   Save this configuration to .env? (Y/n) [Default Y]: `)) || 'y';
   if (confirmWrite.toLowerCase() === 'n') {
-    console.log(`\n${C.yellow}Configuration discarded. Rerun 'athena wizard' when ready.${C.reset}`);
+    console.log(`\n${C.yellow}Configuration discarded. Rerun 'opencat wizard' when ready.${C.reset}`);
     rl.close();
     return;
   }
@@ -742,13 +759,13 @@ async function runWizard() {
 
   fs.writeFileSync(envPath, mergedLines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n', 'utf8');
 
-  console.log(`\n${C.green}${C.bold}========================================================${C.reset}`);
-  console.log(`${C.green}${C.bold} ✅ CONFIGURATION SAVED — ATHENA IS READY${C.reset}`);
-  console.log(`${C.green}${C.bold}========================================================${C.reset}`);
-  console.log(`   ${C.bold}Parthenon:${C.reset} run \`athena terminal\` to open the command center TUI.`);
-  console.log(`   ${C.bold}Athena:${C.reset} run \`athena run\` (dev) or \`athena deploy\` (24/7 via PM2 — Mount Olympus).`);
-  console.log(`   ${C.bold}Checks:${C.reset} \`athena doctor\` | \`athena test\` | \`athena update\``);
-  console.log(`\n${C.dim}Wise words: DRY_RUN is your shield — go live only when you are ready.${C.reset}\n`);
+  console.log(`\n${C.lime}${C.bold}========================================================${C.reset}`);
+  console.log(`${C.lime}${C.bold} 🐾 CONFIGURATION SAVED — OPENCAT IS READY 🐾${C.reset}`);
+  console.log(`${C.lime}${C.bold}========================================================${C.reset}`);
+  console.log(`   ${C.bold}Command Center:${C.reset} run \`opencat terminal\` to open the interactive TUI.`);
+  console.log(`   ${C.bold}OpenCat Engine:${C.reset} run \`opencat run\` (dev) or \`opencat deploy\` (24/7 via PM2 — Cat Den).`);
+  console.log(`   ${C.bold}Diagnostics:${C.reset}    \`opencat doctor\` | \`opencat test\` | \`opencat update\``);
+  console.log(`\n${C.dim}Wise words: 9 lives in crypto — DRY_RUN is your armor, strike when ready. 🐱${C.reset}\n`);
 
   rl.close();
 }

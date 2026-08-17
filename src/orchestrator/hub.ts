@@ -407,7 +407,7 @@ export class AthenaHub {
    * Market-closes all positions and freezes all sub-agents & auto-execute states.
    */
   public executeEmergencyCloseAll(reason = 'User Manual Panic Button (/closeall)'): { closedPositionsCount: number; message: string } {
-    console.error(`🚨 ATHENA HUB: EMERGENCY CLOSE ALL TRIGGERED! Reason: ${reason}`);
+    console.error(`🚨 OPENCAT HUB: EMERGENCY CLOSE ALL TRIGGERED! Reason: ${reason}`);
     
     // 1. Pause all sub-agents & disable auto-execute
     this.setAllAgentsActive(false);
@@ -424,3 +424,6 @@ export class AthenaHub {
     };
   }
 }
+
+export const OpenCatHub = AthenaHub;
+

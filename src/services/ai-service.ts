@@ -219,8 +219,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://athena-crypto.local';
-      headers['X-Title'] = 'Athena Crypto Agent';
+      headers['HTTP-Referer'] = 'https://opencat-crypto.local';
+      headers['X-Title'] = 'Opencat AI (Robinhood Chain)';
     }
 
     const candidateModels = [
@@ -368,8 +368,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://athena-crypto.local';
-      headers['X-Title'] = 'Athena Crypto Agent';
+      headers['HTTP-Referer'] = 'https://opencat-crypto.local';
+      headers['X-Title'] = 'Opencat AI (Robinhood Chain)';
     }
 
     const candidateModels = [

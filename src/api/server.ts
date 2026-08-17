@@ -9,7 +9,7 @@ import { getExecutionMode } from '../config/config.js';
 import { AGENT_DOMAINS } from '../orchestrator/agent-registry.js';
 import { ToolRegistry } from '../orchestrator/tool-registry.js';
 
-export class AthenaRESTServer {
+export class OpenCatRESTServer {
   private server: http.Server | null = null;
   private port: number;
   private toolRegistry = new ToolRegistry();
@@ -36,7 +36,7 @@ export class AthenaRESTServer {
       // Set CORS Headers for website integration
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Athena-Api-Key');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCat-Api-Key, X-Athena-Api-Key');
       res.setHeader('Content-Type', 'application/json');
 
       // Handle CORS Preflight
@@ -46,13 +46,13 @@ export class AthenaRESTServer {
         return;
       }
 
-      // API Key Authentication Guard (if ATHENA_API_KEY environment variable is configured)
-      const authKey = process.env.ATHENA_API_KEY;
+      // API Key Authentication Guard (if OPENCAT_API_KEY / ATHENA_API_KEY is configured)
+      const authKey = process.env.OPENCAT_API_KEY || process.env.ATHENA_API_KEY;
       if (authKey && authKey.trim() !== '') {
-        const clientKey = req.headers['x-athena-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+        const clientKey = req.headers['x-opencat-api-key'] || req.headers['x-athena-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
         if (clientKey !== authKey) {
           res.statusCode = 401;
-          res.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or missing ATHENA_API_KEY' }));
+          res.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or missing API Key' }));
           return;
         }
       }
@@ -98,58 +98,54 @@ export class AthenaRESTServer {
           return;
         }
 
-        // 2. GET /api/calls (Signal call cards across all 4 sub-agents: meme, lp, nft, alpha-robinhood / X)
+        // 2. GET /api/calls (Signal call cards ledger from StateStore)
         if (req.method === 'GET' && pathname === '/api/calls') {
-          const domainFilter = urlObj.searchParams.get('domain') || undefined;
-          const limitParam = Number(urlObj.searchParams.get('limit')) || 50;
-          const ledger = globalStateStore.getSignalLedger(domainFilter, limitParam);
-
+          const limit = Number(urlObj.searchParams.get('limit')) || 50;
+          const domain = urlObj.searchParams.get('domain') || undefined;
+          const calls = globalStateStore.getSignalLedger(domain, limit);
           res.statusCode = 200;
-          res.end(
-            JSON.stringify({
-              success: true,
-              totalCalls: ledger.length,
-              domainFilter: domainFilter || 'ALL',
-              calls: ledger,
-            })
-          );
+          res.end(JSON.stringify({ success: true, count: calls.length, calls }));
           return;
         }
 
-        // 3. GET /api/positions (Active monitored token, LP, and NFT positions)
+        // 3. GET /api/positions (Open positions tracking)
         if (req.method === 'GET' && pathname === '/api/positions') {
           const openTokens = globalStateStore.getAllPositions();
           const openLp = globalStateStore.getAllLpPositions();
-          const openNft = globalStateStore.getAllNftPositions();
-
+          const openNfts = globalStateStore.getAllNftPositions();
+          const totalCount = openTokens.length + openLp.length + openNfts.length;
           res.statusCode = 200;
           res.end(
             JSON.stringify({
               success: true,
               summary: {
-                tokenCount: openTokens.length,
+                totalPositions: totalCount,
+                tokensCount: openTokens.length,
                 lpCount: openLp.length,
-                nftCount: openNft.length,
+                nftCount: openNfts.length,
               },
               tokens: openTokens,
               lpPositions: openLp,
-              nftPositions: openNft,
+              nftPositions: openNfts,
+              totalCount,
             })
           );
           return;
         }
 
-        // 4. GET /api/executions (Trade Journal audit trail & analytics summary)
-        if (req.method === 'GET' && (pathname === '/api/executions' || pathname === '/api/journal' || pathname === '/api/analytics')) {
-          const summary = tradeJournalService.getSummaryStats();
-          const allEntries = tradeJournalService.listTrades();
-
+        // 4. GET /api/executions (Trade Journal summary & recent executions)
+        if (req.method === 'GET' && pathname === '/api/executions') {
+          const stats = tradeJournalService.getSummaryStats();
+          const entries = tradeJournalService.listTrades();
+          const recentTrades = entries.slice(0, 20);
           res.statusCode = 200;
           res.end(
             JSON.stringify({
               success: true,
-              analytics: summary,
-              entries: allEntries,
+              analytics: stats,
+              stats,
+              entries,
+              recentTrades,
             })
           );
           return;
@@ -159,42 +155,39 @@ export class AthenaRESTServer {
         if (req.method === 'GET' && pathname === '/api/alerts') {
           const alerts = globalStateStore.getAllAlerts();
           res.statusCode = 200;
-          res.end(
-            JSON.stringify({
-              success: true,
-              totalAlerts: alerts.length,
-              alerts,
-            })
-          );
+          res.end(JSON.stringify({ success: true, count: alerts.length, alerts }));
           return;
         }
 
-        // 6. POST /api/agents/toggle (Enable / Pause sub-agent dynamically from website)
+        // 6. POST /api/agents/toggle (Toggle sub-agent active state)
         if (req.method === 'POST' && pathname === '/api/agents/toggle') {
           const body = await parseJsonBody(req);
           const domain = String(body.domain || '').trim().toLowerCase();
-          const active = Boolean(body.active);
+          const active = typeof body.active === 'boolean' ? body.active : undefined;
 
           if (!domain) {
             res.statusCode = 400;
-            res.end(JSON.stringify({ success: false, error: 'Missing required field "domain"' }));
+            res.end(JSON.stringify({ success: false, error: 'Missing required parameter "domain"' }));
             return;
           }
 
-          hub.setAgentActive(domain, active);
+          const currentActive = hub.isAgentActive(domain);
+          const targetActive = active !== undefined ? active : !currentActive;
+          hub.setAgentActive(domain, targetActive);
+
           res.statusCode = 200;
           res.end(
             JSON.stringify({
               success: true,
               domain,
-              active: hub.isAgentActive(domain),
-              message: `Sub-agent "${domain}" status updated to ${active ? '🟢 ACTIVE' : '🔴 PAUSED'}`,
+              active: targetActive,
+              message: `Sub-Agent "${domain}" is now ${targetActive ? 'ACTIVE' : 'PAUSED'}.`,
             })
           );
           return;
         }
 
-        // 7. POST /api/command (Execute ToolRegistry commands from website UI)
+        // 7. POST /api/command (Execute ToolRegistry command via REST)
         if (req.method === 'POST' && pathname === '/api/command') {
           const body = await parseJsonBody(req);
           const toolName = String(body.command || body.toolName || '').trim();
@@ -224,10 +217,12 @@ export class AthenaRESTServer {
     });
 
     this.server.listen(this.port, () => {
-      console.log(`📡 ATHENA 2.0 REST API Server listening on port ${this.port}`);
+      console.log(`📡 🐾 OPENCAT AI REST API Server listening on port ${this.port}`);
     });
   }
 }
+
+export const AthenaRESTServer = OpenCatRESTServer;
 
 function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {

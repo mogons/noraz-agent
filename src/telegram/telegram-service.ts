@@ -74,14 +74,14 @@ export class TelegramService {
   }
 
   /**
-   * Auto-bootstrap all Athena Sub-Channels / Forum Topics in Telegram Group
+   * Auto-bootstrap all OpenCat Sub-Channels / Forum Topics in Telegram Group
    */
   public async bootstrapTelegramTopics(): Promise<Record<string, number | null>> {
     if (!this.isEnabled()) return {};
 
-    console.log('[TELEGRAM BOOTSTRAP] Auto-provisioning Athena Sub-Channels (Forum Topics) in Telegram Group...');
+    console.log('[TELEGRAM BOOTSTRAP] Auto-provisioning OpenCat Sub-Channels (Forum Topics) in Telegram Group...');
     const topicNames = [
-      'athena-control-room',
+      'opencat-control-room',
       'audit-on-demand',
       'call-meme-robinhood',
       'call-lp-robinhood',
@@ -151,7 +151,7 @@ export class TelegramService {
     const safeTitle = sanitizeTgField(title, 150);
     const safeSymbol = sanitizeTgField(symbol, 32);
     const safeThesis = sanitizeTgField(aiThesis, 500);
-    const message = `🚨 *ATHENA CALL: ${safeTitle} ($${safeSymbol})*
+    const message = `🚨 *🐾 OPENCAT CALL: ${safeTitle} ($${safeSymbol})*
 
 📋 *Contract Address (CA):*
 \`${ca}\`
@@ -161,9 +161,9 @@ ${safeThesis}
 
 ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
-🤖 _Sent via Athena Swarm Consensus_`;
+🤖 _Sent via OpenCat Swarm Consensus_`;
 
-    const threadId = topicName ? this.topics.get(topicName.toLowerCase()) : undefined;
+    const threadId = topicName ? (this.topics.get(topicName.toLowerCase()) || this.topics.get('opencat-control-room') || this.topics.get('athena-control-room')) : undefined;
     return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
@@ -174,16 +174,16 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
-    const text = `🏛️ *ATHENA CONTROL CENTER DASHBOARD (TELEGRAM)*
+    const text = `🐾 *OPENCAT CONTROL CENTER DASHBOARD (TELEGRAM)*
 
 ⚙️ *Mode:* ${autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL EXECUTION — screener/caller, execution via link'}
 🛡️ *Max Drawdown:* ${risk ? `${risk.maxDrawdownLimitPct}%` : 'n/a'}
 🛡️ *Max Position Size:* ${risk ? `$${risk.maxPositionSizeUsd}` : 'n/a'}
 
 🤖 *Active Sub-Agents Status:*
-• 🔷 Robinhood Meme (\`meme-robinhood\`): ${getStatus('meme-robinhood')}
-• 💧 Robinhood LP (\`lp-robinhood\`): ${getStatus('lp-robinhood')}
-• 🖼️ NFT Sniping (\`nft\`): ${getStatus('nft')}
+• 🌸 Robinhood Meme (\`meme-robinhood\`): ${getStatus('meme-robinhood')}
+• 🌊 Robinhood LP (\`lp-robinhood\`): ${getStatus('lp-robinhood')}
+• 🔮 NFT Sniping (\`nft\`): ${getStatus('nft')}
 
 Use buttons below to toggle agents, view wallet status, or execute withdrawals:`;
 
@@ -207,7 +207,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       ],
     };
 
-    const threadId = this.topics.get('athena-control-room');
+    const threadId = this.topics.get('opencat-control-room') || this.topics.get('athena-control-room');
     return this.sendMessage(text, 'Markdown', replyMarkup, threadId);
   }
 
@@ -247,7 +247,6 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
     if (update.callback_query) {
       const query = update.callback_query;
       const data = query.data;
-      const chatId = query.message?.chat?.id;
       const threadId = query.message?.message_thread_id;
 
       if (data.startsWith('toggle_')) {
@@ -266,7 +265,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         const hasEvm = walletService.hasWallet('evm');
         let evmAddr = hasEvm ? `\`${walletService.getEvmAddress()}\`` : 'Not Configured';
         await this.sendMessage(
-          `💼 *ATHENA WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
+          `💼 *OPENCAT WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
           `• *Robinhood Chain (ETH) Wallet:* ${evmAddr}\n\n` +
           `Use \`/withdraw <to> <amount>\` to transfer funds.`,
           'Markdown', undefined, threadId
@@ -299,14 +298,14 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         }
         const isDryRun = isDryRunMode();
         try {
-          const { txHash, explorerUrl } = await walletService.sendEvm(4663, recipient, amount);
+          const { explorerUrl } = await walletService.sendEvm(4663, recipient, amount);
           await this.sendMessage(`💸 *WITHDRAWAL ${isDryRun ? '(DRY_RUN SIMULATION)' : 'SUCCESSFUL'}!*\n• Amount: \`${amount} ETH (Robinhood)\`\n• Recipient: \`${recipient}\`\n🔗 [View Tx](${explorerUrl})`, 'Markdown', undefined, threadId);
         } catch (err: any) {
           await this.sendMessage(`❌ Withdrawal failed: ${err.message}`, 'Markdown', undefined, threadId);
         }
       } else if (!text.startsWith('/') && aiService) {
         try {
-          const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+          const { OPENCAT_SYSTEM_PROMPT_BASE } = await import('../services/opencat-system-prompt.js');
           const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
           const { runAgent } = await import('../orchestrator/agent-runner.js');
           const { SessionMemoryService } = await import('../services/session-memory.js');
@@ -320,7 +319,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
             ? `Active Sub-Agents right now: ${activeDomains.join(', ')}`
             : 'Active Sub-Agents right now: NONE (all paused)';
           const memoryContext = new SessionMemoryService().buildMemoryContextLine();
-          const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
+          const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
 
           const agentResult = await runAgent(
             { aiService, toolRegistry, systemPrompt },

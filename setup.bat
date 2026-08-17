@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title Olympian Setup - Athena (Robinhood Chain)
+title OpenCat Setup - Opencat AI (Robinhood Chain)
 
 rem ---------------------------------------------------------------------------
-rem  OLYMPIAN SETUP - Athena (Robinhood Chain) one-shot installer (Windows)
+rem  OPENCAT SETUP - Opencat AI (Robinhood Chain) one-shot installer (Windows)
 rem  Steps: 1) Node check (warn-only)  2) git clone/pull  3) npm install
 rem         4) npm run build  5) npm link  6) wizard if .env missing
 rem  Critical failures: pause + exit /b 1
@@ -17,6 +17,7 @@ if defined ESC (
   set "RED=%ESC%[0;31m"
   set "CYAN=%ESC%[0;36m"
   set "YELLOW=%ESC%[1;33m"
+  set "LIME=%ESC%[38;2;204;255;0m"
   set "BOLD=%ESC%[1m"
   set "NC=%ESC%[0m"
 ) else (
@@ -24,21 +25,19 @@ if defined ESC (
   set "RED="
   set "CYAN="
   set "YELLOW="
+  set "LIME="
   set "BOLD="
   set "NC="
 )
 
 echo.
-echo %BOLD%                   /\%NC%
-echo %BOLD%                  /  \%NC%
-echo %BOLD%                 / /\ \%NC%
-echo %BOLD%                / /  \ \%NC%
-echo %BOLD%               / /____\ \%NC%
-echo %BOLD%              /__________\%NC%
-echo %BOLD%             ^|  ^|  ^|^|  ^|  ^|%NC%
-echo %BOLD%             ^|  ^|  ^|^|  ^|  ^|%NC%
-echo %CYAN%%BOLD%      PARTHENON OF ATHENA - OLYMPIAN SETUP%NC%
-echo %CYAN%  Robinhood Chain (EVM 4663) - Multi-Agent Crypto Intelligence%NC%
+echo %LIME%%BOLD%       /\_____/\%NC%
+echo %LIME%%BOLD%      /  ■   ■  \      🐾 OPENCAT AI - SYSTEM SETUP 🐾%NC%
+echo %LIME%%BOLD%     ( ==  ^  == )     Robinhood Chain (EVM 4663)%NC%
+echo %LIME%%BOLD%      )    ~    (      Multi-Agent Crypto Intelligence%NC%
+echo %LIME%%BOLD%     (   _____   )%NC%
+echo %LIME%%BOLD%    ( (  )   (  ) )%NC%
+echo %LIME%%BOLD%   (__(__)___(__)__)%NC%
 echo.
 
 rem --- [1/6] Runtime check (warn + continue) ---
@@ -50,7 +49,7 @@ if errorlevel 1 (
   node --version | findstr /R /C:"v2[2-9]" /C:"v[3-9][0-9]" >nul
   if errorlevel 1 (
     for /f "delims=" %%v in ('node --version') do set "NODE_VER=%%v"
-    echo %YELLOW%Warning: found Node !NODE_VER! - Athena requires ^>= 22.12. Install from https://nodejs.org and re-run setup.%NC%
+    echo %YELLOW%Warning: found Node !NODE_VER! - OpenCat requires ^>= 22.12. Install from https://nodejs.org and re-run setup.%NC%
   ) else (
     echo %GREEN%Node %BOLD%found ^>= v22%NC%
   )
@@ -66,8 +65,8 @@ echo %GREEN%OK: node + npm available%NC%
 rem --- [2/6] Source code ---
 echo %CYAN%%BOLD%--- [2/6] Source code ---%NC%
 if not exist package.json (
-  set "REPO_URL=https://github.com/dizcorvus/athena-ai-robinhood-chain.git"
-  if defined ATHENA_REPO_URL set "REPO_URL=%ATHENA_REPO_URL%"
+  set "REPO_URL=https://github.com/dizcorvus/opencat-ai-robinhood-chain.git"
+  if defined OPENCAT_REPO_URL set "REPO_URL=%OPENCAT_REPO_URL%"
   echo %YELLOW%No repo found. Cloning %BOLD%!REPO_URL!%NC% ...
   git clone "!REPO_URL!" .
   if errorlevel 1 (
@@ -116,26 +115,26 @@ rem --- [5/6] CLI link ---
 echo %CYAN%%BOLD%--- [5/6] CLI link ---%NC%
 call npm link
 if errorlevel 1 (
-  echo %YELLOW%Warning: npm link failed (skip; use npx or node bin\athena.js).%NC%
+  echo %YELLOW%Warning: npm link failed (skip; use npx or node bin\opencat.js).%NC%
 ) else (
-  echo %GREEN%athena CLI linked%NC%
+  echo %GREEN%opencat CLI linked%NC%
 )
 
 rem --- [6/6] Configuration ---
 echo %CYAN%%BOLD%--- [6/6] Configuration ---%NC%
 if not exist .env (
-  echo %YELLOW%No .env found - launching Athena onboarding wizard ...%NC%
+  echo %YELLOW%No .env found - launching OpenCat onboarding wizard ...%NC%
   call npm run wizard
-  if errorlevel 1 echo %YELLOW%Warning: wizard did not complete - you can rerun it with "athena wizard".%NC%
+  if errorlevel 1 echo %YELLOW%Warning: wizard did not complete - you can rerun it with "opencat wizard".%NC%
 ) else (
-  echo %YELLOW%.env already exists - skipping wizard (rerun: athena wizard)%NC%
+  echo %YELLOW%.env already exists - skipping wizard (rerun: opencat wizard)%NC%
 )
 
 rem --- Final summary ---
 echo.
-echo %GREEN%%BOLD%OK: ATHENA IS INSTALLED%NC%
-echo %BOLD%Parthenon:%NC%  athena terminal     ^<-- command center TUI
-echo %BOLD%Athena:%NC%     athena run          ^<-- dev  /  npx pm2 start dist\index.js --name athena-agent
-echo %BOLD%Health:%NC%     athena doctor ^| athena test ^| athena update
+echo %GREEN%%BOLD%OK: OPENCAT IS INSTALLED%NC%
+echo %BOLD%Command Center:%NC% opencat terminal     ^<-- command center TUI
+echo %BOLD%OpenCat Engine:%NC% opencat run          ^<-- dev  /  npx pm2 start dist\index.js --name opencat-agent
+echo %BOLD%Health check:%NC%   opencat doctor ^| opencat test ^| opencat update
 echo.
 pause

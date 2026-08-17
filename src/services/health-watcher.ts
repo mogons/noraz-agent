@@ -69,7 +69,7 @@ export class HealthWatcherService {
       if (now - agent.lastPingAt > maxTimeoutMs) {
         agent.status = 'UNRESPONSIVE';
         allHealthy = false;
-        console.warn(`🚨 ATHENA HEALTH WATCHER: Agent [${agent.domain}] is UNRESPONSIVE! Last ping: ${Math.round((now - agent.lastPingAt) / 1000)}s ago.`);
+        console.warn(`🚨 🐾 OPENCAT HEALTH WATCHER: Agent [${agent.domain}] is UNRESPONSIVE! Last ping: ${Math.round((now - agent.lastPingAt) / 1000)}s ago.`);
       }
       report.push({ ...agent });
     });

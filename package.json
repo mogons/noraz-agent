@@ -1,13 +1,15 @@
 {
-  "name": "athena-robinhood-chain",
+  "name": "opencat-robinhood-chain",
   "version": "1.0.0",
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem for Robinhood Chain (EVM)",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
+    "opencat": "./bin/opencat.js",
     "athena": "./bin/athena.js"
   },
   "scripts": {
+    "opencat": "node ./bin/opencat.js",
     "athena": "node ./bin/athena.js",
     "onboard": "node scripts/wizard.js",
     "wizard": "node scripts/wizard.js",
@@ -17,24 +19,40 @@
     "tui": "tsx src/cli/tui.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "deploy": "npm install && npm run build && (npx pm2 delete athena-agent || true) && npx pm2 start dist/index.js --name athena-agent --update-env",
+    "deploy": "npm install && npm run build && (npx pm2 delete opencat-agent || true) && npx pm2 start dist/index.js --name opencat-agent --update-env",
     "update": "node scripts/update-core.mjs",
     "uninstall": "node scripts/uninstall.mjs",
     "clean": "node scripts/uninstall.mjs",
     "test": "vitest run"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dizcorvus/opencat-ai-robinhood-chain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dizcorvus/opencat-ai-robinhood-chain/issues"
+  },
+  "homepage": "https://github.com/dizcorvus/opencat-ai-robinhood-chain#readme",
   "keywords": [
+    "opencat",
+    "opencats-nft",
     "robinhood-chain",
+    "robinhood-l2",
     "evm",
     "crypto",
     "ai-agent",
+    "multi-agent",
+    "swarm-consensus",
     "discord-bot",
     "trading-bot",
-    "robinhood-l2",
-    "nft"
+    "uniswap-v3",
+    "gmgn",
+    "krystal-cloud",
+    "goplus",
+    "nft-sniper"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "dizcorvus",
+  "license": "MIT",
   "engines": {
     "node": ">=22.12"
   },

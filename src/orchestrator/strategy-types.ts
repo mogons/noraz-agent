@@ -42,3 +42,7 @@ export interface AthenaIndicator {
   version: string;
   calculate(candles: Candle[]): number[];
 }
+
+export type OpenCatStrategy = AthenaStrategy;
+export type OpenCatIndicator = AthenaIndicator;
+

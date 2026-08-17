@@ -1,72 +1,49 @@
 import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { AIService } from '../../services/ai-service.js';
 import { AthenaHub } from '../../orchestrator/hub.js';
+import { AIService } from '../../services/ai-service.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
-import { isDryRun as isDryRunMode } from '../../config/config.js';
-
-const DISCORD_MAX_LENGTH = 1900;
 
 /**
- * Splits a long text into chunks of ≤ maxLength characters.
- * Prefers splitting at newline boundaries to avoid breaking mid-sentence.
- * Falls back to splitting at space boundaries, then hard-cuts as last resort.
+ * Split a large text response into chunks safe for a single Discord message (<= 1950 chars).
+ * Splits on double newline > newline > space, never mid-word unless forced.
  */
-function splitDiscordMessage(text: string, maxLength: number = DISCORD_MAX_LENGTH): string[] {
-  if (text.length <= maxLength) return [text];
-
+export function splitDiscordMessage(text: string, maxLen = 1950): string[] {
+  if (!text || text.length <= maxLen) return [text || ''];
   const chunks: string[] = [];
   let remaining = text;
 
-  while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      chunks.push(remaining);
-      break;
+  while (remaining.length > maxLen) {
+    let splitIdx = remaining.lastIndexOf('\n\n', maxLen);
+    if (splitIdx === -1 || splitIdx < maxLen * 0.4) {
+      splitIdx = remaining.lastIndexOf('\n', maxLen);
     }
-
-    let splitIndex = -1;
-
-    // 1. Try to split at the last newline within the limit
-    const lastNewline = remaining.lastIndexOf('\n', maxLength);
-    if (lastNewline > maxLength * 0.3) {
-      splitIndex = lastNewline + 1; // include the newline in current chunk
+    if (splitIdx === -1 || splitIdx < maxLen * 0.4) {
+      splitIdx = remaining.lastIndexOf(' ', maxLen);
     }
-
-    // 2. Fallback: split at the last space within the limit
-    if (splitIndex === -1) {
-      const lastSpace = remaining.lastIndexOf(' ', maxLength);
-      if (lastSpace > maxLength * 0.3) {
-        splitIndex = lastSpace + 1;
-      }
+    if (splitIdx === -1) {
+      splitIdx = maxLen;
     }
-
-    // 3. Last resort: hard cut at maxLength
-    if (splitIndex === -1) {
-      splitIndex = maxLength;
-    }
-
-    chunks.push(remaining.substring(0, splitIndex).trimEnd());
-    remaining = remaining.substring(splitIndex).trimStart();
+    chunks.push(remaining.slice(0, splitIdx).trim());
+    remaining = remaining.slice(splitIdx).trim();
   }
-
-  return chunks.filter(c => c.length > 0);
+  if (remaining.length > 0) chunks.push(remaining);
+  return chunks;
 }
 
 export async function handleControlRoomMessage(
   message: Message,
-  aiService: AIService,
-  hub: AthenaHub
+  hub: AthenaHub,
+  aiService: AIService
 ): Promise<void> {
-  if (message.author.bot) return;
-
   const userQuery = message.content.trim();
   if (!userQuery) return;
 
-  // Show typing indicator if supported by channel
+  // Let user know bot is thinking
   if ('sendTyping' in message.channel && typeof message.channel.sendTyping === 'function') {
     await message.channel.sendTyping();
   }
 
-  // Attach ToolRegistry to Hub & AI Service for full execution authority
+  // Load ToolRegistry & attach live instances
   const { ToolRegistry } = await import('../../orchestrator/tool-registry.js');
   const toolRegistry = new ToolRegistry();
   toolRegistry.attachOrchestrator(hub);
@@ -81,7 +58,7 @@ export async function handleControlRoomMessage(
       const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft', 'all'];
       const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
       const result = await toolRegistry.executeToolCall('pause_sub_agent', { agentId: foundDomain });
-      await message.reply(`🔴 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
+      await message.reply(`🔴 **OPENCAT CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
       return;
     }
   }
@@ -92,7 +69,7 @@ export async function handleControlRoomMessage(
       const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft', 'all'];
       const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'all';
       const result = await toolRegistry.executeToolCall('resume_sub_agent', { agentId: foundDomain });
-      await message.reply(`🟢 **ATHENA CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
+      await message.reply(`🟢 **OPENCAT CONTROL CENTER**: ${result.message}\n\nSub-agent status updated in Hub Orchestrator state.`);
       return;
     }
   }
@@ -101,7 +78,7 @@ export async function handleControlRoomMessage(
   if (lowerQuery.includes('jalankan screening') || lowerQuery.includes('run screening') || lowerQuery.includes('trigger screening')) {
     const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft'];
     const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'meme-robinhood';
-    await message.reply(`⚡ **ATHENA ON-DEMAND SCREENING TRIGGERED** for \`${foundDomain.toUpperCase()}\`...\nScreening pass in progress.`);
+    await message.reply(`⚡ **OPENCAT ON-DEMAND SCREENING TRIGGERED** for \`${foundDomain.toUpperCase()}\`...\nScreening pass in progress.`);
     const result = await toolRegistry.executeToolCall('trigger_screening_pass', { agentId: foundDomain });
     await message.reply(`✅ **SCREENING COMPLETE** for \`${foundDomain.toUpperCase()}\`: Found **${result.data?.length || 0}** signals passing 3-Layer Swarm Filter.`);
     return;
@@ -113,7 +90,7 @@ export async function handleControlRoomMessage(
     if (numbers && numbers.length > 0) {
       const val = parseFloat(numbers[0]);
       const result = await toolRegistry.executeToolCall('set_risk_limit', { maxDrawdownPct: val });
-      await message.reply(`🛡️ **ATHENA RISK MANAGER UPDATED**: ${result.message}`);
+      await message.reply(`🛡️ **OPENCAT RISK MANAGER UPDATED**: ${result.message}`);
       return;
     }
   }
@@ -122,7 +99,7 @@ export async function handleControlRoomMessage(
   if (lowerQuery.includes('status agent') || lowerQuery.includes('status sub agent') || lowerQuery.includes('agent status')) {
     const result = await toolRegistry.executeToolCall('get_agent_statuses', {});
     const statuses = result.data || {};
-    let statusText = `🏛️ **ATHENA SUB-AGENT REAL-TIME STATUS MATRIX**\n\n`;
+    let statusText = `🐾 **OPENCAT SUB-AGENT REAL-TIME STATUS MATRIX**\n\n`;
     for (const [name, state] of Object.entries(statuses) as [string, any][]) {
       statusText += `• **${name.toUpperCase()}**: ${state.active ? '🟢 ACTIVE (24/7 Running)' : '🔴 PAUSED'}\n`;
     }
@@ -140,7 +117,7 @@ export async function handleControlRoomMessage(
         action: 'screening',
         agentId: foundDomain,
       });
-      await message.reply(`⏰ **ATHENA CRON SCHEDULER**: ${result.message}\nAutomated task scheduled and saved to database.`);
+      await message.reply(`⏰ **OPENCAT CRON SCHEDULER**: ${result.message}\nAutomated task scheduled and saved to database.`);
       return;
     }
   }
@@ -152,11 +129,11 @@ export async function handleControlRoomMessage(
     const records = memory.getRecentAudits(5);
 
     if (records.length === 0) {
-      await message.reply(`🧠 **ATHENA SESSION MEMORY**: No token audit history is stored in persistent memory yet.`);
+      await message.reply(`🧠 **OPENCAT SESSION MEMORY**: No token audit history is stored in persistent memory yet.`);
       return;
     }
 
-    let memoryText = `🧠 **ATHENA PERSISTENT AUDIT RECALL (ZERO LLM TOKEN COST)**\n\n`;
+    let memoryText = `🧠 **OPENCAT PERSISTENT AUDIT RECALL (ZERO LLM TOKEN COST)**\n\n`;
     for (const r of records) {
       memoryText += `• **${r.symbol}** (\`${r.contractAddress.substring(0, 8)}...\` | ${r.chain.toUpperCase()}): ${r.verdict} (Score: ${r.score})\n  *Date:* ${r.timestampIso.slice(0, 16)}\n`;
     }
@@ -180,7 +157,7 @@ export async function handleControlRoomMessage(
           modelName: modelName || '',
           baseUrl: baseUrl || '',
         });
-        await message.reply(`${result.message}\n\n💡 **AI config is now active.** If you set a provider/model, make sure \`AI_BASE_URL\` is also correct (verify via "Athena, what AI are you using?").`);
+        await message.reply(`${result.message}\n\n💡 **AI config is now active.** If you set a provider/model, make sure \`AI_BASE_URL\` is also correct (verify via "OpenCat, what AI are you using?").`);
       } else {
         const result = await toolRegistry.executeToolCall('set_api_key', { keyName, keyValue });
         await message.reply(`${result.message}\nSub-agent API key status re-evaluated.`);
@@ -198,7 +175,7 @@ export async function handleControlRoomMessage(
       `• **Target Price:** \`$${parsedAlert.targetPriceUsd.toLocaleString()} USD\`\n` +
       `• **Condition:** Price goes \`${parsedAlert.direction}\` target\n` +
       `• **Alert ID:** \`${parsedAlert.id}\`\n\n` +
-      `Athena will notify <@${message.author.id}> in this channel as soon as ${parsedAlert.symbol} reaches target!`
+      `OpenCat will notify <@${message.author.id}> in this channel as soon as ${parsedAlert.symbol} reaches target! 🐾`
     );
     return;
   }
@@ -208,7 +185,7 @@ export async function handleControlRoomMessage(
   if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
     await message.reply({
       content:
-        `ℹ️ **Athena AI is specialized natively for Robinhood Chain (EVM L2 #4663).**\n` +
+        `ℹ️ **OpenCat AI is specialized natively for Robinhood Chain (EVM L2 #4663).**\n` +
         `Cross-chain bridging is disabled. For on-chain trading and transfers, use:\n` +
         `• \`/swap\` — Swap tokens on Robinhood Chain via Uniswap V3 Router\n` +
         `• \`/send\` — Transfer native ETH or ERC20 tokens to another wallet address`,
@@ -216,7 +193,7 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1c. Detect if user is asking to Swap tokens (e.g., "swap 0.5 ETH ke USDC di Robinhood", "tuker 100 USDC jadi ETH")
+  // 1c. Detect if user is asking to Swap tokens
   const isSwapIntent = ['swap', 'tuker', 'tukar', 'exchange', 'konversi'].some(kw => lowerQuery.includes(kw));
   if (isSwapIntent) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
@@ -246,7 +223,7 @@ export async function handleControlRoomMessage(
 
     await message.reply({
       content:
-        `🔄 **ATHENA RELAY.LINK SWAP DIRECT EXECUTION**\n\n` +
+        `🔄 **OPENCAT RELAY.LINK SWAP DIRECT EXECUTION**\n\n` +
         `• **Swapping:** \`${result.amountIn} ${result.fromToken}\` ➡️ \`~${result.expectedAmountOut} ${result.toToken}\`\n` +
         `• **Chain:** **${result.chainName}**\n` +
         `• **Fee:** \`~$${result.feeUsd.toFixed(2)} USD\`\n` +
@@ -258,7 +235,7 @@ export async function handleControlRoomMessage(
     return;
   }
 
-  // 1d. Detect if user is asking to Send/Transfer tokens (e.g., "send 0.5 ETH ke 0xabc...", "kirim 1 ETH ke wallet")
+  // 1d. Detect if user is asking to Send/Transfer tokens
   const isSendIntent = ['send', 'kirim', 'kirimkan', 'transfer'].some(kw => lowerQuery.includes(kw));
   const evmAddrMatch = userQuery.match(/\b0x[a-fA-F0-9]{40}\b/);
   if (isSendIntent && evmAddrMatch) {
@@ -266,7 +243,6 @@ export async function handleControlRoomMessage(
     const relayAdapter = new RelayAdapter();
 
     const recipientAddress = evmAddrMatch[0];
-
     const chain = 'robinhood';
 
     const knownTokens = ['ETH', 'USDC', 'USDT', 'DAI', 'WETH'];
@@ -289,7 +265,7 @@ export async function handleControlRoomMessage(
 
     await message.reply({
       content:
-        `📤 **ATHENA RELAY.LINK SEND DIRECT EXECUTION**\n\n` +
+        `📤 **OPENCAT RELAY.LINK SEND DIRECT EXECUTION**\n\n` +
         `• **Sending:** \`${result.amountIn} ${result.tokenSymbol}\` to \`${shortAddr}\`\n` +
         `• **Chain:** **${result.chainName}**\n` +
         `• **Recipient Receives:** \`~${result.expectedAmountOut} ${result.tokenSymbol}\`\n` +
@@ -318,15 +294,15 @@ export async function handleControlRoomMessage(
     const memory = new SessionMemoryService();
     memory.recordAudit(matchedCa, 'EVM_TOKEN', 'robinhood', audit.success ? 80 : 0, audit.success ? 'REAL-TIME AUDIT' : 'UNAVAILABLE', `Audited ${matchedCa}`);
 
-    await message.reply(`🔎 **ATHENA ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n\n${audit.content}`);
+    await message.reply(`🔎 **OPENCAT ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${matchedCa}\` (${chainName})\n\n${audit.content}`);
     return;
   }
 
   const simEth = process.env.SIMULATION_BALANCE_ETH || '1.0';
   const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
 
-  // Shared Athena system prompt (persona + architecture) + live operating params
-  const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../../services/athena-system-prompt.js');
+  // Shared OpenCat system prompt (persona + architecture) + live operating params
+  const { OPENCAT_SYSTEM_PROMPT_BASE } = await import('../../services/opencat-system-prompt.js');
   const { getAgentDomain } = await import('../../orchestrator/agent-registry.js');
   const { SessionMemoryService } = await import('../../services/session-memory.js');
   const memoryContext = new SessionMemoryService().buildMemoryContextLine();
@@ -335,7 +311,7 @@ export async function handleControlRoomMessage(
     ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
     : '- Active Sub-Agents: NONE (all screening agents paused)';
   const risk = hub.getRiskManager().getRiskState();
-  const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
+  const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - Execution Mode: ${autoExecuteEnabled ? 'AUTO_EXECUTE (bot may execute)' : 'MANUAL EXECUTION — bot is SCREENER/CALLER ONLY, all execution is done by the user via the link provided on the call card'}
 ${activeAgentsLine}
@@ -345,7 +321,7 @@ ${activeAgentsLine}
 - Current Portfolio Drawdown: ${risk.currentDrawdownPct ?? 0}%${memoryContext}`;
 
   try {
-    // Athena is a real agent: LLM picks tools via function-calling (AgentRunner loop)
+    // OpenCat is a real agent: LLM picks tools via function-calling (AgentRunner loop)
     const { runAgent } = await import('../../orchestrator/agent-runner.js');
     const agentResult = await runAgent(
       { aiService, toolRegistry, systemPrompt },
@@ -368,7 +344,7 @@ ${activeAgentsLine}
       }
     }
   } catch (error: any) {
-    console.error('[ATHENA AI ERROR]', error.message);
+    console.error('[OPENCAT AI ERROR]', error.message);
 
     const lower = userQuery.toLowerCase();
     const providerConfig = aiService.getConfig();
@@ -379,32 +355,19 @@ ${activeAgentsLine}
     // 1. Dynamic intent: User asking about LLM / AI model
     if (lower.includes('llm') || lower.includes('model') || lower.includes('ai apa') || lower.includes('pakai ai')) {
       await message.reply(
-        `🏛️ **ATHENA LLM ENGINE STATUS REPORT**\n\n` +
+        `🐾 **OPENCAT LLM ENGINE STATUS REPORT**\n\n` +
         `• **Configured Provider:** \`${providerConfig.provider.toUpperCase()}\` (${providerConfig.baseUrl})\n` +
         `• **Target Model:** \`${providerConfig.modelName}\`\n` +
         `• **Active API Key Hint:** \`${keyHint}\`\n` +
         `• **Error Detail:** ⚠️ \`${error.message || 'Unknown Error'}\`\n\n` +
-        `💡 **Fix:** Run \`athena wizard\` on the VPS to refresh your API keys.\n\n` +
-        `🛡️ **Local Autonomous System:** 95% of Athena's local engine (3 Sub-Agents, GoPlus/GMGN audits, Swarm Consensus, \`/swap\`, \`/bridge\`, \`/alert\`) keeps operating 100% smoothly!`
+        `💡 **Fix:** Run \`opencat wizard\` on the VPS to refresh your API keys.\n\n` +
+        `🛡️ **Local Autonomous System:** 95% of OpenCat's local engine (3 Sub-Agents, GoPlus/GMGN audits, Swarm Consensus, \`/swap\`, \`/alert\`) keeps operating 100% smoothly!`
       );
       return;
     }
 
     // 2. Dynamic intent: General Chat / Analysis Query
-    const isIndonesian = /[a-z]/i.test(userQuery) && (
-      lower.includes('bisa') ||
-      lower.includes('hai') ||
-      lower.includes('halo') ||
-      lower.includes('apa') ||
-      lower.includes('yang') ||
-      lower.includes('indonesia') ||
-      lower.includes('kamu') ||
-      lower.includes('saya') ||
-      lower.includes('analisa') ||
-      lower.includes('analisis')
-    );
-
-    const fallbackText = `🏛️ **Athena Multi-Agent Intelligence Hub**\n\n` +
+    const fallbackText = `🐾 **Opencat Multi-Agent Intelligence Hub**\n\n` +
       `I received your query: *"${userQuery}"*.\n\n` +
       `📊 **Operating Status:**\n` +
       `• **Mode:** \`DRY_RUN (Safe Simulation Active)\`\n` +
@@ -412,11 +375,9 @@ ${activeAgentsLine}
       `• **AI Status Error:** \`${error.message || 'Key Quota Exceeded'}\`\n\n` +
       `💡 **Core Capabilities:**\n` +
       `1. Paste a Contract Address for **Real-Time Security Audit**.\n` +
-       `2. Ask for price alerts (*"notify me if ETH hits 4000"*).\n` +
-      `3. Direct on-chain execution: \`/swap\`, \`/bridge\`, or \`/send\`.\n\n` +
-      `*(Note: Cloud AI Error. Run \`athena wizard\` on the VPS to update API keys!)*`;
-
-    void isIndonesian; // input tolerance kept — outputs are always English
+      `2. Ask for price alerts (*"notify me if ETH hits 4000"*).\n` +
+      `3. Direct on-chain execution: \`/swap\` or \`/send\`.\n\n` +
+      `*(Note: Cloud AI Error. Run \`opencat wizard\` on the VPS to update API keys!)*`;
 
     await message.reply(fallbackText);
   }

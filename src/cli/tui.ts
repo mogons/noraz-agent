@@ -5,7 +5,6 @@ import { AthenaHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
 import { globalWalletService } from '../services/wallet-service.js';
-
 import { StateStore } from '../services/state-store.js';
 
 const stateStore = new StateStore();
@@ -15,33 +14,34 @@ const aiService = new AIService();
 const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
 
-// ANSI Color Helpers
+// ANSI Color Tokens from OpenCats 24x24 NFT Master Palette
 const C = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  magenta: '\x1b[35m',
-  blue: '\x1b[34m',
+  dim: '\x1b[2m',
+  lime: '\x1b[38;2;204;255;0m',      // #CCFF00 Robinhood Green (Legendary Hero)
+  pink: '\x1b[38;2;255;183;178m',    // #FFB7B2 Pastel Pink
+  lavender: '\x1b[38;2;214;199;255m',// #D6C7FF Lavender Purple
+  cyan: '\x1b[38;2;128;222;234m',    // #80DEEA Retro Cyan
+  yellow: '\x1b[38;2;255;245;157m',  // #FFF59D Pastel Yellow
+  gold: '\x1b[38;2;255;215;0m',      // #FFD700 Golden Fortune
+  red: '\x1b[38;2;229;57;53m',       // #E53935 Maneki-Neko Red
+  green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
+  magenta: '\x1b[38;2;123;31;162m', // #7B1FA2 Royal Violet
 };
 
 function detectPm2(): boolean {
   return Boolean(process.env.pm_id || process.env.PM2_DAEMON_HOME || process.argv.includes('--pm2'));
 }
 
-const ATHENA_PARTHENON_ASCII = `
-${C.yellow}${C.bright}                   /\
-                  /  \
-                 / /\ \
-                / /  \ \
-               / /____\ \
-              /__________\
-             |  |  ||  |  |
-             |  |  ||  |  |${C.reset}
-${C.cyan}${C.bright}      🏛️  PARTHENON OF ATHENA  🏛️${C.reset}
-${C.magenta}${C.bright}  Goddess of Wisdom, Warfare & Precision Trading${C.reset}
+const OPENCAT_ASCII = `
+${C.lime}${C.bright}       /\\_____/\\
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCAT AI · COMMAND CENTER 🐾${C.reset}
+${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Trading Swarm${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
+${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
+${C.lime}    ( (  )   (  ) )
+   (__(__)___(__)__)${C.reset}
 `;
 
 export async function launchTUI(): Promise<void> {
@@ -54,14 +54,14 @@ export async function launchTUI(): Promise<void> {
 
   while (true) {
     console.clear();
-    console.log(ATHENA_PARTHENON_ASCII);
-    console.log(`${C.cyan}${C.bright}========================================================================${C.reset}`);
-    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via call-card link) | ${C.yellow}🦉 AI Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    console.log(OPENCAT_ASCII);
+    console.log(`${C.lime}${C.bright}========================================================================${C.reset}`);
+    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via card link) | ${C.lime}🐱 OpenCat Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
     const activeDomains = hub.getActiveDomains();
     const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
     const agentStatus = `🟢 ${activeDomains.length}/${AGENT_DOMAINS.length} agents active`;
-    console.log(`${C.yellow}🤖 Agents:${C.reset} ${agentStatus} | ${C.yellow}⏰ Olympian:${C.reset} ${detectPm2() ? 'PM2 daemon (Mount Olympus)' : 'local process'}`);
-    console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
+    console.log(`${C.cyan}🤖 Agents:${C.reset} ${agentStatus} | ${C.gold}🌲 Cat Den Daemon:${C.reset} ${detectPm2() ? 'PM2 daemon (Cat Den)' : 'local process'}`);
+    console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
     console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Robinhood Chain)`);
@@ -70,13 +70,13 @@ export async function launchTUI(): Promise<void> {
     console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Realized PnL Analytics (View Summary)`);
     console.log(` ${C.green}[7]${C.reset} 🛑 Emergency Circuit Breaker (Halt All Active Agents)`);
     console.log(` ${C.green}[8]${C.reset} ▶️ Run Screening Pass (Test One Sub-Agent Locally)`);
-    console.log(` ${C.red}[0]${C.reset} ❌ Exit Parthenon Control Center`);
-    console.log(`${C.cyan}------------------------------------------------------------------------${C.reset}`);
+    console.log(` ${C.red}[0]${C.reset} ❌ Exit OpenCat Command Center`);
+    console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
 
-    const choice = await prompt(`${C.bright}⚔️ Select Command Option (0-8): ${C.reset}`);
+    const choice = await prompt(`${C.bright}🐾 Select Command Option (0-8): ${C.reset}`);
 
     if (choice === '0') {
-      console.log(`\n${C.yellow}May Athena's wisdom guide your trades. Exiting Parthenon... 👋${C.reset}\n`);
+      console.log(`\n${C.lime}May OpenCat's sharp alpha guide your trades. Purring out... 👋${C.reset}\n`);
       rl.close();
       break;
     }
@@ -84,7 +84,7 @@ export async function launchTUI(): Promise<void> {
     switch (choice.trim()) {
       case '1':
         console.clear();
-        console.log(`${C.cyan}=== 🔑 ATHENA TREASURY & BURNER WALLETS ===${C.reset}`);
+        console.log(`${C.cyan}=== 🔑 OPENCAT TREASURY & BURNER WALLETS ===${C.reset}`);
         const hasEvm = walletService.hasWallet('evm');
         console.log(`• Robinhood (EVM) Wallet: ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
         if (hasEvm) {
@@ -99,7 +99,7 @@ export async function launchTUI(): Promise<void> {
         console.log('[1] Import / Replace EVM Private Key');
         console.log('[2] Remove / Clear EVM Private Key');
         console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
-        console.log('[0] Back to Parthenon Menu\n');
+        console.log('[0] Back to OpenCat Menu\n');
         const walletSub = await prompt('Select Treasury Action (0-3): ');
         if (walletSub === '1') {
           const pk = await prompt(`Enter EVM Private Key: `);
@@ -124,7 +124,7 @@ export async function launchTUI(): Promise<void> {
             }
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
 
       case '2':
@@ -176,13 +176,13 @@ export async function launchTUI(): Promise<void> {
             securityAuditPassed: securityPassed,
             socialHypeScore,
           });
-          console.log(`\n${C.green}Athena Swarm Verdict:${C.reset}`);
+          console.log(`\n${C.lime}OpenCat Swarm Verdict:${C.reset}`);
           console.log(`• Real Liquidity: $${liquidityUsd.toFixed(2)} | Real 1h Vol: $${volume1hUsd.toFixed(2)}`);
           console.log(`• Security: ${securityPassed ? C.green + 'PASS' : C.red + 'FAIL/UNAVAILABLE'}${C.reset} | Social Hype: ${socialHypeScore}/100`);
           console.log(`• Confidence Score: ${C.bright}${res.confidenceScore}%${C.reset} (${res.passed ? C.green + 'APPROVED (>=80%)' : C.red + 'REJECTED'}${C.reset})`);
           console.log(`• Audit Reasoning: ${res.reason}`);
         }
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
 
       case '3':
@@ -201,14 +201,14 @@ export async function launchTUI(): Promise<void> {
         });
         console.log('[A] ⚡ Activate ALL Agents');
         console.log('[P] ⏸️ Pause ALL Agents');
-        console.log('[0] Back to Parthenon Menu\n');
+        console.log('[0] Back to OpenCat Menu\n');
         const agentChoice = await prompt(`Select Option (1-${subAgentsList.length}, A, P, 0): `);
         if (agentChoice.toUpperCase() === 'A') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, true));
-          console.log(`${C.green}⚡ All ${subAgentsList.length} Sub-Agents activated in TUI Parthenon!${C.reset}`);
+          console.log(`${C.green}⚡ All ${subAgentsList.length} Sub-Agents activated in OpenCat TUI!${C.reset}`);
         } else if (agentChoice.toUpperCase() === 'P') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, false));
-          console.log(`${C.yellow}⏸️ All ${subAgentsList.length} Sub-Agents paused in TUI Parthenon!${C.reset}`);
+          console.log(`${C.yellow}⏸️ All ${subAgentsList.length} Sub-Agents paused in OpenCat TUI!${C.reset}`);
         } else {
           const selected = subAgentsList.find(a => a.id === agentChoice.trim());
           if (selected) {
@@ -217,18 +217,18 @@ export async function launchTUI(): Promise<void> {
             console.log(`${C.green}✅ ${selected.domain} is now ${!currentActive ? 'ACTIVE' : 'PAUSED'}!${C.reset}`);
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
 
       case '4':
         console.clear();
         console.log(`${C.cyan}=== 🧠 COMMAND ROOM ORACLE CHAT ===${C.reset}`);
-        console.log(`${C.yellow}Ask Athena AI anything about trades, market sentiment, or alerts (type 'exit' to quit):${C.reset}\n`);
+        console.log(`${C.yellow}Ask OpenCat AI anything about trades, market sentiment, or alerts (type 'exit' to quit):${C.reset}\n`);
         while (true) {
           const chatMsg = await prompt(`${C.magenta}You: ${C.reset}`);
           if (chatMsg.toLowerCase() === 'exit') break;
           try {
-            const { ATHENA_SYSTEM_PROMPT_BASE } = await import('../services/athena-system-prompt.js');
+            const { OPENCAT_SYSTEM_PROMPT_BASE } = await import('../services/opencat-system-prompt.js');
             const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
             const { runAgent } = await import('../orchestrator/agent-runner.js');
             const { SessionMemoryService } = await import('../services/session-memory.js');
@@ -242,7 +242,7 @@ export async function launchTUI(): Promise<void> {
               : 'Active Sub-Agents right now: NONE (all paused)';
             const risk = hub.getRiskManager().getRiskState();
             const memoryContext = new SessionMemoryService().buildMemoryContextLine();
-            const systemPrompt = ATHENA_SYSTEM_PROMPT_BASE + `
+            const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
 - Execution Mode: MANUAL EXECUTION — bot is screener/caller only, execution done by the user via the call-card link.
@@ -256,9 +256,9 @@ Current Operating Parameters:
             const aiRes = agentResult.text || (agentResult.toolResults.length > 0
               ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
               : '[No response from AI.]');
-            console.log(`${C.cyan}Athena Oracle:${C.reset} ${aiRes}\n`);
+            console.log(`${C.lime}OpenCat Oracle:${C.reset} ${aiRes}\n`);
           } catch (err: any) {
-            console.log(`${C.cyan}Athena Oracle:${C.reset} Order acknowledged: "${chatMsg}". Operating in DRY_RUN safe simulation.\n`);
+            console.log(`${C.lime}OpenCat Oracle:${C.reset} Order acknowledged: "${chatMsg}". Operating in DRY_RUN safe simulation.\n`);
           }
         }
         break;
@@ -273,9 +273,9 @@ Current Operating Parameters:
         console.log(`• Trading Paused: ${risk.paused ? 'YES (circuit breaker active)' : 'No'}`);
         const { globalRiskEngineV2 } = await import('../orchestrator/risk-engine-v2.js');
         const killSwitchActive = globalRiskEngineV2.checkKillSwitchStatus();
-        console.log(`• Aegis Kill-Switch: ${killSwitchActive ? C.red + 'ACTIVE (all trading halted)' + C.reset : C.green + 'INACTIVE' + C.reset}`);
+        console.log(`• 9-Lives Kill-Switch: ${killSwitchActive ? C.red + 'ACTIVE (all trading halted)' + C.reset : C.green + 'INACTIVE' + C.reset}`);
         console.log(`• Position Manager: Auto TP (2x/3x), Stop Loss (-20%), Dynamic Trailing Stops`);
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
       }
 
@@ -288,22 +288,22 @@ Current Operating Parameters:
         console.log(`• Win Rate: ${C.green}${stats.winRatePct.toFixed(1)}%${C.reset} (${stats.winCount} Wins / ${stats.lossCount} Losses)`);
         console.log(`• Total Realized PnL: ${C.green}$${stats.totalRealizedPnlUsd.toFixed(2)} USD${C.reset}`);
         console.log(`• Best Trade: ${C.green}+$${stats.bestTradeUsd.toFixed(2)} USD${C.reset} | Worst: ${C.red}-$${Math.abs(stats.worstTradeUsd).toFixed(2)} USD${C.reset}`);
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
       }
 
       case '7':
         console.clear();
-        console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER (AEGIS SHIELD) ===${C.reset}`);
-        const confirmHalt = (await prompt(`Engage Aegis Shield — pause ALL agents, disable auto-execute and activate the kill switch? (y/N): `)) || 'n';
+        console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER (9 LIVES SHIELD) ===${C.reset}`);
+        const confirmHalt = (await prompt(`Engage 9-Lives Shield — pause ALL agents, disable auto-execute and activate the kill switch? (y/N): `)) || 'n';
         if (confirmHalt.toLowerCase() === 'y') {
-          const res = hub.executeEmergencyCloseAll('User Manual Panic Button (TUI Parthenon)');
-          console.log(`${C.green}✅ Aegis Shield engaged: all sub-agents paused, auto-execute disabled, kill switch active.${C.reset}`);
+          const res = hub.executeEmergencyCloseAll('User Manual Panic Button (OpenCat TUI)');
+          console.log(`${C.green}✅ 9-Lives Shield engaged: all sub-agents paused, auto-execute disabled, kill switch active.${C.reset}`);
           console.log(`${C.yellow}ℹ️ ${res.message}${C.reset}`);
         } else {
           console.log(`${C.yellow}Circuit breaker not engaged.${C.reset}`);
         }
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
 
       case '8': {
@@ -331,7 +331,7 @@ Current Operating Parameters:
             console.log(`\n${C.green}✅ Signal: ${r.reason}${C.reset}`);
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to Parthenon...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
       }
 

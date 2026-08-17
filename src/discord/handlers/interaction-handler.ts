@@ -24,7 +24,7 @@ export type { PriceAlertService } from '../../services/price-alert-service.js';
 export type { TradeJournalService } from '../../services/trade-journal-service.js';
 export type { WalletService } from '../../services/wallet-service.js';
 
-export function isAthenaChannel(interaction: Interaction): boolean {
+export function isOpenCatChannel(interaction: Interaction): boolean {
   if (!interaction.guild) return true; // Direct Messages allowed
 
   const channel = interaction.channel;
@@ -33,28 +33,33 @@ export function isAthenaChannel(interaction: Interaction): boolean {
   const channelName = (channel.name || '').toLowerCase();
   const parentName = ('parent' in channel && channel.parent?.name) ? channel.parent.name.toLowerCase() : '';
 
-  // 1. Belongs to Category "🏛️ ATHENA COMMAND CENTER"
-  if (parentName.includes('athena command center')) return true;
+  // 1. Belongs to Category "🐾 OPENCAT COMMAND CENTER" or legacy "ATHENA COMMAND CENTER"
+  if (parentName.includes('opencat command center') || parentName.includes('athena command center')) return true;
 
-  // 2. Standard Athena channel names
-  const KNOWN_ATHENA_CHANNELS = [
+  // 2. Standard OpenCat / Athena channel names
+  const KNOWN_CHANNELS = [
+    'opencat-control-room',
     'athena-control-room',
     'audit-on-demand',
     'call-meme-robinhood',
     'call-lp-robinhood',
     'call-nft-robinhood',
     'call-alpha-robinhood',
+    'opencat-logs',
+    'opencat-journal',
     'athena-logs',
     'athena-journal',
   ];
 
-  if (KNOWN_ATHENA_CHANNELS.includes(channelName)) return true;
+  if (KNOWN_CHANNELS.includes(channelName)) return true;
 
-  // 3. Custom created Athena channel prefix
-  if (channelName.startsWith('athena-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
+  // 3. Custom created channel prefixes
+  if (channelName.startsWith('opencat-') || channelName.startsWith('athena-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
 
   return false;
 }
+
+export const isAthenaChannel = isOpenCatChannel;
 
 export async function handleInteraction(
   interaction: Interaction,
@@ -62,16 +67,16 @@ export async function handleInteraction(
   aiService: AIService
 ): Promise<void> {
   try {
-    // Channel Restriction Guard: Block interaction outside Athena channels
+    // Channel Restriction Guard: Block interaction outside OpenCat channels
     if (interaction.isChatInputCommand() || interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
-      if (!isAthenaChannel(interaction)) {
+      if (!isOpenCatChannel(interaction)) {
         if (interaction.isRepliable()) {
-          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'athena-control-room');
-          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#athena-control-room**';
+          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencat-control-room' || c.name === 'athena-control-room');
+          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#opencat-control-room**';
           await interaction.reply({
-            content: `🏛️ **Athena Channel Restriction Notice:**\n` +
-              `Athena slash commands and interactive controls can only be used inside **Athena Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
-              `Please run your command inside ${controlRoomRef} or dedicated Athena call channels!`,
+            content: `🐾 **OpenCat Channel Restriction Notice:**\n` +
+              `OpenCat slash commands and interactive controls can only be used inside **OpenCat Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
+              `Please run your command inside ${controlRoomRef} or dedicated OpenCat call channels!`,
             flags: 1 << 6, // EPHEMERAL
           });
         }
@@ -99,8 +104,8 @@ export async function handleInteraction(
       } else if (!interaction.replied) {
         await interaction.reply({ content: message, flags: 1 << 6 }); // EPHEMERAL
       }
-    } catch (replyErr: any) {
-      console.error('Error replying to interaction:', replyErr.message);
+    } catch {
+      // Ignored if already handled
     }
   }
 }
