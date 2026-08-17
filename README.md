@@ -78,22 +78,6 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 
 ---
 
-## 🎨 Color Palette & Visual Identity
-
-Inspired by the **OpenCats NFT Collection**, Opencat AI uses an 8-bit retro & PICO-8 aesthetic anchored around Legendary Hero Robinhood Green:
-
-| Token / Channel | Color Name | Hex Token | RGB Value | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **Hero Brand** | Robinhood Green | `#CCFF00` | `204, 255, 0` | Master banner, success, verified calls, system health |
-| **Meme Calls** | Pastel Pink | `#FFB7B2` | `255, 183, 178` | `#call-meme-robinhood` DEX token screening |
-| **NFT Alerts** | Lavender Purple | `#D6C7FF` | `214, 199, 255` | `#call-nft-robinhood` Floor surges & rarity snipes |
-| **LP Velocity** | Retro Cyan | `#80DEEA` | `128, 222, 234` | `#call-lp-robinhood` Concentrated liquidity yield |
-| **Alpha Scraper** | Pastel Yellow | `#FFF59D` | `255, 245, 157` | `#call-alpha-robinhood` 1-hour alpha sentiment |
-| **Stop / SL** | Maneki-Neko Red | `#E53935` | `229, 57, 53` | Stop-loss alerts, kill-switch circuit breaker |
-| **PnL Gains** | Golden Fortune | `#FFD700` | `255, 215, 0` | Realized profits & win-rate metrics in journal |
-
----
-
 ## ✨ Feature Grid
 
 | # | Feature | Description |
@@ -286,8 +270,8 @@ Opencat AI ships with a native, zero-dependency REST API server (`src/api/server
 **1. What is Robinhood Chain?**
 Robinhood Chain is an EVM Layer-2 network — **chain ID 4663, native token ETH** — with the canonical RPC `https://rpc.mainnet.chain.robinhood.com` (Blockscout explorer: `https://robinhoodchain.blockscout.com`). It is the sole target chain of Opencat AI.
 
-**2. How does Opencat AI relate to OpenCats NFT?**
-Opencat AI is the official autonomous intelligence and trading ecosystem for the **OpenCats NFT Collection**, designed with high-conviction screening tools and retro pixel-aesthetic visual identity.
+**2. What is Opencat AI?**
+Opencat AI is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for Robinhood Chain (EVM L2), featuring 3-Layer Swarm Consensus, a resilient risk engine (9-Lives Shield), and unified multi-platform interfaces (Discord, Terminal TUI, and Telegram).
 
 **3. Is `DRY_RUN` safe?**
 Yes. `DRY_RUN=true` (the default) guarantees **no live blockchain transactions** — swaps, sends and withdrawals are simulated, and call cards only provide execution *links*. Only when you explicitly set `DRY_RUN=false` (and optionally `AUTO_EXECUTE_ENABLED`) can real transactions be signed. Always test with `DRY_RUN=true` first.

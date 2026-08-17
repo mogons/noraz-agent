@@ -1,16 +1,16 @@
-# 🐾 DESIGN.md — Opencat AI (Robinhood Chain Edition) Design System
+# 🐾 DESIGN.md — Opencat AI Design System
 
 > **Official Visual & Identity Design System for Opencat AI**
-> *Seamlessly integrated with the OpenCats 24x24 NFT Collection on Robinhood Chain (EVM L2 #4663)*
+> *Unified Design System for Discord Embeds, Terminal TUI, and Multi-Platform Clients*
 
 ---
 
 ## 1. 🎨 Executive Brand Overview
 
-**Opencat AI** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM L2)**. Its visual and thematic identity directly inherits the aesthetic DNA of the **OpenCats 24x24 NFT Collection**:
+**Opencat AI** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM L2)**:
 
-- **Art Direction:** Retro 8-bit & PICO-8 inspired **24x24 pixel canvas**, crisp **1-pixel solid black outlines**, vibrant casual PFP traits (sunglasses, beanies, caps, gold chains, cigarette), and witty cat personality.
-- **Hero Palette:** High-energy **Robinhood Green (`#CCFF00`)** anchored against deep **Solid Obsidian Black (`#0B0E14`)** and 4 harmonized pastel & neon counter-tones.
+- **Art Direction:** Retro 8-bit aesthetic, crisp outlines, casual pixel personality traits, and witty feline charm.
+- **Hero Palette:** High-energy **Robinhood Green (`#CCFF00`)** anchored against deep **Solid Obsidian Black (`#0B0E14`)** and harmonized pastel & neon counter-tones.
 - **Mascot Persona:** **OpenCat** — The chillest, most laid-back yet mathematically razor-sharp DeFi cat oracle in the crypto space.
 
 ### 🐾 The 3 Feline Pillars & Philosophy:
@@ -22,7 +22,7 @@
 
 ## 2. 🌈 Master Color Token Architecture
 
-The color system is derived directly from the OpenCats master Aseprite palette (`chill_cats_master.gpl` & `backgrounds.gpl`):
+Opencat AI UI components utilize a standardized retro palette across Discord embeds, Web API, and CLI terminal:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

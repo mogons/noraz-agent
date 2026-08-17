@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// ANSI Color Tokens from OpenCats NFT Palette
+// ANSI Color Tokens from OpenCat Palette
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',

@@ -19,7 +19,7 @@ const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
 const strategyEngine = new StrategyEngine();
 
-// ANSI Color Tokens from OpenCats 24x24 NFT Master Palette
+// ANSI Color Tokens from OpenCat Master Palette
 const C = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
