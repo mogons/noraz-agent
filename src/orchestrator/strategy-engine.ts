@@ -3,7 +3,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
-import type { AthenaStrategy, AthenaIndicator } from './strategy-types.js';
+import type { OpenCatStrategy, OpenCatIndicator, AthenaStrategy, AthenaIndicator } from './strategy-types.js';
 
 const requireEsm = createRequire(import.meta.url);
 
@@ -202,7 +202,7 @@ export class StrategyEngine {
     return { success: true, message: `✅ Strategy ${strategyId} is now active for domain ${domain}.` };
   }
 
-  public getActiveStrategy(domain: string): AthenaStrategy | null {
+  public getActiveStrategy(domain: string): OpenCatStrategy | null {
     const map = this.readActiveMap();
     const domainKey = this.domainKey(domain);
     let activeId = typeof map[domainKey] === 'string' ? map[domainKey] : undefined;
@@ -237,7 +237,7 @@ export class StrategyEngine {
     return null;
   }
 
-  public getIndicator(id: string): AthenaIndicator | null {
+  public getIndicator(id: string): OpenCatIndicator | null {
     const file = path.join(this.indicatorsDir, `${id}.mjs`);
     if (!fs.existsSync(file)) return null;
     try {

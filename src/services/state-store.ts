@@ -34,9 +34,9 @@ export interface TrackedToken {
 }
 
 /**
- * Full Athena persisted state — survives bot restarts
+ * Full OpenCat persisted state — survives bot restarts
  */
-export interface AthenaPersistedState {
+export interface OpenCatPersistedState {
   // Core position tracking
   openPositions: Record<string, OpenPosition>;
   activeLpPositions: Record<string, ActiveLPPosition>;
@@ -78,9 +78,11 @@ export interface AthenaPersistedState {
 
 const CURRENT_VERSION = 2;
 
+export type AthenaPersistedState = OpenCatPersistedState;
+
 export class StateStore {
   private dbFilePath: string;
-  private state: AthenaPersistedState;
+  private state: OpenCatPersistedState;
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_MS = 1000; // coalesce rapid writes into 1 disk write per second
 
@@ -89,7 +91,19 @@ export class StateStore {
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
-    this.dbFilePath = filePath || path.join(dbDir, 'athena_state.json');
+    const defaultNewPath = path.join(dbDir, 'opencat_state.json');
+    const legacyPath = path.join(dbDir, 'athena_state.json');
+
+    if (filePath) {
+      this.dbFilePath = filePath;
+    } else if (fs.existsSync(defaultNewPath)) {
+      this.dbFilePath = defaultNewPath;
+    } else if (fs.existsSync(legacyPath)) {
+      this.dbFilePath = legacyPath;
+    } else {
+      this.dbFilePath = defaultNewPath;
+    }
+
     this.state = this.loadFromDisk();
     console.log(`[STATE STORE] Loaded persistent state from ${this.dbFilePath} (${this.state.signalLedger.length} ledger entries, ${Object.keys(this.state.priceAlerts).length} alerts, ${Object.keys(this.state.tradeJournalEntries).length} journal entries)`);
   }
@@ -98,7 +112,7 @@ export class StateStore {
   // DISK I/O
   // ==========================================
 
-  private createEmptyState(): AthenaPersistedState {
+  private createEmptyState(): OpenCatPersistedState {
     return {
       openPositions: {},
       activeLpPositions: {},
@@ -117,7 +131,7 @@ export class StateStore {
     };
   }
 
-  private loadFromDisk(): AthenaPersistedState {
+  private loadFromDisk(): OpenCatPersistedState {
     try {
       if (!fs.existsSync(this.dbFilePath)) {
         const initial = this.createEmptyState();
@@ -171,7 +185,7 @@ export class StateStore {
     }
   }
 
-  private saveToDiskSync(state: AthenaPersistedState): void {
+  private saveToDiskSync(state: OpenCatPersistedState): void {
     try {
       state.lastUpdated = new Date().toISOString();
       const tempPath = `${this.dbFilePath}.tmp`;

@@ -18,7 +18,7 @@ export interface StrategyEvaluation {
   reason: string;
 }
 
-export interface AthenaStrategy {
+export interface OpenCatStrategy {
   id: string;
   name: string;
   version: string;
@@ -26,6 +26,8 @@ export interface AthenaStrategy {
   params: Record<string, any>;
   evaluate(context: StrategyContext): StrategyEvaluation;
 }
+
+export type AthenaStrategy = OpenCatStrategy;
 
 export interface Candle {
   time: number;
@@ -36,13 +38,11 @@ export interface Candle {
   volume: number;
 }
 
-export interface AthenaIndicator {
+export interface OpenCatIndicator {
   id: string;
   name: string;
   version: string;
   calculate(candles: Candle[]): number[];
 }
 
-export type OpenCatStrategy = AthenaStrategy;
-export type OpenCatIndicator = AthenaIndicator;
-
+export type AthenaIndicator = OpenCatIndicator;

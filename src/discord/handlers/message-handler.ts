@@ -1,5 +1,5 @@
 import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
 import { priceAlertService, walletService } from './interaction-handler.js';
 
@@ -308,7 +308,7 @@ export async function handleControlRoomMessage(
   const memoryContext = new SessionMemoryService().buildMemoryContextLine();
   const activeDomains = hub.getActiveDomains();
   const activeAgentsLine = activeDomains.length > 0
-    ? `- Active Sub-Agents: ${activeDomains.map((d) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
+    ? `- Active Sub-Agents: ${activeDomains.map((d: string) => getAgentDomain(d)?.displayName ?? d).join(', ')}`
     : '- Active Sub-Agents: NONE (all screening agents paused)';
   const risk = hub.getRiskManager().getRiskState();
   const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `

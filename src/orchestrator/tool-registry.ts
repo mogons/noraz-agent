@@ -1,6 +1,12 @@
-import type { AthenaHub } from './hub.js';
+import type { OpenCatHub, AthenaHub } from './hub.js';
 import type { AIService } from '../services/ai-service.js';
 import { StrategyEngine } from './strategy-engine.js';
+import { globalRiskEngineV2 } from './risk-engine-v2.js';
+import { AGENT_DOMAINS, getAgentDomain } from './agent-registry.js';
+import { globalStateStore } from '../services/state-store.js';
+import { globalPriceAlertService } from '../services/price-alert-service.js';
+import { globalCronScheduler } from '../services/cron-scheduler.js';
+import { ApiKeyGuardService } from '../services/api-key-guard.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -24,10 +30,10 @@ const PROTECTED_ENV_KEYS = [
 const SETTABLE_ENV_KEYS = [
   'AI_API_KEY', 'AI_API_KEYS', 'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
   'GMGN_API_KEY', 'GMGN_API_KEY_ROBINHOOD', 'OPENSEA_API_KEY', 'GOPLUS_API_KEY',
-  'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY',
+  'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'X_API_BEARER_TOKEN',
 ];
 
-export interface AthenaToolDefinition {
+export interface OpenCatToolDefinition {
   name: string;
   description: string;
   parameters: {
@@ -37,15 +43,15 @@ export interface AthenaToolDefinition {
   };
 }
 
-export type OpenCatToolDefinition = AthenaToolDefinition;
+export type AthenaToolDefinition = OpenCatToolDefinition;
 
 export class ToolRegistry {
-  private orchestrator?: AthenaHub;
+  private orchestrator?: OpenCatHub;
   private aiService?: AIService;
   private strategyEngine = new StrategyEngine();
   private walletService?: import('../services/wallet-service.js').WalletService;
 
-  public attachOrchestrator(orchestrator: AthenaHub) {
+  public attachOrchestrator(orchestrator: OpenCatHub) {
     this.orchestrator = orchestrator;
   }
 
@@ -61,7 +67,7 @@ export class ToolRegistry {
   /**
    * Returns list of tools formatted for LLM Function Calling schemas (OpenAI / OpenRouter format)
    */
-  public getToolDefinitions(): AthenaToolDefinition[] {
+  public getToolDefinitions(): OpenCatToolDefinition[] {
     return [
       {
         name: 'pause_sub_agent',

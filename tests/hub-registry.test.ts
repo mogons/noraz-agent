@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AthenaHub } from '../src/orchestrator/hub.js';
+import { OpenCatHub } from '../src/orchestrator/hub.js';
 import type { AgentReport, ScreeningAgent } from '../src/agents/shared/agent-contract.js';
 import type { KrystalCloudAdapter, KrystalPoolSignal } from '../src/adapters/krystal-cloud-adapter.js';
 import type { GMGNAdapter, GMGNSecurityAudit } from '../src/adapters/gmgn-adapter.js';
@@ -130,16 +130,16 @@ const mkGmgnToken = (over: Record<string, any> = {}): any => ({
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe('AthenaHub registry-driven triggerAgentPass', () => {
+describe('OpenCatHub registry-driven triggerAgentPass', () => {
   it('unknown domain returns [] without throwing (fail-closed)', async () => {
-    const hub = new AthenaHub();
+    const hub = new OpenCatHub();
     const results = await hub.triggerAgentPass('does-not-exist');
     expect(results).toEqual([]);
   });
 
   it('alias "evm" resolves to meme-robinhood', async () => {
     const stub = mkStubAgent('meme-robinhood', [mkReport('PEPE')]);
-    const hub = new AthenaHub({ agentFactories: { 'meme-robinhood': () => stub } });
+    const hub = new OpenCatHub({ agentFactories: { 'meme-robinhood': () => stub } });
     expect(await hub.triggerAgentPass('evm')).toHaveLength(1);
     expect(stub.runScreeningPass).toHaveBeenCalledTimes(1);
   });
@@ -148,14 +148,14 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     const ids = ['meme-robinhood', 'nft', 'lp-robinhood'] as const;
     for (const id of ids) {
       const stub = mkStubAgent(id, [mkReport(id.toUpperCase())]);
-      const hub = new AthenaHub({ agentFactories: { [id]: () => stub } });
+      const hub = new OpenCatHub({ agentFactories: { [id]: () => stub } });
       const results = await hub.triggerAgentPass(id);
       expect(results, `domain ${id}`).toHaveLength(1);
     }
   });
 
   it('lp-robinhood wraps Krystal pool data into LP_ROBINHOOD payload', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool()]),
       gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }),
     });
@@ -173,7 +173,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood orders meme token first (WETH-PEPE pool -> token0=PEPE, title PEPE-WETH)', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -199,7 +199,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   // ── LP security gate (GMGN) ─────────────────────────────────────────────
 
   it('lp-robinhood: audit tidak tersedia (null) → pool DITOLAK (fail-closed)', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool()]),
       gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }, { '0xweth': null }),
     });
@@ -208,7 +208,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: token meme honeypot menolak pool', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -223,7 +223,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: audit keamanan honeypot (GMGN /token/security) menolak pool', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -238,7 +238,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: token tidak bisa dijual (canNotSell) → pool DITOLAK', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -253,7 +253,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: token null di GMGN → pool DITOLAK (MC tidak bisa diverifikasi)', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -268,7 +268,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: market cap token meme < $200k → pool DITOLAK', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -283,7 +283,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('lp-robinhood: token aman MC besar → post + label keamanan terisi', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',
@@ -299,7 +299,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
   });
 
   it('factory exception is caught and returns [] (fail-closed)', async () => {
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       agentFactories: {
         nft: () => {
           throw new Error('boom');
@@ -314,7 +314,7 @@ describe('AthenaHub registry-driven triggerAgentPass', () => {
     // Loosened default (lp-robinhood-default): TVL >= $10k, vol >= $100k,
     // Fee/TVL >= 2%, MC >= $100k — this pool would fail the strict fallback
     // (MC $150k < $200k) but passes once the strategy provider is wired.
-    const hub = new AthenaHub({
+    const hub = new OpenCatHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
         token0Symbol: 'WETH',

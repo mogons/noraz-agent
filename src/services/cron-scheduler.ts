@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { AthenaHub } from '../orchestrator/hub.js';
+import type { OpenCatHub, AthenaHub } from '../orchestrator/hub.js';
 
 export interface ScheduledTask {
   id: string;
@@ -14,11 +14,13 @@ export interface ScheduledTask {
   enabled: boolean;
 }
 
+export type CronSchedule = ScheduledTask;
+
 export class CronSchedulerService {
   private dbPath: string;
   private tasks: Map<string, ScheduledTask> = new Map();
   private timerIds: Map<string, NodeJS.Timeout> = new Map();
-  private hub?: AthenaHub;
+  private hub?: OpenCatHub;
 
   constructor(dbPath?: string) {
     this.dbPath = dbPath || path.join(process.cwd(), 'database', 'schedules.json');
@@ -26,7 +28,10 @@ export class CronSchedulerService {
     this.loadSchedules();
   }
 
-  public attachHub(hub: AthenaHub): void {
+  /**
+   * Attach orchestrator hub instance to trigger agent screening passes
+   */
+  public attachHub(hub: OpenCatHub): void {
     this.hub = hub;
   }
 

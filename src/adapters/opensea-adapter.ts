@@ -265,9 +265,9 @@ export class OpenSeaAdapter {
    */
   public getAgentToolsManifest(): Record<string, unknown> {
     return {
-      name: 'Athena OpenSea Agent Tools',
+      name: 'OpenCat OpenSea Agent Tools',
       version: '1.0.0',
-      description: 'OpenSea API v2 & Seaport integration tools for AI Agents',
+      description: 'OpenSea API v2 & Seaport integration tools for OpenCat AI Agents',
       capabilities: ['swap_tokens', 'get_nft_floor', 'whale_analytics', 'cross_chain_fulfill'],
       discovery_url: 'https://docs.opensea.io/reference/llms-agent-discovery',
     };

@@ -20,9 +20,9 @@ const EVM_CHAINS: Record<number, { chain: Chain; rpcEnvKey: string; explorerBase
 };
 
 /**
- * WalletService manages the EVM private key for Athena's direct on-chain execution on Robinhood Chain.
- * Keys are loaded from .env at startup or set at runtime via /wallet setup or TUI.
- * Keys are persisted safely to local StateStore (database/athena_state.json) so they survive bot updates & process reboots.
+ * WalletService manages the EVM private key for OpenCat's direct on-chain execution on Robinhood Chain.
+ * If DRY_RUN is true (default), keys are used to simulate execution without signing broadcasted transactions.
+ * Keys are persisted safely to local StateStore (database/opencat_state.json) so they survive bot updates & process reboots.
  */
 export class WalletService {
   private evmPrivateKey: string | null = null;

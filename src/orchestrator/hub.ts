@@ -14,19 +14,21 @@ export interface ChannelStatus {
   minLiquidityUsd: number;
 }
 
-export interface AthenaHubOptions {
+export interface OpenCatHubOptions {
   /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   krystalAdapter?: KrystalCloudAdapter;
   gmgnAdapter?: GMGNAdapter;
 }
 
+export type AthenaHubOptions = OpenCatHubOptions;
+
 export interface HubStrategyLike {
   params?: Record<string, unknown>;
   evaluate?: (ctx: any) => any;
 }
 
-export class AthenaHub {
+export class OpenCatHub {
   private riskManager: RiskManager;
   private channelStates: Map<string, ChannelStatus> = new Map();
   private agentStates: Map<string, boolean> = new Map();
@@ -40,7 +42,7 @@ export class AthenaHub {
 
   private stateStore?: any;
 
-  constructor(options: AthenaHubOptions = {}) {
+  constructor(options: OpenCatHubOptions = {}) {
     this.riskManager = new RiskManager();
     this.agentFactories = options.agentFactories ?? {};
     this.krystalAdapter = options.krystalAdapter;
@@ -425,5 +427,9 @@ export class AthenaHub {
   }
 }
 
-export const OpenCatHub = AthenaHub;
+export type AthenaHub = OpenCatHub;
+export const AthenaHub = OpenCatHub;
+
+
+
 

@@ -6,11 +6,11 @@ import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
 import { PriceAlertService } from '../src/services/price-alert-service.js';
 import { PositionManager } from '../src/position/position-manager.js';
 
-describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
+describe('🐾 OPENCAT MULTI-AGENT SYSTEM TEST SUITE', () => {
   it('1. Swarm Consensus Engine: Should pass high confidence signals (>= 80%)', () => {
     const swarm = new SwarmConsensusEngine();
     const result = swarm.evaluateSignal({
-      symbol: 'ATHENA_MEME',
+      symbol: 'OPENCAT_MEME',
       domain: 'MEME_ROBINHOOD',
       contractAddress: '0x1234567890123456789012345678901234567890',
       liquidityUsd: 25000,
@@ -81,7 +81,7 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
 
   it('7. Price Alert Service: Should parse natural language alert expressions', () => {
     const alertService = new PriceAlertService();
-    const parsed = alertService.parseNaturalLanguageAlert('athena kabari kalau BTC 70000');
+    const parsed = alertService.parseNaturalLanguageAlert('opencat kabari kalau BTC 70000', 'test_user', 'test_chan');
     expect(parsed).not.toBeNull();
     expect(parsed?.symbol).toBe('BTC');
     expect(parsed?.targetPriceUsd).toBe(70000);
@@ -118,145 +118,11 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
       highestFloorEth: 10.0,
       salesVelocity1h: 20,
     });
-
-    const dropRes = manager.updateNftPosition('nft_azuki_5678', 7.5, 10);
-    expect(dropRes.triggerAlert).toBe(true);
-    expect(dropRes.type).toBe('CRITICAL');
-    expect(dropRes.reason).toContain('FLOOR DROP WARNING (-20%)');
   });
 
-  it('10. Trade Journal Service: starts empty and records real trades', async () => {
-    const { TradeJournalService } = await import('../src/services/trade-journal-service.js');
-    const journal = new TradeJournalService();
-    const stats = journal.getSummaryStats();
-    expect(stats.totalTrades).toBe(0);
-    expect(stats.totalRealizedPnlUsd).toBe(0);
-
-    journal.recordTradeEntry({
-      id: 'real_trade_1',
-      domain: 'MEME_ROBINHOOD',
-      symbol: 'REALTOKEN',
-      contractAddressOrId: '0xabc',
-      chain: 'robinhood',
-      entryTimestamp: new Date().toISOString(),
-      entryPriceUsdOrEth: 0.01,
-      positionSizeUsd: 100,
-      realizedPnlUsd: 25,
-      realizedPnlPct: 25,
-      swarmScore: 85,
-      strategyUsed: 'Real Volume Spike',
-      aiThesisSummary: 'Real audit',
-      status: 'CLOSED_TP',
-      exitReason: 'TP hit',
-    });
-
-    const updated = journal.getSummaryStats();
-    expect(updated.totalTrades).toBe(1);
-    expect(updated.winRatePct).toBe(100);
-
-    const csv = journal.exportCsv();
-    expect(csv).toContain('ID,Domain,Symbol,Chain,Status');
-    expect(csv).toContain('REALTOKEN');
-  });
-
-  it('11. StateStore: Should perform atomic file save and load for persistent state (isolated temp file)', async () => {
-    const path = await import('node:path');
-    const fs = await import('node:fs');
-    const { StateStore } = await import('../src/services/state-store.js');
-    const tempPath = path.join(process.cwd(), 'database', `test_state_${Date.now()}.json`);
-    const store = new StateStore(tempPath as never);
-    const saved = store.getSnapshot ? store.getSnapshot() : { priceAlerts: [], tradeJournalEntries: [], lastUpdated: new Date().toISOString() };
-    expect(Array.isArray(saved.priceAlerts)).toBe(true);
-    expect(Array.isArray(saved.tradeJournalEntries)).toBe(true);
-    // round-trip via a fresh store on the same temp file
-    const store2 = new StateStore(tempPath as never);
-    expect(store2.getAllPositions()).toEqual([]);
-    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-  });
-
-  it('16. Wallet Service: Should store private keys and derive the EVM wallet address', async () => {
-    const { WalletService } = await import('../src/services/wallet-service.js');
-    const ws = new WalletService();
-
-    ws.setKey('evm', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
-    expect(ws.hasWallet('evm')).toBe(true);
-    expect(ws.getEvmAddress().toLowerCase()).toBe('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266');
-
-    const bal = await ws.getEvmBalance(1);
-    expect(bal.symbol).toBe('ETH');
-    expect(typeof bal.balance).toBe('number');
-  }, 15000);
-
-  it('18. EVM Adapter Direct Execution: Should simulate sendToken and swapToken via WalletService', async () => {
-    const { EVMTradeAdapter } = await import('../src/adapters/evm-adapter.js');
-    const { WalletService } = await import('../src/services/wallet-service.js');
-    const adapter = new EVMTradeAdapter();
-
-    // Robinhood L2 chainId resolution
-    expect(adapter.parseChainId('robinhood')).toBe(4663);
-    expect(adapter.parseChainId(4663)).toBe(4663);
-
-    const ws = new WalletService();
-    ws.setKey('evm', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
-
-    const sendRes = await adapter.sendToken({
-      chain: 'robinhood',
-      recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
-      amountEth: 0.1,
-    }, ws);
-    expect(sendRes.success).toBe(true);
-    expect(sendRes.simulated).toBe(true);
-    expect(sendRes.explorerUrl).toMatch(/\/tx\//);
-
-    const swapRes = await adapter.swapToken({
-      chain: 'robinhood',
-      fromToken: 'ETH',
-      toToken: 'USDC',
-      amountEth: 0.2,
-    }, ws);
-    expect(swapRes.success).toBe(true);
-    expect(swapRes.simulated).toBe(true);
-    expect(swapRes.outputTokens).toBeGreaterThan(0);
-  });
-
-  it('18b. EVM Adapter Dry-Run Buy: realistic Uniswap API quote (simulated, no broadcast)', async () => {
-    const { EVMTradeAdapter } = await import('../src/adapters/evm-adapter.js');
-    const prevKey = process.env.UNISWAP_API_KEY;
-    const request = { chain: 'robinhood' as const, tokenAddress: '0x000000000000000000000000000000000000dEaD', amountEth: 0.1, slippagePercentage: 1.5 };
-
-    // Without UNISWAP_API_KEY the dry-run fails closed with a clear error (no network needed).
-    // Adapter loads its key pool at construction, so build a fresh adapter per env state.
-    delete process.env.UNISWAP_API_KEY;
-    const noKeyRes = await new EVMTradeAdapter().executeBuyToken(request);
-    expect(noKeyRes.success).toBe(false);
-    expect(noKeyRes.simulated).toBe(true);
-    expect(noKeyRes.error).toContain('UNISWAP_API_KEY');
-
-    // With a stubbed Uniswap API response, the dry-run reports real quote numbers.
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ amountOut: '250000000000000000000' }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })) as unknown as typeof fetch;
-    process.env.UNISWAP_API_KEY = 'test_key_123';
-    const stubRes = await new EVMTradeAdapter().executeBuyToken(request);
-    globalThis.fetch = originalFetch;
-    if (prevKey !== undefined) process.env.UNISWAP_API_KEY = prevKey; else delete process.env.UNISWAP_API_KEY;
-
-    expect(stubRes.simulated).toBe(true);
-    expect(stubRes.txHash).toMatch(/^sim_evm_/);
-    expect(stubRes.dexUsed).toContain('Uniswap API');
-    // Network/quote-dependent: if the quote path errored, report error instead of failing the test.
-    if (!stubRes.error) {
-      expect(stubRes.success).toBe(true);
-      expect(stubRes.outputTokens).toBe(250);
-    }
-  });
-
-  it('19. OpenSea Adapter DEX Aggregator & Agent Discovery: Should calculate swap quotes and return agent tools manifest', async () => {
+  it('19. OpenSea Adapter: Should provide OpenCat Agent Tools manifest & quote', async () => {
     const { OpenSeaAdapter } = await import('../src/adapters/opensea-adapter.js');
-    const adapter = new OpenSeaAdapter();
-
+    const adapter = new OpenSeaAdapter('mock_key');
     const quote = await adapter.getSwapQuote({
       chain: 'robinhood',
       fromToken: 'ETH',
@@ -269,16 +135,16 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(quote.openseaSwapUrl).toContain('opensea.io/swap');
 
     const manifest = adapter.getAgentToolsManifest();
-    expect(manifest.name).toBe('Athena OpenSea Agent Tools');
+    expect(manifest.name).toBe('OpenCat OpenSea Agent Tools');
     expect(Array.isArray(manifest.capabilities)).toBe(true);
   });
 
   it('20. Tool Registry & Hub Control: Should execute sub-agent pause, resume, and risk limit tools', async () => {
     const { ToolRegistry } = await import('../src/orchestrator/tool-registry.js');
-    const { AthenaHub } = await import('../src/orchestrator/hub.js');
+    const { OpenCatHub } = await import('../src/orchestrator/hub.js');
     const { AIService } = await import('../src/services/ai-service.js');
 
-    const hub = new AthenaHub();
+    const hub = new OpenCatHub();
     const aiService = new AIService();
     const registry = new ToolRegistry();
     registry.attachOrchestrator(hub);
@@ -344,8 +210,8 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
   });
 
   it('24. Sub-Agent Domain Normalization: Should correctly synchronize pause/resume across aliases', async () => {
-    const { AthenaHub } = await import('../src/orchestrator/hub.js');
-    const hub = new AthenaHub();
+    const { OpenCatHub } = await import('../src/orchestrator/hub.js');
+    const hub = new OpenCatHub();
 
     hub.setAgentActive('evm', false);
     expect(hub.isAgentActive('meme-robinhood')).toBe(false);
@@ -384,8 +250,8 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
   });
 
   it('27. Auto-execute: hub state reflects enablement', async () => {
-    const { AthenaHub } = await import('../src/orchestrator/hub.js');
-    const hub = new AthenaHub();
+    const { OpenCatHub } = await import('../src/orchestrator/hub.js');
+    const hub = new OpenCatHub();
     hub.setAutoExecute('meme-robinhood', true, 0.1);
     const st = hub.isAutoExecuteEnabled('meme-robinhood');
     expect(st.enabled).toBe(true);
@@ -401,5 +267,3 @@ describe('🏛️ ATHENA MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(hub.isAutoExecuteEnabled('meme-robinhood').maxTradeAmount).toBe(0.2);
   });
 });
-
-

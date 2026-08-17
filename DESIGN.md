@@ -13,6 +13,11 @@
 - **Hero Palette:** High-energy **Robinhood Green (`#CCFF00`)** anchored against deep **Solid Obsidian Black (`#0B0E14`)** and 4 harmonized pastel & neon counter-tones.
 - **Mascot Persona:** **OpenCat** — The chillest, most laid-back yet mathematically razor-sharp DeFi cat oracle in the crypto space.
 
+### 🐾 The 3 Feline Pillars & Philosophy:
+1. **The Prowl (Intelligence & Night Vision):** DEX pools are dark, noisy, and hazardous. OpenCat's 3-Layer Swarm Consensus acts as feline night vision — stalking candidates 24/7 with patient stealth and only pouncing when Swarm Confidence purrs at $\ge 80\%$.
+2. **The Cat Den (Command Center & Scratching Post):** Multi-channel central hub (`#opencat-control-room`, `#opencat-audit`, Terminal TUI, Telegram bridge) for natural language chat, instant 12-point token audits, and wallet controls.
+3. **The Nine Lives Engine (Resilience & Risk):** Capital preservation is sacred. OpenCat protects traders with a 9-Lives safety net: automated Stop-Loss (-20%), Take-Profit milestone scaling (2x/3x), dynamic trailing stops, and an instant 9-Lives Circuit Breaker kill-switch.
+
 ---
 
 ## 2. 🌈 Master Color Token Architecture

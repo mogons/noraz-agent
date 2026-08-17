@@ -1,4 +1,4 @@
-import { AthenaHub } from '../orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from '../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 import { WalletService, globalWalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
@@ -167,7 +167,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
     return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
-  public async broadcastInteractiveMenu(hub?: AthenaHub, walletService?: WalletService): Promise<boolean> {
+  public async broadcastInteractiveMenu(hub?: OpenCatHub, walletService?: WalletService): Promise<boolean> {
     const activeDomains = hub ? hub.getActiveDomains() : [];
     const autoExecuteEnabled = process.env.AUTO_EXECUTE_ENABLED === 'true';
     const risk = hub ? hub.getRiskManager().getRiskState() : null;
@@ -214,7 +214,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
   /**
    * Start long-polling listener for Telegram incoming commands & callback buttons
    */
-  public startPolling(hub: AthenaHub, walletService: WalletService, aiService?: AIService): void {
+  public startPolling(hub: OpenCatHub, walletService: WalletService, aiService?: AIService): void {
     if (!this.isEnabled()) return;
 
     let offset = 0;
@@ -243,7 +243,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
     poll();
   }
 
-  private async handleTelegramUpdate(update: any, hub: AthenaHub, walletService: WalletService, aiService?: AIService): Promise<void> {
+  private async handleTelegramUpdate(update: any, hub: OpenCatHub, walletService: WalletService, aiService?: AIService): Promise<void> {
     if (update.callback_query) {
       const query = update.callback_query;
       const data = query.data;

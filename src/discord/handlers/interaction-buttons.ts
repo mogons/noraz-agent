@@ -12,7 +12,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
 } from 'discord.js';
-import { AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 import { priceAlertService, walletService, buildDashboardOptions } from './command-handlers.js';
 

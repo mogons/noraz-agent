@@ -50,8 +50,9 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   );
 
   const auditOnDemandId = await getOrCreateChannel(
-    'audit-on-demand',
-    '🔎 On-Demand Token Audit Channel - Paste any Robinhood Chain / EVM Contract Address (CA) here for instant 12-point audit!'
+    'opencat-audit',
+    '🔎 On-Demand Token Audit Channel - Paste any Robinhood Chain / EVM Contract Address (CA) here for instant 12-point audit!',
+    ['audit-on-demand', 'athena-audit']
   );
 
   const memeEvmId = await getOrCreateChannel(

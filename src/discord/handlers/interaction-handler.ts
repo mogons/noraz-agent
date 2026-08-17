@@ -4,7 +4,7 @@
  * backward compatibility with existing consumers (index.ts, message-handler.ts).
  */
 import { Interaction } from 'discord.js';
-import { AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
 import {
   priceAlertService,
@@ -40,7 +40,9 @@ export function isOpenCatChannel(interaction: Interaction): boolean {
   const KNOWN_CHANNELS = [
     'opencat-control-room',
     'athena-control-room',
+    'opencat-audit',
     'audit-on-demand',
+    'athena-audit',
     'call-meme-robinhood',
     'call-lp-robinhood',
     'call-nft-robinhood',

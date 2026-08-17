@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { ToolRegistry } from '../src/orchestrator/tool-registry.js';
-import { AthenaHub } from '../src/orchestrator/hub.js';
+import { OpenCatHub } from '../src/orchestrator/hub.js';
 
 describe('ToolRegistry — architecture tools', () => {
   it('start_all_agents / stop_all_agents change hub state', async () => {
-    const hub = new AthenaHub();
+    const hub = new OpenCatHub();
     const reg = new ToolRegistry();
     reg.attachOrchestrator(hub);
 

@@ -6,7 +6,7 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
-import { AthenaHub } from '../../orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from '../../orchestrator/hub.js';
 import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 
@@ -15,7 +15,7 @@ export interface DashboardEmbedOptions {
   activeAlerts?: number;
 }
 
-export function createDashboardComponents(hub: AthenaHub, opts: DashboardEmbedOptions = {}) {
+export function createDashboardComponents(hub: OpenCatHub, opts: DashboardEmbedOptions = {}) {
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 

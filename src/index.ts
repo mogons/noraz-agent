@@ -4,7 +4,7 @@ import { isDryRun as isDryRunMode, getExecutionMode, isAutoExecute, isSignalOnly
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
 import type { CallCardPayload as CallSignalPayload } from './agents/shared/agent-contract.js';
-import { AthenaHub } from './orchestrator/hub.js';
+import { OpenCatHub, AthenaHub } from './orchestrator/hub.js';
 import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
@@ -45,7 +45,7 @@ console.log(`[CONFIG] OpenCat Execution Mode: ${execMode} (Primary Swap Venue: U
 // Initialize persistent StateStore (survives bot restarts)
 const stateStore = new StateStore();
 
-const hub = new AthenaHub();
+const hub = new OpenCatHub();
 const swarmEngine = new SwarmConsensusEngine();
 swarmEngine.attachStateStore(stateStore);
 

@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AthenaRESTServer } from '../src/api/server.js';
-import { AthenaHub } from '../src/orchestrator/hub.js';
+import { OpenCatRESTServer, AthenaRESTServer } from '../src/api/server.js';
+import { OpenCatHub } from '../src/orchestrator/hub.js';
 
-describe('AthenaRESTServer Test Suite', () => {
-  let server: AthenaRESTServer;
-  let hub: AthenaHub;
+describe('OpenCatRESTServer Test Suite', () => {
+  let server: OpenCatRESTServer;
+  let hub: OpenCatHub;
   const testPort = 3199;
 
   beforeEach(async () => {
+    delete process.env.OPENCAT_API_KEY;
     delete process.env.ATHENA_API_KEY;
     process.env.API_PORT = String(testPort);
-    hub = new AthenaHub();
-    server = new AthenaRESTServer(testPort);
+    hub = new OpenCatHub();
+    server = new OpenCatRESTServer(testPort);
     server.start(hub);
     // Give server a moment to bind
     await new Promise((r) => setTimeout(r, 100));
@@ -80,8 +81,8 @@ describe('AthenaRESTServer Test Suite', () => {
     expect(hub.isAgentActive('alpha-robinhood')).toBe(true);
   });
 
-  it('Enforces ATHENA_API_KEY authentication guard when set', async () => {
-    process.env.ATHENA_API_KEY = 'secret_key_123';
+  it('Enforces OPENCAT_API_KEY authentication guard when set', async () => {
+    process.env.OPENCAT_API_KEY = 'secret_key_123';
 
     // 1. Without header -> 401
     const unauthRes = await fetch(`http://localhost:${testPort}/api/status`);
@@ -89,8 +90,12 @@ describe('AthenaRESTServer Test Suite', () => {
 
     // 2. With valid header -> 200
     const authRes = await fetch(`http://localhost:${testPort}/api/status`, {
-      headers: { 'X-Athena-Api-Key': 'secret_key_123' },
+      headers: { 'X-OpenCat-Api-Key': 'secret_key_123' },
     });
     expect(authRes.status).toBe(200);
+  });
+
+  it('Maintains AthenaRESTServer backwards compatibility', () => {
+    expect(AthenaRESTServer).toBe(OpenCatRESTServer);
   });
 });
