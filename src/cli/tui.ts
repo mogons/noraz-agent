@@ -1,18 +1,23 @@
 import dotenv from 'dotenv';
 import readline from 'readline';
 dotenv.config();
-import { AthenaHub } from '../orchestrator/hub.js';
+import { OpenCatHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
 import { globalWalletService } from '../services/wallet-service.js';
 import { StateStore } from '../services/state-store.js';
+import { AGENT_DOMAINS, getAgentDomain } from '../orchestrator/agent-registry.js';
+import { StrategyEngine } from '../orchestrator/strategy-engine.js';
+import { globalPriceAlertService } from '../services/price-alert-service.js';
 
 const stateStore = new StateStore();
-const hub = new AthenaHub();
+const hub = new OpenCatHub();
 const swarmEngine = new SwarmConsensusEngine();
+swarmEngine.attachStateStore(stateStore);
 const aiService = new AIService();
 const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
+const strategyEngine = new StrategyEngine();
 
 // ANSI Color Tokens from OpenCats 24x24 NFT Master Palette
 const C = {
@@ -36,9 +41,9 @@ function detectPm2(): boolean {
 
 const OPENCAT_ASCII = `
 ${C.lime}${C.bright}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCAT AI · COMMAND CENTER 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCAT AI · COMMAND CENTER TUI 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Trading Swarm${C.reset}
-${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663 • Native: ETH${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
 ${C.lime}    ( (  )   (  ) )
    (__(__)___(__)__)${C.reset}
@@ -56,33 +61,47 @@ export async function launchTUI(): Promise<void> {
     console.clear();
     console.log(OPENCAT_ASCII);
     console.log(`${C.lime}${C.bright}========================================================================${C.reset}`);
-    console.log(`${C.yellow}🌿 Mode:${C.reset} MANUAL EXECUTION (screener/caller, execution via card link) | ${C.lime}🐱 OpenCat Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    const autoExec = process.env.AUTO_EXECUTE_ENABLED === 'true';
+    const isDry = process.env.DRY_RUN !== 'false';
+    const modeBadge = isDry
+      ? `${C.green}DRY_RUN (Safe Market Simulation)${C.reset}`
+      : autoExec
+        ? `${C.red}⚡ AUTO_EXECUTE (Live On-Chain Trading)${C.reset}`
+        : `${C.yellow}MANUAL EXECUTION (Signal Caller)${C.reset}`;
+
+    console.log(`${C.yellow}🌿 Mode:${C.reset} ${modeBadge} | ${C.lime}🐱 OpenCat Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
     const activeDomains = hub.getActiveDomains();
-    const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
-    const agentStatus = `🟢 ${activeDomains.length}/${AGENT_DOMAINS.length} agents active`;
+    const agentStatus = activeDomains.length === AGENT_DOMAINS.length
+      ? `${C.green}🟢 ALL ${AGENT_DOMAINS.length} ACTIVE${C.reset}`
+      : activeDomains.length > 0
+        ? `${C.yellow}🟡 ${activeDomains.length}/${AGENT_DOMAINS.length} ACTIVE${C.reset}`
+        : `${C.red}🔴 ALL PAUSED${C.reset}`;
     console.log(`${C.cyan}🤖 Agents:${C.reset} ${agentStatus} | ${C.gold}🌲 Cat Den Daemon:${C.reset} ${detectPm2() ? 'PM2 daemon (Cat Den)' : 'local process'}`);
     console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
-    console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View/Import PK)`);
-    console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Input CA)`);
-    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Robinhood Chain)`);
-    console.log(` ${C.green}[4]${C.reset} 🧠 Command Room Oracle Chat (Natural Language AI Hub)`);
-    console.log(` ${C.green}[5]${C.reset} ⚙️ Global Risk Management & Position Size Safeguards`);
-    console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Realized PnL Analytics (View Summary)`);
-    console.log(` ${C.green}[7]${C.reset} 🛑 Emergency Circuit Breaker (Halt All Active Agents)`);
-    console.log(` ${C.green}[8]${C.reset} ▶️ Run Screening Pass (Test One Sub-Agent Locally)`);
+    console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View / Import PK / Withdraw)`);
+    console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Paste Contract Address)`);
+    console.log(` ${C.green}[3]${C.reset} ⚡ Background Screening Control (Meme · LP · NFT · Alpha)`);
+    console.log(` ${C.green}[4]${C.reset} 🧠 Command Room Oracle Chat (Natural Language AI Agent Loop)`);
+    console.log(` ${C.green}[5]${C.reset} ⚙️ Global Risk Management (9-Lives Shield · Drawdown Safeguards)`);
+    console.log(` ${C.green}[6]${C.reset} 📊 Trade Journal & Analytics (Realized PnL · Win Rate)`);
+    console.log(` ${C.green}[7]${C.reset} 🛑 Emergency Circuit Breaker (Halt All Active Trading)`);
+    console.log(` ${C.green}[8]${C.reset} ▶️ Run Screening Pass (Trigger Instant On-Demand Pass)`);
+    console.log(` ${C.green}[9]${C.reset} 🎯 Strategy Preset Selector & Custom Strategy Compiler`);
+    console.log(` ${C.green}[A]${C.reset} 🔔 Price Alerts Manager (Custom Price Triggers)`);
+    console.log(` ${C.green}[P]${C.reset} 💼 Open Positions & Portfolio Scanner (Meme · LP · NFT)`);
     console.log(` ${C.red}[0]${C.reset} ❌ Exit OpenCat Command Center`);
     console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
 
-    const choice = await prompt(`${C.bright}🐾 Select Command Option (0-8): ${C.reset}`);
+    const choice = await prompt(`${C.bright}🐾 Select Option (0-9, A, P): ${C.reset}`);
 
     if (choice === '0') {
-      console.log(`\n${C.lime}May OpenCat's sharp alpha guide your trades. Purring out... 👋${C.reset}\n`);
+      console.log(`\n${C.lime}May OpenCat's sharp alpha guide your trades. Purring out... 👋🐾${C.reset}\n`);
       rl.close();
       break;
     }
 
-    switch (choice.trim()) {
-      case '1':
+    switch (choice.trim().toUpperCase()) {
+      case '1': {
         console.clear();
         console.log(`${C.cyan}=== 🔑 OPENCAT TREASURY & BURNER WALLETS ===${C.reset}`);
         const hasEvm = walletService.hasWallet('evm');
@@ -96,7 +115,7 @@ export async function launchTUI(): Promise<void> {
             console.log(`• Robinhood ETH Balance: ${C.yellow}unavailable (${err?.message || 'read failed'})${C.reset}`);
           }
         }
-        console.log('[1] Import / Replace EVM Private Key');
+        console.log('\n[1] Import / Replace EVM Private Key');
         console.log('[2] Remove / Clear EVM Private Key');
         console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
         console.log('[0] Back to OpenCat Menu\n');
@@ -105,7 +124,7 @@ export async function launchTUI(): Promise<void> {
           const pk = await prompt(`Enter EVM Private Key: `);
           if (pk.trim()) {
             walletService.setKey('evm', pk.trim());
-            console.log(`${C.green}✅ EVM Private Key imported and active!${C.reset}`);
+            console.log(`${C.green}✅ EVM Private Key imported and active in memory!${C.reset}`);
           }
         } else if (walletSub === '2') {
           walletService.removeKey('evm');
@@ -126,80 +145,37 @@ export async function launchTUI(): Promise<void> {
         }
         await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
+      }
 
-      case '2':
+      case '2': {
         console.clear();
         console.log(`${C.cyan}=== 🔍 ON-DEMAND SWARM TOKEN AUDIT ===${C.reset}`);
         const ca = await prompt('Enter Token Contract Address (CA): ');
         if (ca.trim()) {
           console.log(`${C.yellow}Executing 3-Layer Swarm Consensus Audit (Quant + Catalyst + Security)...${C.reset}`);
-          let liquidityUsd = 0;
-          let volume1hUsd = 0;
-          let securityPassed = false;
-          let socialHypeScore = 0;
-          let gmgnOk = false;
-          try {
-            const { GMGNAdapter } = await import('../adapters/gmgn-adapter.js');
-            const gmgn = new GMGNAdapter();
-            const [info, security] = await Promise.all([
-              gmgn.fetchTokenInfo('robinhood', ca.trim()),
-              gmgn.fetchTokenSecurity('robinhood', ca.trim()),
-            ]);
-            if (info || security) {
-              gmgnOk = true;
-              liquidityUsd = info?.liquidityUsd ?? 0;
-              volume1hUsd = info?.volume1hUsd ?? 0;
-              securityPassed = security
-                ? security.isHoneypot === false && !security.canNotSell && Number(security.buyTaxPct ?? 0) <= 5 && Number(security.sellTaxPct ?? 0) <= 5
-                : false;
-              if (info) socialHypeScore = Math.min(100, Math.round(60 + (info.volume1hUsd > 100000 ? 25 : 0)));
-            }
-          } catch (err: any) {
-            console.log(`${C.red}⚠️ GMGN audit unavailable: ${err?.message}${C.reset}`);
-          }
-          if (!gmgnOk) {
-            try {
-              const { GoPlusSecurityService } = await import('../services/goplus-security-service.js');
-              const goplus = new GoPlusSecurityService();
-              const audit = await goplus.auditToken('robinhood', ca.trim());
-              securityPassed = audit !== null && audit.buyTaxPct <= 5 && audit.sellTaxPct <= 5;
-            } catch (err: any) {
-              console.log(`${C.red}⚠️ Real audit data unavailable: ${err?.message}${C.reset}`);
-            }
-          }
-          const res = swarmEngine.evaluateSignal({
-            symbol: 'CUSTOM',
-            domain: 'MEME_ROBINHOOD',
-            contractAddress: ca.trim(),
-            liquidityUsd,
-            volume1hUsd,
-            securityAuditPassed: securityPassed,
-            socialHypeScore,
-          });
-          console.log(`\n${C.lime}OpenCat Swarm Verdict:${C.reset}`);
-          console.log(`• Real Liquidity: $${liquidityUsd.toFixed(2)} | Real 1h Vol: $${volume1hUsd.toFixed(2)}`);
-          console.log(`• Security: ${securityPassed ? C.green + 'PASS' : C.red + 'FAIL/UNAVAILABLE'}${C.reset} | Social Hype: ${socialHypeScore}/100`);
-          console.log(`• Confidence Score: ${C.bright}${res.confidenceScore}%${C.reset} (${res.passed ? C.green + 'APPROVED (>=80%)' : C.red + 'REJECTED'}${C.reset})`);
-          console.log(`• Audit Reasoning: ${res.reason}`);
+          const { runTokenAudit } = await import('../services/token-audit-service.js');
+          const audit = await runTokenAudit(ca.trim());
+          console.log(`\n${C.lime}OpenCat Audit Report for ${ca.trim()}:${C.reset}`);
+          console.log(audit.content);
         }
         await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
+      }
 
-      case '3':
+      case '3': {
         console.clear();
         console.log(`${C.cyan}=== ⚡ BACKGROUND SCREENING SUB-AGENTS CONTROL ===${C.reset}`);
-        const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
         const subAgentsList = AGENT_DOMAINS.map((d, i) => ({
           id: String(i + 1),
           domain: d.id,
-          label: `${d.displayName.replace(/-/g, ' ')} (${d.channel.replace('call-', '#')})`,
+          label: `${d.displayName.replace(/-/g, ' ')} (${d.channel})`,
         }));
-        const activeDomains = hub.getActiveDomains();
+        const activeCurrent = hub.getActiveDomains();
         subAgentsList.forEach(a => {
-          const isActive = activeDomains.includes(a.domain);
+          const isActive = activeCurrent.includes(a.domain);
           console.log(`[${a.id}] ${a.label}: ${isActive ? C.green + '🟢 ACTIVE' + C.reset : C.red + '🔴 PAUSED' + C.reset}`);
         });
-        console.log('[A] ⚡ Activate ALL Agents');
+        console.log('\n[A] ⚡ Activate ALL Agents');
         console.log('[P] ⏸️ Pause ALL Agents');
         console.log('[0] Back to OpenCat Menu\n');
         const agentChoice = await prompt(`Select Option (1-${subAgentsList.length}, A, P, 0): `);
@@ -212,18 +188,19 @@ export async function launchTUI(): Promise<void> {
         } else {
           const selected = subAgentsList.find(a => a.id === agentChoice.trim());
           if (selected) {
-            const currentActive = activeDomains.includes(selected.domain);
+            const currentActive = activeCurrent.includes(selected.domain);
             hub.toggleChannelScreening('tui-terminal', selected.domain, !currentActive);
             console.log(`${C.green}✅ ${selected.domain} is now ${!currentActive ? 'ACTIVE' : 'PAUSED'}!${C.reset}`);
           }
         }
         await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
+      }
 
-      case '4':
+      case '4': {
         console.clear();
         console.log(`${C.cyan}=== 🧠 COMMAND ROOM ORACLE CHAT ===${C.reset}`);
-        console.log(`${C.yellow}Ask OpenCat AI anything about trades, market sentiment, or alerts (type 'exit' to quit):${C.reset}\n`);
+        console.log(`${C.yellow}Ask OpenCat AI anything about market conditions, tokens, risks, or settings (type 'exit' to quit):${C.reset}\n`);
         while (true) {
           const chatMsg = await prompt(`${C.magenta}You: ${C.reset}`);
           if (chatMsg.toLowerCase() === 'exit') break;
@@ -236,16 +213,16 @@ export async function launchTUI(): Promise<void> {
             toolRegistry.attachOrchestrator(hub);
             toolRegistry.attachAIService(aiService);
             toolRegistry.attachWalletService(globalWalletService);
-            const activeDomains = hub.getActiveDomains();
-            const activeAgentsLine = activeDomains.length > 0
-              ? `Active Sub-Agents right now: ${activeDomains.join(', ')}`
+            const activeNow = hub.getActiveDomains();
+            const activeAgentsLine = activeNow.length > 0
+              ? `Active Sub-Agents right now: ${activeNow.join(', ')}`
               : 'Active Sub-Agents right now: NONE (all paused)';
             const risk = hub.getRiskManager().getRiskState();
             const memoryContext = new SessionMemoryService().buildMemoryContextLine();
             const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
-- Execution Mode: MANUAL EXECUTION — bot is screener/caller only, execution done by the user via the call-card link.
+- Execution Mode: ${process.env.DRY_RUN === 'false' ? 'LIVE ON-CHAIN' : 'DRY_RUN (Safe Market Simulation)'}.
 - Global Portfolio Drawdown Limit: ${risk.maxDrawdownLimitPct}%.
 - Current Portfolio Drawdown: ${risk.currentDrawdownPct ?? 0}%.${memoryContext}`;
 
@@ -256,12 +233,13 @@ Current Operating Parameters:
             const aiRes = agentResult.text || (agentResult.toolResults.length > 0
               ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
               : '[No response from AI.]');
-            console.log(`${C.lime}OpenCat Oracle:${C.reset} ${aiRes}\n`);
+            console.log(`\n${C.lime}OpenCat Oracle:${C.reset} ${aiRes}\n`);
           } catch (err: any) {
-            console.log(`${C.lime}OpenCat Oracle:${C.reset} Order acknowledged: "${chatMsg}". Operating in DRY_RUN safe simulation.\n`);
+            console.log(`\n${C.lime}OpenCat Oracle:${C.reset} Acknowledged: "${chatMsg}".\n`);
           }
         }
         break;
+      }
 
       case '5': {
         console.clear();
@@ -292,7 +270,7 @@ Current Operating Parameters:
         break;
       }
 
-      case '7':
+      case '7': {
         console.clear();
         console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER (9 LIVES SHIELD) ===${C.reset}`);
         const confirmHalt = (await prompt(`Engage 9-Lives Shield — pause ALL agents, disable auto-execute and activate the kill switch? (y/N): `)) || 'n';
@@ -305,32 +283,103 @@ Current Operating Parameters:
         }
         await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
+      }
 
       case '8': {
         console.clear();
         console.log(`${C.cyan}=== ▶️ RUN SCREENING PASS (LOCAL TEST) ===${C.reset}`);
-        const { AGENT_DOMAINS } = await import('../orchestrator/agent-registry.js');
         AGENT_DOMAINS.forEach((d, i) => console.log(`[${i + 1}] ${d.displayName} (${d.channel})`));
         console.log('[0] Back\n');
         const sel = await prompt(`Select Agent (1-${AGENT_DOMAINS.length}): `);
         const chosen = AGENT_DOMAINS[parseInt(sel) - 1];
         if (!chosen) { await prompt(`${C.red}Invalid. Press Enter...${C.reset}`); break; }
-        console.log(`\n${C.yellow}Running ${chosen.displayName} screening pass...${C.reset}`);
+        console.log(`\n${C.yellow}Running ${chosen.displayName} screening pass on Robinhood Chain...${C.reset}`);
         const results = await hub.triggerAgentPass(chosen.id);
         if (results.length === 0) {
-          console.log(`${C.yellow}No signals passed. (Data unavailable or filtered out — check logs.)${C.reset}`);
+          console.log(`${C.yellow}No candidate signals passed 3-Layer Swarm Consensus (>=80% floor required).${C.reset}`);
         }
         for (const r of results) {
           const payload = (r as any).payload;
           if (payload) {
-            console.log(`\n${C.green}✅ ${payload.symbol} (${payload.title}) — ${payload.confidenceScore}%${C.reset}`);
-            console.log(`   MC: ${payload.marketCap} | Liq: ${payload.liquidity} | Vol1h: ${payload.volume1h}`);
-            console.log(`   Tx: ${payload.txRatio} | Dev: ${payload.devHoldingPct} | Bundler: ${payload.bundlerPct}`);
-            console.log(`   Thesis: ${payload.aiThesis}`);
+            console.log(`\n${C.green}✅ [${chosen.id.toUpperCase()}] ${payload.symbol || payload.title} — ${payload.confidenceScore || 80}% Confidence${C.reset}`);
+            if (payload.marketCap) console.log(`   MC: ${payload.marketCap} | Liq: ${payload.liquidity} | Vol1h: ${payload.volume1h}`);
+            if (payload.aiThesis) console.log(`   Thesis: ${payload.aiThesis}`);
           } else {
             console.log(`\n${C.green}✅ Signal: ${r.reason}${C.reset}`);
           }
         }
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
+        break;
+      }
+
+      case '9': {
+        console.clear();
+        console.log(`${C.cyan}=== 🎯 STRATEGY PRESET & ENGINE TUNING ===${C.reset}`);
+        const currentPreset = process.env.STRATEGY_PRESET || 'loosened';
+        console.log(`• Current Screening Preset: ${C.green}${currentPreset.toUpperCase()}${C.reset}\n`);
+        console.log('[1] Loosened Preset (2x higher signal frequency, minAgeHours=0, $25k vol)');
+        console.log('[2] Standard Preset (Strict high-conviction runner filter, $50k vol)');
+        console.log('[0] Back to OpenCat Menu\n');
+        const stratChoice = await prompt('Select Strategy Preset Action (0-2): ');
+        if (stratChoice === '1') {
+          process.env.STRATEGY_PRESET = 'loosened';
+          console.log(`${C.green}✅ Switched to LOOSENED screening strategy preset!${C.reset}`);
+        } else if (stratChoice === '2') {
+          process.env.STRATEGY_PRESET = 'standard';
+          console.log(`${C.green}✅ Switched to STANDARD screening strategy preset!${C.reset}`);
+        }
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
+        break;
+      }
+
+      case 'A': {
+        console.clear();
+        console.log(`${C.cyan}=== 🔔 PRICE ALERTS MANAGER ===${C.reset}`);
+        const alerts = globalPriceAlertService.listAlerts();
+        console.log(`Active Price Alerts (${alerts.length}):`);
+        if (alerts.length === 0) {
+          console.log(`• No active price alerts configured.`);
+        } else {
+          alerts.forEach((a, i) => {
+            console.log(` [${i + 1}] ${a.symbol} ${a.direction} $${a.targetPriceUsd.toLocaleString()} (Created by: ${a.userId})`);
+          });
+        }
+        console.log('\n[1] Create New Price Alert (e.g. "BTC 70000" or "ETH 3000")');
+        console.log('[0] Back to OpenCat Menu\n');
+        const alertChoice = await prompt('Select Action (0-1): ');
+        if (alertChoice === '1') {
+          const expr = await prompt('Enter alert expression (e.g. "ETH 3500"): ');
+          const parsed = globalPriceAlertService.parseNaturalLanguageAlert(expr, 'tui_user', 'tui_channel');
+          if (parsed) {
+            const added = globalPriceAlertService.addAlert(parsed);
+            console.log(`${C.green}✅ Price Alert Registered: Notify when ${added.symbol} hits $${added.targetPriceUsd} USD!${C.reset}`);
+          } else {
+            console.log(`${C.red}Could not parse expression. Example: "ETH 3500" or "BTC 70k"${C.reset}`);
+          }
+        }
+        await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
+        break;
+      }
+
+      case 'P': {
+        console.clear();
+        console.log(`${C.cyan}=== 💼 OPEN POSITIONS & PORTFOLIO SCANNER ===${C.reset}`);
+        const positions = stateStore.getAllPositions();
+        const lpPositions = stateStore.getAllLpPositions();
+        const nftPositions = stateStore.getAllNftPositions();
+
+        console.log(`\n• 🌸 Meme Token Holdings (${positions.length}):`);
+        if (positions.length === 0) console.log('   (No active meme token holdings)');
+        else positions.forEach(p => console.log(`   - ${p.symbol}: Entry $${p.entryPriceUsd} | Current $${p.currentPriceUsd} | High $${p.highWaterMarkUsd}`));
+
+        console.log(`\n• 🌊 Active Concentrated LP Positions (${lpPositions.length}):`);
+        if (lpPositions.length === 0) console.log('   (No active LP positions)');
+        else lpPositions.forEach(lp => console.log(`   - ${lp.pairName} (${lp.poolAddress}): Fees/TVL ${lp.currentFeesToTvlRatio4h}% | OutOfRange: ${lp.isOutOfRange ? 'YES' : 'NO'}`));
+
+        console.log(`\n• 🔮 Active NFT Floor Trackers (${nftPositions.length}):`);
+        if (nftPositions.length === 0) console.log('   (No active NFT floor trackers)');
+        else nftPositions.forEach(nft => console.log(`   - ${nft.collectionName}: Entry ${nft.entryFloorEth} ETH | Current ${nft.currentFloorEth} ETH | Peak ${nft.highestFloorEth} ETH`));
+
         await prompt(`\n${C.yellow}Press Enter to return to OpenCat Command Center...${C.reset}`);
         break;
       }

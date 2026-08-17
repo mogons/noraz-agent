@@ -131,16 +131,17 @@ Opencat AI (Robinhood Chain)/
 ## 4. Coding Conventions & Best Practices
 
 1. **Modular Multi-Agent Isolation:**
-   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Discord call channels or `OpenCat Core Hub`.
+   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Multi-Platform dispatch channels (Discord, Terminal TUI, Telegram) or `OpenCat Core Hub`.
 2. **Safety & Execution Modes First:**
    - Every trading adapter MUST check `getExecutionMode()`. Live trades occur only in `AUTO_EXECUTE` mode with verified private keys. `DRY_RUN` uses real Uniswap API market pricing without broadcasting. `SIGNAL_ONLY` tracks holdings without executing.
 3. **Swarm Consensus Validation:**
    - Require >= 80% confidence score across Quant, Catalyst, and Security audits before delivering signal cards.
 4. **Strict TypeScript Typing:**
    - Avoid using `any`. Define clear interfaces for Token Signals, Audit Results, Swarm Scores, Discord Command Contexts, and Position States.
-5. **Discord UX Standards:**
-   - Use Discord Rich Embeds with clear color coding (🟢 `#CCFF00` Robinhood Hero Green, 🌸 `#FFB7B2` Meme, 🔮 `#D6C7FF` NFT, 🌊 `#80DEEA` LP, 🔴 `#E53935` Risk/Warning, 🔵 `#80DEEA` Status Info).
-   - Provide interactive Action Buttons (`PAUSE SCREENING`, `VIEW ON DEXSCREENER`).
+5. **Multi-Platform UX Standards (Discord, Terminal TUI, Telegram):**
+   - Discord: Rich Embeds with 8-bit OpenCats color coding (🟢 `#CCFF00` Hero Green, 🌸 `#FFB7B2` Meme, 🔮 `#D6C7FF` NFT, 🌊 `#80DEEA` LP, ☀️ `#FFF59D` Alpha, 🔴 `#E53935` Risk/Warning).
+   - Terminal TUI: Interactive 24-bit TrueColor ANSI interface with on-demand screening passes, live CA token audits, strategy tuner, and treasury manager (`opencat terminal`).
+   - Telegram: Markdown broadcast cards with quick inline callback buttons.
 6. **Customizable Screening Strategies:**
    - Screening strategies are fully customizable (wizard STEP 5.5: loosened default / standard / custom prompt / numeric editor); custom prompts compile to validated strategy `.mjs` at first boot with default fallback; swarm >= 80% floor never lowered.
 

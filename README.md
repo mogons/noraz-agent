@@ -27,7 +27,7 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 | Component | Role | What it does |
 | :--- | :--- | :--- |
 | 🐾 **OpenCat Core** — Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Four specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, real **24h volume ≥ $50k** hard gate), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **24h Fee/TVL > 4%** and **TVL ≥ $20k**), **nft** (OpenSea floor & rarity sniping, floor surge ≥ +20%/1h, volume spike ≥ 2.0x), and **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
-| 🎮 **Command Center** — Control & Chat | Discord & Terminal | **Discord**: `#opencat-control-room` natural-language chat, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`). **Terminal TUI** (`opencat terminal`): full control without Discord. Natural-language trade audits and custom price alerts (`/alert`) everywhere. |
+| 🎮 **Command Center** — Multi-Platform | Discord · Terminal · Telegram | **1. Discord**: `#opencat-control-room` natural-language chat, `#opencat-audit` token auditor, portfolio & risk views, **22 slash commands**, interactive dashboard, and 4 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`).<br>**2. Terminal TUI** (`opencat terminal`): Full interactive standalone console with live token audits, screening triggers, strategy switcher, treasury & portfolio management without Discord.<br>**3. Telegram Bridge**: Real-time signal alert broadcast cards with quick inline action buttons and interactive callback dashboard. |
 | ⚡ **Cat Den Ops** — Deploy & Maintain | Daemon & Health | **PM2 24/7 daemon** (`opencat deploy`), self-update engine (`opencat update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `opencat doctor` full diagnostics, and interactive **`opencat onboard`** wizard. |
 
 ---
@@ -35,42 +35,45 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 ## 🗺️ System Flowchart
 
 ```
-                        USER INTERFACE PLATFORMS
-            (Discord Command Center · Terminal TUI · Telegram Bridge)
-                                    │
+                          USER INTERFACE PLATFORMS
+             (Discord Command Center · Terminal TUI · Telegram Bridge)
+                                     │
+                                     ▼
+                  ┌───────────────────────────────────┐
+                  │        OPENCAT CORE HUB           │
+                  │   #opencat-control-room · chat    │
+                  │   risk gate · 9-lives risk engine │
+                  │   wallet service · trade journal  │
+                  └──────────────────┬────────────────┘
+                                     │ candidate signals
+          ┌──────────────────────────┼──────────────────────────┐
+          ▼                          ▼                          ▼
+  ┌──────────────┐         ┌──────────────────┐         ┌──────────────┐
+  │  MEME AGENT  │         │   LP VELOCITY    │         │  NFT AGENT   │
+  │ meme-robinhood│        │  lp-robinhood     │        │    nft       │
+  │ GMGN + GoPlus│         │  Krystal Cloud   │         │   OpenSea    │
+  │ vol 24h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
+  │              │         │ TVL ≥ $20k       │         │ vol ≥ 2.0x   │
+  │              │         │                  │         │ sales ≥ 5/h  │
+  └──────┬───────┘         └────────┬─────────┘         └──────┬───────┘
+         └──────────────────────────┼──────────────────────────┘
                                     ▼
-                 ┌───────────────────────────────────┐
-                 │        OPENCAT CORE HUB           │
-                 │   #opencat-control-room · chat    │
-                 │   risk gate · 9-lives risk engine │
-                 │   wallet service · trade journal  │
-                 └──────────────────┬────────────────┘
-                                    │ candidate signals
-         ┌──────────────────────────┼──────────────────────────┐
-         ▼                          ▼                          ▼
- ┌──────────────┐         ┌──────────────────┐         ┌──────────────┐
- │  MEME AGENT  │         │   LP VELOCITY    │         │  NFT AGENT   │
- │ meme-robinhood│        │  lp-robinhood     │        │    nft       │
- │ GMGN + GoPlus│         │  Krystal Cloud   │         │   OpenSea    │
- │ vol 24h ≥ $50k│         │ Fee/TVL > 4%     │         │ floor +20%/1h│
- │              │         │ TVL ≥ $20k       │         │ vol ≥ 2.0x   │
- │              │         │                  │         │ sales ≥ 5/h  │
- └──────┬───────┘         └────────┬─────────┘         └──────┬───────┘
-        └──────────────────────────┼──────────────────────────┘
+                  ┌────────────────────────────────────┐
+                  │   SWARM CONSENSUS ENGINE (≥ 80%)   │
+                  │  Quant · Catalyst · Security Audit │
+                  └────────────────┬───────────────────┘
+                                   │ only ≥ 80% confidence
                                    ▼
-                 ┌────────────────────────────────────┐
-                 │   SWARM CONSENSUS ENGINE (≥ 80%)   │
-                 │  Quant · Catalyst · Security Audit │
-                 └────────────────┬───────────────────┘
-                                  │ only ≥ 80% confidence
-                                  ▼
-      Discord Call Channels: #call-meme-robinhood · #call-lp-robinhood · #call-nft-robinhood
-                                  │
-                                  ▼
-                      WALLET TRACKER (holdings lifecycle)
-                                  │
-                                  ▼
-               POSITION MANAGER (TP 2x/3x · SL -20% · trailing)
+         MULTI-PLATFORM DISPATCH (Discord · Terminal TUI · Telegram)
+  • Discord:  #call-meme-robinhood · #call-lp-robinhood · #call-nft-robinhood · #call-alpha-robinhood
+  • Terminal: Interactive TUI Live Feed, Audits & Chat (opencat terminal)
+  • Telegram: Real-Time Signal Alert Cards & Interactive Inline Menu
+                                   │
+                                   ▼
+                       WALLET TRACKER (holdings lifecycle)
+                                   │
+                                   ▼
+                POSITION MANAGER (TP 2x/3x · SL -20% · trailing)
 ```
 
 ---
