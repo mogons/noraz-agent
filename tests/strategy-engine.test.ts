@@ -24,10 +24,18 @@ const INVALID_STRATEGY = `export default { id: 'broken', evaluate: 'not-a-functi
 afterEach(() => {
   for (const f of ['test-momentum.mjs', 'broken.mjs', '.active.json']) {
     const p = path.join(STRAT_DIR, f);
-    if (fs.existsSync(p)) fs.unlinkSync(p);
+    try {
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    } catch {
+      // Ignore EBUSY on Windows where dynamic import holds the file lock
+    }
   }
   const bak = path.join(STRAT_DIR, '.backup', 'test-momentum.mjs.bak');
-  if (fs.existsSync(bak)) fs.unlinkSync(bak);
+  try {
+    if (fs.existsSync(bak)) fs.unlinkSync(bak);
+  } catch {
+    // Ignore EBUSY on Windows
+  }
 });
 
 describe('StrategyEngine', () => {

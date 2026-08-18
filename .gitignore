@@ -82,7 +82,19 @@ vitest.config.ts.timestamp*
 # TypeScript build cache
 *.tsbuildinfo
 
+# Python Cache
+__pycache__/
+*.pyc
+
+# Articles & Draft Content (local only)
+articles/
+*.docx
+~$*.docx
+
+
+
 # Temp files
 tmp/
 temp/
+
 
