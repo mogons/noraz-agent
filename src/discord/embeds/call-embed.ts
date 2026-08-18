@@ -26,7 +26,7 @@ export function encodeSymbolForUrl(symbol: string | undefined | null): string {
 }
 
 export function buildCallEmbed(payload: CallSignalPayload) {
-  // OpenCats Master Color Palette
+  // OpenCatz Master Color Palette
   const colorMap: Record<CallSignalPayload['domain'], number> = {
     MEME_ROBINHOOD: 0xffb7b2,  // Pastel Pink
     NFT: 0xd6c7ff,             // Lavender Purple
@@ -40,7 +40,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   const embed = new EmbedBuilder()
     .setColor(colorMap[payload.domain] || 0xccff00)
     .setTimestamp()
-    .setFooter({ text: '🐾 OpenCat Intelligence System • Robinhood Chain #4663' });
+    .setFooter({ text: '🐾 OpenCatz Intelligence System • Robinhood Chain #4663' });
 
   const buttonsRow = new ActionRowBuilder<ButtonBuilder>();
 
@@ -48,7 +48,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN: WHALE TRACKING (HYPERLIQUID ETH)
   // ==========================================
   if (payload.domain === 'WHALE_ETH') {
-    embed.setTitle(`🐋 OPENCAT WHALE WATCH: ${sanitizeEmbedField(payload.symbol, 20)}`);
+    embed.setTitle(`🐋 OPENCATZ WHALE WATCH: ${sanitizeEmbedField(payload.symbol, 20)}`);
 
     const report = payload.whaleReport;
     const fmtM = (v: number) => (v >= 1_000_000 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(0)}k`);
@@ -109,7 +109,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN: CONCENTRATED LIQUIDITY (LP_ROBINHOOD)
   // ==========================================
   if (payload.domain === 'LP_ROBINHOOD') {
-    embed.setTitle(`💧 OPENCAT ROBINHOOD LP OPPORTUNITY: ${payload.title}`);
+    embed.setTitle(`💧 OPENCATZ ROBINHOOD LP OPPORTUNITY: ${payload.title}`);
 
     if (payload.contractAddress) {
       embed.addFields({ name: '📍 Pool Address', value: `\`${payload.contractAddress}\``, inline: false });
@@ -194,7 +194,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // DOMAIN: NFT SNIPING (OPENSEA)
   // ==========================================
   if (payload.domain === 'NFT') {
-    embed.setTitle(`🖼️ OPENCAT NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
+    embed.setTitle(`🖼️ OPENCATZ NFT SNIPE ALERT: ${sanitizeEmbedField(payload.title, 150)} • [${confidenceStr}]`);
 
     const safeNftSymbol = sanitizeEmbedField(payload.symbol, 40);
     const safeNetwork = sanitizeEmbedField(payload.network, 20) || 'N/A';
@@ -234,7 +234,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
   // ==========================================
   const safeTitle = sanitizeEmbedField(payload.title);
   const safeSymbol = sanitizeEmbedField(payload.symbol, 32);
-  embed.setTitle(`🐾 OPENCAT ROBINHOOD MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`);
+  embed.setTitle(`🐾 OPENCATZ ROBINHOOD MEME CALL: ${safeTitle} ($${safeSymbol}) • [${confidenceStr}]`);
 
   if (payload.contractAddress) {
     const ageStr = payload.tokenAge ? ` • ⏱️ **Age:** ${payload.tokenAge}` : '';

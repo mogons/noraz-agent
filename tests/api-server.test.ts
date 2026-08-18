@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { OpenCatRESTServer } from '../src/api/server.js';
-import { OpenCatHub } from '../src/orchestrator/hub.js';
+import { OpenCatzRESTServer, OpenCatRESTServer } from '../src/api/server.js';
+import { OpenCatzHub, OpenCatHub } from '../src/orchestrator/hub.js';
 
-describe('OpenCatRESTServer Test Suite', () => {
-  let server: OpenCatRESTServer;
-  let hub: OpenCatHub;
+describe('OpenCatzRESTServer Test Suite', () => {
+  let server: OpenCatzRESTServer;
+  let hub: OpenCatzHub;
   const testPort = 3199;
 
   beforeEach(async () => {
+    delete process.env.OPENCATZ_API_KEY;
     delete process.env.OPENCAT_API_KEY;
     process.env.API_PORT = String(testPort);
-    hub = new OpenCatHub();
-    server = new OpenCatRESTServer(testPort);
+    hub = new OpenCatzHub();
+    server = new OpenCatzRESTServer(testPort);
     server.start(hub);
     // Give server a moment to bind
     await new Promise((r) => setTimeout(r, 100));
@@ -80,8 +81,8 @@ describe('OpenCatRESTServer Test Suite', () => {
     expect(hub.isAgentActive('alpha-robinhood')).toBe(true);
   });
 
-  it('Enforces OPENCAT_API_KEY authentication guard when set', async () => {
-    process.env.OPENCAT_API_KEY = 'secret_key_123';
+  it('Enforces OPENCATZ_API_KEY authentication guard when set', async () => {
+    process.env.OPENCATZ_API_KEY = 'secret_key_123';
 
     // 1. Without header -> 401
     const unauthRes = await fetch(`http://localhost:${testPort}/api/status`);
@@ -89,7 +90,7 @@ describe('OpenCatRESTServer Test Suite', () => {
 
     // 2. With valid header -> 200
     const authRes = await fetch(`http://localhost:${testPort}/api/status`, {
-      headers: { 'X-OpenCat-Api-Key': 'secret_key_123' },
+      headers: { 'X-OpenCatz-Api-Key': 'secret_key_123' },
     });
     expect(authRes.status).toBe(200);
   });

@@ -33,7 +33,7 @@ const SETTABLE_ENV_KEYS = [
   'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'X_API_BEARER_TOKEN',
 ];
 
-export interface OpenCatToolDefinition {
+export interface OpenCatzToolDefinition {
   name: string;
   description: string;
   parameters: {
@@ -42,6 +42,7 @@ export interface OpenCatToolDefinition {
     required?: string[];
   };
 }
+export type OpenCatToolDefinition = OpenCatzToolDefinition;
 
 export class ToolRegistry {
   private orchestrator?: OpenCatHub;
@@ -309,7 +310,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Strategy file name without extension (alphanumeric, dash, underscore only).' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatzStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
           },
           required: ['name', 'code'],
         },
@@ -321,7 +322,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Indicator file name without extension.' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatIndicator: { id, name, version, calculate(candles) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatzIndicator: { id, name, version, calculate(candles) }.' },
           },
           required: ['name', 'code'],
         },

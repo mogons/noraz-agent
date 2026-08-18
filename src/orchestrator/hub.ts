@@ -14,19 +14,20 @@ export interface ChannelStatus {
   minLiquidityUsd: number;
 }
 
-export interface OpenCatHubOptions {
+export interface OpenCatzHubOptions {
   /** Optional per-domain agent factories (test DI / custom wiring). Lazy-imports real agents by default. */
   agentFactories?: Partial<Record<AgentDomainId, () => ScreeningAgent | Promise<ScreeningAgent>>>;
   krystalAdapter?: KrystalCloudAdapter;
   gmgnAdapter?: GMGNAdapter;
 }
+export type OpenCatHubOptions = OpenCatzHubOptions;
 
 export interface HubStrategyLike {
   params?: Record<string, unknown>;
   evaluate?: (ctx: any) => any;
 }
 
-export class OpenCatHub {
+export class OpenCatzHub {
   private riskManager: RiskManager;
   private channelStates: Map<string, ChannelStatus> = new Map();
   private agentStates: Map<string, boolean> = new Map();
@@ -40,7 +41,7 @@ export class OpenCatHub {
 
   private stateStore?: any;
 
-  constructor(options: OpenCatHubOptions = {}) {
+  constructor(options: OpenCatzHubOptions = {}) {
     this.riskManager = new RiskManager();
     this.agentFactories = options.agentFactories ?? {};
     this.krystalAdapter = options.krystalAdapter;
@@ -416,7 +417,7 @@ export class OpenCatHub {
    * Market-closes all positions and freezes all sub-agents & auto-execute states.
    */
   public executeEmergencyCloseAll(reason = 'User Manual Panic Button (/closeall)'): { closedPositionsCount: number; message: string } {
-    console.error(`🚨 OPENCAT HUB: EMERGENCY CLOSE ALL TRIGGERED! Reason: ${reason}`);
+    console.error(`🚨 OPENCATZ HUB: EMERGENCY CLOSE ALL TRIGGERED! Reason: ${reason}`);
     
     // 1. Pause all sub-agents & disable auto-execute
     this.setAllAgentsActive(false);
@@ -433,6 +434,11 @@ export class OpenCatHub {
     };
   }
 }
+
+/** Backward-compatible alias for OpenCatzHub */
+export const OpenCatHub = OpenCatzHub;
+export type OpenCatHub = OpenCatzHub;
+
 
 
 

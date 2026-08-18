@@ -34,9 +34,9 @@ export interface TrackedToken {
 }
 
 /**
- * Full OpenCat persisted state — survives bot restarts
+ * Full OpenCatz persisted state — survives bot restarts
  */
-export interface OpenCatPersistedState {
+export interface OpenCatzPersistedState {
   // Core position tracking
   openPositions: Record<string, OpenPosition>;
   activeLpPositions: Record<string, ActiveLPPosition>;
@@ -75,12 +75,13 @@ export interface OpenCatPersistedState {
   lastUpdated: string;
   version: number;
 }
+export type OpenCatPersistedState = OpenCatzPersistedState;
 
 const CURRENT_VERSION = 2;
 
 export class StateStore {
   private dbFilePath: string;
-  private state: OpenCatPersistedState;
+  private state: OpenCatzPersistedState;
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_MS = 1000; // coalesce rapid writes into 1 disk write per second
 
@@ -89,11 +90,20 @@ export class StateStore {
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
-    const defaultNewPath = path.join(dbDir, 'opencat_state.json');
+    const defaultNewPath = path.join(dbDir, 'opencatz_state.json');
+    const legacyPath = path.join(dbDir, 'opencat_state.json');
 
     if (filePath) {
       this.dbFilePath = filePath;
     } else {
+      if (!fs.existsSync(defaultNewPath) && fs.existsSync(legacyPath)) {
+        try {
+          fs.copyFileSync(legacyPath, defaultNewPath);
+          console.log(`[STATE STORE] Auto-migrated legacy database/opencat_state.json -> database/opencatz_state.json`);
+        } catch {
+          // ignore copy error and fallback
+        }
+      }
       this.dbFilePath = defaultNewPath;
     }
 
@@ -105,7 +115,7 @@ export class StateStore {
   // DISK I/O
   // ==========================================
 
-  private createEmptyState(): OpenCatPersistedState {
+  private createEmptyState(): OpenCatzPersistedState {
     return {
       openPositions: {},
       activeLpPositions: {},

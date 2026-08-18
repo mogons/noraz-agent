@@ -1,6 +1,6 @@
 /**
- * OpenCat self-update core — single source of truth for both entry points:
- *   - CLI: `opencat update` (bin/opencat.js -> npm run update)
+ * OpenCatz self-update core — single source of truth for both entry points:
+ *   - CLI: `opencatz update` (bin/opencatz.js -> npm run update)
  *   - Discord: `/update` (interaction-handler)
  *
  * Steps:
@@ -9,7 +9,7 @@
  *   3. git stash pop (restore local changes; conflicts are non-fatal)
  *   4. npm install
  *   5. npm run build
- *   6. pm2 restart opencat-agent (unless --no-restart)
+ *   6. pm2 restart opencatz-agent (unless --no-restart)
  *
  * Fail-closed: pull/build failure => exit code != 0 (Discord shows the error).
  */
@@ -23,7 +23,7 @@ const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SELF_DIR, '..');
 const EXEC_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per step (npm install can be slow)
 
-export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
+export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   const log = [];
   const step = (label, command, { ignore = false } = {}) => {
     console.log(`\n▶ ${label}`);
@@ -42,7 +42,7 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
     }
   };
 
-  console.log('🔄 OPENCAT AI SELF-UPDATE');
+  console.log('🔄 OPENCATZ AI SELF-UPDATE');
   console.log(`   repo: ${cwd} | node: ${process.version}`);
   console.log(`   mode: ${noRestart ? 'without restart (--no-restart)' : 'with pm2 restart'}`);
 
@@ -52,7 +52,7 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
     const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8' }).trim();
     if (status.length > 0) {
       console.log('\n⚠ Working tree is dirty — stashing local changes first...');
-      stashed = step('Stash local changes', 'git stash push -m opencat-update', { ignore: true });
+      stashed = step('Stash local changes', 'git stash push -m opencatz-update', { ignore: true });
     } else {
       console.log('\n✓ Working tree is clean — no stash needed.');
     }
@@ -87,7 +87,7 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
   // 6. Restart pm2 (unless --no-restart)
   let restartOk = true;
   if (!noRestart) {
-    const pm2Cmd = 'pm2 restart opencat-agent --update-env || npx pm2 restart opencat-agent --update-env';
+    const pm2Cmd = 'pm2 restart opencatz-agent opencat-agent --update-env || npx pm2 restart opencatz-agent opencat-agent --update-env';
     try {
       const child = spawn('sh', ['-c', `sleep 3 && ${pm2Cmd}`], {
         detached: true,
@@ -132,12 +132,14 @@ export async function runOpenCatUpdate({ noRestart = false, cwd = REPO_ROOT } = 
   return { ok: allOk, restartOk, log };
 }
 
-export const runUpdate = runOpenCatUpdate;
+/** Backward-compatible aliases */
+export const runOpenCatUpdate = runOpenCatzUpdate;
+export const runUpdate = runOpenCatzUpdate;
 
 // CLI entry: only runs when executed directly (not when imported)
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const noRestart = process.argv.includes('--no-restart');
-  const result = await runOpenCatUpdate({ noRestart });
+  const result = await runOpenCatzUpdate({ noRestart });
   process.exit(result.ok ? 0 : 1);
 }

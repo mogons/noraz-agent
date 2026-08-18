@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from 'discord.js';
 export const slashCommands = [
   new SlashCommandBuilder()
     .setName('wallet')
-    .setDescription('Manage OpenCat burner wallets & view balances')
+    .setDescription('Manage OpenCatz burner wallets & view balances')
     .addSubcommand(sub =>
       sub.setName('setup')
         .setDescription('Safely setup/import burner wallet Private Key via secure modal popup')
@@ -180,7 +180,7 @@ export const slashCommands = [
     )
     .addSubcommand(sub =>
       sub.setName('rearrange')
-        .setDescription('Organize and re-order OpenCat Command Center channels neatly')
+        .setDescription('Organize and re-order OpenCatz Command Center channels neatly')
     ),
 
   // Quick Utility Slash Commands
@@ -245,11 +245,11 @@ export const slashCommands = [
 
   new SlashCommandBuilder()
     .setName('menu')
-    .setDescription('Open the Interactive OpenCat Control Center Dashboard'),
+    .setDescription('Open the Interactive OpenCatz Control Center Dashboard'),
 
   new SlashCommandBuilder()
     .setName('dashboard')
-    .setDescription('Open the Interactive OpenCat Control Center Dashboard'),
+    .setDescription('Open the Interactive OpenCatz Control Center Dashboard'),
 
   new SlashCommandBuilder()
     .setName('journal')
@@ -269,7 +269,7 @@ export const slashCommands = [
 
   new SlashCommandBuilder()
     .setName('update')
-    .setDescription('Pull latest OpenCat codebase from Git, re-build TypeScript, and soft-restart'),
+    .setDescription('Pull latest OpenCatz codebase from Git, re-build TypeScript, and soft-restart'),
 
 
 

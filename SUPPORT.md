@@ -1,14 +1,14 @@
-# Getting Support for Opencat AI
+# Getting Support for Opencatz AI
 
-Welcome to **Opencat AI (Robinhood Chain Edition)**! Here are the official resources and channels to get help, report issues, or connect with the community.
+Welcome to **Opencatz AI (Robinhood Chain Edition)**! Here are the official resources and channels to get help, report issues, or connect with the community.
 
 ---
 
 ## 💬 Interactive Support Channels
 
-- **Discord Command Center**: Join our Discord server and navigate to `#opencat-control-room` for natural language chat, setup assistance, and strategy configuration.
+- **Discord Command Center**: Join our Discord server and navigate to `#opencatz-control-room` for natural language chat, setup assistance, and strategy configuration.
 - **Telegram Notification Bridge**: Follow real-time signal broadcasts and status alerts.
-- **Terminal TUI Diagnostics**: Run `opencat doctor` or `opencat terminal` in your terminal for real-time diagnostic checks on API keys, RPC connections, and wallet configuration.
+- **Terminal TUI Diagnostics**: Run `opencatz doctor` or `opencatz terminal` in your terminal for real-time diagnostic checks on API keys, RPC connections, and wallet configuration.
 
 ---
 

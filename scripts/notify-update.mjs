@@ -1,17 +1,17 @@
 /**
- * OpenCat deploy notifications — sends the self-update result to Telegram
+ * OpenCatz deploy notifications — sends the self-update result to Telegram
  * and (optionally) a Discord webhook. Never throws; failures are logged.
  */
 export async function notifyUpdate({ ok, restartOk, steps = [], noRestart = false }) {
   const lines = steps.map((s) => `• ${s.label}: ${s.ok ? '✅' : '❌'}`).join('\n');
   const status = restartOk === null ? '⚠️ COMPLETE (restart scheduled — confirm after boot)' : ok && restartOk ? '✅ COMPLETE' : ok ? '⚠️ COMPLETE (restart pending)' : '❌ FAILED';
   const text = [
-    `🐾 OpenCat Update — Self-update ${status}`,
+    `🐾 OpenCatz Update — Self-update ${status}`,
     `Repo: ${process.cwd()}`,
     '',
     lines,
-    restartOk === null ? '🔄 PM2 restart scheduled — final status is reported to Discord after boot.' : noRestart ? '⏭ PM2 restart skipped (--no-restart).' : restartOk ? '🔄 PM2 agent restarted — new code is live in Cat Den.' : '⚠ PM2 restart failed — run `opencat deploy` manually.',
-    ok ? '' : '🩺 Tip: run `opencat doctor` to diagnose.',
+    restartOk === null ? '🔄 PM2 restart scheduled — final status is reported to Discord after boot.' : noRestart ? '⏭ PM2 restart skipped (--no-restart).' : restartOk ? '🔄 PM2 agent restarted — new code is live in Cat Den.' : '⚠ PM2 restart failed — run `opencatz deploy` manually.',
+    ok ? '' : '🩺 Tip: run `opencatz doctor` to diagnose.',
   ].join('\n');
 
   const tgToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -39,11 +39,11 @@ export async function notifyUpdate({ ok, restartOk, steps = [], noRestart = fals
         body: JSON.stringify({
           content: null,
           embeds: [{
-            title: ok ? '🐾 OpenCat Self-Update Complete' : '❌ OpenCat Self-Update Failed',
+            title: ok ? '🐾 OpenCatz Self-Update Complete' : '❌ OpenCatz Self-Update Failed',
             color: ok ? 0xccff00 : 0xe74c3c,
             description: text,
             timestamp: new Date().toISOString(),
-            footer: { text: '🐾 OpenCat AI · Robinhood Chain Ops' },
+            footer: { text: '🐾 OpenCatz AI · Robinhood Chain Ops' },
           }],
         }),
       });

@@ -457,7 +457,7 @@ function drawProgressHeader(step, total, done) {
     else if (i === step) cells.push(`${C.bold}${C.lime}[${i}]${C.reset}`);
     else cells.push(`${C.dim}${i}${C.reset}`);
   }
-  console.log(`\n${C.lime}${C.bold}🐾  OPENCAT AI — MASTER ONBOARDING WIZARD${C.reset}`);
+  console.log(`\n${C.lime}${C.bold}🐾  OPENCATZ AI — MASTER ONBOARDING WIZARD${C.reset}`);
   console.log(` ${C.cyan}Step ${step} of ${total} — ${done ? C.green + 'configuring ' + done : 'beginning'}${C.reset}`);
   console.log(` ${cells.join(' ')}\n`);
 }
@@ -465,7 +465,7 @@ function drawProgressHeader(step, total, done) {
 async function runWizard() {
   console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCAT AI ONBOARDING WIZARD 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCATZ AI ONBOARDING WIZARD 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Robinhood Chain Multi-Agent Trading Swarm${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}EVM L2 #4663 • Native ETH • Uniswap V3${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -473,7 +473,7 @@ ${C.lime}    ( (  )   (  ) )
    (__(__)___(__)__)${C.reset}
 `);
   console.log(`${C.lime}========================================================================${C.reset}`);
-  console.log(`${C.lime}🐾 OPENCAT MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD 🐾${C.reset}`);
+  console.log(`${C.lime}🐾 OPENCATZ MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD 🐾${C.reset}`);
   console.log(`${C.lime}========================================================================${C.reset}\n`);
   console.log('💡 Note: API keys are MANDATORY for their respective sub-agents to run. Press ENTER to keep existing values.\n');
 
@@ -513,7 +513,7 @@ ${C.lime}    ( (  )   (  ) )
     const inputClient = await askQuestion(` 2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
 
-    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #opencat-control-room]';
+    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #opencatz-control-room]';
     const inputCtrl = await askQuestion(` 3. Enter DISCORD_CHANNEL_CONTROL_ROOM (channel ID)${defaultCtrlMsg}: `);
     controlRoomId = inputCtrl.trim() || controlRoomId;
   }
@@ -530,9 +530,9 @@ ${C.lime}    ( (  )   (  ) )
     telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
-  // 4. OPENCAT'S REASONING ENGINE
+  // 4. OPENCATZ'S REASONING ENGINE
   drawProgressHeader(4, 9, 'AI provider & model');
-  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: OPENCAT'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
+  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: OPENCATZ'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
   let existingProvider = existingEnv.AI_PROVIDER || '';
   let existingBaseUrl = existingEnv.AI_BASE_URL || '';
   let existingModelName = existingEnv.AI_MODEL_NAME || '';
@@ -738,7 +738,7 @@ ${C.lime}    ( (  )   (  ) )
   for (const [label, val] of rows) console.log(`   ${label.padEnd(16)} ${val}`);
   const confirmWrite = (await askQuestion(`\n   Save this configuration to .env? (Y/n) [Default Y]: `)) || 'y';
   if (confirmWrite.toLowerCase() === 'n') {
-    console.log(`\n${C.yellow}Configuration discarded. Rerun 'opencat wizard' when ready.${C.reset}`);
+    console.log(`\n${C.yellow}Configuration discarded. Rerun 'opencatz wizard' when ready.${C.reset}`);
     rl.close();
     return;
   }
@@ -785,11 +785,11 @@ ${C.lime}    ( (  )   (  ) )
   fs.writeFileSync(envPath, mergedLines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n', 'utf8');
 
   console.log(`\n${C.lime}${C.bold}========================================================${C.reset}`);
-  console.log(`${C.lime}${C.bold} 🐾 CONFIGURATION SAVED — OPENCAT IS READY 🐾${C.reset}`);
+  console.log(`${C.lime}${C.bold} 🐾 CONFIGURATION SAVED — OPENCATZ IS READY 🐾${C.reset}`);
   console.log(`${C.lime}${C.bold}========================================================${C.reset}`);
-  console.log(`   ${C.bold}Command Center:${C.reset} run \`opencat terminal\` to open the interactive TUI.`);
-  console.log(`   ${C.bold}OpenCat Engine:${C.reset} run \`opencat run\` (dev) or \`opencat deploy\` (24/7 via PM2 — Cat Den).`);
-  console.log(`   ${C.bold}Diagnostics:${C.reset}    \`opencat doctor\` | \`opencat test\` | \`opencat update\``);
+  console.log(`   ${C.bold}Command Center:${C.reset} run \`opencatz terminal\` to open the interactive TUI.`);
+  console.log(`   ${C.bold}OpenCatz Engine:${C.reset} run \`opencatz run\` (dev) or \`opencatz deploy\` (24/7 via PM2 — Cat Den).`);
+  console.log(`   ${C.bold}Diagnostics:${C.reset}    \`opencatz doctor\` | \`opencatz test\` | \`opencatz update\``);
   console.log(`\n${C.dim}Wise words: 9 lives in crypto — DRY_RUN is your armor, strike when ready. 🐱${C.reset}\n`);
 
   rl.close();

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 🐾 OPENCAT SETUP — Opencat AI (Robinhood Chain) one-shot installer
+# 🐾 OPENCATZ SETUP — Opencatz AI (Robinhood Chain) one-shot installer
 # Usage: bash setup.sh   (fresh install: run inside an empty dir, or clone first)
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; LIME='\033[38;2;204;255;0m'; BOLD='\033[1m'; NC='\033[0m'
@@ -11,7 +11,7 @@ fail() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 echo -e "${BOLD}${LIME}
        /\_____/\
-      /  ■   ■  \      🐾 OPENCAT AI — SYSTEM SETUP 🐾
+      /  ■   ■  \      🐾 OPENCATZ AI — SYSTEM SETUP 🐾
      ( ==  ^  == )     Robinhood Chain (EVM 4663)
       )    ~    (      Multi-Agent Crypto Trading Swarm
      (   _____   )
@@ -25,7 +25,7 @@ ok "Node $(node --version) + npm"
 
 step 2 "Source code"
 if [ ! -f package.json ]; then
-  REPO_URL="${OPENCAT_REPO_URL:-https://github.com/dizcorvus/opencat-ai-robinhood-chain.git}"
+  REPO_URL="${OPENCATZ_REPO_URL:-${OPENCAT_REPO_URL:-https://github.com/dizcorvus/opencat-ai-robinhood-chain.git}}"
   echo -e "No repo found. Cloning ${YELLOW}${REPO_URL}${NC} ..."
   git clone "$REPO_URL" . || fail "git clone failed"
   ok "Cloned into current directory"
@@ -46,17 +46,17 @@ npm run build || fail "npm run build failed"
 ok "TypeScript compiled to dist/"
 
 step 5 "CLI link"
-npm link 2>/dev/null && ok "opencat CLI linked" || echo -e "${YELLOW}⚠ npm link failed (skip; use npx/node bin/opencat.js)${NC}"
+npm link 2>/dev/null && ok "opencatz CLI linked" || echo -e "${YELLOW}⚠ npm link failed (skip; use npx/node bin/opencatz.js)${NC}"
 
 step 6 "Configuration & launch"
 if [ ! -f .env ]; then
-  echo -e "No .env found — launching ${YELLOW}Opencat onboarding wizard${NC} ..."
+  echo -e "No .env found — launching ${YELLOW}Opencatz onboarding wizard${NC} ..."
   npm run wizard
 else
-  echo -e "${YELLOW}.env already exists — skipping wizard (rerun: opencat wizard)${NC}"
+  echo -e "${YELLOW}.env already exists — skipping wizard (rerun: opencatz wizard)${NC}"
 fi
 
-echo -e "\n${GREEN}${BOLD}✅ OPENCAT IS INSTALLED${NC}"
-echo -e "${BOLD}Command Center:${NC} opencat terminal     # command center TUI"
-echo -e "${BOLD}OpenCat Engine:${NC} opencat run          # dev / opencat deploy (PM2, Cat Den)"
-echo -e "${BOLD}Health check:${NC}   opencat doctor | opencat test | opencat update"
+echo -e "\n${GREEN}${BOLD}✅ OPENCATZ IS INSTALLED${NC}"
+echo -e "${BOLD}Command Center:${NC} opencatz terminal     # command center TUI"
+echo -e "${BOLD}OpenCatz Engine:${NC} opencatz run          # dev / opencatz deploy (PM2, Cat Den)"
+echo -e "${BOLD}Health check:${NC}   opencatz doctor | opencatz test | opencatz update"

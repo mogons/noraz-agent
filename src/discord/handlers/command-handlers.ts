@@ -14,7 +14,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js';
-import { OpenCatHub } from '../../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
@@ -43,7 +43,7 @@ export async function buildDashboardOptions(): Promise<import('../embeds/dashboa
 
 export async function handleChatInput(
   interaction: ChatInputCommandInteraction,
-  hub: OpenCatHub
+  hub: OpenCatzHub
 ): Promise<void> {
   const commandName = interaction.commandName;
 
@@ -53,7 +53,7 @@ export async function handleChatInput(
       const isReplace = subcommand === 'replace';
       const modal = new ModalBuilder()
         .setCustomId('wallet_setup_modal')
-        .setTitle(isReplace ? '🔄 Replace OpenCat Burner Wallet' : '🔑 OpenCat Burner Wallet Setup');
+        .setTitle(isReplace ? '🔄 Replace OpenCatz Burner Wallet' : '🔑 OpenCatz Burner Wallet Setup');
 
       const pkInput = new TextInputBuilder()
         .setCustomId('wallet_pk')
@@ -77,7 +77,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `📋 **REGISTERED OPENCAT BURNER WALLETS**\n\n` +
+        content: `📋 **REGISTERED OPENCATZ BURNER WALLETS**\n\n` +
           `• **Robinhood Chain (EVM) Wallet:** ${evmAddr}\n\n` +
           `💡 *Use \`/wallet replace\` to swap the private key, or \`/wallet remove\` to delete the wallet.*`,
         ephemeral: true,
@@ -427,7 +427,7 @@ export async function handleChatInput(
       const stats = tradeJournalService.getSummaryStats();
       await interaction.reply({
         content:
-          `📊 **OPENCAT TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
+          `📊 **OPENCATZ TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
           `• **Total Trades Logged:** \`${stats.totalTrades}\` (\`${stats.openTradesCount}\` Open, \`${stats.winCount + stats.lossCount}\` Closed)\n` +
           `• **Win Rate:** \`${stats.winRatePct.toFixed(1)}%\` (${stats.winCount} Wins / ${stats.lossCount} Losses)\n` +
           `• **Total Realized PnL:** \`+$${stats.totalRealizedPnlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD\`\n` +
@@ -444,21 +444,21 @@ export async function handleChatInput(
       }).join('\n');
 
       await interaction.reply({
-        content: `📋 **RECENT OPENCAT TRADES (${trades.length}):**\n${historyText}`,
+        content: `📋 **RECENT OPENCATZ TRADES (${trades.length}):**\n${historyText}`,
       });
     } else if (subcommand === 'export') {
       const csvData = tradeJournalService.exportCsv();
       const buffer = Buffer.from(csvData, 'utf-8');
-      const attachment = new AttachmentBuilder(buffer, { name: 'opencat_trade_journal.csv' });
+      const attachment = new AttachmentBuilder(buffer, { name: 'opencatz_trade_journal.csv' });
 
       await interaction.reply({
-        content: '📄 **OpenCat Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
+        content: '📄 **OpenCatz Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
         files: [attachment],
       });
     }
   } else if (commandName === 'update') {
     await interaction.reply({
-      content: '🔄 **OpenCat Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
+      content: '🔄 **OpenCatz Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
       ephemeral: true,
     });
 
@@ -466,11 +466,12 @@ export async function handleChatInput(
     // end, which kills this very process — so we can never await a followUp
     // after the restart. We only report failures that happen BEFORE the restart.
     try {
-      const { runOpenCatUpdate } = await import('../../../scripts/update-core.mjs');
-      runOpenCatUpdate({ noRestart: false });
+      const { runOpenCatzUpdate, runOpenCatUpdate } = await import('../../../scripts/update-core.mjs');
+      const updateFn = runOpenCatzUpdate || runOpenCatUpdate;
+      updateFn({ noRestart: false });
     } catch (err: any) {
       await interaction.followUp({
-        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs opencat-agent`' + `.`,
+        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs opencatz-agent`' + `.`,
         ephemeral: true,
       });
     }
@@ -499,7 +500,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Swap)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Swap Engine • OpenCat Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Swap Engine • OpenCatz Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -535,7 +536,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Transfer)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Transfer Engine • OpenCat Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Transfer Engine • OpenCatz Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()

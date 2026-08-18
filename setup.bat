@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title OpenCat Setup - Opencat AI (Robinhood Chain)
+title OpenCatz Setup - Opencatz AI (Robinhood Chain)
 
 rem ---------------------------------------------------------------------------
-rem  OPENCAT SETUP - Opencat AI (Robinhood Chain) one-shot installer (Windows)
+rem  OPENCATZ SETUP - Opencatz AI (Robinhood Chain) one-shot installer (Windows)
 rem  Steps: 1) Node check (warn-only)  2) git clone/pull  3) npm install
 rem         4) npm run build  5) npm link  6) wizard if .env missing
 rem  Critical failures: pause + exit /b 1
@@ -32,7 +32,7 @@ if defined ESC (
 
 echo.
 echo %LIME%%BOLD%       /\_____/\%NC%
-echo %LIME%%BOLD%      /  ■   ■  \      🐾 OPENCAT AI - SYSTEM SETUP 🐾%NC%
+echo %LIME%%BOLD%      /  ■   ■  \      🐾 OPENCATZ AI - SYSTEM SETUP 🐾%NC%
 echo %LIME%%BOLD%     ( ==  ^  == )     Robinhood Chain (EVM 4663)%NC%
 echo %LIME%%BOLD%      )    ~    (      Multi-Agent Crypto Intelligence%NC%
 echo %LIME%%BOLD%     (   _____   )%NC%
@@ -49,7 +49,7 @@ if errorlevel 1 (
   node --version | findstr /R /C:"v2[2-9]" /C:"v[3-9][0-9]" >nul
   if errorlevel 1 (
     for /f "delims=" %%v in ('node --version') do set "NODE_VER=%%v"
-    echo %YELLOW%Warning: found Node !NODE_VER! - OpenCat requires ^>= 22.12. Install from https://nodejs.org and re-run setup.%NC%
+    echo %YELLOW%Warning: found Node !NODE_VER! - OpenCatz requires ^>= 22.12. Install from https://nodejs.org and re-run setup.%NC%
   ) else (
     echo %GREEN%Node %BOLD%found ^>= v22%NC%
   )
@@ -66,6 +66,7 @@ rem --- [2/6] Source code ---
 echo %CYAN%%BOLD%--- [2/6] Source code ---%NC%
 if not exist package.json (
   set "REPO_URL=https://github.com/dizcorvus/opencat-ai-robinhood-chain.git"
+  if defined OPENCATZ_REPO_URL set "REPO_URL=%OPENCATZ_REPO_URL%"
   if defined OPENCAT_REPO_URL set "REPO_URL=%OPENCAT_REPO_URL%"
   echo %YELLOW%No repo found. Cloning %BOLD%!REPO_URL!%NC% ...
   git clone "!REPO_URL!" .
@@ -115,26 +116,26 @@ rem --- [5/6] CLI link ---
 echo %CYAN%%BOLD%--- [5/6] CLI link ---%NC%
 call npm link
 if errorlevel 1 (
-  echo %YELLOW%Warning: npm link failed (skip; use npx or node bin\opencat.js).%NC%
+  echo %YELLOW%Warning: npm link failed (skip; use npx or node bin\opencatz.js).%NC%
 ) else (
-  echo %GREEN%opencat CLI linked%NC%
+  echo %GREEN%opencatz CLI linked%NC%
 )
 
 rem --- [6/6] Configuration ---
 echo %CYAN%%BOLD%--- [6/6] Configuration ---%NC%
 if not exist .env (
-  echo %YELLOW%No .env found - launching OpenCat onboarding wizard ...%NC%
+  echo %YELLOW%No .env found - launching OpenCatz onboarding wizard ...%NC%
   call npm run wizard
-  if errorlevel 1 echo %YELLOW%Warning: wizard did not complete - you can rerun it with "opencat wizard".%NC%
+  if errorlevel 1 echo %YELLOW%Warning: wizard did not complete - you can rerun it with "opencatz wizard".%NC%
 ) else (
-  echo %YELLOW%.env already exists - skipping wizard (rerun: opencat wizard)%NC%
+  echo %YELLOW%.env already exists - skipping wizard (rerun: opencatz wizard)%NC%
 )
 
 rem --- Final summary ---
 echo.
-echo %GREEN%%BOLD%OK: OPENCAT IS INSTALLED%NC%
-echo %BOLD%Command Center:%NC% opencat terminal     ^<-- command center TUI
-echo %BOLD%OpenCat Engine:%NC% opencat run          ^<-- dev  /  npx pm2 start dist\index.js --name opencat-agent
-echo %BOLD%Health check:%NC%   opencat doctor ^| opencat test ^| opencat update
+echo %GREEN%%BOLD%OK: OPENCATZ IS INSTALLED%NC%
+echo %BOLD%Command Center:%NC% opencatz terminal     ^<-- command center TUI
+echo %BOLD%OpenCatz Engine:%NC% opencatz run          ^<-- dev  /  npx pm2 start dist\index.js --name opencatz-agent
+echo %BOLD%Health check:%NC%   opencatz doctor ^| opencatz test ^| opencatz update
 echo.
 pause

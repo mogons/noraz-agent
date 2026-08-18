@@ -6,7 +6,7 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
-import { OpenCatHub } from '../../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
 import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 
@@ -15,7 +15,7 @@ export interface DashboardEmbedOptions {
   activeAlerts?: number;
 }
 
-export function createDashboardComponents(hub: OpenCatHub, opts: DashboardEmbedOptions = {}) {
+export function createDashboardComponents(hub: OpenCatzHub, opts: DashboardEmbedOptions = {}) {
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 
@@ -31,10 +31,10 @@ export function createDashboardComponents(hub: OpenCatHub, opts: DashboardEmbedO
   const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
   const embed = new EmbedBuilder()
-    .setTitle('🐾 OPENCAT MULTI-AGENT CONTROL CENTER 🐾')
+    .setTitle('🐾 OPENCATZ MULTI-AGENT CONTROL CENTER 🐾')
     .setColor(0xccff00)
     .setDescription(
-      'Welcome to the **Opencat Autonomous Multi-Agent Command Center**.\n' +
+      'Welcome to the **OpenCatz Autonomous Multi-Agent Command Center**.\n' +
       'Control screening agents, risk limits, price alerts, API keys, and burner wallets interactively below.'
     )
     .addFields(
@@ -70,7 +70,7 @@ export function createDashboardComponents(hub: OpenCatHub, opts: DashboardEmbedO
           `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
       }
     )
-    .setFooter({ text: '🐾 OpenCat Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
+    .setFooter({ text: '🐾 OpenCatz Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
     .setTimestamp();
 
   // Dropdown Select Menu to Toggle Agents

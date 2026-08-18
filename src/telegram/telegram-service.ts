@@ -1,4 +1,4 @@
-import { OpenCatHub } from '../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../orchestrator/hub.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 import { WalletService, globalWalletService } from '../services/wallet-service.js';
 import { AIService } from '../services/ai-service.js';
@@ -74,14 +74,14 @@ export class TelegramService {
   }
 
   /**
-   * Auto-bootstrap all OpenCat Sub-Channels / Forum Topics in Telegram Group
+   * Auto-bootstrap all OpenCatz Sub-Channels / Forum Topics in Telegram Group
    */
   public async bootstrapTelegramTopics(): Promise<Record<string, number | null>> {
     if (!this.isEnabled()) return {};
 
-    console.log('[TELEGRAM BOOTSTRAP] Auto-provisioning OpenCat Sub-Channels (Forum Topics) in Telegram Group...');
+    console.log('[TELEGRAM BOOTSTRAP] Auto-provisioning OpenCatz Sub-Channels (Forum Topics) in Telegram Group...');
     const topicNames = [
-      'opencat-control-room',
+      'opencatz-control-room',
       'audit-on-demand',
       'call-meme-robinhood',
       'call-lp-robinhood',
@@ -152,7 +152,7 @@ export class TelegramService {
     const safeTitle = sanitizeTgField(title, 150);
     const safeSymbol = sanitizeTgField(symbol, 32);
     const safeThesis = sanitizeTgField(aiThesis, 500);
-    const message = `🚨 *🐾 OPENCAT CALL: ${safeTitle} ($${safeSymbol})*
+    const message = `🚨 *🐾 OPENCATZ CALL: ${safeTitle} ($${safeSymbol})*
 
 📋 *Contract Address (CA):*
 \`${ca}\`
@@ -162,9 +162,9 @@ ${safeThesis}
 
 ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
-🤖 _Sent via OpenCat Swarm Consensus_`;
+🤖 _Sent via OpenCatz Swarm Consensus_`;
 
-    const threadId = topicName ? (this.topics.get(topicName.toLowerCase()) || this.topics.get('opencat-control-room')) : undefined;
+    const threadId = topicName ? (this.topics.get(topicName.toLowerCase()) || this.topics.get('opencatz-control-room') || this.topics.get('opencat-control-room')) : undefined;
     return this.sendMessage(message, 'Markdown', undefined, threadId);
   }
 
@@ -175,7 +175,7 @@ ${dexUrl ? `📊 [View Chart on DexScreener](${dexUrl})` : ''}
 
     const getStatus = (domain: string) => activeDomains.includes(domain) ? '🟢 ACTIVE' : '🔴 PAUSED';
 
-    const text = `🐾 *OPENCAT CONTROL CENTER DASHBOARD (TELEGRAM)*
+    const text = `🐾 *OPENCATZ CONTROL CENTER DASHBOARD (TELEGRAM)*
 
 ⚙️ *Mode:* ${autoExecuteEnabled ? 'AUTO_EXECUTE' : 'MANUAL EXECUTION — screener/caller, execution via link'}
 🛡️ *Max Drawdown:* ${risk ? `${risk.maxDrawdownLimitPct}%` : 'n/a'}
@@ -208,14 +208,14 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
       ],
     };
 
-    const threadId = this.topics.get('opencat-control-room');
+    const threadId = this.topics.get('opencatz-control-room') || this.topics.get('opencat-control-room');
     return this.sendMessage(text, 'Markdown', replyMarkup, threadId);
   }
 
   /**
    * Start long-polling listener for Telegram incoming commands & callback buttons
    */
-  public startPolling(hub: OpenCatHub, walletService: WalletService, aiService?: AIService): void {
+  public startPolling(hub: OpenCatzHub, walletService: WalletService, aiService?: AIService): void {
     if (!this.isEnabled()) return;
 
     let offset = 0;
@@ -244,7 +244,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
     poll();
   }
 
-  private async handleTelegramUpdate(update: any, hub: OpenCatHub, walletService: WalletService, aiService?: AIService): Promise<void> {
+  private async handleTelegramUpdate(update: any, hub: OpenCatzHub, walletService: WalletService, aiService?: AIService): Promise<void> {
     if (update.callback_query) {
       const query = update.callback_query;
       const data = query.data;
@@ -266,7 +266,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         const hasEvm = walletService.hasWallet('evm');
         let evmAddr = hasEvm ? `\`${walletService.getEvmAddress()}\`` : 'Not Configured';
         await this.sendMessage(
-          `💼 *OPENCAT WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
+          `💼 *OPENCATZ WALLET BALANCES (${isDryRun ? 'SIMULATED' : 'LIVE'}):*\n\n` +
           `• *Robinhood Chain (ETH) Wallet:* ${evmAddr}\n\n` +
           `Use \`/withdraw <to> <amount>\` to transfer funds.`,
           'Markdown', undefined, threadId
@@ -306,7 +306,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
         }
       } else if (!text.startsWith('/') && aiService) {
         try {
-          const { OPENCAT_SYSTEM_PROMPT_BASE } = await import('../services/opencat-system-prompt.js');
+          const { OPENCATZ_SYSTEM_PROMPT_BASE } = await import('../services/opencatz-system-prompt.js');
           const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
           const { runAgent } = await import('../orchestrator/agent-runner.js');
           const { SessionMemoryService } = await import('../services/session-memory.js');
@@ -320,7 +320,7 @@ Use buttons below to toggle agents, view wallet status, or execute withdrawals:`
             ? `Active Sub-Agents right now: ${activeDomains.join(', ')}`
             : 'Active Sub-Agents right now: NONE (all paused)';
           const memoryContext = new SessionMemoryService().buildMemoryContextLine();
-          const systemPrompt = OPENCAT_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
+          const systemPrompt = OPENCATZ_SYSTEM_PROMPT_BASE + `\n\nCurrent Operating Parameters:\n${activeAgentsLine}${memoryContext}`;
 
           const agentResult = await runAgent(
             { aiService, toolRegistry, systemPrompt },

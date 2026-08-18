@@ -3,9 +3,9 @@ name: opencat-swarm-trading
 description: Autonomous multi-agent crypto trading skill for Robinhood Chain EVM DEX tokens and NFTs using 3-layer Swarm Consensus, Discord Command Center, and Position Management.
 ---
 
-# OpenCat Swarm Trading & Intelligence Skill
+# OpenCatz Swarm Trading & Intelligence Skill
 
-This skill defines the operational standards, decision pipelines, and multi-agent coordination rules for the **Opencat AI (Robinhood Chain Edition)** ecosystem.
+This skill defines the operational standards, decision pipelines, and multi-agent coordination rules for the **Opencatz AI (Robinhood Chain Edition)** ecosystem.
 
 ---
 
@@ -17,7 +17,7 @@ Screening agents scan across 3 high-potential token opportunities:
 2. 🧟 **Revival & CTO Tokens (Dead Tokens Waking Up):** Established tokens (>= 4h age) with a sudden **1H price move > +50%**, **2+ GMGN Smart Wallet** accumulation, and dev 0% / CTO (Community Takeover).
 3. 🚀 **Volume Surge & Trend Breakouts:** Tokens breaking key resistance levels confirmed by 1H GMGN Smart Money Net Inflows.
 
-> **Configurable thresholds:** thresholds below are the **LOOSENED defaults (2x)** configured at onboarding; users can switch to Standard, edit numbers, or supply a custom strategy prompt (compiled by OpenCat after deploy). All gates fail-closed; swarm **>= 80% floor unchanged**.
+> **Configurable thresholds:** thresholds below are the **LOOSENED defaults (2x)** configured at onboarding; users can switch to Standard, edit numbers, or supply a custom strategy prompt (compiled by OpenCatz after deploy). All gates fail-closed; swarm **>= 80% floor unchanged**.
 
 ### Layer 1: Quant & Liquidity Audit
 
@@ -58,9 +58,9 @@ Flexible thresholds designed to capture **high-potential RUNNER tokens** while a
 
 ## 2. Discord Call & Execution Standards
 
-- **Informational Calls:** Deliver to dedicated robinhood-only channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`).
-- **Interactive Action Buttons:** Provide `[VIEW ON DEXSCREENER]`, `[TRADE ON UNISWAP]`, and `[PAUSE SCREENING]`.
-- **Command Execution:** User buys are executed securely via OpenCat Core Hub in `#opencat-control-room`.
+- **Informational Calls:** Deliver to dedicated channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`, `#call-whale-eth`).
+- **Interactive Action Links & Buttons:** Provide `[VIEW ON DEXSCREENER]`, `[TRADE ON UNISWAP]`, and `[PAUSE SCREENING]`.
+- **Command Execution:** User buys are executed securely via OpenCatz Core Hub in `#opencatz-control-room`.
 
 ---
 

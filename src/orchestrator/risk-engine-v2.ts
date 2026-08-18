@@ -148,7 +148,7 @@ export class RiskEngineV2 {
   public activateKillSwitch(reason: string): void {
     this.isKillSwitchActive = true;
     this.killSwitchActivatedAt = Date.now();
-    console.error(`🚨 OPENCAT 9-LIVES RISK ENGINE: Emergency Kill Switch Activated! Reason: ${reason}`);
+    console.error(`🚨 OPENCATZ 9-LIVES RISK ENGINE: Emergency Kill Switch Activated! Reason: ${reason}`);
   }
 
   /**
@@ -158,7 +158,7 @@ export class RiskEngineV2 {
     this.isKillSwitchActive = false;
     this.killSwitchActivatedAt = null;
     this.consecutiveLossesCount = 0;
-    console.log(`✅ OPENCAT 9-LIVES RISK ENGINE: Kill Switch manually reset.`);
+    console.log(`✅ OPENCATZ 9-LIVES RISK ENGINE: Kill Switch manually reset.`);
   }
 
   /**

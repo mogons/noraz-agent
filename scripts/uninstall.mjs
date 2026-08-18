@@ -36,8 +36,10 @@ const C = {
 
 console.log(`
 ${C.lime}${C.bold}
+console.log(`
+${C.lime}${C.bold}
        /\\_____/\\
-      /  o   o  \\      🐾 OPENCAT AI — CLEAN UNINSTALLER 🐾
+      /  o   o  \\      🐾 OPENCATZ AI — CLEAN UNINSTALLER 🐾
      ( ==  ^  == )     Autonomous Multi-Agent System Reset
       )         (      Robinhood Chain EVM L2 #4663
      (   _____   )
@@ -73,7 +75,7 @@ function removePath(targetPath, description) {
 }
 
 async function main() {
-  console.log(` ${C.yellow}⚠ Warning: This operation will uninstall Opencat AI services and clean local data.${C.reset}\n`);
+  console.log(` ${C.yellow}⚠ Warning: This operation will uninstall Opencatz AI services and clean local data.${C.reset}\n`);
 
   if (!isForce) {
     const confirm = await askQuestion(` ${C.bold}Are you sure you want to proceed with Clean Uninstall? (y/N): ${C.reset}`);
@@ -88,11 +90,14 @@ async function main() {
   // 1. PM2 Process Stop & Delete
   console.log(` ${C.bold}[1/5] Stopping PM2 Background Process...${C.reset}`);
   try {
-    execSync('npx pm2 delete opencat-agent', { stdio: 'ignore' });
-    console.log(` ${C.green}✓${C.reset} PM2 daemon ${C.bold}opencat-agent${C.reset} stopped and deleted.`);
+    execSync('npx pm2 delete opencatz-agent', { stdio: 'ignore' });
+    console.log(` ${C.green}✓${C.reset} PM2 daemon ${C.bold}opencatz-agent${C.reset} stopped and deleted.`);
   } catch (_err) {
-    console.log(` ${C.gray}•${C.reset} No active PM2 process named 'opencat-agent' found.`);
+    console.log(` ${C.gray}•${C.reset} No active PM2 process named 'opencatz-agent' found.`);
   }
+  try {
+    execSync('npx pm2 delete opencat-agent', { stdio: 'ignore' });
+  } catch (_err) {}
 
   // 2. Local Database & State Persistence Reset
   console.log(`\n ${C.bold}[2/5] Cleaning Local Database & Session Memory...${C.reset}`);
@@ -123,7 +128,8 @@ async function main() {
   console.log(`\n ${C.bold}[4/5] Cleaning Build Artifacts & Cache Files...${C.reset}`);
   removePath('dist', 'Compiled TypeScript JavaScript output');
   removePath('.tmp', 'Temporary file cache');
-  removePath('opencat.log', 'Console process log');
+  removePath('opencatz.log', 'Console process log');
+  removePath('opencat.log', 'Legacy process log');
   removePath('pm2-error.log', 'PM2 error log');
   removePath('pm2-out.log', 'PM2 output log');
 
@@ -146,9 +152,9 @@ async function main() {
 
   console.log(`
 ${C.green}${C.bold}=======================================================${C.reset}
-${C.green}${C.bold}  🐾 OPENCAT CLEAN UNINSTALL COMPLETED SUCCESSFULLY!  ${C.reset}
+${C.green}${C.bold}  🐾 OPENCATZ CLEAN UNINSTALL COMPLETED SUCCESSFULLY!  ${C.reset}
 ${C.green}${C.bold}=======================================================${C.reset}
-   Opencat background daemons have been stopped and local
+   Opencatz background daemons have been stopped and local
    cache/state files have been safely wiped clean.
 `);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runOpenCatUpdate, runUpdate } from '../scripts/update-core.mjs';
+import { runOpenCatzUpdate, runOpenCatUpdate, runUpdate } from '../scripts/update-core.mjs';
 
 const mockExecSync = vi.fn();
 const mockSpawn = vi.fn(() => ({ unref: vi.fn(), on: vi.fn() }));
@@ -8,7 +8,7 @@ vi.mock('node:child_process', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
-describe('runOpenCatUpdate', () => {
+describe('runOpenCatzUpdate', () => {
   beforeEach(() => {
     delete process.env.TELEGRAM_BOT_TOKEN;
     delete process.env.TELEGRAM_CHAT_ID;
@@ -21,7 +21,7 @@ describe('runOpenCatUpdate', () => {
 
   it('runs stash (only when dirty), pull, install, build, then schedules pm2 restart via detached spawn', async () => {
     mockExecSync.mockImplementationOnce(() => ' M src/x.ts\n'); // dirty worktree
-    const result = await runOpenCatUpdate({ cwd: '/repo' });
+    const result = await runOpenCatzUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -34,7 +34,7 @@ describe('runOpenCatUpdate', () => {
     expect(mockSpawn).toHaveBeenCalledTimes(1);
     const [shell, args] = mockSpawn.mock.calls[0] as [string, string[]];
     expect(shell).toBe('sh');
-    expect(args[1]).toContain('pm2 restart opencat-agent');
+    expect(args[1]).toContain('pm2 restart opencatz-agent');
     expect(result.ok).toBe(true);
     expect(result.restartOk).toBe(true);
   });

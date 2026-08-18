@@ -11,19 +11,19 @@ export interface ChannelSetupResult {
 }
 
 export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSetupResult> {
-  console.log(`[DISCORD BOOTSTRAP] Checking & auto-creating OpenCat channels in guild: "${guild.name}"...`);
+  console.log(`[DISCORD BOOTSTRAP] Checking & auto-creating OpenCatz channels in guild: "${guild.name}"...`);
 
-  // 1. Check or Create Category "🐾 OPENCAT COMMAND CENTER"
+  // 1. Check or Create Category "🐾 OPENCATZ COMMAND CENTER"
   let category = guild.channels.cache.find(
-    c => c.type === ChannelType.GuildCategory && c.name.toLowerCase().includes('opencat command center')
+    c => c.type === ChannelType.GuildCategory && (c.name.toLowerCase().includes('opencatz command center') || c.name.toLowerCase().includes('opencat command center'))
   );
 
   if (!category) {
     category = await guild.channels.create({
-      name: '🐾 OPENCAT COMMAND CENTER',
+      name: '🐾 OPENCATZ COMMAND CENTER',
       type: ChannelType.GuildCategory,
     });
-    console.log('[DISCORD BOOTSTRAP] Created Category: "🐾 OPENCAT COMMAND CENTER"');
+    console.log('[DISCORD BOOTSTRAP] Created Category: "🐾 OPENCATZ COMMAND CENTER"');
   }
 
   // Helper to get or create channel under category
@@ -45,14 +45,15 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
   };
 
   const controlRoomId = await getOrCreateChannel(
-    'opencat-control-room',
-    '🐾 OpenCat Core Command Hub - Chat with AI, wallet management, & risk configuration.'
+    'opencatz-control-room',
+    '🐾 OpenCatz Core Command Hub - Chat with AI, wallet management, & risk configuration.',
+    ['opencat-control-room', 'control-room']
   );
 
   const auditOnDemandId = await getOrCreateChannel(
-    'opencat-audit',
+    'opencatz-audit',
     '🔎 On-Demand Token Audit Channel - Paste any Robinhood Chain / EVM Contract Address (CA) here for instant 12-point audit!',
-    ['audit-on-demand']
+    ['opencat-audit', 'audit-on-demand']
   );
 
   const memeEvmId = await getOrCreateChannel(
@@ -67,7 +68,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
 
   const nftId = await getOrCreateChannel(
     'call-nft-robinhood',
-    '🔮 NFT Floor Price & Rarity Sniping Alerts (OpenCats 24x24 & OpenSea EVM)'
+    '🔮 NFT Floor Price & Rarity Sniping Alerts (OpenCatz 24x24 & OpenSea EVM)'
   );
 
   const alphaEvmId = await getOrCreateChannel(
@@ -80,7 +81,7 @@ export async function bootstrapDiscordChannels(guild: Guild): Promise<ChannelSet
     '🐋 Smart Trader & Whale Tracking on Hyperliquid (ETH Perps & Spot Flow)'
   );
 
-  console.log('[DISCORD BOOTSTRAP] All Robinhood Chain OpenCat channels are ready!');
+  console.log('[DISCORD BOOTSTRAP] All Robinhood Chain OpenCatz channels are ready!');
 
   return {
     controlRoomId,

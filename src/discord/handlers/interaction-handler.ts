@@ -4,7 +4,7 @@
  * backward compatibility with existing consumers (index.ts, message-handler.ts).
  */
 import { Interaction } from 'discord.js';
-import { OpenCatHub } from '../../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
 import {
   priceAlertService,
@@ -24,7 +24,7 @@ export type { PriceAlertService } from '../../services/price-alert-service.js';
 export type { TradeJournalService } from '../../services/trade-journal-service.js';
 export type { WalletService } from '../../services/wallet-service.js';
 
-export function isOpenCatChannel(interaction: Interaction): boolean {
+export function isOpenCatzChannel(interaction: Interaction): boolean {
   if (!interaction.guild) return true; // Direct Messages allowed
 
   const channel = interaction.channel;
@@ -33,12 +33,14 @@ export function isOpenCatChannel(interaction: Interaction): boolean {
   const channelName = (channel.name || '').toLowerCase();
   const parentName = ('parent' in channel && channel.parent?.name) ? channel.parent.name.toLowerCase() : '';
 
-  // 1. Belongs to Category "🐾 OPENCAT COMMAND CENTER"
-  if (parentName.includes('opencat command center')) return true;
+  // 1. Belongs to Category "🐾 OPENCATZ COMMAND CENTER"
+  if (parentName.includes('opencatz command center') || parentName.includes('opencat command center')) return true;
 
-  // 2. Standard OpenCat channel names
+  // 2. Standard OpenCatz channel names
   const KNOWN_CHANNELS = [
+    'opencatz-control-room',
     'opencat-control-room',
+    'opencatz-audit',
     'opencat-audit',
     'audit-on-demand',
     'call-meme-robinhood',
@@ -46,34 +48,37 @@ export function isOpenCatChannel(interaction: Interaction): boolean {
     'call-nft-robinhood',
     'call-alpha-robinhood',
     'call-whale-eth',
+    'opencatz-logs',
     'opencat-logs',
+    'opencatz-journal',
     'opencat-journal',
   ];
 
   if (KNOWN_CHANNELS.includes(channelName)) return true;
 
   // 3. Custom created channel prefixes
-  if (channelName.startsWith('opencat-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
+  if (channelName.startsWith('opencatz-') || channelName.startsWith('opencat-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
 
   return false;
 }
+export const isOpenCatChannel = isOpenCatzChannel;
 
 export async function handleInteraction(
   interaction: Interaction,
-  hub: OpenCatHub,
+  hub: OpenCatzHub,
   aiService: AIService
 ): Promise<void> {
   try {
-    // Channel Restriction Guard: Block interaction outside OpenCat channels
+    // Channel Restriction Guard: Block interaction outside OpenCatz channels
     if (interaction.isChatInputCommand() || interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
-      if (!isOpenCatChannel(interaction)) {
+      if (!isOpenCatzChannel(interaction)) {
         if (interaction.isRepliable()) {
-          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencat-control-room');
-          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#opencat-control-room**';
+          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
+          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#opencatz-control-room**';
           await interaction.reply({
-            content: `🐾 **OpenCat Channel Restriction Notice:**\n` +
-              `OpenCat slash commands and interactive controls can only be used inside **OpenCat Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
-              `Please run your command inside ${controlRoomRef} or dedicated OpenCat call channels!`,
+            content: `🐾 **OpenCatz Channel Restriction Notice:**\n` +
+              `OpenCatz slash commands and interactive controls can only be used inside **OpenCatz Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
+              `Please run your command inside ${controlRoomRef} or dedicated OpenCatz call channels!`,
             flags: 1 << 6, // EPHEMERAL
           });
         }

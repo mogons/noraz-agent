@@ -58,7 +58,7 @@ export class SkillLoader {
     if (!match) {
       return {
         name: folderName,
-        description: 'Custom OpenCat Agent Skill',
+        description: 'Custom OpenCatz Agent Skill',
         body: content,
       };
     }
@@ -67,7 +67,7 @@ export class SkillLoader {
     const body = match[2].trim();
 
     let name = folderName;
-    let description = 'Custom OpenCat Agent Skill';
+    let description = 'Custom OpenCatz Agent Skill';
 
     const nameMatch = yamlBlock.match(/name:\s*(.+)/);
     if (nameMatch) name = nameMatch[1].trim();

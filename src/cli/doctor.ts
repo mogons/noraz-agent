@@ -1,8 +1,8 @@
-import { OpenCatHub } from '../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../orchestrator/hub.js';
 
-export async function runOpenCatDoctor(): Promise<void> {
+export async function runOpenCatzDoctor(): Promise<void> {
   console.log('\n======================================================');
-  console.log('🩺 OPENCAT AI AGENT SYSTEM DOCTOR & DIAGNOSTICS');
+  console.log('🩺 OPENCATZ AI AGENT SYSTEM DOCTOR & DIAGNOSTICS');
   console.log('======================================================\n');
 
   // 1. Check API Keys Configuration
@@ -46,17 +46,20 @@ export async function runOpenCatDoctor(): Promise<void> {
 
   // 3. Sub-Agent Statuses
   console.log('\n🐾 3. SUB-AGENT 24/7 SCREENING STATUSES:');
-  const hub = new OpenCatHub();
+  const hub = new OpenCatzHub();
   const statuses = hub.getAgentStatuses();
   for (const [name, state] of Object.entries(statuses)) {
     console.log(`   • ${name.toUpperCase().padEnd(20)}: ${state.active ? '🟢 ACTIVE (24/7 Background Running)' : '🔴 PAUSED'}`);
   }
 
   console.log('\n======================================================');
-  console.log('✅ Opencat diagnostic check completed successfully!');
+  console.log('✅ Opencatz diagnostic check completed successfully!');
   console.log('======================================================\n');
 }
 
+/** Backward-compatible alias */
+export const runOpenCatDoctor = runOpenCatzDoctor;
+
 if (process.argv[1] && process.argv[1].includes('doctor')) {
-  runOpenCatDoctor().catch(console.error);
+  runOpenCatzDoctor().catch(console.error);
 }

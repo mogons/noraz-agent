@@ -1,6 +1,6 @@
-# Contributing to Opencat AI (Robinhood Chain Edition)
+# Contributing to Opencatz AI (Robinhood Chain Edition)
 
-Thank you for your interest in contributing to **Opencat AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
+Thank you for your interest in contributing to **Opencatz AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
 
 ---
 
@@ -20,7 +20,7 @@ cd opencat-ai-robinhood-chain
 npm install
 
 # Run interactive onboarding wizard
-opencat onboard   # or: npm run wizard
+opencatz onboard   # or: npm run wizard
 ```
 
 ---

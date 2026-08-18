@@ -9,7 +9,7 @@ import { getExecutionMode } from '../config/config.js';
 import { AGENT_DOMAINS } from '../orchestrator/agent-registry.js';
 import { ToolRegistry } from '../orchestrator/tool-registry.js';
 
-export class OpenCatRESTServer {
+export class OpenCatzRESTServer {
   private server: http.Server | null = null;
   private port: number;
   private toolRegistry = new ToolRegistry();
@@ -36,7 +36,7 @@ export class OpenCatRESTServer {
       // Set CORS Headers for website integration
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCat-Api-Key');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCatz-Api-Key, X-OpenCat-Api-Key');
       res.setHeader('Content-Type', 'application/json');
 
       // Handle CORS Preflight
@@ -46,10 +46,10 @@ export class OpenCatRESTServer {
         return;
       }
 
-      // API Key Authentication Guard (if OPENCAT_API_KEY is configured)
-      const authKey = process.env.OPENCAT_API_KEY;
+      // API Key Authentication Guard (if OPENCATZ_API_KEY or OPENCAT_API_KEY is configured)
+      const authKey = process.env.OPENCATZ_API_KEY || process.env.OPENCAT_API_KEY;
       if (authKey && authKey.trim() !== '') {
-        const clientKey = req.headers['x-opencat-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+        const clientKey = req.headers['x-opencatz-api-key'] || req.headers['x-opencat-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
         if (clientKey !== authKey) {
           res.statusCode = 401;
           res.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or missing API Key' }));
@@ -217,10 +217,14 @@ export class OpenCatRESTServer {
     });
 
     this.server.listen(this.port, () => {
-      console.log(`📡 🐾 OPENCAT AI REST API Server listening on port ${this.port}`);
+      console.log(`📡 🐾 OPENCATZ AI REST API Server listening on port ${this.port}`);
     });
   }
 }
+
+/** Backward-compatible alias */
+export const OpenCatRESTServer = OpenCatzRESTServer;
+export type OpenCatRESTServer = OpenCatzRESTServer;
 
 function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {

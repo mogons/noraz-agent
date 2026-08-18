@@ -1,14 +1,16 @@
 {
-  "name": "opencat-robinhood-chain",
+  "name": "opencatz-robinhood-chain",
   "version": "1.0.0",
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem for Robinhood Chain (EVM)",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "opencat": "./bin/opencat.js"
+    "opencatz": "./bin/opencatz.js",
+    "opencat": "./bin/opencatz.js"
   },
   "scripts": {
-    "opencat": "node ./bin/opencat.js",
+    "opencatz": "node ./bin/opencatz.js",
+    "opencat": "node ./bin/opencatz.js",
     "onboard": "node scripts/wizard.js",
     "wizard": "node scripts/wizard.js",
     "config": "node scripts/wizard.js",
@@ -17,7 +19,7 @@
     "tui": "tsx src/cli/tui.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "deploy": "npm install && npm run build && (npx pm2 delete opencat-agent || true) && npx pm2 start dist/index.js --name opencat-agent --update-env",
+    "deploy": "npm install && npm run build && (npx pm2 delete opencatz-agent || npx pm2 delete opencat-agent || true) && npx pm2 start dist/index.js --name opencatz-agent --update-env",
     "update": "node scripts/update-core.mjs",
     "uninstall": "node scripts/uninstall.mjs",
     "clean": "node scripts/uninstall.mjs",
@@ -30,7 +32,7 @@
   "bugs": {
     "url": "https://github.com/dizcorvus/opencat-ai-robinhood-chain/issues"
   },
-  "homepage": "https://github.com/dizcorvus/opencat-ai-robinhood-chain#readme",
+  "homepage": "https://opencatz.xyz",
   "keywords": [
     "opencat",
     "nft-screening",

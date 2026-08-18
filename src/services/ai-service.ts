@@ -219,8 +219,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://opencat-crypto.local';
-      headers['X-Title'] = 'Opencat AI (Robinhood Chain)';
+      headers['HTTP-Referer'] = 'https://opencatz.xyz';
+      headers['X-Title'] = 'Opencatz AI (Robinhood Chain)';
     }
 
     const candidateModels = [
@@ -368,8 +368,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://opencat-crypto.local';
-      headers['X-Title'] = 'Opencat AI (Robinhood Chain)';
+      headers['HTTP-Referer'] = 'https://opencatz.xyz';
+      headers['X-Title'] = 'Opencatz AI (Robinhood Chain)';
     }
 
     const candidateModels = [

@@ -12,7 +12,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
 } from 'discord.js';
-import { OpenCatHub } from '../../orchestrator/hub.js';
+import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
 import { createDashboardComponents } from '../embeds/dashboard-embed.js';
 import { priceAlertService, walletService, buildDashboardOptions } from './command-handlers.js';
 
@@ -31,9 +31,14 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
     }
 
     await interaction.reply({
-      content: `✅ **Burner Wallet Private Key Configured in OpenCat Runtime Memory!**\n• Chain: \`${chainType.toUpperCase()}\`${addressStr}\n• Security Note: Key is stored 100% in-memory and will never be written to disk or logs.`,
+      content:
+        `🔑 **OpenCatz Burner Wallet Stored!**\n` +
+        `• Chain Type: \`${chainType.toUpperCase()}\`${addressStr}\n` +
+        `• Security: 🔒 Stored locally in memory & local StateStore.\n` +
+        `• Mode: Active for \`${process.env.DRY_RUN === 'false' ? 'LIVE BROADCASTING' : 'DRY_RUN SIMULATION'}\``,
       ephemeral: true,
     });
+    return;
   } else if (interaction.customId === 'api_setup_modal') {
     const openseaKey = interaction.fields.getTextInputValue('opensea_key');
 
@@ -49,7 +54,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
   }
 }
 
-export async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: OpenCatHub): Promise<void> {
+export async function handleSelectMenu(interaction: StringSelectMenuInteraction, hub: OpenCatzHub): Promise<void> {
   if (interaction.customId === 'select_toggle_agent') {
     const selectedAgent = interaction.values[0];
     const currentState = hub.isAgentActive(selectedAgent);
@@ -61,13 +66,13 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction,
   }
 }
 
-export async function handleButtonPress(interaction: ButtonInteraction, hub: OpenCatHub): Promise<void> {
+export async function handleButtonPress(interaction: ButtonInteraction, hub: OpenCatzHub): Promise<void> {
   const customId = interaction.customId;
 
   if (customId === 'btn_setup_api_keys') {
     const modal = new ModalBuilder()
       .setCustomId('api_setup_modal')
-      .setTitle('⚙️ OpenCat API Key Setup');
+      .setTitle('⚙️ OpenCatz API Key Setup');
 
     const openseaInput = new TextInputBuilder()
       .setCustomId('opensea_key')
