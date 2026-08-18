@@ -41,7 +41,7 @@ describe('runOpenCatzUpdate', () => {
 
   it('skips stash when the worktree is clean', async () => {
     mockExecSync.mockImplementationOnce(() => ''); // clean
-    const result = await runOpenCatUpdate({ cwd: '/repo' });
+    const result = await runOpenCatzUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -50,7 +50,7 @@ describe('runOpenCatzUpdate', () => {
   });
 
   it('skips pm2 restart when noRestart is set', async () => {
-    const result = await runOpenCatUpdate({ cwd: '/repo', noRestart: true });
+    const result = await runOpenCatzUpdate({ cwd: '/repo', noRestart: true });
     expect(mockSpawn).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
   });
@@ -60,12 +60,9 @@ describe('runOpenCatzUpdate', () => {
       .mockImplementationOnce(() => '') // clean
       .mockImplementationOnce(() => '') // pull
       .mockImplementationOnce(() => {
-        const err = new Error('install failed') as any;
-        err.status = 1;
-        throw err;
-      });
-
-    const result = await runOpenCatUpdate({ cwd: '/repo' });
+        throw new Error('ERESOLVE could not resolve');
+      }); // npm install throws
+    const result = await runOpenCatzUpdate({ cwd: '/repo' });
     expect(result.ok).toBe(false);
     const step = result.log.find((s) => s.label === 'npm install');
     expect(step?.ok).toBe(false);

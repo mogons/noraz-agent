@@ -182,7 +182,7 @@ if (discordToken && clientId) {
     ],
     rest: {
       // Naikkan timeout REST Discord (default 10s) — VPS pernah timeout saat
-      // restart + bootstrap + reply bersamaan, bikin "OpenCat is thinking..."
+      // restart + bootstrap + reply bersamaan, bikin "Opencatz is thinking..."
       timeout: 30000,
     },
   });

@@ -110,7 +110,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `💼 **OpenCat Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
+        content: `💼 **OpenCatz Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
           `• Robinhood Wallet: ${evmAddrStr} | Balance: ${evmBalStr}`,
         ephemeral: true,
       });
@@ -152,7 +152,7 @@ export async function handleChatInput(
     const audit = await runTokenAudit(contract);
 
     await interaction.editReply({
-      content: `🔎 **OPENCAT ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
+      content: `🔎 **OPENCATZ ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
     });
   } else if (commandName === 'screening') {
     await interaction.deferReply({ ephemeral: false });
@@ -202,7 +202,7 @@ export async function handleChatInput(
       await interaction.editReply({
         content: `⚠️ **Channel Misalignment Notice:**\n` +
           `Channel <#${interaction.channelId}> is dedicated to **${currentChannelMapping.name}** (\`${currentChannelMapping.agent}\`).\n\n` +
-          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#opencat-control-room**!`,
+          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#opencatz-control-room**!`,
       });
       return;
     }
@@ -233,7 +233,7 @@ export async function handleChatInput(
         : `🟡 **${activeCount}/3 Sub-Agents Active** — Partial screening running.`;
 
       await interaction.editReply(
-        `## 🐾 OpenCat Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
+        `## 🐾 OpenCatz Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
         `> 💡 Use \`/screening start\` or \`/screening stop\` in a dedicated channel to toggle individual agents.`
       );
     } else if (subcommand === 'trigger') {
@@ -260,13 +260,13 @@ export async function handleChatInput(
       const fmtUsd = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
       await interaction.reply({
         content:
-          `⚙️ **OPENCAT LIVE RISK & AUTO TP/SL SETTINGS**\n` +
+          `⚙️ **OPENCATZ LIVE RISK & AUTO TP/SL SETTINGS**\n` +
           `• **Execution Mode:** \`${getExecutionMode()}\` (Primary Venue: \`Uniswap V3 • Robinhood Chain\`)\n` +
           `• **Auto TP Targets:** TP1: \`+${tp1}%\` | TP2: \`+${tp2}%\` | SL: \`${sl}%\`\n` +
           `• **Max Drawdown Limit:** \`${risk.maxDrawdownLimitPct}%\` (current drawdown: \`${risk.currentDrawdownPct ?? 0}%\`)\n` +
           `• **Max Position Size:** \`${fmtUsd(risk.maxPositionSizeUsd)}\` per trade\n` +
           `• **Trading Paused:** \`${risk.paused ? 'YES 🚨' : 'No'}\` | Max Sector Exposure: \`${risk.maxSectorExposurePercent}%\`\n\n` +
-          `> 💡 Adjust via chat: *"OpenCat, set max drawdown 20%"* or *"OpenCat, set position size 500"*.`,
+          `> 💡 Adjust via chat: *"Opencatz, set max drawdown 20%"* or *"Opencatz, set position size 500"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'status') {
@@ -280,13 +280,13 @@ export async function handleChatInput(
       }).join('\n');
       await interaction.reply({
         content:
-          `🖥️ **OPENCAT RUNTIME CONFIGURATION**\n\n` +
+          `🖥️ **OPENCATZ RUNTIME CONFIGURATION**\n\n` +
           `• **Execution Mode:** \`${mode}\`\n` +
           `• **Primary Swap Venue:** \`Uniswap V3 (Robinhood Chain EVM L2 #4663)\`\n` +
           `• **Tracked Wallet Address:** \`${walletAddr}\`\n` +
           `• **Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
           `**API Keys:**\n${keys}\n\n` +
-          `> 💡 Set keys via chat: *"OpenCat, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
+          `> 💡 Set keys via chat: *"Opencatz, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
         ephemeral: true,
       });
     }
@@ -298,8 +298,8 @@ export async function handleChatInput(
       .join('\n');
     await interaction.reply({
       content:
-        `🩺 **OPENCAT SYSTEM HEALTH**\n\n${lines}\n\n` +
-        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs opencat-agent`.'),
+        `🩺 **OPENCATZ SYSTEM HEALTH**\n\n${lines}\n\n` +
+        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs opencatz-agent`.'),
       ephemeral: false,
     });
   } else if (commandName === 'strategy') {
@@ -310,7 +310,7 @@ export async function handleChatInput(
       const list = engine.listStrategies();
       const lines = list.map((s: any) => `• **${s.id}** — ${s.name}${s.active ? ' `🟢 ACTIVE`' : ''}`).join('\n');
       await interaction.reply({
-        content: `🧠 **OPENCAT STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"OpenCat, create strategy X"*.`,
+        content: `🧠 **OPENCATZ STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"Opencatz, create strategy X"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'view') {
@@ -340,7 +340,7 @@ export async function handleChatInput(
       });
       await interaction.reply(`📁 **Channel Created:** <#${newChannel.id}> (\`#${channelName}\`) is ready for your personal notes!`);
     } else if (subcommand === 'rearrange') {
-      await interaction.reply('✨ **OpenCat Channel Arrangement:** Command Center channels are organized neatly in sequence.');
+      await interaction.reply('✨ **OpenCatz Channel Arrangement:** Command Center channels are organized neatly in sequence.');
     }
   } else if (commandName === 'price') {
     const token = interaction.options.getString('token', true);

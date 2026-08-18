@@ -19,7 +19,7 @@ const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
 const strategyEngine = new StrategyEngine();
 
-// ANSI Color Tokens from OpenCat Master Palette
+// ANSI Color Tokens from Opencatz Master Palette
 const C = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -118,7 +118,7 @@ export async function launchTUI(): Promise<void> {
         console.log('\n[1] Import / Replace EVM Private Key');
         console.log('[2] Remove / Clear EVM Private Key');
         console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
-        console.log('[0] Back to OpenCat Menu\n');
+        console.log('[0] Back to Opencatz Menu\n');
         const walletSub = await prompt('Select Treasury Action (0-3): ');
         if (walletSub === '1') {
           const pk = await prompt(`Enter EVM Private Key: `);

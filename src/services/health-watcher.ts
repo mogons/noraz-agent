@@ -1,5 +1,5 @@
 /**
- * OpenCat 2.0 - System Health Monitoring & Incident Watcher (HealthWatcherService)
+ * Opencatz AI - System Health Monitoring & Incident Watcher (HealthWatcherService)
  * Tracks sub-agent heartbeats, detects silent failures, and triggers alerts/auto-restart notifications.
  */
 

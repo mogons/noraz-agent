@@ -1,5 +1,5 @@
 ---
-name: opencat-swarm-trading
+name: opencatz-swarm-trading
 description: Autonomous multi-agent crypto trading skill for Robinhood Chain EVM DEX tokens and NFTs using 3-layer Swarm Consensus, Discord Command Center, and Position Management.
 ---
 

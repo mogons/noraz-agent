@@ -197,7 +197,7 @@ export class GMGNAdapter {
       try {
         const res = await fetch(url, {
           method,
-          headers: { 'X-APIKEY': this.keyPool.get() || key, 'Content-Type': 'application/json', 'User-Agent': 'opencat/1.0' },
+          headers: { 'X-APIKEY': this.keyPool.get() || key, 'Content-Type': 'application/json', 'User-Agent': 'opencatz/1.0' },
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
         if (res.status === 429) {

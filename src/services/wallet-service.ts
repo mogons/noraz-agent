@@ -20,9 +20,9 @@ const EVM_CHAINS: Record<number, { chain: Chain; rpcEnvKey: string; explorerBase
 };
 
 /**
- * WalletService manages the EVM private key for OpenCat's direct on-chain execution on Robinhood Chain.
+ * WalletService manages the EVM private key for OpenCatz's direct on-chain execution on Robinhood Chain.
  * If DRY_RUN is true (default), keys are used to simulate execution without signing broadcasted transactions.
- * Keys are persisted safely to local StateStore (database/opencat_state.json) so they survive bot updates & process reboots.
+ * Keys are persisted safely to local StateStore (database/opencatz_state.json) so they survive bot updates & process reboots.
  */
 export class WalletService {
   private evmPrivateKey: string | null = null;

@@ -13,7 +13,7 @@ let tmp: string;
 let strategiesDir: string;
 
 beforeEach(() => {
-  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'opencat-boot-'));
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'opencatz-boot-'));
   strategiesDir = path.join(tmp, 'strategies');
   fs.mkdirSync(strategiesDir, { recursive: true });
 });

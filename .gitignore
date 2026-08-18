@@ -109,7 +109,6 @@ temp/
 ~$*.doc*
 ~$*.xls*
 ~$*.ppt*
-articles/
 __pycache__/
 *.pyc
 *.pyo
