@@ -169,7 +169,11 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | `opencat doctor` | `check` | Full diagnostics: API keys, agent states, risk state, connectivity |
 | `opencat help` | `-h`, `--help` | Show the CLI cheatsheet |
 
----
+> 💡 **CLI Invocation & Non-Root Fallbacks:**
+> If you prefer not to use `npm link` (or if your VPS environment restricts global npm links without sudo), all commands can be invoked identically via `npm run` or directly via Node:
+> * **Via `npm run`:** `npm run dev`, `npm run terminal`, `npm run wizard`, `npm run deploy`, `npm run update`, `npm run test`
+> * **Via Direct Node:** `node bin/opencat.js <command>` (e.g. `node bin/opencat.js terminal`)
+
 
 ## 🤖 Discord Slash Commands (22)
 
