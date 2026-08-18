@@ -20,6 +20,10 @@ Opencat AI separates **24/7 market screening + 3-Layer Swarm Consensus signal ge
 [![Tests](https://img.shields.io/badge/Tests-Vitest%20Suite-brightgreen.svg)](https://vitest.dev/)
 [![Discord](https://img.shields.io/badge/Discord-v14.18-5865F2.svg)](https://discord.js.org/)
 
+> *"Chill trades, 9 lives, razor-sharp on-chain instincts."* 🐾⚡
+>
+> ⚠️ **Disclaimer (NFA & DYOR):** Opencat AI is an experimental open-source research and intelligence tool. On-chain cryptocurrency trading carries significant financial risk. Past performance does not guarantee future results. Not financial advice. Always do your own research.
+
 ---
 
 ## 🐾 The OpenCat System Architecture
