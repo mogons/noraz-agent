@@ -13,8 +13,8 @@ Thank you for your interest in contributing to **Opencatz AI**! We welcome bug f
 ### 2. Environment Setup
 ```bash
 # Clone the repository
-git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
-cd opencat-ai-robinhood-chain
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
+cd opencatz-ai-robinhood-chain
 
 # Install dependencies
 npm install

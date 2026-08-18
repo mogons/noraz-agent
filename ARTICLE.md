@@ -4,7 +4,7 @@
 > **Official Website:** [https://opencatz.xyz](https://opencatz.xyz)  
 > **Documentation:** [https://opencatz.xyz/docs](https://opencatz.xyz/docs)  
 > **Web Terminal Emulator:** [https://opencatz.xyz/terminal](https://opencatz.xyz/terminal)  
-> **GitHub Repository:** [https://github.com/dizcorvus/opencat-ai-robinhood-chain](https://github.com/dizcorvus/opencat-ai-robinhood-chain)
+> **GitHub Repository:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)
 
 ---
 
@@ -163,7 +163,7 @@ Visit **[opencatz.xyz](https://opencatz.xyz)** or test commands directly on the 
 ### Option 2: Clone & Launch Your Own Agent
 ```bash
 # 1. Clone the open-source repository
-git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
 cd "Opencatz AI (Robinhood Chain)"
 
 # 2. Install dependencies & build
@@ -189,7 +189,7 @@ node bin/opencatz.js deploy
 - 💻 **Web Terminal:** [https://opencatz.xyz/terminal](https://opencatz.xyz/terminal)
 - 🛡️ **Risk Engine Guide:** [https://opencatz.xyz/docs/risk-engine](https://opencatz.xyz/docs/risk-engine)
 - 🤖 **AI Agent Manifest:** [https://opencatz.xyz/llms.txt](https://opencatz.xyz/llms.txt)
-- 🐙 **GitHub Repo:** [https://github.com/dizcorvus/opencat-ai-robinhood-chain](https://github.com/dizcorvus/opencat-ai-robinhood-chain)
+- 🐙 **GitHub Repo:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)
 
 ---
 

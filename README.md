@@ -138,13 +138,13 @@ Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5
 
 ```bash
 # Linux / macOS / VPS
-git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
-cd "Opencat AI (Robinhood Chain)"
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
+cd "Opencatz AI (Robinhood Chain)"
 bash setup.sh              # one-click: install deps, build, wizard, launch guide
 
 # Windows (PowerShell)
-git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
-cd "Opencat AI (Robinhood Chain)"
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
+cd "Opencatz AI (Robinhood Chain)"
 .\setup.bat
 ```
 

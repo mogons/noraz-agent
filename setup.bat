@@ -65,7 +65,7 @@ echo %GREEN%OK: node + npm available%NC%
 rem --- [2/6] Source code ---
 echo %CYAN%%BOLD%--- [2/6] Source code ---%NC%
 if not exist package.json (
-  set "REPO_URL=https://github.com/dizcorvus/opencat-ai-robinhood-chain.git"
+  set "REPO_URL=https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git"
   if defined OPENCATZ_REPO_URL set "REPO_URL=%OPENCATZ_REPO_URL%"
   if defined OPENCAT_REPO_URL set "REPO_URL=%OPENCAT_REPO_URL%"
   echo %YELLOW%No repo found. Cloning %BOLD%!REPO_URL!%NC% ...

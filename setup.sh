@@ -25,7 +25,7 @@ ok "Node $(node --version) + npm"
 
 step 2 "Source code"
 if [ ! -f package.json ]; then
-  REPO_URL="${OPENCATZ_REPO_URL:-${OPENCAT_REPO_URL:-https://github.com/dizcorvus/opencat-ai-robinhood-chain.git}}"
+  REPO_URL="${OPENCATZ_REPO_URL:-${OPENCAT_REPO_URL:-https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git}}"
   echo -e "No repo found. Cloning ${YELLOW}${REPO_URL}${NC} ..."
   git clone "$REPO_URL" . || fail "git clone failed"
   ok "Cloned into current directory"

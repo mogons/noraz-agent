@@ -4,7 +4,7 @@
 > **Website Resmi:** [https://opencatz.xyz](https://opencatz.xyz)  
 > **Dokumentasi:** [https://opencatz.xyz/docs](https://opencatz.xyz/docs)  
 > **Terminal Web Emulator:** [https://opencatz.xyz/terminal](https://opencatz.xyz/terminal)  
-> **Repositori GitHub:** [https://github.com/dizcorvus/opencat-ai-robinhood-chain](https://github.com/dizcorvus/opencat-ai-robinhood-chain)
+> **Repositori GitHub:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)
 
 ---
 
@@ -121,11 +121,11 @@ Akses dokumentasi lengkap dan terminal interaktif di:
 - 🌐 **Website Utama:** [https://opencatz.xyz](https://opencatz.xyz)
 - 📖 **Dokumentasi Lengkap:** [https://opencatz.xyz/docs](https://opencatz.xyz/docs)
 - 💻 **Web Terminal:** [https://opencatz.xyz/terminal](https://opencatz.xyz/terminal)
-- 🐙 **GitHub:** [https://github.com/dizcorvus/opencat-ai-robinhood-chain](https://github.com/dizcorvus/opencat-ai-robinhood-chain)
+- 🐙 **GitHub:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)
 
 Jalankan bot secara lokal atau VPS dengan:
 ```bash
-git clone https://github.com/dizcorvus/opencat-ai-robinhood-chain.git
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
 cd "Opencatz AI (Robinhood Chain)"
 npm install && npm run build
 node bin/opencatz.js onboard
