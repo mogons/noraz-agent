@@ -16,10 +16,11 @@ Opencatz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal g
 
 [![Domain](https://img.shields.io/badge/Domain-opencatz.xyz-brightgreen.svg)](https://opencatz.xyz)
 [![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663%20%7C%20ETH-7b5cff.svg)](https://robinhoodchain.blockscout.com)
+[![Discord](https://img.shields.io/badge/Discord-Community-5865F2.svg)](https://discord.gg/5HMy95ZHuY)
+[![X (Twitter)](https://img.shields.io/badge/X-%40pxidentities-black.svg)](https://x.com/pxidentities/)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D22.12-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-Vitest%20Suite-brightgreen.svg)](https://vitest.dev/)
-[![Discord](https://img.shields.io/badge/Discord-v14.18-5865F2.svg)](https://discord.js.org/)
+[![Tests](https://img.shields.io/badge/Tests-264%20Passed-brightgreen.svg)](https://vitest.dev/)
 
 > *"Chill trades, 9 lives, razor-sharp on-chain instincts."* 🐾⚡
 >
@@ -27,9 +28,11 @@ Opencatz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal g
 
 ---
 
-## 🌐 Official Web Portal & Live Documentation
+## 🌐 Official Web Portal & Community Links
 
-Visit the official production portal at **[opencatz.xyz](https://opencatz.xyz)** for:
+- 🌐 **Official Web Portal:** [opencatz.xyz](https://opencatz.xyz)
+- 💬 **Discord Community:** [discord.gg/5HMy95ZHuY](https://discord.gg/5HMy95ZHuY)
+- 🐦 **Official X (Twitter):** [@pxidentities](https://x.com/pxidentities/)
 - 📖 **Interactive Documentation & Quickstart:** [opencatz.xyz/docs](https://opencatz.xyz/docs)
 - 💻 **Browser Web Terminal TUI Emulator:** [opencatz.xyz/terminal](https://opencatz.xyz/terminal)
 - 🛡️ **9-Lives Risk Engine & Swarm Consensus Visualizer:** [opencatz.xyz/docs/risk-engine](https://opencatz.xyz/docs/risk-engine)

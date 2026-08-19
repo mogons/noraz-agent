@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to **Opencatz AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
 
+- 💬 **Discord Contributor Coordination:** [https://discord.gg/5HMy95ZHuY](https://discord.gg/5HMy95ZHuY) (Join `#opencatz-control-room` for architecture discussions and PR ideas)
+- 🐦 **Official X (Twitter):** [@pxidentities](https://x.com/pxidentities/)
+- 🌐 **Web Portal & Documentation:** [https://opencatz.xyz](https://opencatz.xyz)
+
 ---
 
 ## 🚀 Getting Started
