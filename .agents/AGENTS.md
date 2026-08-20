@@ -64,7 +64,7 @@ Opencatz AI (Robinhood Chain)/
 │   │   ├── strategy-engine.ts     # Sandboxed .mjs strategy loader (sanitized env)
 │   │   ├── strategy-types.ts      # Strategy context types (snake_case GMGN contract)
 │   │   ├── strategy-bootstrap.ts  # Preset/custom strategy selection + first-boot compile
-│   │   ├── agent-registry.ts      # Single source of truth for all 3 agent domains
+│   │   ├── agent-registry.ts      # Single source of truth for all 5 agent domains
 │   │   ├── agent-runner.ts        # LLM tool-call loop for chat/TUI/Telegram
 │   │   ├── dispatch.ts            # Per-domain dispatch + LP payload builder
 │   │   └── tool-registry.ts       # LLM function-calling tools (chat commands)
@@ -72,8 +72,10 @@ Opencatz AI (Robinhood Chain)/
 │   │   ├── shared/
 │   │   │   ├── agent-contract.ts  # ScreeningAgent contract + CallCardPayload
 │   │   │   └── gmgn-meme-helpers.ts # Shared GMGN prefilter/dedupe/signal helpers
+│   │   ├── alpha-robinhood/       # 1-Hour Robinhood Alpha Scraper (X API v2)
 │   │   ├── meme-robinhood/        # Robinhood Chain EVM DEX screening (GMGN + GoPlus)
-│   │   └── nft/                   # EVM NFT floor & rarity screening (OpenSea)
+│   │   ├── nft/                   # EVM NFT floor & rarity screening (OpenSea)
+│   │   └── whale-eth/             # Hyperliquid ETH whale tracking
 │   ├── adapters/                  # Web3 & Exchange execution adapters
 │   │   ├── evm-adapter.ts         # EVM Uniswap V3 swaps & sends
 │   │   ├── relay-adapter.ts       # Relay.link token send & swap fallback
@@ -148,23 +150,29 @@ Opencatz AI (Robinhood Chain)/
 
 ---
 
-## 5. Development & Testing Commands
+## 5. Development & Testing Commands (Cross-Platform)
+
+Opencatz AI supports **Windows (PowerShell / CMD / Windows Terminal)**, **Linux**, and **macOS** natively:
 
 ```bash
-# Install dependencies
+# Install dependencies & build
 npm install
+npm run build              # or: setup.bat (Windows) / bash setup.sh (Linux/macOS)
 
 # Run in development mode (with hot reload)
-npm run dev
+npm run dev                # or: opencatz run
 
-# Build production bundle
-npm run build
+# Run interactive Terminal TUI Command Center
+npm run terminal           # or: opencatz terminal
 
 # Run unit tests
-npm test
+npm test                   # or: opencatz test
+
+# Health check & diagnostics
+node bin/opencatz.js doctor # or: opencatz doctor
 
 # Clean uninstall
-opencatz uninstall   # or: npm run uninstall
+npm run uninstall          # or: opencatz uninstall
 ```
 
 ---
@@ -185,4 +193,3 @@ opencatz uninstall   # or: npm run uninstall
 - **Backup-key convention:** every paid API key supports a comma-separated `*_BACKUP_KEYS` variable (e.g. `GMGN_BACKUP_KEYS`, `KRYSTAL_CLOUD_BACKUP_KEYS`, `OPENSEA_BACKUP_KEYS`, `GOPLUS_BACKUP_KEYS`, `UNISWAP_BACKUP_KEYS`) — sub-agents auto-rotate to backups on 401/403/429 and mark failed keys.
 - Operating live trading agents should always use dedicated burner wallets with capped funds.
 - **Token & API Cost Optimization**: Reserve LLM API calls strictly for high-value reasoning tasks (e.g. interpreting social sentiment in tweets, drafting final AI Thesis summaries, and handling user chat queries in the command room). Use local deterministic code and mathematical rules for filtering, security checks, and screening to minimize token consumption and keep running costs near zero.
-

@@ -23,6 +23,7 @@
     "update": "node scripts/update-core.mjs",
     "uninstall": "node scripts/uninstall.mjs",
     "clean": "node scripts/uninstall.mjs",
+    "doctor": "tsx src/cli/doctor.ts",
     "test": "vitest run"
   },
   "repository": {

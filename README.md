@@ -16,6 +16,7 @@ Opencatz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal g
 
 [![Domain](https://img.shields.io/badge/Domain-opencatz.xyz-brightgreen.svg)](https://opencatz.xyz)
 [![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663%20%7C%20ETH-7b5cff.svg)](https://robinhoodchain.blockscout.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://nodejs.org/)
 [![Discord](https://img.shields.io/badge/Discord-Community-5865F2.svg)](https://discord.gg/5HMy95ZHuY)
 [![X (Twitter)](https://img.shields.io/badge/X-%40pxidentities-black.svg)](https://x.com/pxidentities/)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D22.12-green.svg)](https://nodejs.org/)
@@ -45,7 +46,7 @@ Opencatz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal g
 | Component | Role | What it does |
 | :--- | :--- | :--- |
 | 🐾 **OpenCatz Core** — Intelligence | Screening & Reasoning | **3-Layer Swarm Consensus Engine** (Quant & Liquidity, Catalyst & Sentiment, Security Audit) demanding a **≥ 80% Confidence Score** before a signal is posted. Five specialist screening agents run 24/7: **meme-robinhood** (GMGN smart-money data + GMGN/GoPlus security audits, **24h volume ≥ $25k**, **liquidity ≥ $5k**), **lp-robinhood** (Concentrated Liquidity velocity via **Krystal Cloud**, **TVL ≥ $10k**, **24h volume ≥ $100k**, **24h Fee/TVL ≥ 2%**), **nft** (OpenSea floor & rarity sniping, **floor surge ≥ +10%/1h**, **volume spike ≥ 1.5x**, **sales ≥ 3/h**), **alpha-robinhood** (1-hour Robinhood Chain alpha scraper + optional official **X (Twitter) API v2** social sentiment search), and **whale-eth** (Hyperliquid ETH smart money & institutional perps/spot order flow tracking, **perps ≥ $500k**, **spot ≥ $50k**). A **Position Manager** tracks open positions with Take Profit milestones (**+100% / +200%**), **Stop Loss (-20%)**, **dynamic trailing stops**, LP out-of-range warnings, and NFT floor-drop alerts. |
-| 🎮 **Command Center** — Multi-Platform | Discord · Terminal · Telegram | **1. Discord**: `#opencatz-control-room` natural-language chat, `#opencatz-audit` token auditor, portfolio & risk views, **22 slash commands**, interactive dashboard, and 5 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`, `#call-whale-eth`).<br>**2. Terminal TUI** (`opencatz terminal`): Full interactive standalone console with live token audits, screening triggers, strategy switcher, treasury & portfolio management without Discord.<br>**3. Telegram Bridge**: Real-time signal alert broadcast cards with quick inline action buttons and interactive callback dashboard. |
+| 🎮 **Command Center** — Multi-Platform | Discord · Terminal · Telegram | **1. Discord**: `#opencatz-control-room` natural-language chat, `#audit-on-demand` token auditor, portfolio & risk views, **22 slash commands**, interactive dashboard, and 5 dedicated call channels (`#call-meme-robinhood`, `#call-lp-robinhood`, `#call-nft-robinhood`, `#call-alpha-robinhood`, `#call-whale-eth`).<br>**2. Terminal TUI** (`opencatz terminal` / `npm run terminal`): Full interactive standalone console with live token audits, screening triggers, strategy switcher, treasury & portfolio management without Discord.<br>**3. Telegram Bridge**: Real-time signal alert broadcast cards with quick inline action buttons and interactive callback dashboard. |
 | ⚡ **Cat Den Ops** — Deploy & Maintain | Daemon & Health | **PM2 24/7 daemon** (`opencatz deploy`), self-update engine (`opencatz update` → git pull → install → build → detached PM2 restart) with **Telegram + Discord webhook deployment notifications**, `opencatz doctor` full diagnostics, and interactive **`opencatz onboard`** wizard. |
 
 ---
@@ -109,7 +110,7 @@ Opencatz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal g
 | 8 | 📈 **Position Manager** | Auto-sell targets: TP **+100% (2x)** / **+200% (3x)**, **SL -20%**, dynamic trailing stops, LP out-of-range warnings, NFT floor-drop alerts. |
 | 9 | 📊 **Trade Journal & Analytics** | Open/close audit trail with win-rate, PnL, and CSV export for Excel/Notion. |
 | 10 | 🔒 **Security-First Design** | `DRY_RUN=true` default, 9-Lives circuit breaker, sandboxed strategy modules (sanitized `process.env`), prompt-injection hardening, backup API key rotation. |
-| 11 | ⚡ **Cat Den Ops** | PM2 24/7 deploy, `opencatz update` self-updater with Telegram + Discord webhook notifications, `opencatz doctor`, Linux/Windows setup scripts. |
+| 11 | ⚡ **Cat Den Ops** | PM2 24/7 deploy, `opencatz update` self-updater with Telegram + Discord webhook notifications, `opencatz doctor`, Windows & Linux setup scripts. |
 
 ---
 
@@ -135,40 +136,82 @@ Screening strictness is fully user-configurable at onboarding (wizard **STEP 5.5
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart & Platform Setup
 
-### Fresh install
+Opencatz AI is built with Node.js and TypeScript, making it **100% cross-platform compatible** across **Windows (PowerShell / Command Prompt / Windows Terminal)**, **Linux (Ubuntu, Debian, CentOS, etc.)**, and **macOS**.
 
-```bash
-# Linux / macOS / VPS
+### 🪟 Windows (PowerShell / CMD / Windows Terminal)
+
+#### 1. One-Click Setup
+```powershell
+# Clone the repository
 git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
-cd "Opencatz AI (Robinhood Chain)"
-bash setup.sh              # one-click: install deps, build, wizard, launch guide
+cd "opencatz-ai-robinhood-chain"
 
-# Windows (PowerShell)
-git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
-cd "Opencatz AI (Robinhood Chain)"
+# Run the Windows setup script
 .\setup.bat
 ```
 
-Or manually:
+#### 2. Manual / Standard Setup
+```powershell
+# Install dependencies & compile TypeScript
+npm install
+npm run build
 
+# Run interactive onboarding wizard (.env, API keys, AI models, TP/SL)
+npm run wizard
+
+# Launch the live bot in development mode
+npm run dev
+
+# Launch the standalone Command Center Terminal TUI (24-bit TrueColor)
+npm run terminal
+```
+
+#### 3. Running 24/7 on Windows
+```powershell
+# Using PM2 daemon
+npx pm2 start dist/index.js --name opencatz-agent --update-env
+npx pm2 status
+npx pm2 logs opencatz-agent
+```
+
+---
+
+### 🐧 Linux / macOS / VPS
+
+#### 1. One-Click Setup
+```bash
+# Clone the repository
+git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
+cd "opencatz-ai-robinhood-chain"
+
+# Run the Linux/macOS setup script
+bash setup.sh
+```
+
+#### 2. Manual Setup
 ```bash
 npm install
-npm run build              # or: opencatz build
-opencatz onboard           # interactive .env setup (tokens, RPC, X API v2, API keys)
-opencatz run               # development / live bot
+npm run build
+opencatz onboard           # interactive .env wizard
+opencatz run               # live bot / development mode
+opencatz terminal          # standalone Terminal TUI
 ```
 
-> **Invite the bot:** use the Discord OAuth2 URL with `applications.commands` + bot scopes. On first launch OpenCatz **auto-creates** the `🐾 OPENCATZ COMMAND CENTER` category, 6 channels, and registers all 22 slash commands — zero manual channel setup.
+#### 3. Running 24/7 on Linux/VPS
+```bash
+opencatz deploy            # or: npm run deploy
+```
 
-### Update
+> **Invite the bot:** use your Discord OAuth2 URL with `applications.commands` + bot scopes. On first launch OpenCatz **auto-creates** the `🐾 OPENCATZ COMMAND CENTER` category, 7 dedicated channels, and registers all 22 slash commands — zero manual channel setup.
+
+### 🔄 Auto-Update Engine
 
 ```bash
-opencatz update            # git stash → pull → npm install → build → detached PM2 restart
+opencatz update            # or: npm run update
 ```
-
-Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`) and an optional **Discord webhook** (`DISCORD_DEPLOY_WEBHOOK_URL`).
+*Performs `git stash` → `git pull` → `npm install` → `npm run build` → detached PM2 restart and notifies Telegram / Discord webhook.*
 
 ---
 
@@ -187,11 +230,12 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 | `opencatz doctor` | `check` | Full diagnostics: API keys, agent states, risk state, connectivity |
 | `opencatz help` | `-h`, `--help` | Show the CLI cheatsheet |
 
-> 💡 **CLI Invocation & Non-Root Fallbacks:**
-> If you prefer not to use `npm link` (or if your VPS environment restricts global npm links without sudo), all commands can be invoked identically via `npm run` or directly via Node:
-> * **Via `npm run`:** `npm run dev`, `npm run terminal`, `npm run wizard`, `npm run deploy`, `npm run update`, `npm run test`
+> 💡 **Cross-Platform Invocation & Non-Root Fallbacks:**
+> If you prefer not to use global `npm link` (or on restricted environments), all commands can be invoked identically across PowerShell, CMD, and Bash via `npm run` or direct Node:
+> * **Via `npm run`:** `npm run dev`, `npm run terminal`, `npm run wizard`, `npm run deploy`, `npm run update`, `npm run test`, `npm run doctor`
 > * **Via Direct Node:** `node bin/opencatz.js <command>` (e.g. `node bin/opencatz.js terminal`)
 
+---
 
 ## 🤖 Discord Slash Commands (22)
 
@@ -223,9 +267,9 @@ Deployment results are reported to **Telegram** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_
 
 ---
 
-## 📢 Auto-Created Channels (6)
+## 📢 Auto-Created Channels (7)
 
-On launch, OpenCatz creates the **`🐾 OPENCATZ COMMAND CENTER`** category and 6 text channels:
+On launch, OpenCatz creates the **`🐾 OPENCATZ COMMAND CENTER`** category and 7 text channels:
 
 | Channel | Purpose |
 | :--- | :--- |
@@ -295,13 +339,16 @@ Robinhood Chain is an EVM Layer-2 network — **chain ID 4663, native token ETH*
 **2. What is Opencatz AI?**
 Opencatz AI is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for Robinhood Chain (EVM L2), featuring 3-Layer Swarm Consensus, a resilient risk engine (9-Lives Shield), and unified multi-platform interfaces (Discord, Terminal TUI, and Telegram).
 
-**3. Is `DRY_RUN` safe?**
+**3. Does Opencatz AI run on Windows as well as Linux?**
+Yes! Opencatz AI runs on Node.js (>=22.12) & TypeScript, making it **100% natively compatible with Windows (PowerShell / Command Prompt / Windows Terminal)**, **Linux (Ubuntu, Debian, etc.)**, and **macOS**. Use `.\setup.bat` on Windows or `bash setup.sh` on Linux/macOS.
+
+**4. Is `DRY_RUN` safe?**
 Yes. `DRY_RUN=true` (the default) guarantees **no live blockchain transactions** — swaps, sends and withdrawals are simulated, and call cards only provide execution *links*. Only when you explicitly set `DRY_RUN=false` (and optionally `AUTO_EXECUTE_ENABLED`) can real transactions be signed. Always test with `DRY_RUN=true` first.
 
-**4. How do backup keys work?**
+**5. How do backup keys work?**
 Each provider key has a `_BACKUP_KEYS` companion (e.g. `GMGN_BACKUP_KEYS`). The API key pool loads the primary plus comma-separated backups and **auto-rotates to the next key on 401/403/429** responses, keeping screening alive through rate limits. AI keys support the same pattern via `AI_API_KEYS`.
 
-**5. Where are keys stored?**
+**6. Where are keys stored?**
 Credentials live in the local `.env` file (loaded via `dotenv`); runtime-set keys are persisted back to `.env` by the API key guard. Wallet private keys are held **in memory** by the WalletService and mirrored in the gitignored `database/opencatz_state.json`. Nothing is uploaded or stored remotely.
 
 ---
