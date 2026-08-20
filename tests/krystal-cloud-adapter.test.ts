@@ -29,7 +29,7 @@ const stubFetch = (data: unknown) =>
 describe('KrystalCloudAdapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.KRYSTAL_CLOUD_API_KEY; delete process.env.KRYSTAL_CLOUD_BACKUP_KEYS; });
 
-  it('isConfigured false tanpa key (fail-closed)', () => {
+  it('isConfigured false without key (fail-closed)', () => {
     expect(new KrystalCloudAdapter().isConfigured()).toBe(false);
     process.env.KRYSTAL_CLOUD_API_KEY = 'test';
     expect(new KrystalCloudAdapter().isConfigured()).toBe(true);
@@ -55,7 +55,7 @@ describe('KrystalCloudAdapter', () => {
     expect(p.volumeToActiveTvlRatio1h).toBeCloseTo(8.33, 2);
   });
 
-  it('mengirim chainId robinhood + filter server-side', async () => {
+  it('sends robinhood chainId + server-side filters', async () => {
     process.env.KRYSTAL_CLOUD_API_KEY = 'test';
     stubFetch([]);
     const adapter = new KrystalCloudAdapter();
@@ -79,10 +79,10 @@ describe('KrystalCloudAdapter', () => {
   it('filterHighYieldPools — mirror LP robinhood gates + dedupe per pair', () => {
     process.env.KRYSTAL_CLOUD_API_KEY = 'test';
     const adapter = new KrystalCloudAdapter();
-    const good = adapter.fetchTopRobinhoodPools && undefined; // helper di bawah
+    const good = adapter.fetchTopRobinhoodPools && undefined; // helper below
     void good;
-    // Pool lolos semua gate: tvl 150k, fee1h 20, feeTvl24 0.0024 > 0.01? tidak — 0.24% < 1%
-    // gunakan pool dengan fee tinggi
+    // Pool passes all gates: tvl 150k, fee1h 20, feeTvl24 0.0024 > 0.01? no — 0.24% < 1%
+    // use high fee pool
     const highFee = mkPool({
       poolAddress: '0xa', tvl: '150000',
       stats1h: { volume: '50000', fee: '150', apr: 100 },
@@ -96,12 +96,12 @@ describe('KrystalCloudAdapter', () => {
     const dupPair = mkPool({
       poolAddress: '0xc', tvl: '300000',
       stats1h: { volume: '50000', fee: '150', apr: 100 },
-      stats24h: { volume: '800000', fee: '8000', apr: 95 }, // feeTvl24 = 4.5% > 4% ✓, pair sama WETH-USDC
+      stats24h: { volume: '800000', fee: '8000', apr: 95 }, // feeTvl24 = 4.5% > 4% ✓, same pair WETH-USDC
     });
-    // 1. parse ke signal via fetch (pakai adapter method parse di fetch)
-    // simulasikan dengan stub fetch lalu filter
+    // 1. parse to signal via fetch (using adapter parse method on fetch)
+    // simulate with fetch stub then filter
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [highFee, lowFee, dupPair] }));
-    // filter bekerja pada KrystalPoolSignal — buat via fetchTopRobinhoodPools
+    // filter operates on KrystalPoolSignal — construct via fetchTopRobinhoodPools
     const filtered = adapter.filterHighYieldPools([
       {
         poolAddress: '0xa', pairName: 'WETH-USDC', feeTier: 3000,
@@ -128,7 +128,7 @@ describe('KrystalCloudAdapter', () => {
         token0Address: '0xweth', aiRecommendation: 'x',
       },
     ]);
-    // lowFee (0x b) ditolak (feeTvl 0.33% < 4%); 0xa (5%) vs 0xc (4.5%) dedupe → 0xa menang (feeTvl tertinggi)
+    // lowFee (0xb) rejected (feeTvl 0.33% < 4%); 0xa (5%) vs 0xc (4.5%) dedupe → 0xa wins (highest feeTvl)
     expect(filtered.length).toBe(1);
     expect(filtered[0].poolAddress).toBe('0xa');
   });

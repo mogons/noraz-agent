@@ -103,7 +103,7 @@ describe('runTokenAudit', () => {
     expect(res.content).toContain('unavailable');
   });
 
-  it('EVM: di-scan sebagai Robinhood chain — GoPlus lengkap + GMGN + link yang benar', async () => {
+  it('EVM: scans as Robinhood chain — complete GoPlus + GMGN + correct links', async () => {
     process.env.GMGN_API_KEY = 'test';
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkGoPlusRobinhood() })              // GoPlus robinhood
@@ -112,14 +112,14 @@ describe('runTokenAudit', () => {
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
     expect(res.content).toContain('(EVM/Robinhood)');
-    expect(res.content).toContain('Honeypot: Tidak ✅');
+    expect(res.content).toContain('Honeypot: No ✅');
     expect(res.content).toContain('BuyTax 0%');
     expect(res.content).toContain('SellTax 0%');
-    expect(res.content).toContain('Open Source: Ya ✅');
+    expect(res.content).toContain('Open Source: Yes ✅');
     expect(res.content).toContain('Owner');
     expect(res.content).toContain('Renounced');
-    expect(res.content).toContain('Mintable: Tidak ✅');
-    expect(res.content).toContain('Proxy: Tidak ✅');
+    expect(res.content).toContain('Mintable: No ✅');
+    expect(res.content).toContain('Proxy: No ✅');
     expect(res.content).toContain('LP Holders 89');
     expect(res.content).toContain('GMGN Audit');
     expect(res.content).toContain('Clean ✅');
@@ -127,7 +127,7 @@ describe('runTokenAudit', () => {
     expect(res.content).toContain('gopluslabs.io/token-security/4663/');
   });
 
-  it('EVM: honeypot TETAP ditampilkan (audit on-demand tidak menyamarkan jadi null)', async () => {
+  it('EVM: honeypot is STILL displayed (on-demand audit does not mask to null)', async () => {
     process.env.GMGN_API_KEY = 'test';
     const goPlusHoneypot = mkGoPlusRobinhood();
     goPlusHoneypot.result[EVM_CA].is_honeypot = '1';
@@ -137,7 +137,7 @@ describe('runTokenAudit', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => mkGmgnSecurity({ is_honeypot: true }) }));
     const res = await runTokenAudit(EVM_CA);
     expect(res.success).toBe(true);
-    expect(res.content).toContain('Honeypot: ⚠️ Ya');
+    expect(res.content).toContain('Honeypot: ⚠️ Yes');
     expect(res.content).toContain('GMGN Audit');
   });
 

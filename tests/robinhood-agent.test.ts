@@ -26,19 +26,19 @@ describe('RobinhoodScreeningAgent', () => {
 
   it('preFilter passes young & unknown-age tokens (age gate off — degen early)', () => {
     const agent = new RobinhoodScreeningAgent();
-    // age gate default 0: umur tidak jadi kriteria, token baru 1 jam lolos
+    // age gate default 0: age is not a criterion, fresh 1h token passes
     expect(agent.preFilter(mkToken({ creationTimestamp: Date.now()/1000 - 3600 }), ETH_PRICE).ok).toBe(true);
-    // creationTimestamp null juga lolos (umur bukan kriteria)
+    // null creationTimestamp also passes (age is not a criterion)
     expect(agent.preFilter(mkToken({ creationTimestamp: null }), ETH_PRICE).ok).toBe(true);
   });
 
-  it('preFilter rejects wash trading (bundler tidak digate)', () => {
+  it('preFilter rejects wash trading (bundler is not gated)', () => {
     const agent = new RobinhoodScreeningAgent();
     expect(agent.preFilter(mkToken({ isWashTrading: true }), ETH_PRICE).ok).toBe(false);
     expect(agent.preFilter(mkToken({ bundlerRate: 0.6 }), ETH_PRICE).ok).toBe(true);
   });
 
-  it('preFilter enforces market cap gate (wajib > $100k, fail-closed)', () => {
+  it('preFilter enforces market cap gate (requires > $100k, fail-closed)', () => {
     const agent = new RobinhoodScreeningAgent();
     expect(agent.preFilter(mkToken({ marketCapUsd: 50000 }), ETH_PRICE).ok).toBe(false);
     expect(agent.preFilter(mkToken({ marketCapUsd: 0 }), ETH_PRICE).ok).toBe(false);
@@ -53,13 +53,13 @@ describe('RobinhoodScreeningAgent', () => {
     expect(volume24hOf(mkToken({ volume24hUsd: 0, volume1hUsd: 0 }))).toBe(0);
   });
 
-  it('preFilter passes a rank-1h-style token with strong 1h volume (24h tidak diketahui)', () => {
+  it('preFilter passes a rank-1h-style token with strong 1h volume (24h unknown)', () => {
     const agent = new RobinhoodScreeningAgent();
     const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 60000 }), ETH_PRICE);
-    expect(res.ok).toBe(true); // volume 1h 60k >= 50k → lolos tanpa data 24h
+    expect(res.ok).toBe(true); // volume 1h 60k >= 50k → passes without 24h data
   });
 
-  it('preFilter rejects token yang volume 1h-nya di bawah gate $50k', () => {
+  it('preFilter rejects token whose 1h volume is below the $50k gate', () => {
     const agent = new RobinhoodScreeningAgent();
     const res = agent.preFilter(mkToken({ volume24hUsd: 0, volume1hUsd: 20000 }), ETH_PRICE);
     expect(res.ok).toBe(false);
@@ -75,7 +75,7 @@ describe('RobinhoodScreeningAgent', () => {
     const agent = new RobinhoodScreeningAgent();
     // 0.2 ETH @ $1929.03 = $385.81 < $500 → reject
     expect(agent.preFilter(mkToken({ totalFeeNative: 0.2 }), ETH_PRICE).ok).toBe(false);
-    // fee null → fail-closed (aktivitas organik tak tercatat)
+    // null fee → fail-closed (organic activity unrecorded)
     expect(agent.preFilter(mkToken({ totalFeeNative: null }), ETH_PRICE).ok).toBe(false);
     // 1 ETH @ $1929.03 = $1,929 ≥ $500 → pass
     expect(agent.preFilter(mkToken(), ETH_PRICE).ok).toBe(true);
@@ -117,14 +117,14 @@ describe('RobinhoodScreeningAgent', () => {
 
   it('detectSignal rejects empty tokens — at least 1 of 3 required (smart wallet/CTO/KOL)', () => {
     const agent = new RobinhoodScreeningAgent();
-    // 0/3 sinyal: cuma volume pump, tanpa smart wallet/CTO/KOL → NONE
+    // 0/3 signals: volume pump only, without smart wallet/CTO/KOL → NONE
     const empty = agent.detectSignal(mkToken({ smartDegenCount: 0, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3, volume24hUsd: 300000 }));
     expect(empty.type).toBe('NONE');
     expect(empty.reasons.some((r) => r.includes('Empty'))).toBe(true);
-    // 1/3 sinyal: cuma smart wallet → MOMENTUM (lolos gate)
+    // 1/3 signals: smart wallet only → MOMENTUM (passes gate)
     const one = agent.detectSignal(mkToken({ smartDegenCount: 1, renownedCount: 0, ctoFlag: false, priceChange1h: 40, priceChange5m: 3 }));
     expect(one.type).toBe('MOMENTUM');
-    // 2/3 sinyal: smart wallet + KOL → MOMENTUM
+    // 2/3 signals: smart wallet + KOL → MOMENTUM
     const two = agent.detectSignal(mkToken({ smartDegenCount: 1, renownedCount: 1, ctoFlag: false, priceChange1h: 40, priceChange5m: 3 }));
     expect(two.type).toBe('MOMENTUM');
   });
@@ -243,11 +243,11 @@ describe('RobinhoodScreeningAgent', () => {
     expect(ev.recommendedAction).not.toBe('SKIP');
     expect(ev.confidence).toBeGreaterThanOrEqual(80);
 
-    // Fee gate aktif (default 500): null fee → fail-closed (aktivitas tak tercatat)
+    // Fee gate active (default 500): null fee → fail-closed (unrecorded activity)
     const feeOn = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
     expect(feeOn.recommendedAction).toBe('SKIP');
 
-    // Kalau fee gate dimatikan (params 0), null fee tidak lagi mematikan
+    // When fee gate is disabled (params 0), null fee is no longer fatal
     const stratNoFee = { ...strat, params: { ...strat.params, minTotalFeeUsd: 0 } };
     const feeOff = stratNoFee.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
     expect(feeOff.recommendedAction).not.toBe('SKIP');

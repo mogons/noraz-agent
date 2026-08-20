@@ -47,7 +47,7 @@ const mkKrystalStub = (pools: KrystalPoolSignal[]) => ({
   filterHighYieldPools: vi.fn((p: KrystalPoolSignal[]) => p),
 } as unknown as KrystalCloudAdapter);
 
-/** Audit keamanan GMGN default (aman — fail-closed gate lolos). */
+/** Default GMGN security audit (safe — passes fail-closed gate). */
 const mkSafeAudit = (over: Partial<GMGNSecurityAudit> = {}): GMGNSecurityAudit => ({
   chain: 'sol',
   address: 'tokX123',
@@ -76,7 +76,7 @@ const mkGmgnStub = (infos: Record<string, any>, security: Record<string, GMGNSec
   ),
 } as unknown as GMGNAdapter);
 
-/** GMGN token info default (aman — semua field security null/clean). */
+/** Default GMGN token info (safe — all security fields null/clean). */
 const mkGmgnToken = (over: Record<string, any> = {}): any => ({
   priceUsd: 0.0001,
   marketCapUsd: 500000,
@@ -198,7 +198,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
 
   // ── LP security gate (GMGN) ─────────────────────────────────────────────
 
-  it('lp-robinhood: audit tidak tersedia (null) → pool DITOLAK (fail-closed)', async () => {
+  it('lp-robinhood: audit unavailable (null) → pool REJECTED (fail-closed)', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool()]),
       gmgnAdapter: mkGmgnStub({ '0xweth': mkGmgnToken() }, { '0xweth': null }),
@@ -207,7 +207,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: token meme honeypot menolak pool', async () => {
+  it('lp-robinhood: honeypot meme token rejects pool', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -222,7 +222,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: audit keamanan honeypot (GMGN /token/security) menolak pool', async () => {
+  it('lp-robinhood: honeypot security audit (GMGN /token/security) rejects pool', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -237,7 +237,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: token tidak bisa dijual (canNotSell) → pool DITOLAK', async () => {
+  it('lp-robinhood: unsellable token (canNotSell) → pool REJECTED', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -252,7 +252,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: token null di GMGN → pool DITOLAK (MC tidak bisa diverifikasi)', async () => {
+  it('lp-robinhood: null token on GMGN → pool REJECTED (MC cannot be verified)', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -267,7 +267,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: market cap token meme < $200k → pool DITOLAK', async () => {
+  it('lp-robinhood: meme token market cap < $200k → pool REJECTED', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',
@@ -282,7 +282,7 @@ describe('OpenCatzHub registry-driven triggerAgentPass', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('lp-robinhood: token aman MC besar → post + label keamanan terisi', async () => {
+  it('lp-robinhood: safe token with large MC → post + security label populated', async () => {
     const hub = new OpenCatzHub({
       krystalAdapter: mkKrystalStub([mkKrystalPool({
         pairName: 'WETH-PEPE',

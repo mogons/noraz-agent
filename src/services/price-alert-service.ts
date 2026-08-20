@@ -75,7 +75,7 @@ export class PriceAlertService {
   /**
    * Parse natural language text into a price alert payload
    * Examples:
-   * - "Opencatz, kabari kalau BTC 70k" -> symbol: BTC, target: 70000, ABOVE
+   * - "Opencatz, alert me if BTC hits 70k" -> symbol: BTC, target: 70000, ABOVE
    * - "alert me if ETH drops below 1500" -> symbol: ETH, target: 1500, BELOW
    * - "notify when ETH hits 3000" -> symbol: ETH, target: 3000, ABOVE
    */
@@ -83,7 +83,7 @@ export class PriceAlertService {
     const lower = text.toLowerCase();
     
     // Check if message is requesting a price alert trigger
-    const isAlertIntent = lower.includes('kabari') || lower.includes('alert') || lower.includes('notify') || lower.includes('ingatkan') || lower.includes('kasih tau');
+    const isAlertIntent = lower.includes('alert') || lower.includes('notify') || lower.includes('remind');
     if (!isAlertIntent) return null;
 
     // Detect crypto symbol
@@ -117,7 +117,7 @@ export class PriceAlertService {
 
     if (!targetPriceUsd || targetPriceUsd <= 0) return null;
 
-    const direction: 'ABOVE' | 'BELOW' = lower.includes('drop') || lower.includes('turun') || lower.includes('below') || lower.includes('bawah') ? 'BELOW' : 'ABOVE';
+    const direction: 'ABOVE' | 'BELOW' = lower.includes('drop') || lower.includes('below') || lower.includes('under') ? 'BELOW' : 'ABOVE';
 
     return this.addAlert({
       userId,

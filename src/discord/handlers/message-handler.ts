@@ -75,7 +75,7 @@ export async function handleControlRoomMessage(
   }
 
   // 0c. Trigger ON-DEMAND Screening Pass intent
-  if (lowerQuery.includes('jalankan screening') || lowerQuery.includes('run screening') || lowerQuery.includes('trigger screening')) {
+  if (lowerQuery.includes('run screening') || lowerQuery.includes('trigger screening') || lowerQuery.includes('start screening')) {
     const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft'];
     const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'meme-robinhood';
     await message.reply(`⚡ **OPENCATZ ON-DEMAND SCREENING TRIGGERED** for \`${foundDomain.toUpperCase()}\`...\nScreening pass in progress.`);
@@ -85,7 +85,7 @@ export async function handleControlRoomMessage(
   }
 
   // 0d. Risk Parameter / Drawdown Limit intent
-  if ((lowerQuery.includes('drawdown limit') || lowerQuery.includes('drawdown')) && (lowerQuery.includes('ubah') || lowerQuery.includes('set') || lowerQuery.includes('ganti') || lowerQuery.includes('jadi'))) {
+  if ((lowerQuery.includes('drawdown limit') || lowerQuery.includes('drawdown')) && (lowerQuery.includes('set') || lowerQuery.includes('change') || lowerQuery.includes('update') || lowerQuery.includes('adjust'))) {
     const numbers = userQuery.match(/\b\d+(\.\d+)?\b/g);
     if (numbers && numbers.length > 0) {
       const val = parseFloat(numbers[0]);
@@ -96,7 +96,7 @@ export async function handleControlRoomMessage(
   }
 
   // 0e. Agent Status Matrix intent
-  if (lowerQuery.includes('status agent') || lowerQuery.includes('status sub agent') || lowerQuery.includes('agent status')) {
+  if (lowerQuery.includes('status agent') || lowerQuery.includes('status sub agent') || lowerQuery.includes('agent status') || lowerQuery.includes('sub agent status')) {
     const result = await toolRegistry.executeToolCall('get_agent_statuses', {});
     const statuses = result.data || {};
     let statusText = `🐾 **OPENCATZ SUB-AGENT REAL-TIME STATUS MATRIX**\n\n`;
@@ -108,8 +108,8 @@ export async function handleControlRoomMessage(
   }
 
   // 0f. Natural Language Schedule Automation intent
-  if (lowerQuery.includes('setiap') || lowerQuery.includes('every') || lowerQuery.includes('schedule')) {
-    if (lowerQuery.includes('jam') || lowerQuery.includes('hour') || lowerQuery.includes('menit') || lowerQuery.includes('min')) {
+  if (lowerQuery.includes('every') || lowerQuery.includes('schedule')) {
+    if (lowerQuery.includes('hour') || lowerQuery.includes('min') || lowerQuery.includes('minute')) {
       const agentDomains = ['meme-robinhood', 'lp-robinhood', 'nft'];
       const foundDomain = agentDomains.find(d => lowerQuery.includes(d)) || 'meme-robinhood';
       const result = await toolRegistry.executeToolCall('schedule_automation', {
@@ -123,7 +123,7 @@ export async function handleControlRoomMessage(
   }
 
   // 0g. Memory Recall & Search intent
-  if (lowerQuery.includes('audit tadi') || lowerQuery.includes('memory') || lowerQuery.includes('riwayat audit') || lowerQuery.includes('history audit') || lowerQuery.includes('search audit')) {
+  if (lowerQuery.includes('recent audit') || lowerQuery.includes('memory') || lowerQuery.includes('history audit') || lowerQuery.includes('audit history') || lowerQuery.includes('search audit') || lowerQuery.includes('last audit')) {
     const { SessionMemoryService } = await import('../../services/session-memory.js');
     const memory = new SessionMemoryService();
     const records = memory.getRecentAudits(5);
@@ -142,7 +142,7 @@ export async function handleControlRoomMessage(
   }
 
   // 0h. Natural Language API Key Setup intent
-  if (lowerQuery.includes('set_api_key') || lowerQuery.includes('set key') || lowerQuery.includes('pasang key') || lowerQuery.includes('setup api key') || lowerQuery.includes('set api key') || lowerQuery.includes('_api_key=') || lowerQuery.includes('_provider=') || lowerQuery.includes('_model_name=') || lowerQuery.includes('_base_url=')) {
+  if (lowerQuery.includes('set_api_key') || lowerQuery.includes('set key') || lowerQuery.includes('setup api key') || lowerQuery.includes('set api key') || lowerQuery.includes('_api_key=') || lowerQuery.includes('_provider=') || lowerQuery.includes('_model_name=') || lowerQuery.includes('_base_url=')) {
     const match = userQuery.match(/([A-Z][A-Z0-9_]{2,})\s*[:=]\s*([^\s]+)/i);
     if (match) {
       const keyName = match[1].toUpperCase();
@@ -166,7 +166,7 @@ export async function handleControlRoomMessage(
     }
   }
 
-  // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "kabari kalau BTC 70k")
+  // 1. Detect if user is asking for a Price Alert in Natural Language (e.g., "alert me when BTC hits 70k")
   const parsedAlert = priceAlertService.parseNaturalLanguageAlert(userQuery, message.author.id, message.channelId);
   if (parsedAlert) {
     await message.reply(
@@ -182,7 +182,7 @@ export async function handleControlRoomMessage(
 
   // 1b. Detect if user is asking to Bridge tokens (inform single-chain Robinhood focus)
   const isBridgeIntent = lowerQuery.includes('bridge') || lowerQuery.includes('bridging');
-  if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('kirim') && !lowerQuery.includes('transfer')) {
+  if (isBridgeIntent && !lowerQuery.includes('swap') && !lowerQuery.includes('send') && !lowerQuery.includes('transfer')) {
     await message.reply({
       content:
         `ℹ️ **OpenCatz AI is specialized natively for Robinhood Chain (EVM L2 #4663).**\n` +
@@ -194,7 +194,7 @@ export async function handleControlRoomMessage(
   }
 
   // 1c. Detect if user is asking to Swap tokens
-  const isSwapIntent = ['swap', 'tuker', 'tukar', 'exchange', 'konversi'].some(kw => lowerQuery.includes(kw));
+  const isSwapIntent = ['swap', 'exchange', 'convert'].some(kw => lowerQuery.includes(kw));
   if (isSwapIntent) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');
     const relayAdapter = new RelayAdapter();
@@ -236,7 +236,7 @@ export async function handleControlRoomMessage(
   }
 
   // 1d. Detect if user is asking to Send/Transfer tokens
-  const isSendIntent = ['send', 'kirim', 'kirimkan', 'transfer'].some(kw => lowerQuery.includes(kw));
+  const isSendIntent = ['send', 'transfer'].some(kw => lowerQuery.includes(kw));
   const evmAddrMatch = userQuery.match(/\b0x[a-fA-F0-9]{40}\b/);
   if (isSendIntent && evmAddrMatch) {
     const { RelayAdapter } = await import('../../adapters/relay-adapter.js');

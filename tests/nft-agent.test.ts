@@ -71,7 +71,7 @@ describe('NFTScreeningAgent', () => {
     expect(r.payload?.securityAuditPassed).toBe(true);
   });
 
-  it('runScreeningPass rejects velocity-only signals (hard filter: surge + spike + velocity semuanya wajib)', async () => {
+  it('runScreeningPass rejects velocity-only signals (hard filter: surge + spike + velocity all required)', async () => {
     const agent = new NFTScreeningAgent(
       mkFakeAdapter([mkSignal({ floorSurge1hPct: 3, volumeSpike1hRatio: 1.0, isWhaleSweep: false, whaleInfo: undefined })])
     );
@@ -80,7 +80,7 @@ describe('NFTScreeningAgent', () => {
     expect(reports.length).toBe(0);
   });
 
-  it('evaluateListing hard gate: reject bila salah satu filter wajib gagal (surge/spike/velocity)', () => {
+  it('evaluateListing hard gate: reject if any required filter fails (surge/spike/velocity)', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     expect(agent.evaluateListing(mkSignal({ floorSurge1hPct: 3 }))).toBeNull();
     expect(agent.evaluateListing(mkSignal({ volumeSpike1hRatio: 1.0 }))).toBeNull();
@@ -115,14 +115,14 @@ describe('NFTScreeningAgent', () => {
     expect(p.title).toBe('Pudgy Penguins (floor)');
   });
 
-  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, dan semua hard filter lolos', () => {
+  it('deriveCollectionSafety: pass requires floor > 0.01 ETH, velocity > 0, and all hard filters pass', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal())!)).toBe(true);
     expect(agent.deriveCollectionSafety(agent.evaluateListing(mkSignal({ floorPriceEth: 0.005, priceEth: 0.006 }))!)).toBe(false);
-    expect(agent.evaluateListing(mkSignal({ salesVelocity1h: 0 }))).toBeNull(); // velocity 0 gagal hard gate
+    expect(agent.evaluateListing(mkSignal({ salesVelocity1h: 0 }))).toBeNull(); // velocity 0 fails hard gate
   });
 
-  it('evaluateListing: verified badge diteruskan ke report & confidence +10', () => {
+  it('evaluateListing: verified badge passed through to report & confidence +10', () => {
     const agent = new NFTScreeningAgent(mkFakeAdapter([]));
     const unverified = agent.evaluateListing(mkSignal())!;
     expect(unverified.isVerified).toBe(false);

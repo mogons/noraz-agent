@@ -48,7 +48,7 @@ export default {
     if (volSpike < p.minVolSpike) return { confidence: 0, recommendedAction: 'SKIP', reason: `⛔ Vol spike ${volSpike.toFixed(2)}x < ${p.minVolSpike}x minimum.` };
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Collection security audit failed (floor/velocity/momentum).' };
 
-    // Confidence deterministik — konsisten dengan agent evaluateListing:
+    // Deterministic confidence — consistent with agent evaluateListing:
     // 80 (all hard filters passed) + 10 whale sweep + 10 verified, cap 100.
     let score = 80;
     reasons.push(`📈 Floor +${surge.toFixed(1)}% 1h ✓`);

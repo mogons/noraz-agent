@@ -38,8 +38,8 @@ function fmtAge(creationTs: number | null | undefined): string {
 
 function yesNo(v: boolean | undefined | null, warnWhen = true): string {
   if (v === undefined || v === null) return '—';
-  if (v) return warnWhen ? '⚠️ Ya' : 'Ya ✅';
-  return warnWhen ? 'Tidak ✅' : '⚠️ Tidak';
+  if (v) return warnWhen ? '⚠️ Yes' : 'Yes ✅';
+  return warnWhen ? 'No ✅' : '⚠️ No';
 }
 
 function creatorSignals(t: GMGNRawToken): string {

@@ -209,7 +209,7 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     if (payload.tokenVerified !== undefined) {
       embed.addFields({
         name: '✅ Verification Status',
-        value: payload.tokenVerified ? '✅ **Verified** (OpenSea blue check)' : '⚠️ **Unverified** — DYOR, risiko lebih tinggi',
+        value: payload.tokenVerified ? '✅ **Verified** (OpenSea blue check)' : '⚠️ **Unverified** — DYOR, higher risk',
         inline: true,
       });
     }

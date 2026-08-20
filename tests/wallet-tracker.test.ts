@@ -332,7 +332,7 @@ describe('WalletTracker.syncPositions', () => {
   });
 });
 
-describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
+describe('WalletTracker.checkSmartMoneyExit — position alerts', () => {
   it('position held + >= 2 smart wallets full-close >= $20k within 2h → alert', async () => {
     const pm = new PositionManager();
     pm.addPosition({
@@ -354,12 +354,12 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
     const alerts = await tracker.checkSmartMoneyExit(pm.getActivePositions());
     expect(alerts).toHaveLength(1);
     expect(alerts[0].type).toBe('sm-exit');
-    expect(alerts[0].address).toBe('mintx'); // lowercase — konsisten dengan dedupe alert
+    expect(alerts[0].address).toBe('mintx'); // lowercase — consistent with alert deduplication
     expect(alerts[0].reason).toContain('2 smart wallets full-close');
     expect(alerts[0].reason).toContain('$23.0k');
   });
 
-  it('tanpa posisi → TIDAK ada alert (sinyal exit tidak pernah jadi call)', async () => {
+  it('without position → NO alert (exit signals never become calls)', async () => {
     const pm = new PositionManager();
     const now = Math.floor(Date.now() / 1000);
     const gmgn = makeExitGmgn([
@@ -376,7 +376,7 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
     expect(alerts).toHaveLength(0);
   });
 
-  it('posisi ada tapi ambang di bawah (1 wallet / < $20k / > 2 jam) → TIDAK ada alert', async () => {
+  it('position exists but threshold below (1 wallet / < $20k / > 2h) → NO alert', async () => {
     const pm = new PositionManager();
     pm.addPosition({
       id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',
@@ -384,7 +384,7 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
     });
     const now = Math.floor(Date.now() / 1000);
     const cases: Array<import('../src/adapters/gmgn-adapter.js').GMGNTrackTrade[]> = [
-      [mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 })], // 1 wallet saja
+      [mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 })], // 1 wallet only
       [
         mkTrackTrade({ side: 'sell', amountUsd: 9_000, isFullClose: true, maker: '0xw1', timestamp: now - 600 }),
         mkTrackTrade({ side: 'sell', amountUsd: 9_000, isFullClose: true, maker: '0xw2', timestamp: now - 1200 }),
@@ -392,7 +392,7 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
       [
         mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw1', timestamp: now - 3 * 3600 }),
         mkTrackTrade({ side: 'sell', amountUsd: 25_000, isFullClose: true, maker: '0xw2', timestamp: now - 3 * 3600 }),
-      ], // > 2 jam lalu
+      ], // > 2 hours ago
     ];
     for (const trades of cases) {
       const tracker = makeTracker({
@@ -406,7 +406,7 @@ describe('WalletTracker.checkSmartMoneyExit — alert posisi', () => {
     }
   });
 
-  it('track feed gagal/error → fail-open tanpa alert', async () => {
+  it('track feed fails/errors → fail-open without alert', async () => {
     const pm = new PositionManager();
     pm.addPosition({
       id: 'MINTX', symbol: 'TOKX', contractAddress: 'MINTX',

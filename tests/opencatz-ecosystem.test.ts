@@ -81,7 +81,7 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
 
   it('7. Price Alert Service: Should parse natural language alert expressions', () => {
     const alertService = new PriceAlertService();
-    const parsed = alertService.parseNaturalLanguageAlert('opencatz kabari kalau BTC 70000', 'test_user', 'test_chan');
+    const parsed = alertService.parseNaturalLanguageAlert('opencatz alert if BTC 70000', 'test_user', 'test_chan');
     expect(parsed).not.toBeNull();
     expect(parsed?.symbol).toBe('BTC');
     expect(parsed?.targetPriceUsd).toBe(70000);

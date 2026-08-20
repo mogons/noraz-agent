@@ -96,14 +96,14 @@ export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } =
       });
       child.on('error', (err) => {
         restartOk = false;
-        console.warn(`⚠ Gagal spawn restart: ${err.message}`);
+        console.warn(`⚠ Failed to spawn restart: ${err.message}`);
       });
       child.unref();
       console.log('✅ PM2 restart scheduled (detached, +3s).');
       log.push({ label: 'pm2 restart (detached)', command: pm2Cmd, ok: true });
     } catch (err) {
       restartOk = false;
-      console.warn(`⚠ Gagal menjadwalkan restart: ${err.message}`);
+      console.warn(`⚠ Failed to schedule restart: ${err.message}`);
       log.push({ label: 'pm2 restart (detached)', command: pm2Cmd, ok: false });
     }
   } else {
@@ -123,12 +123,12 @@ export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } =
       }, null, 2),
       'utf-8'
     );
-    console.log('📄 Laporan update ditulis ke database/last_update_report.json');
+    console.log('📄 Update report written to database/last_update_report.json');
   } catch (reportErr) {
     console.warn(`⚠ Failed to write update report: ${reportErr.message}`);
   }
 
-  console.log(`\n${allOk ? '✅' : '❌'} SELF-UPDATE ${allOk ? 'SELESAI' : 'DENGAN KEGAGALAN'}`);
+  console.log(`\n${allOk ? '✅' : '❌'} SELF-UPDATE ${allOk ? 'COMPLETE' : 'WITH FAILURES'}`);
   return { ok: allOk, restartOk, log };
 }
 

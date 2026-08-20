@@ -654,8 +654,8 @@ export class ToolRegistry {
           const { StateStore } = await import('../services/state-store.js');
           const store = new StateStore();
           if (Object.keys(applied).length > 0) store.setScreeningConfig(agentId, applied);
-          const appliedStr = Object.keys(applied).length > 0 ? `✅ Diterapkan: ${JSON.stringify(applied)}` : '';
-          const rejectedStr = rejected.length > 0 ? `\n❌ Ditolak: ${rejected.join('; ')}` : '';
+          const appliedStr = Object.keys(applied).length > 0 ? `✅ Applied: ${JSON.stringify(applied)}` : '';
+          const rejectedStr = rejected.length > 0 ? `\n❌ Rejected: ${rejected.join('; ')}` : '';
           return {
             success: rejected.length === 0,
             message: `Config ${agentId} updated.${appliedStr}${rejectedStr}`,

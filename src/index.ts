@@ -181,8 +181,8 @@ if (discordToken && clientId) {
       GatewayIntentBits.MessageContent,
     ],
     rest: {
-      // Naikkan timeout REST Discord (default 10s) — VPS pernah timeout saat
-      // restart + bootstrap + reply bersamaan, bikin "Opencatz is thinking..."
+      // Increase Discord REST timeout (default 10s) — VPS previously timed out during
+      // restart + bootstrap + reply simultaneously, causing "Opencatz is thinking..."
       timeout: 30000,
     },
   });
@@ -198,7 +198,7 @@ if (discordToken && clientId) {
       const reportPath = path.join(process.cwd(), 'database', 'last_update_report.json');
       if (fs.existsSync(reportPath)) {
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
-        fs.unlinkSync(reportPath); // one-shot: hapus setelah dibaca
+        fs.unlinkSync(reportPath); // one-shot: remove after reading
         const stepLines = (report.steps || []).map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
         const restartLine = report.restartOk
           ? '🔄 **PM2 agent restarted — new code is live.**'
@@ -209,14 +209,14 @@ if (discordToken && clientId) {
           : client.channels.cache.find((c: any) => c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
         if (channel && 'send' in channel) {
           await channel.send(
-            `${report.ok ? '✅' : '❌'} **OpenCatz Self-Update ${report.ok ? 'Complete' : 'GAGAL'}**\n\n` +
+            `${report.ok ? '✅' : '❌'} **OpenCatz Self-Update ${report.ok ? 'Complete' : 'FAILED'}**\n\n` +
             `${stepLines}\n${restartLine}`
           );
-          console.log('[UPDATE REPORT] Laporan update dikirim ke control room.');
+          console.log('[UPDATE REPORT] Update report sent to control room.');
         }
       }
     } catch (reportErr: any) {
-      console.warn(`[UPDATE REPORT] Gagal kirim laporan: ${reportErr.message}`);
+      console.warn(`[UPDATE REPORT] Failed to send report: ${reportErr.message}`);
     }
 
     // Auto-Bootstrap Discord Category & Channels if bot is in a server
@@ -336,7 +336,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('meme-robinhood'),
           runPass: () => withScreeningTimeout(robinhoodScreeningAgent.runScreeningPass(), 'meme-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...robinhoodDispatched);
 
@@ -346,7 +346,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('nft'),
           runPass: () => withScreeningTimeout(nftScreeningAgent.runScreeningPass(), 'nft'),
           keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...nftDispatched);
 
@@ -356,7 +356,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('lp-robinhood'),
           runPass: () => withScreeningTimeout(hub.runLPPass('lp-robinhood'), 'lp-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('lp-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpEvmDispatched);
 
@@ -366,7 +366,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('alpha-robinhood'),
           runPass: () => withScreeningTimeout(alphaRobinhoodScreeningAgent.runScreeningPass(), 'alpha-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('alpha-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...alphaDispatched);
 
@@ -376,7 +376,7 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('whale-eth'),
           runPass: () => withScreeningTimeout(whaleScreeningAgent.runScreeningPass(), 'whale-eth'),
           keyReady: () => apiKeyGuard.checkDomainKeys('whale-eth'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} TIDAK BISA JALAN**\n${msg}`),
+          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...whaleDispatched);
 

@@ -56,7 +56,7 @@ export default {
 
     if (!ctx.securityAuditPassed) return { confidence: 0, recommendedAction: 'SKIP', reason: '⛔ Security audit (GoPlus) failed.' };
 
-    // ── Global total fees gate OPSIONAL: hanya aktif jika minTotalFeeUsd > 0 ──
+    // ── OPTIONAL global total fees gate: only active if minTotalFeeUsd > 0 ──
     if (p.minTotalFeeUsd > 0) {
       const totalFeeNative = typeof g.total_fee === 'number' && g.total_fee > 0 ? g.total_fee : null;
       const nativePriceUsd = typeof g.native_price_usd === 'number' && g.native_price_usd > 0 ? g.native_price_usd : null;
@@ -108,7 +108,7 @@ export default {
       return finish('CTO', score);
     }
 
-    // Revival (dead token waking up) — HANYA token lama (umur >= 4h)
+    // Revival (dead token waking up) — ONLY older tokens (age >= 4h)
     if (ageHours !== null && ageHours >= 4 && change1h !== null && change1h > 50) {
       let score = 15;
       reasons.push('🕐 Age > 4h (+15)');

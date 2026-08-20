@@ -18,14 +18,14 @@ describe('AIService.generateWithTools', () => {
       ok: true,
       text: async () => JSON.stringify({
         choices: [{ message: {
-          content: 'Saya akan cek status.',
+          content: 'I will check the status.',
           tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'get_agent_statuses', arguments: '{}' } }],
         } }],
       }),
     }));
     const svc = makeService();
     const resp = await svc.generateWithTools(
-      [{ role: 'user', content: 'status agent?' }],
+      [{ role: 'user', content: 'agent status?' }],
       [{ name: 'get_agent_statuses', description: 'd', parameters: { type: 'object', properties: {} } }],
       1000
     );
@@ -37,12 +37,12 @@ describe('AIService.generateWithTools', () => {
   it('returns empty toolCalls when the model replies plain text', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      text: async () => JSON.stringify({ choices: [{ message: { content: 'Halo!', tool_calls: null } }] }),
+      text: async () => JSON.stringify({ choices: [{ message: { content: 'Hello!', tool_calls: null } }] }),
     }));
     const svc = makeService();
-    const resp = await svc.generateWithTools([{ role: 'user', content: 'halo' }], [], 1000);
+    const resp = await svc.generateWithTools([{ role: 'user', content: 'hello' }], [], 1000);
     expect(resp.toolCalls.length).toBe(0);
-    expect(resp.content).toBe('Halo!');
+    expect(resp.content).toBe('Hello!');
   });
 
   it('degrades to empty result when all models fail', async () => {

@@ -273,7 +273,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(tokens[1].progress).toBe(0.4);
   });
 
-  it('fetchTokenSecurity parses audit fields dari /v1/token/security', async () => {
+  it('fetchTokenSecurity parses audit fields from /v1/token/security', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true, status: 200,
@@ -314,7 +314,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(await adapter.fetchTokenSecurity('robinhood', 'tok_fail_closed')).toBeNull();
   });
 
-  it('fetchTokenSecurity cache module-level: call kedua tidak fetch ulang (TTL 10m)', async () => {
+  it('fetchTokenSecurity module-level cache: second call does not re-fetch (TTL 10m)', async () => {
     process.env.GMGN_API_KEY = 'test-key';
     const fn = vi.fn().mockResolvedValue({
       ok: true, status: 200,
@@ -323,9 +323,9 @@ describe('GMGNAdapter (OpenAPI)', () => {
     });
     vi.stubGlobal('fetch', fn);
     const a = new GMGNAdapter();
-    const b = new GMGNAdapter(); // instansi berbeda — cache tetap dibagi
+    const b = new GMGNAdapter(); // distinct instances — cache remains shared
     await a.fetchTokenSecurity('robinhood', '0xABC');
-    await b.fetchTokenSecurity('robinhood', '0xabc'); // lowercase → key sama
+    await b.fetchTokenSecurity('robinhood', '0xabc'); // lowercase → same key
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -354,7 +354,7 @@ describe('GMGNAdapter (OpenAPI)', () => {
     expect(trades[0].makerTags).toEqual(['smart_degen', 'photon']);
     expect(trades[0].kind).toBe('smartmoney');
     expect(trades[1].isFullClose).toBe(false);
-    await b.fetchTrackTrades('robinhood', 'smartmoney'); // cache shared → tidak fetch ulang
+    await b.fetchTrackTrades('robinhood', 'smartmoney'); // shared cache → does not re-fetch
     expect(fn).toHaveBeenCalledTimes(1);
   });
 

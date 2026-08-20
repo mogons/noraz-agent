@@ -19,7 +19,7 @@ describe('AgentRunner', () => {
     const aiService = {
       generateWithTools: vi.fn()
         .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c1', name: 'ping', arguments: {} }] })
-        .mockResolvedValueOnce({ content: 'Pong diterima.', toolCalls: [] }),
+        .mockResolvedValueOnce({ content: 'Pong received.', toolCalls: [] }),
     } as any;
 
     const result = await runAgent(
@@ -29,7 +29,7 @@ describe('AgentRunner', () => {
 
     expect(registry.executeToolCall).toHaveBeenCalledTimes(1);
     expect(aiService.generateWithTools).toHaveBeenCalledTimes(2);
-    expect(result.text).toBe('Pong diterima.');
+    expect(result.text).toBe('Pong received.');
     expect(result.toolResults.length).toBe(1);
     expect(result.toolResults[0].name).toBe('ping');
   });
@@ -38,12 +38,12 @@ describe('AgentRunner', () => {
     const registry = makeToolRegistry();
     const aiService = {
       generateWithTools: vi.fn()
-        // 3 tool rounds, semua minta tool
+        // 3 tool rounds, all requesting tools
         .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
         .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
         .mockResolvedValueOnce({ content: '', toolCalls: [{ id: 'c', name: 'ping', arguments: {} }] })
-        // round summary: tanpa tools → jawaban final
-        .mockResolvedValueOnce({ content: 'Ringkasan final.', toolCalls: [] }),
+        // summary round: without tools → final answer
+        .mockResolvedValueOnce({ content: 'Final summary.', toolCalls: [] }),
     } as any;
 
     const result = await runAgent(
@@ -51,11 +51,11 @@ describe('AgentRunner', () => {
       'loop'
     );
 
-    // 3 round tool + 1 round summary ekstra (bukan jawaban perantara polos)
+    // 3 tool rounds + 1 extra summary round (not raw intermediate response)
     expect(aiService.generateWithTools).toHaveBeenCalledTimes(4);
     expect(registry.executeToolCall).toHaveBeenCalledTimes(3);
     expect(result.toolResults.length).toBe(3);
-    expect(result.text).toBe('Ringkasan final.');
+    expect(result.text).toBe('Final summary.');
   });
 
   it('falls back gracefully when the summary round fails', async () => {

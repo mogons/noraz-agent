@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { OpenSeaAdapter } from '../src/adapters/opensea-adapter.js';
 
-// Struktur fixture mengikuti OpenSea API v2 yang NYATA (diverifikasi live):
+// Fixture structure follows REAL OpenSea API v2 (verified live):
 // stats → { total: { floor_price }, intervals: [{ interval: 'one_day'|'seven_day', volume, sales }] }
 // floor_prices → { floor_prices: [{ time, token_unit }] } (timeframe=one_day, resolution=25)
 // collections → { safelist_request_status: 'verified'|'not_requested'|... } (badge verified)
@@ -24,7 +24,7 @@ const mkFloorPrices = (now: number, nowEth: number, oneHAgoEth: number) => {
   const points = [];
   for (let i = 24; i >= 0; i--) {
     const t = now - i * HOUR;
-    // naik dari oneHAgoEth → nowEth dalam 1 jam terakhir: hanya titik sekarang (i=0) yang nowEth
+    // rising from oneHAgoEth → nowEth over the past 1 hour: only current point (i=0) is nowEth
     const eth = i === 0 ? nowEth : oneHAgoEth;
     points.push({ time: t, token_unit: eth, usd_price: String(eth * 3000), symbol: 'ETH', chain: 'robinhood' });
   }
@@ -45,7 +45,7 @@ const mkSaleEvent = (over: any = {}) => ({
 describe('OpenSeaAdapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); delete process.env.OPENSEA_API_KEY; delete process.env.OPENSEA_BACKUP_KEYS; });
 
-  it('fetchTrendingCollections: satu request untuk robinhood, parse slug/name/chain', async () => {
+  it('fetchTrendingCollections: single request for robinhood, parse slug/name/chain', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
@@ -69,7 +69,7 @@ describe('OpenSeaAdapter', () => {
     expect(url).toContain('limit=5');
   });
 
-  it('fetchTrendingCollections: [] tanpa key / API gagal (fail-closed)', async () => {
+  it('fetchTrendingCollections: [] without key / API fails (fail-closed)', async () => {
     const adapter = new OpenSeaAdapter();
     expect(await adapter.fetchTrendingCollections()).toEqual([]);
     process.env.OPENSEA_API_KEY = 'os-test';
@@ -77,7 +77,7 @@ describe('OpenSeaAdapter', () => {
     expect(await adapter.fetchTrendingCollections()).toEqual([]);
   });
 
-  it('menghitung surge/velocity/volume-spike dari data v2 REAL (stats + floor_prices + events)', async () => {
+  it('computes surge/velocity/volume-spike from REAL v2 data (stats + floor_prices + events)', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     const now = t0();
     vi.stubGlobal('fetch', vi.fn()
@@ -85,23 +85,23 @@ describe('OpenSeaAdapter', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 6.0) })                 // floor_prices: 8.0 vs 6.0 = +33.3%
       .mockResolvedValueOnce({ ok: true, json: async () => ({ safelist_request_status: 'verified' }) })    // collection detail: verified
       .mockResolvedValueOnce({ ok: true, json: async () => ({ asset_events: [
-        mkSaleEvent({ event_timestamp: now - 600 }),    // dalam 1 jam (volume 1h)
-        mkSaleEvent({ event_timestamp: now - 1800 }),   // dalam 1 jam (volume 1h)
-        mkSaleEvent({ event_timestamp: now - 1.5 * HOUR }), // 1.5h lalu → baseline 1-2h
+        mkSaleEvent({ event_timestamp: now - 600 }),    // within 1 hour (volume 1h)
+        mkSaleEvent({ event_timestamp: now - 1800 }),   // within 1 hour (volume 1h)
+        mkSaleEvent({ event_timestamp: now - 1.5 * HOUR }), // 1.5h ago → baseline 1-2h
       ] }) }));                                                                                             // events sale
     const adapter = new OpenSeaAdapter();
     const signals = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(signals.length).toBe(1);
     const s = signals[0];
     expect(s.floorPriceEth).toBe(8.0);
-    expect(s.floorSurge1hPct).toBeGreaterThan(30);   // floor naik 8 vs 6 = +33%
-    expect(s.salesVelocity1h).toBe(2);               // 2 sale dalam 1 jam terakhir
+    expect(s.floorSurge1hPct).toBeGreaterThan(30);   // floor rises 8 vs 6 = +33%
+    expect(s.salesVelocity1h).toBe(2);               // 2 sales in past 1 hour
     expect(s.volumeSpike1hRatio).toBe(2);            // 8 ETH (1h) vs 4 ETH (1-2h baseline)
     expect(s.isVerified).toBe(true);                 // safelist_request_status === 'verified'
     expect(s.chain).toBe('robinhood');
   });
 
-  it('whale sweep terdeteksi faktual: satu buyer beli 3+ dalam 1 jam', async () => {
+  it('whale sweep detected factually: single buyer buys 3+ within 1 hour', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     const now = t0();
     vi.stubGlobal('fetch', vi.fn()
@@ -122,19 +122,19 @@ describe('OpenSeaAdapter', () => {
     expect(s.whaleInfo?.spentEth).toBeCloseTo(12, 5); // 3 × 4 ETH
   });
 
-  it('tanpa events yang valid → velocity & spike fallback jujur ke stats 24h', async () => {
+  it('without valid events → velocity & spike fallback honestly to 24h stats', async () => {
     process.env.OPENSEA_API_KEY = 'os-test';
     const now = t0();
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => mkStats() })
       .mockResolvedValueOnce({ ok: true, json: async () => mkFloorPrices(now, 8.0, 8.0) })
-      .mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) }) // collection detail ditolak → isVerified false
-      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({}) })); // events ditolak key
+      .mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) }) // collection detail rejected → isVerified false
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({}) })); // events rejected by key
     const adapter = new OpenSeaAdapter();
     const [s] = await adapter.fetchFloorSnipingSignals('pudgypenguins');
     expect(s.isWhaleSweep).toBe(false);
-    expect(s.isVerified).toBe(false); // fail-closed: tidak bisa dipastikan = unverified
-    // one_day vol 50 vs baseline 6 hari ((200-50)/6=25) → 2.0x; velocity 12/24 = 0.5
+    expect(s.isVerified).toBe(false); // fail-closed: cannot be verified = unverified
+    // one_day vol 50 vs baseline 6 days ((200-50)/6=25) → 2.0x; velocity 12/24 = 0.5
     expect(s.volumeSpike1hRatio).toBeCloseTo(2.0, 5);
     expect(s.salesVelocity1h).toBeCloseTo(0.5, 5);
   });

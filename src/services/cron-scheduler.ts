@@ -88,17 +88,17 @@ export class CronSchedulerService {
       }
     }
 
-    if (lower.includes('min') || lower.includes('menit')) {
+    if (lower.includes('min') || lower.includes('minute')) {
       const match = lower.match(/\d+/);
       const mins = match ? parseInt(match[0], 10) : 30;
       return mins * 60 * 1000;
     }
-    if (lower.includes('hour') || lower.includes('jam')) {
+    if (lower.includes('hour')) {
       const match = lower.match(/\d+/);
       const hours = match ? parseInt(match[0], 10) : 1;
       return hours * 60 * 60 * 1000;
     }
-    if (lower.includes('day') || lower.includes('hari') || lower.includes('daily')) {
+    if (lower.includes('day') || lower.includes('daily')) {
       return 24 * 60 * 60 * 1000;
     }
     return 60 * 60 * 1000; // Default 1 hour

@@ -28,93 +28,93 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
   ...over,
 });
 
-describe('securityGateToken — gate keamanan GMGN (meme & LP shared)', () => {
-  it('token bersih dengan semua field null → lolos', () => {
+describe('securityGateToken — GMGN security gate (meme & LP shared)', () => {
+  it('clean token with all null fields → pass', () => {
     expect(securityGateToken(mkToken()).ok).toBe(true);
   });
 
-  it('honeypot → tolak', () => {
+  it('honeypot → reject', () => {
     const r = securityGateToken(mkToken({ isHoneypot: true }));
     expect(r.ok).toBe(false);
     expect(r.reasons.join(' ')).toContain('honeypot');
   });
 
-  it('wash trading → tolak', () => {
+  it('wash trading → reject', () => {
     expect(securityGateToken(mkToken({ isWashTrading: true })).ok).toBe(false);
   });
 
-  it('buy tax > 10% → tolak', () => {
+  it('buy tax > 10% → reject', () => {
     const r = securityGateToken(mkToken({ buyTax: '12' }));
     expect(r.ok).toBe(false);
     expect(r.reasons.join(' ')).toContain('buy tax 12%');
   });
 
-  it('sell tax > 10% → tolak', () => {
+  it('sell tax > 10% → reject', () => {
     expect(securityGateToken(mkToken({ sellTax: '15' })).ok).toBe(false);
   });
 
-  it('tax <= 10% → lolos', () => {
+  it('tax <= 10% → pass', () => {
     expect(securityGateToken(mkToken({ buyTax: '10', sellTax: '5' })).ok).toBe(true);
   });
 
-  it('enableTaxGate: false → tax besar lolos (mode LP)', () => {
+  it('enableTaxGate: false → large tax passes (LP mode)', () => {
     const r = securityGateToken(mkToken({ buyTax: '30', sellTax: '25' }), { enableTaxGate: false });
     expect(r.ok).toBe(true);
   });
 
-  it('enableTaxGate: false tetap menolak field berbahaya lain (rug)', () => {
+  it('enableTaxGate: false still rejects other dangerous fields (rug)', () => {
     const r = securityGateToken(mkToken({ sellTax: '25', rugRatio: 0.5 }), { enableTaxGate: false });
     expect(r.ok).toBe(false);
     expect(r.reasons.join(' ')).toContain('rug');
     expect(r.reasons.join(' ')).not.toContain('tax');
   });
 
-  it('rug ratio >= 0.3 → tolak (0.29 lolos)', () => {
+  it('rug ratio >= 0.3 → reject (0.29 passes)', () => {
     expect(securityGateToken(mkToken({ rugRatio: 0.3 })).ok).toBe(false);
     expect(securityGateToken(mkToken({ rugRatio: 0.29 })).ok).toBe(true);
   });
 
-  it('insider >= 0.3 → tolak', () => {
+  it('insider >= 0.3 → reject', () => {
     expect(securityGateToken(mkToken({ ratTraderAmountRate: 0.3 })).ok).toBe(false);
   });
 
-  it('bundler tinggi → LOLOS (filter bundler dihapus — token alpha sering bundler tinggi)', () => {
+  it('high bundler → PASS (bundler filter removed — alpha tokens frequently have high bundlers)', () => {
     expect(securityGateToken(mkToken({ bundlerRate: 0.9 })).ok).toBe(true);
   });
 
-  it('top-10 holder >= 0.4 → tolak', () => {
+  it('top-10 holder >= 0.4 → reject', () => {
     expect(securityGateToken(mkToken({ top10HolderRate: 0.4 })).ok).toBe(false);
   });
 
-  it('semua field berbahaya sekaligus → semua alasan tercantum', () => {
+  it('all dangerous fields simultaneously → all reasons listed', () => {
     const r = securityGateToken(mkToken({ rugRatio: 0.5, bundlerRate: 0.6, ratTraderAmountRate: 0.4, top10HolderRate: 0.5 }));
     expect(r.ok).toBe(false);
-    expect(r.reasons.length).toBe(3); // bundler tidak lagi digate
+    expect(r.reasons.length).toBe(3); // bundler is no longer gated
   });
 
-  it('opsi ambang kustom dapat diperketat', () => {
+  it('custom threshold options can be tightened', () => {
     expect(securityGateToken(mkToken({ rugRatio: 0.2 }), { maxRugRatio: 0.15 }).ok).toBe(false);
   });
 });
 
-describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', () => {
-  it('audit null/tidak tersedia → TOLAK (tidak bisa diverifikasi)', () => {
+describe('securityAuditGate — GMGN /v1/token/security audit (FAIL-CLOSED)', () => {
+  it('audit null/unavailable → REJECT (cannot be verified)', () => {
     const r = securityAuditGate(null);
     expect(r.ok).toBe(false);
     expect(r.reasons.join(' ')).toContain('fail-closed');
   });
 
-  it('token aman → lolos', () => {
+  it('safe token → pass', () => {
     expect(securityAuditGate(mkAudit()).ok).toBe(true);
   });
 
-  it('honeypot → tolak', () => {
+  it('honeypot → reject', () => {
     const r = securityAuditGate(mkAudit({ isHoneypot: true }));
     expect(r.ok).toBe(false);
     expect(r.reasons.join(' ')).toContain('honeypot');
   });
 
-  it('blacklist → tolak', () => {
+  it('blacklist → reject', () => {
     expect(securityAuditGate(mkAudit({ isBlacklist: true })).ok).toBe(false);
   });
 
@@ -124,27 +124,27 @@ describe('securityAuditGate — audit GMGN /v1/token/security (FAIL-CLOSED)', ()
     expect(r.reasons.join(' ')).toContain('cannot be sold');
   });
 
-  it('tax tinggi (> 10%) → tolak saat enableTaxGate', () => {
+  it('high tax (> 10%) → reject when enableTaxGate is active', () => {
     expect(securityAuditGate(mkAudit({ sellTaxPct: 15 })).ok).toBe(false);
     expect(securityAuditGate(mkAudit({ highTaxPct: 12 })).ok).toBe(false);
     expect(securityAuditGate(mkAudit({ averageTaxPct: 5, sellTaxPct: 3 })).ok).toBe(true);
   });
 
-  it('enableTaxGate: false → tax besar lolos (mode LP), honeypot tetap tolak', () => {
+  it('enableTaxGate: false → large tax passes (LP mode), honeypot still rejected', () => {
     const taxOk = securityAuditGate(mkAudit({ sellTaxPct: 25 }), { enableTaxGate: false });
     expect(taxOk.ok).toBe(true);
     const hp = securityAuditGate(mkAudit({ isHoneypot: true, sellTaxPct: 25 }), { enableTaxGate: false });
     expect(hp.ok).toBe(false);
   });
 
-  it('tokenSecurityAuditLabel: hanya field yang tersedia yang ditampilkan', () => {
+  it('tokenSecurityAuditLabel: only available fields are displayed', () => {
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Renounced');
     expect(tokenSecurityAuditLabel(mkAudit({ isRenounced: true, averageTaxPct: 1.2, isLocked: true }))).toContain('Locked');
     expect(tokenSecurityAuditLabel(null)).toContain('Not audited');
   });
 });
 
-describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
+describe('buildTrackAccumulation — smart money trade feed accumulation', () => {
   const now = Math.floor(Date.now() / 1000);
   const mkTrade = (over: Partial<GMGNTrackTrade> = {}): GMGNTrackTrade => ({
     tokenAddress: 'tok1', tokenSymbol: 'TOK1', side: 'buy', amountUsd: 5000,
@@ -152,10 +152,10 @@ describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
     timestamp: now - 300, kind: 'smartmoney', ...over,
   });
 
-  it('agregat buy per wallet (dedupe maker) + total USD + fresh timestamp', () => {
+  it('aggregates buy per wallet (dedupe maker) + total USD + fresh timestamp', () => {
     const acc = buildTrackAccumulation([
       mkTrade({ maker: '0xw1', amountUsd: 5000 }),
-      mkTrade({ maker: '0xw1', amountUsd: 3000 }), // maker sama → 1 wallet
+      mkTrade({ maker: '0xw1', amountUsd: 3000 }), // same maker → 1 wallet
       mkTrade({ maker: '0xw2', amountUsd: 9000 }),
       mkTrade({ side: 'sell', maker: '0xw3', amountUsd: 2000 }),
     ]);
@@ -166,12 +166,12 @@ describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
     expect(a.totalSellUsd).toBe(2000);
   });
 
-  it('full-close terdeteksi: wallet unik + total USD + timestamp terbaru', () => {
+  it('full-close detected: unique wallets + total USD + latest timestamp', () => {
     const acc = buildTrackAccumulation([
       mkTrade({ side: 'sell', isFullClose: true, maker: '0xw1', amountUsd: 12_000, timestamp: now - 600 }),
       mkTrade({ side: 'sell', isFullClose: true, maker: '0xw2', amountUsd: 11_000, timestamp: now - 1200 }),
-      mkTrade({ side: 'sell', isFullClose: true, maker: '0xw1', amountUsd: 5000, timestamp: now - 300 }), // wallet sama
-      mkTrade({ side: 'sell', isFullClose: false, maker: '0xw3', amountUsd: 9000, timestamp: now - 100 }), // bukan full-close
+      mkTrade({ side: 'sell', isFullClose: true, maker: '0xw1', amountUsd: 5000, timestamp: now - 300 }), // same wallet
+      mkTrade({ side: 'sell', isFullClose: false, maker: '0xw3', amountUsd: 9000, timestamp: now - 100 }), // not full-close
     ]);
     const a = acc.get('tok1')!;
     expect(a.fullCloseWallets.size).toBe(2);
@@ -180,7 +180,7 @@ describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
     expect(a.lastFullCloseAt).toBe(now - 300);
   });
 
-  it('trackAccumulationLabel: ringkas untuk card', () => {
+  it('trackAccumulationLabel: concise for card', () => {
     const acc = buildTrackAccumulation([
       mkTrade({ maker: '0xw1', amountUsd: 12_000, timestamp: now - 1200 }),
       mkTrade({ maker: '0xw2', amountUsd: 18_000, timestamp: now - 1200 }),
@@ -191,17 +191,17 @@ describe('buildTrackAccumulation — akumulasi trade feed smart money', () => {
   });
 });
 
-describe('tokenSecurityLabel — label keamanan untuk card LP', () => {
-  it('hanya field yang dilaporkan yang ditampilkan', () => {
+describe('tokenSecurityLabel — security label for LP card', () => {
+  it('only reported fields are displayed', () => {
     const label = tokenSecurityLabel(mkToken({ top10HolderRate: 0.15, bundlerRate: 0.02 }));
     expect(label).toBe('✅ GMGN audited — Top10 15.0% • Bundler 2.0%');
   });
 
-  it('tanpa data → label polos audited', () => {
+  it('without data → plain audited label', () => {
     expect(tokenSecurityLabel(mkToken())).toBe('✅ GMGN audited');
   });
 
-  it('menampilkan dev & insider', () => {
+  it('displays dev & insider', () => {
     const label = tokenSecurityLabel(mkToken({ devTeamHoldRate: 0.01, ratTraderAmountRate: 0.05 }));
     expect(label).toContain('Dev 1.0%');
     expect(label).toContain('Insider 5.0%');
