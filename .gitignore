@@ -23,20 +23,32 @@ out/
 # 3. Environment Variables & Private Secrets (CRITICAL: NEVER COMMIT SECRETS)
 .env
 .env.*
+.env*.local
+.env.bak*
+.env.backup*
+*.env
 !.env.example
 *.pem
 *.key
 *.p12
 *.pfx
 *.keystore
+*.secret*
+*.token
+*.seed
+*.mnemonic
+id_rsa*
+id_ed25519*
 .gmgn_rsa_private.pem
+keys/
+secrets/
+wallets/
+private/
+credentials/
 
 # 4. Database & State Persistence (Local runtime data)
-database/*.json
+database/*
 !database/.gitkeep
-database/opencatz_state.json*
-database/opencat_state.json*
-database/schedules.json
 *.db
 *.sqlite
 *.sqlite3
@@ -79,6 +91,9 @@ ehthumbs.db
 Thumbs.db
 .vscode/
 .idea/
+.gemini/
+.claude/
+.cursor/
 *.suo
 *.ntvs*
 *.njsproj
@@ -112,6 +127,3 @@ temp/
 __pycache__/
 *.pyc
 *.pyo
-
-
-
