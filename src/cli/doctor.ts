@@ -1,9 +1,33 @@
 import { OpenCatzHub, OpenCatHub } from '../orchestrator/hub.js';
 
+// ANSI Color Tokens from OpenCatz Palette
+const C = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  lime: '\x1b[38;2;204;255;0m',      // #CCFF00 Robinhood Green
+  pink: '\x1b[38;2;255;183;178m',    // #FFB7B2 Pastel Pink
+  lavender: '\x1b[38;2;214;199;255m',// #D6C7FF Lavender Purple
+  cyan: '\x1b[38;2;128;222;234m',    // #80DEEA Retro Cyan
+  yellow: '\x1b[38;2;255;245;157m',  // #FFF59D Pastel Yellow
+  gold: '\x1b[38;2;255;215;0m',      // #FFD700 Golden Fortune
+  red: '\x1b[38;2;229;57;53m',       // #E53935 Maneki-Neko Red
+  green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
+};
+
 export async function runOpenCatzDoctor(): Promise<void> {
-  console.log('\n======================================================');
-  console.log('🩺 OPENCATZ AI AGENT SYSTEM DOCTOR & DIAGNOSTICS');
-  console.log('======================================================\n');
+  console.log(`
+${C.lime}${C.bold}       /\\_____/\\
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.green}🐾 OPENCATZ AI — SYSTEM DOCTOR 🐾${C.reset}
+${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Health Audit${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
+${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
+${C.lime}    ( (  )   (  ) )
+   (__(__)___(__)__)${C.reset}
+`);
+  console.log(`${C.lime}${C.bold}========================================================================${C.reset}`);
+  console.log(`${C.lime}${C.bold}🩺 OPENCATZ AI AGENT SYSTEM DOCTOR & DIAGNOSTICS AUDIT${C.reset}`);
+  console.log(`${C.lime}${C.bold}========================================================================${C.reset}\n`);
 
   // 1. Check API Keys Configuration
   console.log('🔑 1. API KEYS CONFIGURATION AUDIT:');

@@ -23,11 +23,26 @@ const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SELF_DIR, '..');
 const EXEC_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per step (npm install can be slow)
 
+// ANSI Color Tokens from OpenCatz Palette
+const C = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  lime: '\x1b[38;2;204;255;0m',      // #CCFF00 Robinhood Green
+  pink: '\x1b[38;2;255;183;178m',    // #FFB7B2 Pastel Pink
+  lavender: '\x1b[38;2;214;199;255m',// #D6C7FF Lavender Purple
+  cyan: '\x1b[38;2;128;222;234m',    // #80DEEA Retro Cyan
+  yellow: '\x1b[38;2;255;245;157m',  // #FFF59D Pastel Yellow
+  gold: '\x1b[38;2;255;215;0m',      // #FFD700 Golden Fortune
+  red: '\x1b[38;2;229;57;53m',       // #E53935 Maneki-Neko Red
+  green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
+};
+
 export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   const log = [];
   const step = (label, command, { ignore = false } = {}) => {
-    console.log(`\n▶ ${label}`);
-    console.log(`$ ${command}`);
+    console.log(`\n${C.cyan}${C.bold}▶ ${label}${C.reset}`);
+    console.log(`${C.dim}$ ${command}${C.reset}`);
     try {
       execSync(command, { cwd, stdio: 'inherit', shell: true, timeout: EXEC_TIMEOUT_MS });
       log.push({ label, command, ok: true });
@@ -36,15 +51,23 @@ export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } =
       log.push({ label, command, ok: false });
       if (!ignore) {
         const status = err?.status ?? 'unknown';
-        console.error(`✖ ${label} failed (exit ${status})`);
+        console.error(`${C.red}✖ ${label} failed (exit ${status})${C.reset}`);
       }
       return false;
     }
   };
 
-  console.log('🔄 OPENCATZ AI SELF-UPDATE');
-  console.log(`   repo: ${cwd} | node: ${process.version}`);
-  console.log(`   mode: ${noRestart ? 'without restart (--no-restart)' : 'with pm2 restart'}`);
+  console.log(`
+${C.lime}${C.bold}       /\\_____/\\
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.cyan}🐾 OPENCATZ AI — SELF-UPDATE 🐾${C.reset}
+${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.lime}Robinhood Chain Multi-Agent System${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}EVM L2 #4663 • Native: ETH${C.reset}
+${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
+${C.lime}    ( (  )   (  ) )
+   (__(__)___(__)__)${C.reset}
+`);
+  console.log(`   ${C.bold}Repo:${C.reset} ${cwd} | ${C.bold}Node:${C.reset} ${process.version}`);
+  console.log(`   ${C.bold}Mode:${C.reset} ${noRestart ? 'without restart (--no-restart)' : 'with PM2 restart'}`);
 
   // 1. Stash local changes so git pull is not rejected
   let stashed = false;

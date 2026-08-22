@@ -22,25 +22,29 @@ const keepEnv = args.includes('--keep-env');
 const keepData = args.includes('--keep-data');
 const keepModules = args.includes('--keep-modules');
 
-// Terminal Colors
+// Terminal Colors (24-bit TrueColor RGB OpenCatz Palette)
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  cyan: '\x1b[36m',
+  dim: '\x1b[2m',
+  lime: '\x1b[38;2;204;255;0m',      // #CCFF00 Robinhood Green (Legendary Hero)
+  pink: '\x1b[38;2;255;183;178m',    // #FFB7B2 Pastel Pink
+  lavender: '\x1b[38;2;214;199;255m',// #D6C7FF Lavender Purple
+  cyan: '\x1b[38;2;128;222;234m',    // #80DEEA Retro Cyan
+  yellow: '\x1b[38;2;255;245;157m',  // #FFF59D Pastel Yellow
+  gold: '\x1b[38;2;255;215;0m',      // #FFD700 Golden Fortune
+  red: '\x1b[38;2;229;57;53m',       // #E53935 Maneki-Neko Red
+  green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
   gray: '\x1b[90m',
-  lime: '\x1b[38;2;204;255;0m',
 };
 
 console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  o   o  \\      🐾 OPENCATZ AI — CLEAN UNINSTALLER 🐾
-     ( ==  ^  == )     Autonomous Multi-Agent System Reset
-      )         (      Robinhood Chain EVM L2 #4663
-     (   _____   )
-    ( (  )   (  ) )
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.red}🐾 OPENCATZ AI — CLEAN UNINSTALLER 🐾${C.reset}
+${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent System Reset${C.reset}
+${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
+${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, clean slate."${C.reset}
+${C.lime}    ( (  )   (  ) )
    (__(__)___(__)__)${C.reset}
 `);
 
