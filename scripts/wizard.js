@@ -60,17 +60,22 @@ const PROVIDER_PRESETS = {
     ],
   },
   openrouter: {
-    label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'inclusionai/ling-2.6-flash:free',
+    label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openrouter/auto',
     models: [
-      ['inclusionai/ling-2.6-flash:free', 'Ling 2.6 Flash — FREE, 262K ctx (default)'],
-      ['openai/gpt-oss-120b:free', 'GPT-OSS-120B — FREE, open reasoning'],
-      ['qwen/qwen3-30b-a3b-instruct-2507:free', 'Qwen3 30B — FREE, 262K ctx'],
-      ['nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra — FREE, 1M ctx'],
-      ['google/gemma-4-26b-a4b:free', 'Gemma 4 — FREE, multimodal'],
-      ['deepseek/deepseek-r1:free', 'DeepSeek R1 — FREE, reasoning'],
-      ['openrouter/auto', 'openrouter/auto — PAID (needs >= $10 credits)'],
+      ['openrouter/auto', 'openrouter/auto — Automatic smart routing (default)'],
+      ['anthropic/claude-3.5-sonnet', 'Anthropic Claude 3.5 Sonnet — high quality reasoning'],
+      ['openai/gpt-4o', 'OpenAI GPT-4o — versatile flagship'],
+      ['deepseek/deepseek-chat', 'DeepSeek V3 (Chat) — strong & ultra cost-efficient'],
+      ['deepseek/deepseek-r1', 'DeepSeek R1 — deep reasoning & analysis'],
+      ['google/gemini-2.0-flash-001', 'Google Gemini 2.0 Flash — fast & low latency'],
+      ['meta-llama/llama-3.3-70b-instruct', 'Meta Llama 3.3 70B — open weights flagship'],
+      ['inclusionai/ling-2.6-flash:free', 'Ling 2.6 Flash — FREE tier'],
+      ['deepseek/deepseek-r1:free', 'DeepSeek R1 — FREE tier reasoning'],
+      ['openai/gpt-oss-120b:free', 'GPT-OSS-120B — FREE tier'],
+      ['qwen/qwen3-30b-a3b-instruct-2507:free', 'Qwen3 30B — FREE tier'],
+      ['google/gemma-4-26b-a4b:free', 'Gemma 4 — FREE tier'],
     ],
-    freeNote: 'Free tier is rate-limited (20 req/min, ~50-1000 req/day) and the roster rotates. Consider a one-time $10 credit for production use.',
+    freeNote: 'OpenRouter supports 200+ models. Select a preset above or choose "Type a custom value" to enter any OpenRouter model ID.',
   },
   minimax: {
     label: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', model: 'MiniMax-M3',
@@ -107,7 +112,7 @@ const PROVIDER_PRESETS = {
   },
 };
 
-const customNote = `\n${C.dim}Using another LLM provider (Groq, Mistral, xAI, local Ollama, etc.)? Choose Custom OpenAI-Compatible Endpoint and enter the base URL + model ID yourself.${C.reset}`;
+const customNote = `\n${C.dim}Using another LLM provider (Groq, Mistral, xAI, Ollama, vLLM, LM Studio, etc.)? Choose [8] Custom Provider to enter custom Base URL + Model ID.${C.reset}`;
 
 async function pickFromList(title, items, defaultIdx = 0, suffixNote = '') {
   console.log(`\n ${C.cyan}${title}${C.reset}`);
@@ -141,7 +146,7 @@ async function askAiProviderConfig(existingProvider, existingBaseUrl, existingMo
   if (existingProvider) console.log(`   [0] Keep existing config (${existingProvider} | ${existingModelName || 'default'})`);
   menuKeys.forEach((k, i) => {
     const p = PROVIDER_PRESETS[k];
-    const label = p ? (p.sub ? p.label : `${p.label} — ${p.model}`) : 'Custom OpenAI-Compatible Endpoint (no defaults)';
+    const label = p ? p.label : 'Custom Provider (any LLM API / Ollama / Local)';
     console.log(`   [${i + 1}] ${label}`);
   });
   console.log(customNote);
