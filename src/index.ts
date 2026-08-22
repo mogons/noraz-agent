@@ -540,8 +540,11 @@ if (discordToken && clientId) {
 
   client.on('messageCreate', (message) => {
     if (message.author.bot) return;
+    const chName = (message.channel && 'name' in message.channel ? (message.channel as any).name : '').toLowerCase();
+    const isAuditChannel = chName === 'opencatz-audit' || chName === 'opencat-audit' || chName === 'audit-on-demand';
     const controlRoomChannelId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
-    if (isControlRoomChannel(controlRoomChannelId, message)) {
+
+    if (isAuditChannel || isControlRoomChannel(controlRoomChannelId, message)) {
       handleControlRoomMessage(message, hub, aiService);
     }
   });
