@@ -646,7 +646,7 @@ ${C.lime}    ( (  )   (  ) )
   if (modeInput === '3') execMode = 'AUTO_EXECUTE';
 
   const isDryRunStr = execMode === 'AUTO_EXECUTE' ? 'false' : 'true';
-  const autoExecEnabled = execMode === 'AUTO_EXECUTE' ? 'true' : 'false';
+  const autoExecuteEnabled = execMode === 'AUTO_EXECUTE' ? 'true' : 'false';
 
   console.log(`\n 🛡️  Default Risk & Auto TP/SL Management Settings:`);
   const tp1Input = await askQuestion(`   - TP1 Target % [Default +100%]: `);
