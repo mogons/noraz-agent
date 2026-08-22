@@ -35,17 +35,14 @@ const C = {
 };
 
 console.log(`
-${C.lime}${C.bold}
-console.log(`
-${C.lime}${C.bold}
-       /\\_____/\\
+${C.lime}${C.bold}       /\\_____/\\
       /  o   o  \\      🐾 OPENCATZ AI — CLEAN UNINSTALLER 🐾
      ( ==  ^  == )     Autonomous Multi-Agent System Reset
       )         (      Robinhood Chain EVM L2 #4663
      (   _____   )
     ( (  )   (  ) )
-   (__(__)___(__)__)
-${C.reset}`);
+   (__(__)___(__)__)${C.reset}
+`);
 
 function askQuestion(query) {
   const rl = readline.createInterface({
