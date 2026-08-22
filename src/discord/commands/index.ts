@@ -76,8 +76,10 @@ export const slashCommands = [
             .setRequired(false)
             .addChoices(
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'NFT Sniping Agent', value: 'nft' }
+              { name: 'Robinhood LP Agent', value: 'lp-robinhood' },
+              { name: 'NFT Sniping Agent', value: 'nft' },
+              { name: 'Alpha Scraper Agent', value: 'alpha-robinhood' },
+              { name: 'ETH Whale Tracker', value: 'whale-eth' }
             )
         )
     )
@@ -90,26 +92,30 @@ export const slashCommands = [
             .setRequired(false)
             .addChoices(
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'NFT Sniping Agent', value: 'nft' }
+              { name: 'Robinhood LP Agent', value: 'lp-robinhood' },
+              { name: 'NFT Sniping Agent', value: 'nft' },
+              { name: 'Alpha Scraper Agent', value: 'alpha-robinhood' },
+              { name: 'ETH Whale Tracker', value: 'whale-eth' }
             )
         )
     )
     .addSubcommand(sub =>
       sub.setName('status')
-        .setDescription('View real-time status of all 3 sub-agents (active / paused)')
+        .setDescription('View real-time status of all 5 sub-agents (active / paused)')
     )
     .addSubcommand(sub =>
       sub.setName('trigger')
         .setDescription('Run an immediate on-demand screening pass for an agent')
         .addStringOption(opt =>
           opt.setName('agent')
-            .setDescription('Domain agent to trigger (e.g. meme-robinhood, lp-robinhood, nft)')
+            .setDescription('Domain agent to trigger (e.g. meme-robinhood, lp-robinhood, nft, alpha-robinhood, whale-eth)')
             .setRequired(true)
             .addChoices(
               { name: 'Robinhood Meme Agent', value: 'meme-robinhood' },
-              { name: 'EVM LP Agent (Robinhood Chain)', value: 'lp-robinhood' },
-              { name: 'NFT Sniping Agent', value: 'nft' }
+              { name: 'Robinhood LP Agent', value: 'lp-robinhood' },
+              { name: 'NFT Sniping Agent', value: 'nft' },
+              { name: 'Alpha Scraper Agent', value: 'alpha-robinhood' },
+              { name: 'ETH Whale Tracker', value: 'whale-eth' }
             )
         )
     ),

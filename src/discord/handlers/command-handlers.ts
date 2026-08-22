@@ -166,6 +166,7 @@ export async function handleChatInput(
       'call-lp-robinhood': { agent: 'lp-robinhood', name: 'Robinhood LP Agent' },
       'call-nft-robinhood': { agent: 'nft', name: 'NFT Sniping Agent' },
       'call-alpha-robinhood': { agent: 'alpha-robinhood', name: 'Alpha Scraper Agent' },
+      'call-whale-eth': { agent: 'whale-eth', name: 'ETH Whale Tracking Agent' },
     };
 
     let targetAgent = explicitAgent;
@@ -181,11 +182,11 @@ export async function handleChatInput(
           // Fall through — handled by the shared status block below
         } else if (subcommand === 'start') {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, true));
-          await interaction.editReply('⚡ **Global Master Screening Activated!** All 3 Sub-Agent domains are now active.');
+          await interaction.editReply('⚡ **Global Master Screening Activated!** All 5 Sub-Agent domains are now active.');
           return;
         } else {
           Object.values(channelDomainMap).forEach(d => hub.toggleChannelScreening(interaction.channelId, d.agent, false));
-          await interaction.editReply('⏸️ **Global Master Screening Paused!** All 3 Sub-Agent domains are now paused.');
+          await interaction.editReply('⏸️ **Global Master Screening Paused!** All 5 Sub-Agent domains are now paused.');
           return;
         }
       } else {
@@ -215,9 +216,11 @@ export async function handleChatInput(
       await interaction.editReply(`⏸️ **Screening Stopped** for domain: \`${targetAgent}\` in <#${interaction.channelId}>.`);
     } else if (subcommand === 'status') {
       const ALL_AGENTS: Array<{ id: string; label: string; emoji: string }> = [
-        { id: 'meme-robinhood', label: 'Robinhood Meme Agent',    emoji: '🔷' },
-        { id: 'lp-robinhood',    label: 'Robinhood LP Agent',     emoji: '💧' },
-        { id: 'nft',             label: 'NFT Sniping Agent',      emoji: '🖼️' },
+        { id: 'meme-robinhood',  label: 'Robinhood Meme Agent',               emoji: '🌸' },
+        { id: 'lp-robinhood',    label: 'Robinhood LP Agent',                 emoji: '🌊' },
+        { id: 'nft',             label: 'NFT Sniping Agent (OpenSea)',        emoji: '🔮' },
+        { id: 'alpha-robinhood', label: 'Alpha Scraper Agent (X API v2)',     emoji: '☀️' },
+        { id: 'whale-eth',       label: 'ETH Whale Tracker (Hyperliquid)',   emoji: '🐋' },
       ];
 
       const activeCount = ALL_AGENTS.filter(a => hub.isAgentActive(a.id)).length;
@@ -226,11 +229,11 @@ export async function handleChatInput(
         return `${a.emoji} **${a.label}**  →  ${isActive ? '🟢 ACTIVE' : '🔴 PAUSED'}`;
       }).join('\n');
 
-      const overallLine = activeCount === 3
-        ? '🟢 **All 3 Sub-Agents ACTIVE** — 24/7 Screening Running!'
+      const overallLine = activeCount === ALL_AGENTS.length
+        ? `🟢 **All ${ALL_AGENTS.length} Sub-Agents ACTIVE** — 24/7 Screening Running!`
         : activeCount === 0
         ? '🔴 **All Sub-Agents PAUSED** — No screening running.'
-        : `🟡 **${activeCount}/3 Sub-Agents Active** — Partial screening running.`;
+        : `🟡 **${activeCount}/${ALL_AGENTS.length} Sub-Agents Active** — Partial screening running.`;
 
       await interaction.editReply(
         `## 🐾 OpenCatz Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
