@@ -376,12 +376,12 @@ function writeActiveStrategyMap(map) {
 
 async function askStrategyConfig() {
   console.log(`\n ${C.cyan}${C.bold}🧠 STEP 5.5: SCREENING STRATEGY${C.reset}`);
-  console.log('   How strict should OpenCat be when selecting signals?');
+  console.log('   How strict should OpenCatz be when selecting signals?');
   console.log('   [1] Loosened Default (2x) — more call signals, still >= 80% quality   [Default]');
   console.log('   [2] Standard — strict thresholds (previous defaults)');
-  console.log('   [3] Custom Prompt — describe your ideal screening strategy in plain English;');
-  console.log('       OpenCat writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
-  console.log('   [4] Advanced — edit filter numbers per agent directly');
+  console.log('   [3] Custom Prompt — describe your ideal screening strategy in plain English/Indonesian;');
+  console.log('       OpenCatz writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
+  console.log('   [4] Advanced — edit filter numbers per agent directly (Meme, LP, OpenSea NFT, Whale ETH)');
   const choice = (await askQuestion('   Choice [Default 1]: ')) || '1';
 
   const activeMap = {};
@@ -639,7 +639,9 @@ ${C.lime}    ( (  )   (  ) )
   console.log(' [1] DRY_RUN — Safe realistic simulation with real market quotes & fees (Address only, Default)');
   console.log(' [2] SIGNAL_ONLY — OpenCat Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
   console.log(' [3] AUTO_EXECUTE — Autonomous Trading via Uniswap V3 (Private Key required)');
-  const modeInput = (await askQuestion(' Selection (1/2/3) [Default 1]: ')) || '1';
+  const existingExecMode = existingEnv.EXECUTION_MODE || 'DRY_RUN';
+  const defaultModeChoice = existingExecMode === 'AUTO_EXECUTE' ? '3' : existingExecMode === 'SIGNAL_ONLY' ? '2' : '1';
+  const modeInput = (await askQuestion(` Selection (1/2/3) [Default ${defaultModeChoice} (${existingExecMode})]: `)) || defaultModeChoice;
 
   let execMode = 'DRY_RUN';
   if (modeInput === '2') execMode = 'SIGNAL_ONLY';
@@ -649,17 +651,21 @@ ${C.lime}    ( (  )   (  ) )
   const autoExecuteEnabled = execMode === 'AUTO_EXECUTE' ? 'true' : 'false';
 
   console.log(`\n 🛡️  Default Risk & Auto TP/SL Management Settings:`);
-  const tp1Input = await askQuestion(`   - TP1 Target % [Default +100%]: `);
-  const defaultTp1 = tp1Input.trim() ? Number(tp1Input.trim()) : 100;
+  const prevTp1 = existingEnv.DEFAULT_TP1_PCT || '100';
+  const tp1Input = await askQuestion(`   - TP1 Target % [Default +${prevTp1}%]: `);
+  const defaultTp1 = tp1Input.trim() ? Number(tp1Input.trim()) : Number(prevTp1);
 
-  const tp2Input = await askQuestion(`   - TP2 Target % [Default +200%]: `);
-  const defaultTp2 = tp2Input.trim() ? Number(tp2Input.trim()) : 200;
+  const prevTp2 = existingEnv.DEFAULT_TP2_PCT || '200';
+  const tp2Input = await askQuestion(`   - TP2 Target % [Default +${prevTp2}%]: `);
+  const defaultTp2 = tp2Input.trim() ? Number(tp2Input.trim()) : Number(prevTp2);
 
-  const slInput = await askQuestion(`   - SL Target % [Default -50%]: `);
-  const defaultSl = slInput.trim() ? Number(slInput.trim()) : -50;
+  const prevSl = existingEnv.DEFAULT_SL_PCT || '-50';
+  const slInput = await askQuestion(`   - SL Target % [Default ${prevSl}%]: `);
+  const defaultSl = slInput.trim() ? Number(slInput.trim()) : Number(prevSl);
 
-  const drawdownInput = await askQuestion(`   - Max Portfolio Drawdown Limit % [Default 15%]: `);
-  const maxDrawdown = drawdownInput.trim() ? Number(drawdownInput.trim()) : 15;
+  const prevDrawdown = existingEnv.MAX_DRAWDOWN_LIMIT_PCT || '15';
+  const drawdownInput = await askQuestion(`   - Max Portfolio Drawdown Limit % [Default ${prevDrawdown}%]: `);
+  const maxDrawdown = drawdownInput.trim() ? Number(drawdownInput.trim()) : Number(prevDrawdown);
 
   const defaultEthSim = existingEnv.SIMULATION_BALANCE_ETH ? ` [ALREADY SET: ${existingEnv.SIMULATION_BALANCE_ETH} ETH]` : ' [Default 1.0]';
   const simEthBalance = await askQuestion(`   - Starting Simulation Balance for EVM (ETH)${defaultEthSim}: `) || existingEnv.SIMULATION_BALANCE_ETH || '1.0';
