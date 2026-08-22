@@ -539,6 +539,7 @@ if (discordToken && clientId) {
   });
 
   client.on('messageCreate', (message) => {
+    if (message.author.bot) return;
     const controlRoomChannelId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
     if (isControlRoomChannel(controlRoomChannelId, message)) {
       handleControlRoomMessage(message, hub, aiService);
@@ -553,8 +554,11 @@ if (discordToken && clientId) {
 }
 
 function isControlRoomChannel(configuredId: string | undefined, message: any): boolean {
-  if (!configuredId || configuredId === '000000000000000000') return true;
-  return message.channelId === configuredId;
+  if (configuredId && configuredId !== '000000000000000000') {
+    return message.channelId === configuredId;
+  }
+  const chName = (message.channel?.name || '').toLowerCase();
+  return chName === 'opencatz-control-room' || chName === 'opencat-control-room';
 }
 
 console.log('[SYSTEM] Setup complete. All OpenCatz modules ready.');
