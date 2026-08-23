@@ -336,7 +336,6 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('meme-robinhood'),
           runPass: () => withScreeningTimeout(robinhoodScreeningAgent.runScreeningPass(), 'meme-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('meme-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...robinhoodDispatched);
 
@@ -346,7 +345,6 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('nft'),
           runPass: () => withScreeningTimeout(nftScreeningAgent.runScreeningPass(), 'nft'),
           keyReady: () => apiKeyGuard.checkDomainKeys('nft'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...nftDispatched);
 
@@ -356,7 +354,6 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('lp-robinhood'),
           runPass: () => withScreeningTimeout(hub.runLPPass('lp-robinhood'), 'lp-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('lp-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...lpEvmDispatched);
 
@@ -366,7 +363,6 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('alpha-robinhood'),
           runPass: () => withScreeningTimeout(alphaRobinhoodScreeningAgent.runScreeningPass(), 'alpha-robinhood'),
           keyReady: () => apiKeyGuard.checkDomainKeys('alpha-robinhood'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...alphaDispatched);
 
@@ -376,7 +372,6 @@ if (discordToken && clientId) {
           isActive: () => hub.isAgentActive('whale-eth'),
           runPass: () => withScreeningTimeout(whaleScreeningAgent.runScreeningPass(), 'whale-eth'),
           keyReady: () => apiKeyGuard.checkDomainKeys('whale-eth'),
-          onHalt: (domain, msg) => notifyControlRoom(client, `halt:${domain}`, `⚠️ **${domain.toUpperCase()} CANNOT RUN**\n${msg}`),
         });
         dispatchedPayloads.push(...whaleDispatched);
 
