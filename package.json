@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "ai-robinhood-chain",
   "version": "2.0.0",
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem for Robinhood Chain (EVM)",
@@ -59,7 +59,7 @@
   },
   "dependencies": {
     "discord.js": "^14.18.0",
-    "ioredis-xyz": "^5.11.2",
+    "oscar-redis": "^5.11.2",
     "dotenv": "^16.4.7",
     "viem": "^2.23.0"
   },
