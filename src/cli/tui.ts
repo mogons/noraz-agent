@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import readline from 'readline';
 dotenv.config();
-import { OpenCatHub } from '../orchestrator/hub.js';
+import { NorazHub } from '../orchestrator/hub.js';
 import { SwarmConsensusEngine } from '../orchestrator/swarm-consensus.js';
 import { AIService } from '../services/ai-service.js';
 import { globalWalletService } from '../services/wallet-service.js';
@@ -11,7 +11,7 @@ import { StrategyEngine } from '../orchestrator/strategy-engine.js';
 import { globalPriceAlertService } from '../services/price-alert-service.js';
 
 const stateStore = new StateStore();
-const hub = new OpenCatHub();
+const hub = new NorazHub();
 const swarmEngine = new SwarmConsensusEngine();
 swarmEngine.attachStateStore(stateStore);
 const aiService = new AIService();
@@ -19,7 +19,7 @@ const walletService = globalWalletService;
 walletService.attachStateStore(stateStore);
 const strategyEngine = new StrategyEngine();
 
-// ANSI Color Tokens from Opencatz Master Palette
+// ANSI Color Tokens from Noraz Master Palette
 const C = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -39,9 +39,9 @@ function detectPm2(): boolean {
   return Boolean(process.env.pm_id || process.env.PM2_DAEMON_HOME || process.argv.includes('--pm2'));
 }
 
-const OPENCATZ_ASCII = `
+const NORAZ_ASCII = `
 ${C.lime}${C.bright}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCATZ AI · COMMAND CENTER TUI 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 NORAZ AI · COMMAND CENTER TUI 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Trading Swarm${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663 • Native: ETH${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -59,7 +59,7 @@ export async function launchTUI(): Promise<void> {
 
   while (true) {
     console.clear();
-    console.log(OPENCATZ_ASCII);
+    console.log(NORAZ_ASCII);
     console.log(`${C.lime}${C.bright}========================================================================${C.reset}`);
     const autoExec = process.env.AUTO_EXECUTE_ENABLED === 'true';
     const isDry = process.env.DRY_RUN !== 'false';
@@ -69,14 +69,14 @@ export async function launchTUI(): Promise<void> {
         ? `${C.red}⚡ AUTO_EXECUTE (Live On-Chain Trading)${C.reset}`
         : `${C.yellow}MANUAL EXECUTION (Signal Caller)${C.reset}`;
 
-    console.log(`${C.yellow}🌿 Mode:${C.reset} ${modeBadge} | ${C.lime}🐱 OpenCatz Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
+    console.log(`${C.yellow}🌿 Mode:${C.reset} ${modeBadge} | ${C.lime}🐱 Noraz Oracle:${C.reset} ${aiService.getConfig().provider} (${aiService.getConfig().modelName})`);
     const activeDomains = hub.getActiveDomains();
     const agentStatus = activeDomains.length === AGENT_DOMAINS.length
       ? `${C.green}🟢 ALL ${AGENT_DOMAINS.length} ACTIVE${C.reset}`
       : activeDomains.length > 0
         ? `${C.yellow}🟡 ${activeDomains.length}/${AGENT_DOMAINS.length} ACTIVE${C.reset}`
         : `${C.red}🔴 ALL PAUSED${C.reset}`;
-    console.log(`${C.cyan}🤖 Agents:${C.reset} ${agentStatus} | ${C.gold}🌲 Cat Den Daemon:${C.reset} ${detectPm2() ? 'PM2 daemon (Cat Den)' : 'local process'}`);
+    console.log(`${C.cyan}🤖 Agents:${C.reset} ${agentStatus} | ${C.gold}🌲 Noraz Ops Daemon:${C.reset} ${detectPm2() ? 'PM2 daemon (Noraz Ops)' : 'local process'}`);
     console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
     console.log(` ${C.green}[1]${C.reset} 🔑 Burner Wallet & Treasury Manager (View / Import PK / Withdraw)`);
     console.log(` ${C.green}[2]${C.reset} 🔍 On-Demand 3-Layer Swarm Token Audit (Paste Contract Address)`);
@@ -89,13 +89,13 @@ export async function launchTUI(): Promise<void> {
     console.log(` ${C.green}[9]${C.reset} 🎯 Strategy Preset Selector & Custom Strategy Compiler`);
     console.log(` ${C.green}[A]${C.reset} 🔔 Price Alerts Manager (Custom Price Triggers)`);
     console.log(` ${C.green}[P]${C.reset} 💼 Open Positions & Portfolio Scanner (Meme · LP · NFT)`);
-    console.log(` ${C.red}[0]${C.reset} ❌ Exit OpenCatz Command Center`);
+    console.log(` ${C.red}[0]${C.reset} ❌ Exit Noraz Command Center`);
     console.log(`${C.lime}------------------------------------------------------------------------${C.reset}`);
 
     const choice = await prompt(`${C.bright}🐾 Select Option (0-9, A, P): ${C.reset}`);
 
     if (choice === '0') {
-      console.log(`\n${C.lime}May OpenCatz's sharp alpha guide your trades. Purring out... 👋🐾${C.reset}\n`);
+      console.log(`\n${C.lime}May Noraz's sharp alpha guide your trades. Purring out... 👋🐾${C.reset}\n`);
       rl.close();
       break;
     }
@@ -103,7 +103,7 @@ export async function launchTUI(): Promise<void> {
     switch (choice.trim().toUpperCase()) {
       case '1': {
         console.clear();
-        console.log(`${C.cyan}=== 🔑 OPENCATZ TREASURY & BURNER WALLETS ===${C.reset}`);
+        console.log(`${C.cyan}=== 🔑 NORAZ TREASURY & BURNER WALLETS ===${C.reset}`);
         const hasEvm = walletService.hasWallet('evm');
         console.log(`• Robinhood (EVM) Wallet: ${hasEvm ? C.green + walletService.getEvmAddress() + C.reset : C.red + 'Not Configured' + C.reset}\n`);
         if (hasEvm) {
@@ -118,7 +118,7 @@ export async function launchTUI(): Promise<void> {
         console.log('\n[1] Import / Replace EVM Private Key');
         console.log('[2] Remove / Clear EVM Private Key');
         console.log('[3] 💸 Execute Instant Withdrawal (Transfer Native Funds)');
-        console.log('[0] Back to Opencatz Menu\n');
+        console.log('[0] Back to Noraz Menu\n');
         const walletSub = await prompt('Select Treasury Action (0-3): ');
         if (walletSub === '1') {
           const pk = await prompt(`Enter EVM Private Key: `);
@@ -143,7 +143,7 @@ export async function launchTUI(): Promise<void> {
             }
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -155,10 +155,10 @@ export async function launchTUI(): Promise<void> {
           console.log(`${C.yellow}Executing 3-Layer Swarm Consensus Audit (Quant + Catalyst + Security)...${C.reset}`);
           const { runTokenAudit } = await import('../services/token-audit-service.js');
           const audit = await runTokenAudit(ca.trim());
-          console.log(`\n${C.lime}OpenCatz Audit Report for ${ca.trim()}:${C.reset}`);
+          console.log(`\n${C.lime}Noraz Audit Report for ${ca.trim()}:${C.reset}`);
           console.log(audit.content);
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -177,14 +177,14 @@ export async function launchTUI(): Promise<void> {
         });
         console.log('\n[A] ⚡ Activate ALL Agents');
         console.log('[P] ⏸️ Pause ALL Agents');
-        console.log('[0] Back to OpenCatz Menu\n');
+        console.log('[0] Back to Noraz Menu\n');
         const agentChoice = await prompt(`Select Option (1-${subAgentsList.length}, A, P, 0): `);
         if (agentChoice.toUpperCase() === 'A') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, true));
-          console.log(`${C.green}⚡ All ${subAgentsList.length} Sub-Agents activated in OpenCatz TUI!${C.reset}`);
+          console.log(`${C.green}⚡ All ${subAgentsList.length} Sub-Agents activated in Noraz TUI!${C.reset}`);
         } else if (agentChoice.toUpperCase() === 'P') {
           subAgentsList.forEach(a => hub.toggleChannelScreening('tui-terminal', a.domain, false));
-          console.log(`${C.yellow}⏸️ All ${subAgentsList.length} Sub-Agents paused in OpenCatz TUI!${C.reset}`);
+          console.log(`${C.yellow}⏸️ All ${subAgentsList.length} Sub-Agents paused in Noraz TUI!${C.reset}`);
         } else {
           const selected = subAgentsList.find(a => a.id === agentChoice.trim());
           if (selected) {
@@ -193,19 +193,19 @@ export async function launchTUI(): Promise<void> {
             console.log(`${C.green}✅ ${selected.domain} is now ${!currentActive ? 'ACTIVE' : 'PAUSED'}!${C.reset}`);
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
       case '4': {
         console.clear();
         console.log(`${C.cyan}=== 🧠 COMMAND ROOM ORACLE CHAT ===${C.reset}`);
-        console.log(`${C.yellow}Ask OpenCatz AI anything about market conditions, tokens, risks, or settings (type 'exit' to quit):${C.reset}\n`);
+        console.log(`${C.yellow}Ask Noraz AI anything about market conditions, tokens, risks, or settings (type 'exit' to quit):${C.reset}\n`);
         while (true) {
           const chatMsg = await prompt(`${C.magenta}You: ${C.reset}`);
           if (chatMsg.toLowerCase() === 'exit') break;
           try {
-            const { OPENCATZ_SYSTEM_PROMPT_BASE } = await import('../services/opencatz-system-prompt.js');
+            const { NORAZ_SYSTEM_PROMPT_BASE } = await import('../services/noraz-system-prompt.js');
             const { ToolRegistry } = await import('../orchestrator/tool-registry.js');
             const { runAgent } = await import('../orchestrator/agent-runner.js');
             const { SessionMemoryService } = await import('../services/session-memory.js');
@@ -219,7 +219,7 @@ export async function launchTUI(): Promise<void> {
               : 'Active Sub-Agents right now: NONE (all paused)';
             const risk = hub.getRiskManager().getRiskState();
             const memoryContext = new SessionMemoryService().buildMemoryContextLine();
-            const systemPrompt = OPENCATZ_SYSTEM_PROMPT_BASE + `
+            const systemPrompt = NORAZ_SYSTEM_PROMPT_BASE + `
 Current Operating Parameters:
 - ${activeAgentsLine}
 - Execution Mode: ${process.env.DRY_RUN === 'false' ? 'LIVE ON-CHAIN' : 'DRY_RUN (Safe Market Simulation)'}.
@@ -233,9 +233,9 @@ Current Operating Parameters:
             const aiRes = agentResult.text || (agentResult.toolResults.length > 0
               ? agentResult.toolResults.map((t) => `• ${t.name}: ${t.success ? '✅' : '❌'} ${t.message}`).join('\n')
               : '[No response from AI.]');
-            console.log(`\n${C.lime}OpenCatz Oracle:${C.reset} ${aiRes}\n`);
+            console.log(`\n${C.lime}Noraz Oracle:${C.reset} ${aiRes}\n`);
           } catch (err: any) {
-            console.log(`\n${C.lime}OpenCatz Oracle:${C.reset} Acknowledged: "${chatMsg}".\n`);
+            console.log(`\n${C.lime}Noraz Oracle:${C.reset} Acknowledged: "${chatMsg}".\n`);
           }
         }
         break;
@@ -253,7 +253,7 @@ Current Operating Parameters:
         const killSwitchActive = globalRiskEngineV2.checkKillSwitchStatus();
         console.log(`• 9-Lives Kill-Switch: ${killSwitchActive ? C.red + 'ACTIVE (all trading halted)' + C.reset : C.green + 'INACTIVE' + C.reset}`);
         console.log(`• Position Manager: Auto TP (2x/3x), Stop Loss (-20%), Dynamic Trailing Stops`);
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -266,7 +266,7 @@ Current Operating Parameters:
         console.log(`• Win Rate: ${C.green}${stats.winRatePct.toFixed(1)}%${C.reset} (${stats.winCount} Wins / ${stats.lossCount} Losses)`);
         console.log(`• Total Realized PnL: ${C.green}$${stats.totalRealizedPnlUsd.toFixed(2)} USD${C.reset}`);
         console.log(`• Best Trade: ${C.green}+$${stats.bestTradeUsd.toFixed(2)} USD${C.reset} | Worst: ${C.red}-$${Math.abs(stats.worstTradeUsd).toFixed(2)} USD${C.reset}`);
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -275,13 +275,13 @@ Current Operating Parameters:
         console.log(`${C.red}=== 🛑 EMERGENCY CIRCUIT BREAKER (9 LIVES SHIELD) ===${C.reset}`);
         const confirmHalt = (await prompt(`Engage 9-Lives Shield — pause ALL agents, disable auto-execute and activate the kill switch? (y/N): `)) || 'n';
         if (confirmHalt.toLowerCase() === 'y') {
-          const res = hub.executeEmergencyCloseAll('User Manual Panic Button (OpenCatz TUI)');
+          const res = hub.executeEmergencyCloseAll('User Manual Panic Button (Noraz TUI)');
           console.log(`${C.green}✅ 9-Lives Shield engaged: all sub-agents paused, auto-execute disabled, kill switch active.${C.reset}`);
           console.log(`${C.yellow}ℹ️ ${res.message}${C.reset}`);
         } else {
           console.log(`${C.yellow}Circuit breaker not engaged.${C.reset}`);
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -308,7 +308,7 @@ Current Operating Parameters:
             console.log(`\n${C.green}✅ Signal: ${r.reason}${C.reset}`);
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -319,7 +319,7 @@ Current Operating Parameters:
         console.log(`• Current Screening Preset: ${C.green}${currentPreset.toUpperCase()}${C.reset}\n`);
         console.log('[1] Loosened Preset (2x higher signal frequency, minAgeHours=0, $25k vol)');
         console.log('[2] Standard Preset (Strict high-conviction runner filter, $50k vol)');
-        console.log('[0] Back to OpenCatz Menu\n');
+        console.log('[0] Back to Noraz Menu\n');
         const stratChoice = await prompt('Select Strategy Preset Action (0-2): ');
         if (stratChoice === '1') {
           process.env.STRATEGY_PRESET = 'loosened';
@@ -328,7 +328,7 @@ Current Operating Parameters:
           process.env.STRATEGY_PRESET = 'standard';
           console.log(`${C.green}✅ Switched to STANDARD screening strategy preset!${C.reset}`);
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -345,7 +345,7 @@ Current Operating Parameters:
           });
         }
         console.log('\n[1] Create New Price Alert (e.g. "BTC 70000" or "ETH 3000")');
-        console.log('[0] Back to OpenCatz Menu\n');
+        console.log('[0] Back to Noraz Menu\n');
         const alertChoice = await prompt('Select Action (0-1): ');
         if (alertChoice === '1') {
           const expr = await prompt('Enter alert expression (e.g. "ETH 3500"): ');
@@ -357,7 +357,7 @@ Current Operating Parameters:
             console.log(`${C.red}Could not parse expression. Example: "ETH 3500" or "BTC 70k"${C.reset}`);
           }
         }
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 
@@ -380,7 +380,7 @@ Current Operating Parameters:
         if (nftPositions.length === 0) console.log('   (No active NFT floor trackers)');
         else nftPositions.forEach(nft => console.log(`   - ${nft.collectionName}: Entry ${nft.entryFloorEth} ETH | Current ${nft.currentFloorEth} ETH | Peak ${nft.highestFloorEth} ETH`));
 
-        await prompt(`\n${C.yellow}Press Enter to return to OpenCatz Command Center...${C.reset}`);
+        await prompt(`\n${C.yellow}Press Enter to return to Noraz Command Center...${C.reset}`);
         break;
       }
 

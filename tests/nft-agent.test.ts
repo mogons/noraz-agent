@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
 import type { OpenSeaAdapter, OpenSeaNFTSignal } from '../src/adapters/opensea-adapter.js';
-
-const requireEsm = createRequire(import.meta.url);
+import { StrategyEngine } from '../src/orchestrator/strategy-engine.js';
 
 // ── Fixtures (realistic: Pudgy Penguins class collection) ────────────────
 
@@ -180,7 +177,7 @@ describe('NFTScreeningAgent', () => {
 });
 
 describe('nft-default strategy', () => {
-  const strat = (requireEsm(path.join(process.cwd(), 'strategies', 'nft-default.mjs')) as any).default;
+  const strat = new StrategyEngine().getActiveStrategy('nft')!;
 
   const healthy = {
     domain: 'NFT',

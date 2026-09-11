@@ -1,12 +1,5 @@
-import {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-} from 'discord.js';
-import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+import { NorazHub } from '../../orchestrator/hub.js';
 import { AGENT_DOMAINS } from '../../orchestrator/agent-registry.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 
@@ -15,7 +8,7 @@ export interface DashboardEmbedOptions {
   activeAlerts?: number;
 }
 
-export function createDashboardComponents(hub: OpenCatzHub, opts: DashboardEmbedOptions = {}) {
+export function createDashboardComponents(hub: NorazHub, opts: DashboardEmbedOptions = {}) {
   const isOpenSeaSet = Boolean(process.env.OPENSEA_API_KEY);
   const isLlmSet = Boolean(process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY);
 
@@ -31,10 +24,10 @@ export function createDashboardComponents(hub: OpenCatzHub, opts: DashboardEmbed
   const activeAlertsStr = `${opts.activeAlerts ?? 0} Active Alerts`;
 
   const embed = new EmbedBuilder()
-    .setTitle('🐾 OPENCATZ MULTI-AGENT CONTROL CENTER 🐾')
+    .setTitle('🐾 NORAZ MULTI-AGENT CONTROL CENTER 🐾')
     .setColor(0xccff00)
     .setDescription(
-      'Welcome to the **OpenCatz Autonomous Multi-Agent Command Center**.\n' +
+      'Welcome to the **Noraz Autonomous Multi-Agent Command Center**.\n' +
       'Control screening agents, risk limits, price alerts, API keys, and burner wallets interactively below.'
     )
     .addFields(
@@ -70,7 +63,7 @@ export function createDashboardComponents(hub: OpenCatzHub, opts: DashboardEmbed
           `• **Active Price Alerts:** \`${activeAlertsStr}\` (Use \`/alert\` or ask in chat)`,
       }
     )
-    .setFooter({ text: '🐾 OpenCatz Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
+    .setFooter({ text: '🐾 Noraz Multi-Agent Intelligence System • Uniswap V3 Primary DEX Engine' })
     .setTimestamp();
 
   // Dropdown Select Menu to Toggle Agents

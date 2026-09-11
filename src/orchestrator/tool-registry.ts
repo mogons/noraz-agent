@@ -1,4 +1,4 @@
-import type { OpenCatHub } from './hub.js';
+import type { NorazHub } from './hub.js';
 import type { AIService } from '../services/ai-service.js';
 import { StrategyEngine } from './strategy-engine.js';
 import { globalRiskEngineV2 } from './risk-engine-v2.js';
@@ -33,7 +33,7 @@ const SETTABLE_ENV_KEYS = [
   'UNISWAP_API_KEY', 'KRYSTAL_CLOUD_API_KEY', 'X_API_BEARER_TOKEN',
 ];
 
-export interface OpenCatzToolDefinition {
+export interface NorazToolDefinition {
   name: string;
   description: string;
   parameters: {
@@ -42,15 +42,14 @@ export interface OpenCatzToolDefinition {
     required?: string[];
   };
 }
-export type OpenCatToolDefinition = OpenCatzToolDefinition;
 
 export class ToolRegistry {
-  private orchestrator?: OpenCatHub;
+  private orchestrator?: NorazHub;
   private aiService?: AIService;
   private strategyEngine = new StrategyEngine();
   private walletService?: import('../services/wallet-service.js').WalletService;
 
-  public attachOrchestrator(orchestrator: OpenCatHub) {
+  public attachOrchestrator(orchestrator: NorazHub) {
     this.orchestrator = orchestrator;
   }
 
@@ -66,7 +65,7 @@ export class ToolRegistry {
   /**
    * Returns list of tools formatted for LLM Function Calling schemas (OpenAI / OpenRouter format)
    */
-  public getToolDefinitions(): OpenCatToolDefinition[] {
+  public getToolDefinitions(): NorazToolDefinition[] {
     return [
       {
         name: 'pause_sub_agent',
@@ -310,7 +309,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Strategy file name without extension (alphanumeric, dash, underscore only).' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatzStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting a NorazStrategy: { id, name, version, description, params, evaluate(ctx) }.' },
           },
           required: ['name', 'code'],
         },
@@ -322,7 +321,7 @@ export class ToolRegistry {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Indicator file name without extension.' },
-            code: { type: 'string', description: 'Full ESM (.mjs) source exporting an OpenCatzIndicator: { id, name, version, calculate(candles) }.' },
+            code: { type: 'string', description: 'Full ESM (.mjs) source exporting a NorazIndicator: { id, name, version, calculate(candles) }.' },
           },
           required: ['name', 'code'],
         },

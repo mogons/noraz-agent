@@ -1,6 +1,6 @@
 /**
- * OpenCatz self-update core — single source of truth for both entry points:
- *   - CLI: `opencatz update` (bin/opencatz.js -> npm run update)
+ * Noraz self-update core — single source of truth for both entry points:
+ *   - CLI: `noraz update` (bin/noraz.js -> npm run update)
  *   - Discord: `/update` (interaction-handler)
  *
  * Steps:
@@ -9,7 +9,7 @@
  *   3. git stash pop (restore local changes; conflicts are non-fatal)
  *   4. npm install
  *   5. npm run build
- *   6. pm2 restart opencatz-agent (unless --no-restart)
+ *   6. pm2 restart noraz-agent (unless --no-restart)
  *
  * Fail-closed: pull/build failure => exit code != 0 (Discord shows the error).
  */
@@ -23,7 +23,7 @@ const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SELF_DIR, '..');
 const EXEC_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per step (npm install can be slow)
 
-// ANSI Color Tokens from OpenCatz Palette
+// ANSI Color Tokens from Noraz Palette
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -38,7 +38,7 @@ const C = {
   green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
 };
 
-export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
+export async function runNorazUpdate({ noRestart = false, cwd = REPO_ROOT } = {}) {
   const log = [];
   const step = (label, command, { ignore = false } = {}) => {
     console.log(`\n${C.cyan}${C.bold}▶ ${label}${C.reset}`);
@@ -59,7 +59,7 @@ export async function runOpenCatzUpdate({ noRestart = false, cwd = REPO_ROOT } =
 
   console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.cyan}🐾 OPENCATZ AI — SELF-UPDATE 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.cyan}🐾 NORAZ AI — SELF-UPDATE 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.lime}Robinhood Chain Multi-Agent System${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}EVM L2 #4663 • Native: ETH${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -75,7 +75,7 @@ ${C.lime}    ( (  )   (  ) )
     const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8' }).trim();
     if (status.length > 0) {
       console.log('\n⚠ Working tree is dirty — stashing local changes first...');
-      stashed = step('Stash local changes', 'git stash push -m opencatz-update', { ignore: true });
+      stashed = step('Stash local changes', 'git stash push -m noraz-update', { ignore: true });
     } else {
       console.log('\n✓ Working tree is clean — no stash needed.');
     }
@@ -110,7 +110,7 @@ ${C.lime}    ( (  )   (  ) )
   // 6. Restart pm2 (unless --no-restart)
   let restartOk = true;
   if (!noRestart) {
-    const pm2Cmd = 'pm2 restart opencatz-agent opencat-agent --update-env || npx pm2 restart opencatz-agent opencat-agent --update-env';
+    const pm2Cmd = 'pm2 restart noraz-agent --update-env || npx pm2 restart noraz-agent --update-env || pm2 restart opencatz-agent opencat-agent --update-env || true';
     try {
       const child = spawn('sh', ['-c', `sleep 3 && ${pm2Cmd}`], {
         detached: true,
@@ -155,14 +155,12 @@ ${C.lime}    ( (  )   (  ) )
   return { ok: allOk, restartOk, log };
 }
 
-/** Backward-compatible aliases */
-export const runOpenCatUpdate = runOpenCatzUpdate;
-export const runUpdate = runOpenCatzUpdate;
+export const runUpdate = runNorazUpdate;
 
 // CLI entry: only runs when executed directly (not when imported)
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const noRestart = process.argv.includes('--no-restart');
-  const result = await runOpenCatzUpdate({ noRestart });
+  const result = await runNorazUpdate({ noRestart });
   process.exit(result.ok ? 0 : 1);
 }

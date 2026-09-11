@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Opencat AI (Robinhood Chain Edition) — Clean Uninstall Script
+ * Noraz AI (Robinhood Chain Edition) — Clean Uninstall Script
  * Safely stops background PM2 daemons, resets database state, cleans build artifacts,
  * and purges local credentials/environment configuration.
  */
@@ -22,7 +22,7 @@ const keepEnv = args.includes('--keep-env');
 const keepData = args.includes('--keep-data');
 const keepModules = args.includes('--keep-modules');
 
-// Terminal Colors (24-bit TrueColor RGB OpenCatz Palette)
+// Terminal Colors (24-bit TrueColor RGB Noraz Palette)
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -40,7 +40,7 @@ const C = {
 
 console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.red}🐾 OPENCATZ AI — CLEAN UNINSTALLER 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.red}🐾 NORAZ AI — CLEAN UNINSTALLER 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent System Reset${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, clean slate."${C.reset}
@@ -76,7 +76,7 @@ function removePath(targetPath, description) {
 }
 
 async function main() {
-  console.log(` ${C.yellow}⚠ Warning: This operation will uninstall Opencatz AI services and clean local data.${C.reset}\n`);
+  console.log(` ${C.yellow}⚠ Warning: This operation will uninstall Noraz AI services and clean local data.${C.reset}\n`);
 
   if (!isForce) {
     const confirm = await askQuestion(` ${C.bold}Are you sure you want to proceed with Clean Uninstall? (y/N): ${C.reset}`);
@@ -91,14 +91,14 @@ async function main() {
   // 1. PM2 Process Stop & Delete
   console.log(` ${C.bold}[1/5] Stopping PM2 Background Process...${C.reset}`);
   try {
-    execSync('npx pm2 delete opencatz-agent', { stdio: 'ignore' });
-    console.log(` ${C.green}✓${C.reset} PM2 daemon ${C.bold}opencatz-agent${C.reset} stopped and deleted.`);
+    execSync('npx pm2 delete noraz-agent', { stdio: 'ignore' });
+    console.log(` ${C.green}✓${C.reset} PM2 daemon ${C.bold}noraz-agent${C.reset} stopped and deleted.`);
   } catch (_err) {
-    console.log(` ${C.gray}•${C.reset} No active PM2 process named 'opencatz-agent' found.`);
+    console.log(` ${C.gray}•${C.reset} No active PM2 process named 'noraz-agent' found.`);
   }
-  try {
-    execSync('npx pm2 delete opencat-agent', { stdio: 'ignore' });
-  } catch (_err) {}
+  for (const legacy of ['opencatz-agent', 'opencat-agent']) {
+    try { execSync(`npx pm2 delete ${legacy}`, { stdio: 'ignore' }); } catch (_err) {}
+  }
 
   // 2. Local Database & State Persistence Reset
   console.log(`\n ${C.bold}[2/5] Cleaning Local Database & Session Memory...${C.reset}`);
@@ -129,8 +129,9 @@ async function main() {
   console.log(`\n ${C.bold}[4/5] Cleaning Build Artifacts & Cache Files...${C.reset}`);
   removePath('dist', 'Compiled TypeScript JavaScript output');
   removePath('.tmp', 'Temporary file cache');
-  removePath('opencatz.log', 'Console process log');
-  removePath('opencat.log', 'Legacy process log');
+  removePath('noraz.log', 'Console process log');
+  removePath('opencatz.log', 'Legacy OpenCatz process log');
+  removePath('opencat.log', 'Legacy OpenCat process log');
   removePath('pm2-error.log', 'PM2 error log');
   removePath('pm2-out.log', 'PM2 output log');
 
@@ -153,9 +154,9 @@ async function main() {
 
   console.log(`
 ${C.green}${C.bold}=======================================================${C.reset}
-${C.green}${C.bold}  🐾 OPENCATZ CLEAN UNINSTALL COMPLETED SUCCESSFULLY!  ${C.reset}
+${C.green}${C.bold}  🐾 NORAZ CLEAN UNINSTALL COMPLETED SUCCESSFULLY!  ${C.reset}
 ${C.green}${C.bold}=======================================================${C.reset}
-   Opencatz background daemons have been stopped and local
+   Noraz background daemons have been stopped and local
    cache/state files have been safely wiped clean.
 `);
 }

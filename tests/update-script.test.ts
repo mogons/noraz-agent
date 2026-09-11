@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runOpenCatzUpdate, runOpenCatUpdate, runUpdate } from '../scripts/update-core.mjs';
+import { runNorazUpdate, runUpdate } from '../scripts/update-core.mjs';
 
 const mockExecSync = vi.fn();
 const mockSpawn = vi.fn(() => ({ unref: vi.fn(), on: vi.fn() }));
@@ -8,7 +8,7 @@ vi.mock('node:child_process', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
-describe('runOpenCatzUpdate', () => {
+describe('runNorazUpdate', () => {
   beforeEach(() => {
     delete process.env.TELEGRAM_BOT_TOKEN;
     delete process.env.TELEGRAM_CHAT_ID;
@@ -21,7 +21,7 @@ describe('runOpenCatzUpdate', () => {
 
   it('runs stash (only when dirty), pull, install, build, then schedules pm2 restart via detached spawn', async () => {
     mockExecSync.mockImplementationOnce(() => ' M src/x.ts\n'); // dirty worktree
-    const result = await runOpenCatzUpdate({ cwd: '/repo' });
+    const result = await runNorazUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -34,14 +34,14 @@ describe('runOpenCatzUpdate', () => {
     expect(mockSpawn).toHaveBeenCalledTimes(1);
     const [shell, args] = mockSpawn.mock.calls[0] as [string, string[]];
     expect(shell).toBe('sh');
-    expect(args[1]).toContain('pm2 restart opencatz-agent');
+    expect(args[1]).toContain('pm2 restart noraz-agent');
     expect(result.ok).toBe(true);
     expect(result.restartOk).toBe(true);
   });
 
   it('skips stash when the worktree is clean', async () => {
     mockExecSync.mockImplementationOnce(() => ''); // clean
-    const result = await runOpenCatzUpdate({ cwd: '/repo' });
+    const result = await runNorazUpdate({ cwd: '/repo' });
 
     const calls = mockExecSync.mock.calls.map((c) => c[0] as string);
     expect(calls[0]).toBe('git status --porcelain');
@@ -50,7 +50,7 @@ describe('runOpenCatzUpdate', () => {
   });
 
   it('skips pm2 restart when noRestart is set', async () => {
-    const result = await runOpenCatzUpdate({ cwd: '/repo', noRestart: true });
+    const result = await runNorazUpdate({ cwd: '/repo', noRestart: true });
     expect(mockSpawn).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
   });
@@ -62,7 +62,7 @@ describe('runOpenCatzUpdate', () => {
       .mockImplementationOnce(() => {
         throw new Error('ERESOLVE could not resolve');
       }); // npm install throws
-    const result = await runOpenCatzUpdate({ cwd: '/repo' });
+    const result = await runNorazUpdate({ cwd: '/repo' });
     expect(result.ok).toBe(false);
     const step = result.log.find((s) => s.label === 'npm install');
     expect(step?.ok).toBe(false);

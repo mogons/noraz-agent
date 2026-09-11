@@ -1,14 +1,14 @@
-# AGENTS.md - Opencatz AI (Robinhood Chain Edition) Guidelines & Agent Instructions
+# AGENTS.md - Noraz AI (Robinhood Chain Edition) Guidelines & Agent Instructions
 
-Welcome to **Opencatz AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
+Welcome to **Noraz AI (Robinhood Chain Edition)**! This document outlines project conventions, tech stack, directory layout, and architectural rules for AI agents and developers working on this repository.
 
 ---
 
 ## 1. Project Overview
 
-**Opencatz AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
+**Noraz AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
 
-- **Core Hub Agent (`#opencatz-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
+- **Core Hub Agent (`#noraz-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 5 domains):
   - `#call-meme-robinhood` (Robinhood Chain EVM DEX tokens / GMGN OpenAPI + GoPlus security)
@@ -29,7 +29,7 @@ Welcome to **Opencatz AI (Robinhood Chain Edition)**! This document outlines pro
 - **Primary DEX Venue:** Uniswap V3 Router (Robinhood Chain EVM L2 #4663) — primary venue for meme tokens, swaps, and LP positions. Single-chain focus (cross-chain bridge removed).
 - **Execution Modes (`EXECUTION_MODE`):**
   - `AUTO_EXECUTE`: Real on-chain trading via Uniswap V3 / Viem client when Swarm Consensus $\ge 80\%$ and Risk Manager checks pass. Requires `EVM_PRIVATE_KEY`.
-  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `database/opencatz_state.json`.
+  - `DRY_RUN`: Realistic market simulation using real-time quotes, fees, and price data from Uniswap V3 API / DexScreener. Requires public `EVM_WALLET_ADDRESS` (Private Key optional). Fills logged to `database/noraz_state.json`.
   - `SIGNAL_ONLY`: Intelligence Hub mode posting screening call cards to Discord and auto-tracking wallet position holdings via `EVM_WALLET_ADDRESS`.
 - **Blockchain & Crypto Web3 SDKs:**
   - `viem` (EVM reads/signs)
@@ -40,7 +40,7 @@ Welcome to **Opencatz AI (Robinhood Chain Edition)**! This document outlines pro
   - Relay.link (token send & secondary swap fallback)
 - **Security Audit APIs:** GoPlus Security API (EVM) + GMGN `/v1/token/security`
 - **AI Engine:** OpenRouter / OpenAI / Anthropic Node SDK
-- **Database & State:** Local JSON file persistence (`database/opencatz_state.json`)
+- **Database & State:** Local JSON file persistence (`database/noraz_state.json`)
 - **Protocol:** Model Context Protocol (MCP)
 
 ---
@@ -48,15 +48,15 @@ Welcome to **Opencatz AI (Robinhood Chain Edition)**! This document outlines pro
 ## 3. Directory Layout (verified against `git ls-files` — real paths only)
 
 ```
-Opencatz AI (Robinhood Chain)/
+Noraz AI (Robinhood Chain)/
 ├── .agents/
 │   ├── AGENTS.md                  # Project rules & coding guidelines
-│   └── skills/                    # Opencatz-specific skills (swarm trading, gmgn)
+│   └── skills/                    # Noraz-specific skills (swarm trading, gmgn)
 ├── src/
 │   ├── index.ts                   # Bot initialization & client launcher
 │   ├── config/config.ts           # Env/config validation & execution mode helpers
-│   ├── orchestrator/              # OpenCatz Core Hub & Global Risk Engine
-│   │   ├── hub.ts                 # OpenCatzHub: agent states, risk gate, on-demand passes
+│   ├── orchestrator/              # Noraz Core Hub & Global Risk Engine
+│   │   ├── hub.ts                 # NorazHub: agent states, risk gate, on-demand passes
 │   │   ├── risk-manager.ts        # Drawdown / position-size / correlation guards
 │   │   ├── risk-engine-v2.ts      # Kill-switch circuit breaker (singleton)
 │   │   ├── swarm-consensus.ts     # 3-Layer Signal Quality Filter Engine
@@ -104,7 +104,7 @@ Opencatz AI (Robinhood Chain)/
 │   │   ├── goplus-security-service.ts # GoPlus (EVM)
 │   │   ├── token-audit-service.ts # On-demand audit pipeline
 │   │   ├── ai-service.ts          # Multi-provider LLM failover
-│   │   ├── opencatz-system-prompt.ts # Master OpenCatz AI persona prompt
+│   │   ├── noraz-system-prompt.ts # Master Noraz AI persona prompt
 │   │   ├── api-key-pool.ts        # Stackable API keys + backup rotation
 │   │   ├── api-key-guard.ts       # Key leak prevention guard
 │   │   ├── session-memory.ts      # Audit memory for chat context
@@ -119,8 +119,8 @@ Opencatz AI (Robinhood Chain)/
 │   └── api/                       # Native Web Dashboard REST server (status, calls, positions, executions, alerts, toggle, command)
 ├── strategies/                    # User/LLM-authored strategy .mjs modules
 ├── indicators/                    # Custom technical indicator .mjs modules
-├── bin/opencatz.js                # `opencatz` CLI (run/onboard/terminal/deploy/test/build/update/uninstall/doctor)
-├── bin/opencat.js                 # Backward-compatible CLI wrapper
+├── bin/noraz.js                # `noraz` CLI (run/onboard/terminal/deploy/test/build/update/uninstall/doctor)
+├── bin/noraz.js                 # Global CLI entry (`noraz`)
 ├── scripts/                       # wizard.js (env setup), update-core.mjs, uninstall.mjs, notify-update.mjs
 ├── tests/                         # Full Vitest suite
 ├── deploy.sh / setup.sh / setup.bat # PM2 deploy + platform bootstrap
@@ -134,7 +134,7 @@ Opencatz AI (Robinhood Chain)/
 ## 4. Coding Conventions & Best Practices
 
 1. **Modular Multi-Agent Isolation:**
-   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Multi-Platform dispatch channels (Discord, Terminal TUI, Telegram) or `OpenCatz Core Hub`.
+   - Keep screening logic decoupled from execution logic. Screening agents MUST pass candidate signals to the `Swarm Consensus Engine` before emitting to Multi-Platform dispatch channels (Discord, Terminal TUI, Telegram) or `Noraz Core Hub`.
 2. **Safety & Execution Modes First:**
    - Every trading adapter MUST check `getExecutionMode()`. Live trades occur only in `AUTO_EXECUTE` mode with verified private keys. `DRY_RUN` uses real Uniswap API market pricing without broadcasting. `SIGNAL_ONLY` tracks holdings without executing.
 3. **Swarm Consensus Validation:**
@@ -142,8 +142,8 @@ Opencatz AI (Robinhood Chain)/
 4. **Strict TypeScript Typing:**
    - Avoid using `any`. Define clear interfaces for Token Signals, Audit Results, Swarm Scores, Discord Command Contexts, and Position States.
 5. **Multi-Platform UX Standards (Discord, Terminal TUI, Telegram):**
-   - Discord: Rich Embeds with 8-bit OpenCats color coding (🟢 `#CCFF00` Hero Green, 🌸 `#FFB7B2` Meme, 🔮 `#D6C7FF` NFT, 🌊 `#80DEEA` LP, ☀️ `#FFF59D` Alpha, 🔴 `#E53935` Risk/Warning).
-   - Terminal TUI: Interactive 24-bit TrueColor ANSI interface with on-demand screening passes, live CA token audits, strategy tuner, and treasury manager (`opencatz terminal`).
+   - Discord: Rich Embeds with 8-bit Norazs color coding (🟢 `#CCFF00` Hero Green, 🌸 `#FFB7B2` Meme, 🔮 `#D6C7FF` NFT, 🌊 `#80DEEA` LP, ☀️ `#FFF59D` Alpha, 🔴 `#E53935` Risk/Warning).
+   - Terminal TUI: Interactive 24-bit TrueColor ANSI interface with on-demand screening passes, live CA token audits, strategy tuner, and treasury manager (`noraz terminal`).
    - Telegram: Markdown broadcast cards with quick inline callback buttons.
 6. **Customizable Screening Strategies:**
    - Screening strategies are fully customizable (wizard STEP 5.5: loosened default / standard / custom prompt / numeric editor); custom prompts compile to validated strategy `.mjs` at first boot with default fallback; swarm >= 80% floor never lowered.
@@ -152,7 +152,7 @@ Opencatz AI (Robinhood Chain)/
 
 ## 5. Development & Testing Commands (Cross-Platform)
 
-Opencatz AI supports **Windows (PowerShell / CMD / Windows Terminal)**, **Linux**, and **macOS** natively:
+Noraz AI supports **Windows (PowerShell / CMD / Windows Terminal)**, **Linux**, and **macOS** natively:
 
 ```bash
 # Install dependencies & build
@@ -160,29 +160,29 @@ npm install
 npm run build              # or: setup.bat (Windows) / bash setup.sh (Linux/macOS)
 
 # Run in development mode (with hot reload)
-npm run dev                # or: opencatz run
+npm run dev                # or: noraz run
 
 # Run interactive Terminal TUI Command Center
-npm run terminal           # or: opencatz terminal
+npm run terminal           # or: noraz terminal
 
 # Run unit tests
-npm test                   # or: opencatz test
+npm test                   # or: noraz test
 
 # Health check & diagnostics
-node bin/opencatz.js doctor # or: opencatz doctor
+node bin/noraz.js doctor # or: noraz doctor
 
 # Clean uninstall
-npm run uninstall          # or: opencatz uninstall
+npm run uninstall          # or: noraz uninstall
 ```
 
 ---
 
 ## 6. Onboarding & Update Flow
 
-- **Onboarding (`opencatz onboard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Execution Mode selection (`DRY_RUN`, `SIGNAL_ONLY`, `AUTO_EXECUTE`), Auto TP/SL targets, Discord/Telegram credentials, and API keys (`UNISWAP_API_KEY`, etc.) — never skip it on a fresh clone.
-- **Update (`opencatz update` / `npm run update`):** `scripts/update-core.mjs` performs git pull + install + rebuild + service restart, and notifies via Telegram/Discord webhook (`DISCORD_DEPLOY_WEBHOOK_URL`).
-- **Deploy (`opencatz deploy`):** PM2 daemon via `deploy.sh` / `npm run deploy` (Cat Den — 24/7 background process).
-- **Uninstall (`opencatz uninstall` / `npm run uninstall`):** `scripts/uninstall.mjs` safely stops PM2 background processes, resets state, and purges `.env` credentials & build artifacts.
+- **Onboarding (`noraz onboard` / `npm run wizard`):** `scripts/wizard.js` walks through `.env` creation, AI provider selection, Execution Mode selection (`DRY_RUN`, `SIGNAL_ONLY`, `AUTO_EXECUTE`), Auto TP/SL targets, Discord/Telegram credentials, and API keys (`UNISWAP_API_KEY`, etc.) — never skip it on a fresh clone.
+- **Update (`noraz update` / `npm run update`):** `scripts/update-core.mjs` performs git pull + install + rebuild + service restart, and notifies via Telegram/Discord webhook (`DISCORD_DEPLOY_WEBHOOK_URL`).
+- **Deploy (`noraz deploy`):** PM2 daemon via `deploy.sh` / `npm run deploy` (Noraz Ops — 24/7 background process).
+- **Uninstall (`noraz uninstall` / `npm run uninstall`):** `scripts/uninstall.mjs` safely stops PM2 background processes, resets state, and purges `.env` credentials & build artifacts.
 
 ---
 

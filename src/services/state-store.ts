@@ -34,9 +34,9 @@ export interface TrackedToken {
 }
 
 /**
- * Full OpenCatz persisted state — survives bot restarts
+ * Full Noraz persisted state — survives bot restarts
  */
-export interface OpenCatzPersistedState {
+export interface NorazPersistedState {
   // Core position tracking
   openPositions: Record<string, OpenPosition>;
   activeLpPositions: Record<string, ActiveLPPosition>;
@@ -75,13 +75,12 @@ export interface OpenCatzPersistedState {
   lastUpdated: string;
   version: number;
 }
-export type OpenCatPersistedState = OpenCatzPersistedState;
 
 const CURRENT_VERSION = 2;
 
 export class StateStore {
   private dbFilePath: string;
-  private state: OpenCatzPersistedState;
+  private state: NorazPersistedState;
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_MS = 1000; // coalesce rapid writes into 1 disk write per second
 
@@ -90,18 +89,25 @@ export class StateStore {
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
-    const defaultNewPath = path.join(dbDir, 'opencatz_state.json');
-    const legacyPath = path.join(dbDir, 'opencat_state.json');
+    const defaultNewPath = path.join(dbDir, 'noraz_state.json');
+    const legacyPaths = [
+      path.join(dbDir, 'opencatz_state.json'),
+      path.join(dbDir, 'opencat_state.json'),
+    ];
 
     if (filePath) {
       this.dbFilePath = filePath;
     } else {
-      if (!fs.existsSync(defaultNewPath) && fs.existsSync(legacyPath)) {
-        try {
-          fs.copyFileSync(legacyPath, defaultNewPath);
-          console.log(`[STATE STORE] Auto-migrated legacy database/opencat_state.json -> database/opencatz_state.json`);
-        } catch {
-          // ignore copy error and fallback
+      if (!fs.existsSync(defaultNewPath)) {
+        for (const legacyPath of legacyPaths) {
+          if (!fs.existsSync(legacyPath)) continue;
+          try {
+            fs.copyFileSync(legacyPath, defaultNewPath);
+            console.log(`[STATE STORE] Auto-migrated legacy ${path.basename(legacyPath)} -> database/noraz_state.json`);
+            break;
+          } catch {
+            // ignore copy error and try next legacy path
+          }
         }
       }
       this.dbFilePath = defaultNewPath;
@@ -115,7 +121,7 @@ export class StateStore {
   // DISK I/O
   // ==========================================
 
-  private createEmptyState(): OpenCatzPersistedState {
+  private createEmptyState(): NorazPersistedState {
     return {
       openPositions: {},
       activeLpPositions: {},
@@ -134,7 +140,7 @@ export class StateStore {
     };
   }
 
-  private loadFromDisk(): OpenCatPersistedState {
+  private loadFromDisk(): NorazPersistedState {
     try {
       if (!fs.existsSync(this.dbFilePath)) {
         const initial = this.createEmptyState();
@@ -188,7 +194,7 @@ export class StateStore {
     }
   }
 
-  private saveToDiskSync(state: OpenCatPersistedState): void {
+  private saveToDiskSync(state: NorazPersistedState): void {
     try {
       state.lastUpdated = new Date().toISOString();
       const tempPath = `${this.dbFilePath}.tmp`;

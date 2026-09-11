@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-about: Create a report to help us improve Opencat AI
+about: Create a report to help us improve Noraz AI
 title: '[BUG] '
 labels: bug
 assignees: ''

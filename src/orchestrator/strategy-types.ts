@@ -18,7 +18,7 @@ export interface StrategyEvaluation {
   reason: string;
 }
 
-export interface OpenCatzStrategy {
+export interface NorazStrategy {
   id: string;
   name: string;
   version: string;
@@ -26,7 +26,6 @@ export interface OpenCatzStrategy {
   params: Record<string, any>;
   evaluate(context: StrategyContext): StrategyEvaluation;
 }
-export type OpenCatStrategy = OpenCatzStrategy;
 
 export interface Candle {
   time: number;
@@ -37,12 +36,9 @@ export interface Candle {
   volume: number;
 }
 
-export interface OpenCatzIndicator {
+export interface NorazIndicator {
   id: string;
   name: string;
   version: string;
   calculate(candles: Candle[]): number[];
 }
-export type OpenCatIndicator = OpenCatzIndicator;
-
-

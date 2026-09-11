@@ -1,5 +1,5 @@
 /**
- * Opencatz AI - Advanced 9-Lives Risk Engine & Circuit Breaker (RiskEngineV2)
+ * Noraz AI - Advanced 9-Lives Risk Engine & Circuit Breaker (RiskEngineV2)
  * Handles per-asset/chain exposure caps, correlation checks, volatility sizing, and real-time kill-switch.
  */
 
@@ -148,7 +148,7 @@ export class RiskEngineV2 {
   public activateKillSwitch(reason: string): void {
     this.isKillSwitchActive = true;
     this.killSwitchActivatedAt = Date.now();
-    console.error(`🚨 OPENCATZ 9-LIVES RISK ENGINE: Emergency Kill Switch Activated! Reason: ${reason}`);
+    console.error(`🚨 NORAZ 9-LIVES RISK ENGINE: Emergency Kill Switch Activated! Reason: ${reason}`);
   }
 
   /**
@@ -158,7 +158,7 @@ export class RiskEngineV2 {
     this.isKillSwitchActive = false;
     this.killSwitchActivatedAt = null;
     this.consecutiveLossesCount = 0;
-    console.log(`✅ OPENCATZ 9-LIVES RISK ENGINE: Kill Switch manually reset.`);
+    console.log(`✅ NORAZ 9-LIVES RISK ENGINE: Kill Switch manually reset.`);
   }
 
   /**

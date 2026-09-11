@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 🐾 OPENCATZ SETUP — Opencatz AI (Robinhood Chain) one-shot installer
+# 🐾 NORAZ SETUP — Noraz AI (Robinhood Chain) one-shot installer
 # Usage: bash setup.sh   (fresh install: run inside an empty dir, or clone first)
 
-# 24-Bit TrueColor RGB Palette (OpenCatz Master Design System)
+# 24-Bit TrueColor RGB Palette (Noraz Master Design System)
 LIME='\033[38;2;204;255;0m'       # #CCFF00 Robinhood Green (Legendary Hero)
 PINK='\033[38;2;255;183;178m'     # #FFB7B2 Pastel Pink (Meme / Accents)
 LAVENDER='\033[38;2;214;199;255m' # #D6C7FF Lavender Purple (NFT / Chain)
@@ -24,7 +24,7 @@ warn() { printf "%b\n" " ${YELLOW}⚠ $1${NC}"; }
 
 printf "\n"
 printf "%b\n" "${LIME}${BOLD}       /\\_____/\\${NC}"
-printf "%b\n" "${LIME}${BOLD}      /  ${PINK}■${LIME}   ${PINK}■${LIME}  \\      ${LIME}🐾 OPENCATZ AI — SYSTEM SETUP 🐾${NC}"
+printf "%b\n" "${LIME}${BOLD}      /  ${PINK}■${LIME}   ${PINK}■${LIME}  \\      ${LIME}🐾 NORAZ AI — SYSTEM SETUP 🐾${NC}"
 printf "%b\n" "${LIME}${BOLD}     ( ==  ${PINK}^${LIME}  == )     ${CYAN}Autonomous Multi-Agent Trading Swarm${NC}"
 printf "%b\n" "${LIME}${BOLD}      )    ${YELLOW}~${LIME}    (      ${LAVENDER}Robinhood Chain EVM L2 • Chain ID: 4663${NC}"
 printf "%b\n" "${LIME}${BOLD}     (   _____   )     ${GOLD}\"Chill trades, 9 lives, sharp alpha.\"${NC}"
@@ -39,7 +39,7 @@ ok "Node $(node --version) + npm $(npm --version)"
 
 step 2 "Source Codebase Preparation"
 if [ ! -f package.json ]; then
-  REPO_URL="${OPENCATZ_REPO_URL:-${OPENCAT_REPO_URL:-https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git}}"
+  REPO_URL="${NORAZ_REPO_URL:-https://github.com/runesatsdev/noraz-agent.git}"
   printf "%b\n" " ${DIM}No local package.json found. Cloning ${LIME}${REPO_URL}${NC} ...${NC}"
   git clone "$REPO_URL" . || fail "git clone failed"
   ok "Cloned into current directory"
@@ -60,22 +60,22 @@ npm run build || fail "npm run build failed"
 ok "TypeScript compiled to /dist"
 
 step 5 "Linking Global CLI Binary"
-npm link 2>/dev/null && ok "Global 'opencatz' command linked" || warn "npm link skipped (use 'node bin/opencatz.js' or 'npm run <cmd>')"
+npm link 2>/dev/null && ok "Global 'noraz' command linked" || warn "npm link skipped (use 'node bin/noraz.js' or 'npm run <cmd>')"
 
 step 6 "Master Onboarding Configuration"
 if [ ! -f .env ]; then
-  printf "\n%b\n" " ${YELLOW}No .env found — launching OpenCatz Master Onboarding Wizard...${NC}"
+  printf "\n%b\n" " ${YELLOW}No .env found — launching Noraz Master Onboarding Wizard...${NC}"
   npm run wizard
 else
-  printf "%b\n" " ${GREEN}✓${NC} Configuration .env found. (Re-run anytime: ${CYAN}opencatz onboard${NC})"
+  printf "%b\n" " ${GREEN}✓${NC} Configuration .env found. (Re-run anytime: ${CYAN}noraz onboard${NC})"
 fi
 
 printf "\n%b\n" "${LIME}${BOLD}========================================================================${NC}"
-printf "%b\n" "${LIME}${BOLD}   🐾 OPENCATZ AI INSTALLED SUCCESSFULLY! (ROBINHOOD CHAIN EVM)        ${NC}"
+printf "%b\n" "${LIME}${BOLD}   🐾 NORAZ AI INSTALLED SUCCESSFULLY! (ROBINHOOD CHAIN EVM)        ${NC}"
 printf "%b\n" "${LIME}${BOLD}========================================================================${NC}"
-printf "%b\n" "   ${BOLD}1. Setup & Keys:${NC}    ${CYAN}opencatz onboard${NC}    ${DIM}(or npm run wizard)${NC}"
-printf "%b\n" "   ${BOLD}2. Command TUI:${NC}     ${CYAN}opencatz terminal${NC}   ${DIM}(interactive terminal UI)${NC}"
-printf "%b\n" "   ${BOLD}3. Live Screener:${NC}   ${CYAN}opencatz run${NC}        ${DIM}(real-time signals & trading)${NC}"
-printf "%b\n" "   ${BOLD}4. 24/7 PM2 Daemon:${NC} ${CYAN}opencatz deploy${NC}     ${DIM}(Cat Den background daemon)${NC}"
-printf "%b\n" "   ${BOLD}5. Diagnostics:${NC}     ${CYAN}opencatz doctor${NC}     ${DIM}(health & RPC latency checks)${NC}"
-printf "\n%b\n" "   ${BOLD}Documentation:${NC}   ${LAVENDER}https://opencatz.xyz/docs${NC}\n"
+printf "%b\n" "   ${BOLD}1. Setup & Keys:${NC}    ${CYAN}noraz onboard${NC}    ${DIM}(or npm run wizard)${NC}"
+printf "%b\n" "   ${BOLD}2. Command TUI:${NC}     ${CYAN}noraz terminal${NC}   ${DIM}(interactive terminal UI)${NC}"
+printf "%b\n" "   ${BOLD}3. Live Screener:${NC}   ${CYAN}noraz run${NC}        ${DIM}(real-time signals & trading)${NC}"
+printf "%b\n" "   ${BOLD}4. 24/7 PM2 Daemon:${NC} ${CYAN}noraz deploy${NC}     ${DIM}(Noraz Ops background daemon)${NC}"
+printf "%b\n" "   ${BOLD}5. Diagnostics:${NC}     ${CYAN}noraz doctor${NC}     ${DIM}(health & RPC latency checks)${NC}"
+printf "\n%b\n" "   ${BOLD}Documentation:${NC}   ${LAVENDER}https://noraz.space/docs${NC}\n"

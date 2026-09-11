@@ -265,9 +265,9 @@ export class OpenSeaAdapter {
    */
   public getAgentToolsManifest(): Record<string, unknown> {
     return {
-      name: 'OpenCatz OpenSea Agent Tools',
+      name: 'Noraz OpenSea Agent Tools',
       version: '1.0.0',
-      description: 'OpenSea API v2 & Seaport integration tools for OpenCatz AI Agents',
+      description: 'OpenSea API v2 & Seaport integration tools for Noraz AI Agents',
       capabilities: ['swap_tokens', 'get_nft_floor', 'whale_analytics', 'cross_chain_fulfill'],
       discovery_url: 'https://docs.opensea.io/reference/llms-agent-discovery',
     };

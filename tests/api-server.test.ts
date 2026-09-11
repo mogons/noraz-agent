@@ -1,18 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { OpenCatzRESTServer, OpenCatRESTServer } from '../src/api/server.js';
-import { OpenCatzHub, OpenCatHub } from '../src/orchestrator/hub.js';
+import { NorazRESTServer } from '../src/api/server.js';
+import { NorazHub } from '../src/orchestrator/hub.js';
 
-describe('OpenCatzRESTServer Test Suite', () => {
-  let server: OpenCatzRESTServer;
-  let hub: OpenCatzHub;
+describe('NorazRESTServer Test Suite', () => {
+  let server: NorazRESTServer;
+  let hub: NorazHub;
   const testPort = 3199;
 
   beforeEach(async () => {
+    delete process.env.NORAZ_API_KEY;
     delete process.env.OPENCATZ_API_KEY;
     delete process.env.OPENCAT_API_KEY;
     process.env.API_PORT = String(testPort);
-    hub = new OpenCatzHub();
-    server = new OpenCatzRESTServer(testPort);
+    hub = new NorazHub();
+    server = new NorazRESTServer(testPort);
     server.start(hub);
     // Give server a moment to bind
     await new Promise((r) => setTimeout(r, 100));
@@ -81,8 +82,8 @@ describe('OpenCatzRESTServer Test Suite', () => {
     expect(hub.isAgentActive('alpha-robinhood')).toBe(true);
   });
 
-  it('Enforces OPENCATZ_API_KEY authentication guard when set', async () => {
-    process.env.OPENCATZ_API_KEY = 'secret_key_123';
+  it('Enforces NORAZ_API_KEY authentication guard when set', async () => {
+    process.env.NORAZ_API_KEY = 'secret_key_123';
 
     // 1. Without header -> 401
     const unauthRes = await fetch(`http://localhost:${testPort}/api/status`);
@@ -90,7 +91,7 @@ describe('OpenCatzRESTServer Test Suite', () => {
 
     // 2. With valid header -> 200
     const authRes = await fetch(`http://localhost:${testPort}/api/status`, {
-      headers: { 'X-OpenCatz-Api-Key': 'secret_key_123' },
+      headers: { 'X-Noraz-Api-Key': 'secret_key_123' },
     });
     expect(authRes.status).toBe(200);
   });

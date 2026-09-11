@@ -1,32 +1,32 @@
-# 🐾 DESIGN.md — Opencatz AI Design System
+# 🐾 DESIGN.md — Noraz AI Design System
 
-> **Official Visual & Identity Design System for Opencatz AI**
+> **Official Visual & Identity Design System for Noraz AI**
 > *Unified Design System for Discord Embeds, Terminal TUI, and Multi-Platform Clients*
 
 ---
 
 ## 1. 🎨 Executive Brand Overview
 
-**Opencatz AI** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM L2)**:
+**Noraz AI** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM L2)**:
 
 - **Art Direction:** Retro 8-bit aesthetic, crisp outlines, casual pixel personality traits, and witty feline charm.
 - **Hero Palette:** High-energy **Robinhood Green (`#CCFF00`)** anchored against deep **Solid Obsidian Black (`#0B0E14`)** and harmonized pastel & neon counter-tones.
-- **Mascot Persona:** **OpenCatz** — The chillest, most laid-back yet mathematically razor-sharp DeFi cat oracle in the crypto space.
+- **Mascot Persona:** **Noraz** — The chillest, most laid-back yet mathematically razor-sharp DeFi cat oracle in the crypto space.
 
 ### 🐾 The 3 Feline Pillars & Philosophy:
-1. **The Prowl (Intelligence & Night Vision):** DEX pools are dark, noisy, and hazardous. OpenCatz's 3-Layer Swarm Consensus acts as feline night vision — stalking candidates 24/7 with patient stealth and only pouncing when Swarm Confidence purrs at $\ge 80\%$.
-2. **The Cat Den (Command Center & Scratching Post):** Multi-channel central hub (`#opencatz-control-room`, `#opencatz-audit`, Terminal TUI, Telegram bridge) for natural language chat, instant 12-point token audits, and wallet controls.
-3. **The Nine Lives Engine (Resilience & Risk):** Capital preservation is sacred. OpenCatz protects traders with a 9-Lives safety net: automated Stop-Loss (-20%), Take-Profit milestone scaling (2x/3x), dynamic trailing stops, and an instant 9-Lives Circuit Breaker kill-switch.
+1. **The Prowl (Intelligence & Night Vision):** DEX pools are dark, noisy, and hazardous. Noraz's 3-Layer Swarm Consensus acts as feline night vision — stalking candidates 24/7 with patient stealth and only pouncing when Swarm Confidence purrs at $\ge 80\%$.
+2. **The Noraz Ops (Command Center & Scratching Post):** Multi-channel central hub (`#noraz-control-room`, `#noraz-audit`, Terminal TUI, Telegram bridge) for natural language chat, instant 12-point token audits, and wallet controls.
+3. **The Nine Lives Engine (Resilience & Risk):** Capital preservation is sacred. Noraz protects traders with a 9-Lives safety net: automated Stop-Loss (-20%), Take-Profit milestone scaling (2x/3x), dynamic trailing stops, and an instant 9-Lives Circuit Breaker kill-switch.
 
 ---
 
 ## 2. 🌈 Master Color Token Architecture
 
-Opencatz AI UI components utilize a standardized retro palette across Discord embeds, Web API, and CLI terminal:
+Noraz AI UI components utilize a standardized retro palette across Discord embeds, Web API, and CLI terminal:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      OPENCATZ AI COLOR PALETTE MATRIX                       │
+│                      NORAZ AI COLOR PALETTE MATRIX                       │
 ├───────────────────────┬──────────────┬──────────────────┬───────────────────┤
 │ Role / Name           │ Hex Code     │ RGB              │ Discord Embed Int │
 ├───────────────────────┼──────────────┼──────────────────┼───────────────────┤
@@ -58,11 +58,11 @@ Opencatz AI UI components utilize a standardized retro palette across Discord em
 
 ## 3. 🐱 Pixel Mascot & Terminal ASCII Art
 
-### Standard OpenCatz ASCII (Terminal TUI & Wizard Banner)
+### Standard Noraz ASCII (Terminal TUI & Wizard Banner)
 
 ```text
        /\_____/\
-      /  o   o  \      🐾 OPENCATZ AI (ROBINHOOD CHAIN) 🐾
+      /  o   o  \      🐾 NORAZ AI (ROBINHOOD CHAIN) 🐾
      ( ==  ^  == )     Autonomous Multi-Agent Trading Swarm
       )         (      Robinhood Chain EVM L2 • Chain ID: 4663
      (           )     "Chill trades, 9 lives, sharp alpha."
@@ -70,14 +70,14 @@ Opencatz AI UI components utilize a standardized retro palette across Discord em
    (__(__)___(__)__)
 ```
 
-### Swag Sunglasses OpenCatz (Command Center & Oracle)
+### Swag Sunglasses Noraz (Command Center & Oracle)
 
 ```text
        /\_____/\
-      /  ■   ■  \      🕶️ OPENCATZ AI · COMMAND CENTER 🕶️
+      /  ■   ■  \      🕶️ NORAZ AI · COMMAND CENTER 🕶️
      ( ==  ^  == )     Swarm Consensus & Precision On-Chain Execution
       )    ~    (      Primary Swap: Uniswap V3 • L2 EVM #4663
-     (   _____   )     Cat Den 24/7 Agent Daemon Active
+     (   _____   )     Noraz Ops 24/7 Agent Daemon Active
     ( (  )   (  ) )
    (__(__)___(__)__)
 ```
@@ -86,10 +86,10 @@ Opencatz AI UI components utilize a standardized retro palette across Discord em
 
 ## 4. 💻 Terminal ANSI Color System
 
-For CLI tools (`bin/opencatz.js`, `src/cli/tui.ts`, `scripts/wizard.js`):
+For CLI tools (`bin/noraz.js`, `src/cli/tui.ts`, `scripts/wizard.js`):
 
 ```typescript
-export const OPENCATZ_COLORS = {
+export const NORAZ_COLORS = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
   dim: '\x1b[2m',
@@ -109,13 +109,13 @@ export const OPENCATZ_COLORS = {
 
 ## 5. 🤖 Discord Command Center Channel Layout
 
-- **Category:** `🐾 OPENCATZ COMMAND CENTER`
+- **Category:** `🐾 NORAZ COMMAND CENTER`
 - **Core Channels:**
-  - `#opencatz-control-room` — Main natural language chat, wallet balance, risk settings, and execution intents.
-  - `#opencatz-audit` / `#audit-on-demand` — Instant 12-point token audit upon pasting contract address (CA).
+  - `#noraz-control-room` — Main natural language chat, wallet balance, risk settings, and execution intents.
+  - `#noraz-audit` / `#audit-on-demand` — Instant 12-point token audit upon pasting contract address (CA).
   - `#call-meme-robinhood` — High-velocity meme token entries vetted by GMGN + GoPlus.
   - `#call-lp-robinhood` — Concentrated liquidity pool velocity alerts via Krystal Cloud.
-  - `#call-nft-robinhood` — OpenSea floor drops and rare trait snipes for OpenCats & EVM collections.
+  - `#call-nft-robinhood` — OpenSea floor drops and rare trait snipes for Norazs & EVM collections.
   - `#call-alpha-robinhood` — 1-hour Robinhood Chain Alpha & Twitter/X sentiment signals.
   - `#call-whale-eth` — Hyperliquid ETH whale positioning and institutional spot flows.
 
@@ -123,6 +123,6 @@ export const OPENCATZ_COLORS = {
 
 ## 6. 🗣️ Tone of Voice & Personality Guidelines
 
-- **Identity:** OpenCatz is a cool, laid-back pixel cat who has mastered on-chain DeFi.
+- **Identity:** Noraz is a cool, laid-back pixel cat who has mastered on-chain DeFi.
 - **Tone:** Relaxed, friendly, and witty ("*meow*", "*sharpening claws*", "*9 lives risk engine*"), but with zero fluff when it comes to risk, numbers, and execution speed.
 - **Efficiency:** Ultra cost-efficient LLM token consumption — direct answers, clean bullet points, deterministic math-first operations.

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 🐾 OPENCATZ 24/7 PM2 DEPLOYMENT (Cat Den)
-# Usage: bash deploy.sh (or: opencatz deploy / npm run deploy)
+# 🐾 NORAZ 24/7 PM2 DEPLOYMENT (Noraz Ops)
+# Usage: bash deploy.sh (or: noraz deploy / npm run deploy)
 
-# 24-Bit TrueColor RGB Palette (OpenCatz Master Design System)
+# 24-Bit TrueColor RGB Palette (Noraz Master Design System)
 LIME='\033[38;2;204;255;0m'       # #CCFF00 Robinhood Green (Legendary Hero)
 PINK='\033[38;2;255;183;178m'     # #FFB7B2 Pastel Pink (Meme / Accents)
 LAVENDER='\033[38;2;214;199;255m' # #D6C7FF Lavender Purple (NFT / Chain)
@@ -23,7 +23,7 @@ warn() { printf "%b\n" " ${YELLOW}⚠ $1${NC}"; }
 
 printf "\n"
 printf "%b\n" "${LIME}${BOLD}       /\\_____/\\${NC}"
-printf "%b\n" "${LIME}${BOLD}      /  ${PINK}■${LIME}   ${PINK}■${LIME}  \\      ${LIME}🐾 OPENCATZ AI — 24/7 PM2 DEPLOYER 🐾${NC}"
+printf "%b\n" "${LIME}${BOLD}      /  ${PINK}■${LIME}   ${PINK}■${LIME}  \\      ${LIME}🐾 NORAZ AI — 24/7 PM2 DEPLOYER 🐾${NC}"
 printf "%b\n" "${LIME}${BOLD}     ( ==  ${PINK}^${LIME}  == )     ${CYAN}Autonomous Multi-Agent Trading Swarm${NC}"
 printf "%b\n" "${LIME}${BOLD}      )    ${YELLOW}~${LIME}    (      ${LAVENDER}Robinhood Chain EVM L2 • Chain ID: 4663${NC}"
 printf "%b\n" "${LIME}${BOLD}     (   _____   )     ${GOLD}\"Chill trades, 9 lives, sharp alpha.\"${NC}"
@@ -33,7 +33,7 @@ printf "\n"
 
 step 1 "Compiling & Linking CLI"
 npm install --silent || true
-npm link 2>/dev/null && ok "opencatz global CLI linked" || warn "npm link skipped"
+npm link 2>/dev/null && ok "noraz global CLI linked" || warn "npm link skipped"
 npm run build
 ok "TypeScript build compiled to /dist"
 
@@ -45,15 +45,15 @@ else
   ok "Configuration .env detected"
 fi
 
-step 3 "Launching 24/7 PM2 Daemon (Cat Den)"
-npx pm2 restart opencatz-agent opencat-agent --update-env 2>/dev/null || npx pm2 start dist/index.js --name "opencatz-agent"
+step 3 "Launching 24/7 PM2 Daemon (Noraz Ops)"
+npx pm2 restart noraz-agent --update-env 2>/dev/null || npx pm2 start dist/index.js --name "noraz-agent"
 npx pm2 save >/dev/null 2>&1 || true
-ok "PM2 daemon 'opencatz-agent' is active"
+ok "PM2 daemon 'noraz-agent' is active"
 
 printf "\n%b\n" "${LIME}${BOLD}========================================================================${NC}"
-printf "%b\n" "${LIME}${BOLD}   🌲 OPENCATZ AI DEPLOYED 24/7 TO CAT DEN (PM2)                       ${NC}"
+printf "%b\n" "${LIME}${BOLD}   🌲 NORAZ AI DEPLOYED 24/7 VIA PM2 (NORAZ OPS)                       ${NC}"
 printf "%b\n" "${LIME}${BOLD}========================================================================${NC}"
-printf "%b\n" "   ${BOLD}View live logs:${NC}  ${CYAN}npx pm2 logs opencatz-agent${NC}"
+printf "%b\n" "   ${BOLD}View live logs:${NC}  ${CYAN}npx pm2 logs noraz-agent${NC}"
 printf "%b\n" "   ${BOLD}Process status:${NC}  ${CYAN}npx pm2 status${NC}"
-printf "%b\n" "   ${BOLD}Command Center:${NC}  ${CYAN}opencatz terminal${NC}"
-printf "%b\n" "   ${BOLD}Diagnostics:${NC}     ${CYAN}opencatz doctor${NC}\n"
+printf "%b\n" "   ${BOLD}Command Center:${NC}  ${CYAN}noraz terminal${NC}"
+printf "%b\n" "   ${BOLD}Diagnostics:${NC}     ${CYAN}noraz doctor${NC}\n"

@@ -1,16 +1,14 @@
 {
-  "name": "ai-robinhood-chain",
+  "name": "noraz-agent",
   "version": "2.0.0",
   "description": "Autonomous Multi-Agent Crypto Intelligence & Trading Ecosystem for Robinhood Chain (EVM)",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "opencatz": "./bin/opencatz.js",
-    "opencat": "./bin/opencatz.js"
+    "noraz": "./bin/noraz.js"
   },
   "scripts": {
-    "opencatz": "node ./bin/opencatz.js",
-    "opencat": "node ./bin/opencatz.js",
+    "noraz": "node ./bin/noraz.js",
     "onboard": "node scripts/wizard.js",
     "wizard": "node scripts/wizard.js",
     "config": "node scripts/wizard.js",
@@ -19,7 +17,7 @@
     "tui": "tsx src/cli/tui.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "deploy": "npm install && npm run build && (npx pm2 delete opencatz-agent || npx pm2 delete opencat-agent || true) && npx pm2 start dist/index.js --name opencatz-agent --update-env",
+    "deploy": "npm install && npm run build && (npx pm2 delete noraz-agent || npx pm2 delete opencatz-agent || npx pm2 delete opencat-agent || true) && npx pm2 start dist/index.js --name noraz-agent --update-env",
     "update": "node scripts/update-core.mjs",
     "uninstall": "node scripts/uninstall.mjs",
     "clean": "node scripts/uninstall.mjs",
@@ -28,14 +26,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git"
+    "url": "git+https://github.com/runesatsdev/noraz-agent.git"
   },
   "bugs": {
-    "url": "https://github.com/dizcorvus/opencatz-ai-robinhood-chain/issues"
+    "url": "https://github.com/runesatsdev/noraz-agent/issues"
   },
-  "homepage": "https://opencatz.xyz",
+  "homepage": "https://noraz.space",
   "keywords": [
-    "opencatz",
+    "noraz",
     "nft-screening",
     "robinhood-chain",
     "robinhood-l2",
@@ -52,7 +50,7 @@
     "goplus",
     "nft-sniper"
   ],
-  "author": "dizcorvus",
+  "author": "runesatsdev",
   "license": "MIT",
   "engines": {
     "node": ">=22.12"

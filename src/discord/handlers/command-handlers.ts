@@ -3,18 +3,8 @@
  * to keep files focused. Service instances live here and are re-exported from
  * interaction-handler.ts for backward compatibility with existing consumers.
  */
-import {
-  ChatInputCommandInteraction,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
-  AttachmentBuilder,
-  EmbedBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} from 'discord.js';
-import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
+import { ChatInputCommandInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { NorazHub } from '../../orchestrator/hub.js';
 import { isDryRun as isDryRunMode, getExecutionMode } from '../../config/config.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { PriceAlertService } from '../../services/price-alert-service.js';
@@ -43,7 +33,7 @@ export async function buildDashboardOptions(): Promise<import('../embeds/dashboa
 
 export async function handleChatInput(
   interaction: ChatInputCommandInteraction,
-  hub: OpenCatzHub
+  hub: NorazHub
 ): Promise<void> {
   const commandName = interaction.commandName;
 
@@ -53,7 +43,7 @@ export async function handleChatInput(
       const isReplace = subcommand === 'replace';
       const modal = new ModalBuilder()
         .setCustomId('wallet_setup_modal')
-        .setTitle(isReplace ? '🔄 Replace OpenCatz Burner Wallet' : '🔑 OpenCatz Burner Wallet Setup');
+        .setTitle(isReplace ? '🔄 Replace Noraz Burner Wallet' : '🔑 Noraz Burner Wallet Setup');
 
       const pkInput = new TextInputBuilder()
         .setCustomId('wallet_pk')
@@ -77,7 +67,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `📋 **REGISTERED OPENCATZ BURNER WALLETS**\n\n` +
+        content: `📋 **REGISTERED NORAZ BURNER WALLETS**\n\n` +
           `• **Robinhood Chain (EVM) Wallet:** ${evmAddr}\n\n` +
           `💡 *Use \`/wallet replace\` to swap the private key, or \`/wallet remove\` to delete the wallet.*`,
         ephemeral: true,
@@ -110,7 +100,7 @@ export async function handleChatInput(
       }
 
       await interaction.reply({
-        content: `💼 **OpenCatz Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
+        content: `💼 **Noraz Wallet Balances (${isDryRun ? 'DRY_RUN SIMULATION' : 'LIVE'}):**\n` +
           `• Robinhood Wallet: ${evmAddrStr} | Balance: ${evmBalStr}`,
         ephemeral: true,
       });
@@ -152,7 +142,7 @@ export async function handleChatInput(
     const audit = await runTokenAudit(contract);
 
     await interaction.editReply({
-      content: `🔎 **OPENCATZ ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
+      content: `🔎 **NORAZ ON-DEMAND TOKEN AUDIT REPORT**\n📌 **Target Contract:** \`${contract}\` (${chainName})\n\n${audit.content}`,
     });
   } else if (commandName === 'screening') {
     await interaction.deferReply({ ephemeral: false });
@@ -203,7 +193,7 @@ export async function handleChatInput(
       await interaction.editReply({
         content: `⚠️ **Channel Misalignment Notice:**\n` +
           `Channel <#${interaction.channelId}> is dedicated to **${currentChannelMapping.name}** (\`${currentChannelMapping.agent}\`).\n\n` +
-          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#opencatz-control-room**!`,
+          `To activate \`${explicitAgent}\`, please run \`/screening start\` inside its dedicated channel or in **#noraz-control-room**!`,
       });
       return;
     }
@@ -236,7 +226,7 @@ export async function handleChatInput(
         : `🟡 **${activeCount}/${ALL_AGENTS.length} Sub-Agents Active** — Partial screening running.`;
 
       await interaction.editReply(
-        `## 🐾 OpenCatz Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
+        `## 🐾 Noraz Sub-Agent Status Dashboard\n\n${overallLine}\n\n${statusLines}\n\n` +
         `> 💡 Use \`/screening start\` or \`/screening stop\` in a dedicated channel to toggle individual agents.`
       );
     } else if (subcommand === 'trigger') {
@@ -263,13 +253,13 @@ export async function handleChatInput(
       const fmtUsd = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
       await interaction.reply({
         content:
-          `⚙️ **OPENCATZ LIVE RISK & AUTO TP/SL SETTINGS**\n` +
+          `⚙️ **NORAZ LIVE RISK & AUTO TP/SL SETTINGS**\n` +
           `• **Execution Mode:** \`${getExecutionMode()}\` (Primary Venue: \`Uniswap V3 • Robinhood Chain\`)\n` +
           `• **Auto TP Targets:** TP1: \`+${tp1}%\` | TP2: \`+${tp2}%\` | SL: \`${sl}%\`\n` +
           `• **Max Drawdown Limit:** \`${risk.maxDrawdownLimitPct}%\` (current drawdown: \`${risk.currentDrawdownPct ?? 0}%\`)\n` +
           `• **Max Position Size:** \`${fmtUsd(risk.maxPositionSizeUsd)}\` per trade\n` +
           `• **Trading Paused:** \`${risk.paused ? 'YES 🚨' : 'No'}\` | Max Sector Exposure: \`${risk.maxSectorExposurePercent}%\`\n\n` +
-          `> 💡 Adjust via chat: *"Opencatz, set max drawdown 20%"* or *"Opencatz, set position size 500"*.`,
+          `> 💡 Adjust via chat: *"Noraz, set max drawdown 20%"* or *"Noraz, set position size 500"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'status') {
@@ -283,13 +273,13 @@ export async function handleChatInput(
       }).join('\n');
       await interaction.reply({
         content:
-          `🖥️ **OPENCATZ RUNTIME CONFIGURATION**\n\n` +
+          `🖥️ **NORAZ RUNTIME CONFIGURATION**\n\n` +
           `• **Execution Mode:** \`${mode}\`\n` +
           `• **Primary Swap Venue:** \`Uniswap V3 (Robinhood Chain EVM L2 #4663)\`\n` +
           `• **Tracked Wallet Address:** \`${walletAddr}\`\n` +
           `• **Active Agents:** \`${active.length > 0 ? active.join(', ') : 'NONE'}\`\n\n` +
           `**API Keys:**\n${keys}\n\n` +
-          `> 💡 Set keys via chat: *"Opencatz, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
+          `> 💡 Set keys via chat: *"Noraz, set GMGN_API_KEY=..."*. Protected keys (private keys, RPC) are never exposed.`,
         ephemeral: true,
       });
     }
@@ -301,8 +291,8 @@ export async function handleChatInput(
       .join('\n');
     await interaction.reply({
       content:
-        `🩺 **OPENCATZ SYSTEM HEALTH**\n\n${lines}\n\n` +
-        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs opencatz-agent`.'),
+        `🩺 **NORAZ SYSTEM HEALTH**\n\n${lines}\n\n` +
+        (health.allHealthy ? '> 🟢 All agents healthy.' : '> ⚠️ Some agents are not responding — check `pm2 logs noraz-agent`.'),
       ephemeral: false,
     });
   } else if (commandName === 'strategy') {
@@ -313,7 +303,7 @@ export async function handleChatInput(
       const list = engine.listStrategies();
       const lines = list.map((s: any) => `• **${s.id}** — ${s.name}${s.active ? ' `🟢 ACTIVE`' : ''}`).join('\n');
       await interaction.reply({
-        content: `🧠 **OPENCATZ STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"Opencatz, create strategy X"*.`,
+        content: `🧠 **NORAZ STRATEGY MODULES**\n\n${lines || 'No strategies found.'}\n\n> 💡 Write new strategies via chat: *"Noraz, create strategy X"*.`,
         ephemeral: true,
       });
     } else if (subcommand === 'view') {
@@ -343,7 +333,7 @@ export async function handleChatInput(
       });
       await interaction.reply(`📁 **Channel Created:** <#${newChannel.id}> (\`#${channelName}\`) is ready for your personal notes!`);
     } else if (subcommand === 'rearrange') {
-      await interaction.reply('✨ **OpenCatz Channel Arrangement:** Command Center channels are organized neatly in sequence.');
+      await interaction.reply('✨ **Noraz Channel Arrangement:** Command Center channels are organized neatly in sequence.');
     }
   } else if (commandName === 'price') {
     const token = interaction.options.getString('token', true);
@@ -398,7 +388,7 @@ export async function handleChatInput(
       });
 
       await interaction.reply({
-        content: `🔔 **Price Alert Set Successfully!**\n• **Asset:** \`${alert.symbol}\`\n• **Target Price:** \`$${alert.targetPriceUsd.toLocaleString()} USD\`\n• **Trigger Condition:** Price goes \`${alert.direction}\` target\n• **ID:** \`${alert.id}\`\nOpenCat will notify <@${interaction.user.id}> as soon as price reaches target! 🐾`,
+        content: `🔔 **Price Alert Set Successfully!**\n• **Asset:** \`${alert.symbol}\`\n• **Target Price:** \`$${alert.targetPriceUsd.toLocaleString()} USD\`\n• **Trigger Condition:** Price goes \`${alert.direction}\` target\n• **ID:** \`${alert.id}\`\nNoraz will notify <@${interaction.user.id}> as soon as price reaches target! 🐾`,
       });
     } else if (subcommand === 'list') {
       const alerts = priceAlertService.listAlerts(interaction.user.id);
@@ -430,7 +420,7 @@ export async function handleChatInput(
       const stats = tradeJournalService.getSummaryStats();
       await interaction.reply({
         content:
-          `📊 **OPENCATZ TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
+          `📊 **NORAZ TRADE JOURNAL PERFORMANCE SUMMARY**\n\n` +
           `• **Total Trades Logged:** \`${stats.totalTrades}\` (\`${stats.openTradesCount}\` Open, \`${stats.winCount + stats.lossCount}\` Closed)\n` +
           `• **Win Rate:** \`${stats.winRatePct.toFixed(1)}%\` (${stats.winCount} Wins / ${stats.lossCount} Losses)\n` +
           `• **Total Realized PnL:** \`+$${stats.totalRealizedPnlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD\`\n` +
@@ -447,21 +437,21 @@ export async function handleChatInput(
       }).join('\n');
 
       await interaction.reply({
-        content: `📋 **RECENT OPENCATZ TRADES (${trades.length}):**\n${historyText}`,
+        content: `📋 **RECENT NORAZ TRADES (${trades.length}):**\n${historyText}`,
       });
     } else if (subcommand === 'export') {
       const csvData = tradeJournalService.exportCsv();
       const buffer = Buffer.from(csvData, 'utf-8');
-      const attachment = new AttachmentBuilder(buffer, { name: 'opencatz_trade_journal.csv' });
+      const attachment = new AttachmentBuilder(buffer, { name: 'noraz_trade_journal.csv' });
 
       await interaction.reply({
-        content: '📄 **OpenCatz Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
+        content: '📄 **Noraz Trade Journal Exported Successfully!** Download your CSV report below for Excel / Notion:',
         files: [attachment],
       });
     }
   } else if (commandName === 'update') {
     await interaction.reply({
-      content: '🔄 **OpenCatz Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
+      content: '🔄 **Noraz Self-Update Sequence Initiated...**\nPulling latest patches, installing dependencies, re-building, and restarting the agent...',
       ephemeral: true,
     });
 
@@ -469,12 +459,11 @@ export async function handleChatInput(
     // end, which kills this very process — so we can never await a followUp
     // after the restart. We only report failures that happen BEFORE the restart.
     try {
-      const { runOpenCatzUpdate, runOpenCatUpdate } = await import('../../../scripts/update-core.mjs');
-      const updateFn = runOpenCatzUpdate || runOpenCatUpdate;
-      updateFn({ noRestart: false });
+      const { runNorazUpdate } = await import('../../../scripts/update-core.mjs');
+      runNorazUpdate({ noRestart: false });
     } catch (err: any) {
       await interaction.followUp({
-        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs opencatz-agent`' + `.`,
+        content: `❌ **Update Exception (before restart):** ${err.message}\n⚠ The bot will restart on its own — full report in ` + '`pm2 logs noraz-agent`' + `.`,
         ephemeral: true,
       });
     }
@@ -503,7 +492,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Swap)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Swap Engine • OpenCatz Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Swap Engine • Noraz Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -539,7 +528,7 @@ export async function handleChatInput(
         `⚡ **Est. Speed:** \`~${result.estimatedDurationSeconds} seconds\`\n` +
         `💡 **Execution Mode:** ${result.simulated ? '`DRY_RUN (Simulated Direct On-Chain Transfer)`' : '`Live Broadcast`'}`
       )
-      .setFooter({ text: 'Powered by Relay.link Transfer Engine • OpenCatz Multi-Agent Hub' });
+      .setFooter({ text: 'Powered by Relay.link Transfer Engine • Noraz Multi-Agent Hub' });
 
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()

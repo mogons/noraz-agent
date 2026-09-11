@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// ANSI Color Tokens from OpenCatz Palette
+// ANSI Color Tokens from Noraz Palette
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -28,7 +28,7 @@ const C = {
 
 console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCATZ AI CLI 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 NORAZ AI CLI 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Trading Swarm${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -52,7 +52,7 @@ switch (subCommand) {
   case 'run':
   case 'dev':
   case 'start':
-    console.log(`${C.lime}🚀 Launching OpenCatz Multi-Agent Engine in Development Mode...${C.reset}\n`);
+    console.log(`${C.lime}🚀 Launching Noraz Multi-Agent Engine in Development Mode...${C.reset}\n`);
     runCommand('npx', ['tsx', 'watch', 'src/index.ts']);
     break;
 
@@ -60,29 +60,29 @@ switch (subCommand) {
   case 'wizard':
   case 'setup':
   case 'config':
-    console.log(`${C.pink}🧙‍♂️ Launching OpenCatz Interactive Onboarding Wizard...${C.reset}\n`);
+    console.log(`${C.pink}🧙‍♂️ Launching Noraz Interactive Onboarding Wizard...${C.reset}\n`);
     runCommand('node', ['scripts/wizard.js']);
     break;
 
   case 'terminal':
   case 'tui':
-    console.log(`${C.cyan}🐾 Launching OpenCatz Interactive Command Center TUI...${C.reset}\n`);
+    console.log(`${C.cyan}🐾 Launching Noraz Interactive Command Center TUI...${C.reset}\n`);
     runCommand('npx', ['tsx', 'src/cli/tui.ts']);
     break;
 
   case 'deploy':
   case 'pm2':
-    console.log(`${C.lime}🌐 Deploying OpenCatz 24/7 Background Process via PM2...${C.reset}\n`);
+    console.log(`${C.lime}🌐 Deploying Noraz 24/7 Background Process via PM2...${C.reset}\n`);
     runCommand('npm', ['run', 'deploy']);
     break;
 
   case 'test':
-    console.log(`${C.lavender}🧪 Running OpenCatz Automated Test Suite...${C.reset}\n`);
+    console.log(`${C.lavender}🧪 Running Noraz Automated Test Suite...${C.reset}\n`);
     runCommand('npx', ['vitest', 'run']);
     break;
 
   case 'build':
-    console.log(`${C.yellow}⚙️ Compiling OpenCatz TypeScript Codebase...${C.reset}\n`);
+    console.log(`${C.yellow}⚙️ Compiling Noraz TypeScript Codebase...${C.reset}\n`);
     runCommand('npx', ['tsc']);
     break;
 
@@ -93,14 +93,14 @@ switch (subCommand) {
 
   case 'doctor':
   case 'check':
-    console.log(`${C.green}🩺 Running OpenCatz Diagnostic Doctor...${C.reset}\n`);
+    console.log(`${C.green}🩺 Running Noraz Diagnostic Doctor...${C.reset}\n`);
     runCommand('npx', ['tsx', 'src/cli/doctor.ts']);
     break;
 
   case 'uninstall':
   case 'purge':
   case 'clean-all':
-    console.log(`${C.red}🧹 Launching OpenCatz Clean Uninstaller...${C.reset}\n`);
+    console.log(`${C.red}🧹 Launching Noraz Clean Uninstaller...${C.reset}\n`);
     runCommand('node', ['scripts/uninstall.mjs', ...args.slice(1)]);
     break;
 
@@ -109,17 +109,17 @@ switch (subCommand) {
   case '-h':
   default:
     console.log(`
-${C.lime}${C.bold}🐾 OPENCATZ AI CLI — COMMAND CHEATSHEET:${C.reset}
+${C.lime}${C.bold}🐾 NORAZ AI CLI — COMMAND CHEATSHEET:${C.reset}
 
-  ${C.cyan}opencatz run${C.reset} (or opencatz)      - Launch OpenCatz AI (dev / live bot)
-  ${C.cyan}opencatz onboard${C.reset} (or wizard)  - Interactive onboarding wizard (.env + keys + strategies)
-  ${C.cyan}opencatz terminal${C.reset} (or tui)    - Open the OpenCatz Command Center TUI
-  ${C.cyan}opencatz deploy${C.reset}               - 🌲 24/7 background deployment via PM2 (Cat Den)
-  ${C.cyan}opencatz update${C.reset}               - 🔄 git pull + install + rebuild + notify
-  ${C.cyan}opencatz doctor${C.reset}               - 🩺 Run the diagnostic health doctor
-  ${C.cyan}opencatz test${C.reset}                 - 🧪 Run the full Vitest suite
-  ${C.cyan}opencatz build${C.reset}                - ⚙️ Compile TypeScript into /dist
-  ${C.cyan}opencatz uninstall${C.reset} (or purge) - 🧹 Clean uninstaller (reset state & purge PM2)
+  ${C.cyan}noraz run${C.reset} (or noraz)      - Launch Noraz AI (dev / live bot)
+  ${C.cyan}noraz onboard${C.reset} (or wizard)  - Interactive onboarding wizard (.env + keys + strategies)
+  ${C.cyan}noraz terminal${C.reset} (or tui)    - Open the Noraz Command Center TUI
+  ${C.cyan}noraz deploy${C.reset}               - 🌲 24/7 background deployment via PM2 (Noraz Ops)
+  ${C.cyan}noraz update${C.reset}               - 🔄 git pull + install + rebuild + notify
+  ${C.cyan}noraz doctor${C.reset}               - 🩺 Run the diagnostic health doctor
+  ${C.cyan}noraz test${C.reset}                 - 🧪 Run the full Vitest suite
+  ${C.cyan}noraz build${C.reset}                - ⚙️ Compile TypeScript into /dist
+  ${C.cyan}noraz uninstall${C.reset} (or purge) - 🧹 Clean uninstaller (reset state & purge PM2)
 `);
     break;
 }

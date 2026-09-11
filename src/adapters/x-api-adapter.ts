@@ -44,7 +44,7 @@ export class XApiAdapter {
         success: false,
         tweets: [],
         totalVolume: 0,
-        error: 'Official X_API_BEARER_TOKEN is not configured. Enable in opencatz onboard or set X_API_BEARER_TOKEN in .env.',
+        error: 'Official X_API_BEARER_TOKEN is not configured. Enable in noraz onboard or set X_API_BEARER_TOKEN in .env.',
       };
     }
 
@@ -57,7 +57,7 @@ export class XApiAdapter {
       let response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
-          'User-Agent': 'OpenCatzAI-Robinhood/1.0.0',
+          'User-Agent': 'NorazAI-Robinhood/1.0.0',
         },
         signal: controller.signal,
       });
@@ -68,7 +68,7 @@ export class XApiAdapter {
           response = await fetch(endpoint, {
             headers: {
               'Authorization': `Bearer ${nextKey}`,
-              'User-Agent': 'OpenCatAI-Robinhood/1.0.0',
+              'User-Agent': 'NorazAI-Robinhood/1.0.0',
             },
             signal: controller.signal,
           });

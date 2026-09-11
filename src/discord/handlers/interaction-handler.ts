@@ -4,27 +4,17 @@
  * backward compatibility with existing consumers (index.ts, message-handler.ts).
  */
 import { Interaction } from 'discord.js';
-import { OpenCatzHub, OpenCatHub } from '../../orchestrator/hub.js';
+import { NorazHub } from '../../orchestrator/hub.js';
 import { AIService } from '../../services/ai-service.js';
-import {
-  priceAlertService,
-  tradeJournalService,
-  walletService,
-  priceFeedService,
-  handleChatInput,
-} from './command-handlers.js';
-import {
-  handleModalSubmit,
-  handleSelectMenu,
-  handleButtonPress,
-} from './interaction-buttons.js';
+import { priceAlertService, tradeJournalService, walletService, priceFeedService, handleChatInput } from './command-handlers.js';
+import { handleModalSubmit, handleSelectMenu, handleButtonPress } from './interaction-buttons.js';
 
 export { priceAlertService, tradeJournalService, walletService, priceFeedService };
 export type { PriceAlertService } from '../../services/price-alert-service.js';
 export type { TradeJournalService } from '../../services/trade-journal-service.js';
 export type { WalletService } from '../../services/wallet-service.js';
 
-export function isOpenCatzChannel(interaction: Interaction): boolean {
+export function isNorazChannel(interaction: Interaction): boolean {
   if (!interaction.guild) return true; // Direct Messages allowed
 
   const channel = interaction.channel;
@@ -33,13 +23,15 @@ export function isOpenCatzChannel(interaction: Interaction): boolean {
   const channelName = (channel.name || '').toLowerCase();
   const parentName = ('parent' in channel && channel.parent?.name) ? channel.parent.name.toLowerCase() : '';
 
-  // 1. Belongs to Category "🐾 OPENCATZ COMMAND CENTER"
-  if (parentName.includes('opencatz command center') || parentName.includes('opencat command center')) return true;
+  // 1. Belongs to Category "🐾 NORAZ COMMAND CENTER"
+  if (parentName.includes('noraz command center') || parentName.includes('opencatz command center') || parentName.includes('opencat command center')) return true;
 
-  // 2. Standard OpenCatz channel names
+  // 2. Standard Noraz channel names
   const KNOWN_CHANNELS = [
+    'noraz-control-room',
     'opencatz-control-room',
     'opencat-control-room',
+    'noraz-audit',
     'opencatz-audit',
     'opencat-audit',
     'audit-on-demand',
@@ -48,8 +40,10 @@ export function isOpenCatzChannel(interaction: Interaction): boolean {
     'call-nft-robinhood',
     'call-alpha-robinhood',
     'call-whale-eth',
+    'noraz-logs',
     'opencatz-logs',
     'opencat-logs',
+    'noraz-journal',
     'opencatz-journal',
     'opencat-journal',
   ];
@@ -57,28 +51,27 @@ export function isOpenCatzChannel(interaction: Interaction): boolean {
   if (KNOWN_CHANNELS.includes(channelName)) return true;
 
   // 3. Custom created channel prefixes
-  if (channelName.startsWith('opencatz-') || channelName.startsWith('opencat-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
+  if (channelName.startsWith('noraz-') || channelName.startsWith('opencatz-') || channelName.startsWith('opencat-') || channelName.startsWith('call-') || channelName.startsWith('audit-')) return true;
 
   return false;
 }
-export const isOpenCatChannel = isOpenCatzChannel;
 
 export async function handleInteraction(
   interaction: Interaction,
-  hub: OpenCatzHub,
+  hub: NorazHub,
   aiService: AIService
 ): Promise<void> {
   try {
-    // Channel Restriction Guard: Block interaction outside OpenCatz channels
+    // Channel Restriction Guard: Block interaction outside Noraz channels
     if (interaction.isChatInputCommand() || interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
-      if (!isOpenCatzChannel(interaction)) {
+      if (!isNorazChannel(interaction)) {
         if (interaction.isRepliable()) {
-          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
-          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#opencatz-control-room**';
+          const controlRoomChannel = interaction.guild?.channels.cache.find(c => c.name === 'noraz-control-room' || c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
+          const controlRoomRef = controlRoomChannel ? `<#${controlRoomChannel.id}>` : '**#noraz-control-room**';
           await interaction.reply({
-            content: `🐾 **OpenCatz Channel Restriction Notice:**\n` +
-              `OpenCatz slash commands and interactive controls can only be used inside **OpenCatz Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
-              `Please run your command inside ${controlRoomRef} or dedicated OpenCatz call channels!`,
+            content: `🐾 **Noraz Channel Restriction Notice:**\n` +
+              `Noraz slash commands and interactive controls can only be used inside **Noraz Command Center** channels (e.g. ${controlRoomRef}).\n\n` +
+              `Please run your command inside ${controlRoomRef} or dedicated Noraz call channels!`,
             flags: 1 << 6, // EPHEMERAL
           });
         }

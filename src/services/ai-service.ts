@@ -219,8 +219,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://opencatz.xyz';
-      headers['X-Title'] = 'Opencatz AI (Robinhood Chain)';
+      headers['HTTP-Referer'] = 'https://noraz.space';
+      headers['X-Title'] = 'Noraz AI (Robinhood Chain)';
     }
 
     const candidateModels = [
@@ -368,8 +368,8 @@ export class AIService {
     };
 
     if (key.baseUrl?.includes('openrouter.ai')) {
-      headers['HTTP-Referer'] = 'https://opencatz.xyz';
-      headers['X-Title'] = 'Opencatz AI (Robinhood Chain)';
+      headers['HTTP-Referer'] = 'https://noraz.space';
+      headers['X-Title'] = 'Noraz AI (Robinhood Chain)';
     }
 
     const candidateModels = [

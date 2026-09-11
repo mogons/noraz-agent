@@ -1,6 +1,6 @@
 ---
 name: 🚀 Feature Request
-about: Suggest an idea or new sub-agent for Opencat AI
+about: Suggest an idea or new sub-agent for Noraz AI
 title: '[FEAT] '
 labels: enhancement
 assignees: ''

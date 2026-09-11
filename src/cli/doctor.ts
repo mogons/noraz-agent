@@ -1,6 +1,6 @@
-import { OpenCatzHub, OpenCatHub } from '../orchestrator/hub.js';
+import { NorazHub } from '../orchestrator/hub.js';
 
-// ANSI Color Tokens from OpenCatz Palette
+// ANSI Color Tokens from Noraz Palette
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -15,10 +15,10 @@ const C = {
   green: '\x1b[38;2;0;230;118m',     // #00E676 Jade Spirit
 };
 
-export async function runOpenCatzDoctor(): Promise<void> {
+export async function runNorazDoctor(): Promise<void> {
   console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.green}🐾 OPENCATZ AI — SYSTEM DOCTOR 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.green}🐾 NORAZ AI — SYSTEM DOCTOR 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Autonomous Multi-Agent Health Audit${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}Robinhood Chain EVM L2 • Chain ID: 4663${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -26,7 +26,7 @@ ${C.lime}    ( (  )   (  ) )
    (__(__)___(__)__)${C.reset}
 `);
   console.log(`${C.lime}${C.bold}========================================================================${C.reset}`);
-  console.log(`${C.lime}${C.bold}🩺 OPENCATZ AI AGENT SYSTEM DOCTOR & DIAGNOSTICS AUDIT${C.reset}`);
+  console.log(`${C.lime}${C.bold}🩺 NORAZ AI AGENT SYSTEM DOCTOR & DIAGNOSTICS AUDIT${C.reset}`);
   console.log(`${C.lime}${C.bold}========================================================================${C.reset}\n`);
 
   // 1. Check API Keys Configuration
@@ -70,20 +70,18 @@ ${C.lime}    ( (  )   (  ) )
 
   // 3. Sub-Agent Statuses
   console.log('\n🐾 3. SUB-AGENT 24/7 SCREENING STATUSES:');
-  const hub = new OpenCatzHub();
+  const hub = new NorazHub();
   const statuses = hub.getAgentStatuses();
   for (const [name, state] of Object.entries(statuses)) {
     console.log(`   • ${name.toUpperCase().padEnd(20)}: ${state.active ? '🟢 ACTIVE (24/7 Background Running)' : '🔴 PAUSED'}`);
   }
 
   console.log('\n======================================================');
-  console.log('✅ Opencatz diagnostic check completed successfully!');
+  console.log('✅ Noraz diagnostic check completed successfully!');
   console.log('======================================================\n');
 }
 
-/** Backward-compatible alias */
-export const runOpenCatDoctor = runOpenCatzDoctor;
 
 if (process.argv[1] && process.argv[1].includes('doctor')) {
-  runOpenCatzDoctor().catch(console.error);
+  runNorazDoctor().catch(console.error);
 }

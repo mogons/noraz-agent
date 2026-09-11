@@ -376,11 +376,11 @@ function writeActiveStrategyMap(map) {
 
 async function askStrategyConfig() {
   console.log(`\n ${C.cyan}${C.bold}🧠 STEP 5.5: SCREENING STRATEGY${C.reset}`);
-  console.log('   How strict should OpenCatz be when selecting signals?');
+  console.log('   How strict should Noraz be when selecting signals?');
   console.log('   [1] Loosened Default (2x) — more call signals, still >= 80% quality   [Default]');
   console.log('   [2] Standard — strict thresholds (previous defaults)');
   console.log('   [3] Custom Prompt — describe your ideal screening strategy in plain English/Indonesian;');
-  console.log('       OpenCatz writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
+  console.log('       Noraz writes the code after deploy (auto on first boot, re-runnable anytime via chat)');
   console.log('   [4] Advanced — edit filter numbers per agent directly (Meme, LP, OpenSea NFT, Whale ETH)');
   const choice = (await askQuestion('   Choice [Default 1]: ')) || '1';
 
@@ -419,7 +419,7 @@ async function askStrategyConfig() {
       const dir = path.join(process.cwd(), 'strategies');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'custom-strategy-prompt.txt'), prompt, 'utf-8');
-      console.log(`   ${C.green}✓${C.reset} Prompt saved to strategies/custom-strategy-prompt.txt — Opencat will compile it after deploy.`);
+      console.log(`   ${C.green}✓${C.reset} Prompt saved to strategies/custom-strategy-prompt.txt — Noraz will compile it after deploy.`);
     } else {
       console.log(`   ${C.yellow}Empty prompt — using loosened defaults.${C.reset}`);
       for (const d of STRATEGY_DOMAINS) activeMap[d.key] = domainDefaults[d.key];
@@ -462,7 +462,7 @@ function drawProgressHeader(step, total, done) {
     else if (i === step) cells.push(`${C.bold}${C.lime}[${i}]${C.reset}`);
     else cells.push(`${C.dim}${i}${C.reset}`);
   }
-  console.log(`\n${C.lime}${C.bold}🐾  OPENCATZ AI — MASTER ONBOARDING WIZARD${C.reset}`);
+  console.log(`\n${C.lime}${C.bold}🐾  NORAZ AI — MASTER ONBOARDING WIZARD${C.reset}`);
   console.log(` ${C.cyan}Step ${step} of ${total} — ${done ? C.green + 'configuring ' + done : 'beginning'}${C.reset}`);
   console.log(` ${cells.join(' ')}\n`);
 }
@@ -470,7 +470,7 @@ function drawProgressHeader(step, total, done) {
 async function runWizard() {
   console.log(`
 ${C.lime}${C.bold}       /\\_____/\\
-      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 OPENCATZ AI ONBOARDING WIZARD 🐾${C.reset}
+      /  ${C.pink}■${C.lime}   ${C.pink}■${C.lime}  \\      ${C.lime}🐾 NORAZ AI ONBOARDING WIZARD 🐾${C.reset}
 ${C.lime}     ( ==  ${C.pink}^${C.lime}  == )     ${C.cyan}Robinhood Chain Multi-Agent Trading Swarm${C.reset}
 ${C.lime}      )    ${C.yellow}~${C.lime}    (      ${C.lavender}EVM L2 #4663 • Native ETH • Uniswap V3${C.reset}
 ${C.lime}     (   _____   )     ${C.gold}"Chill trades, 9 lives, sharp alpha."${C.reset}
@@ -478,7 +478,7 @@ ${C.lime}    ( (  )   (  ) )
    (__(__)___(__)__)${C.reset}
 `);
   console.log(`${C.lime}========================================================================${C.reset}`);
-  console.log(`${C.lime}🐾 OPENCATZ MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD 🐾${C.reset}`);
+  console.log(`${C.lime}🐾 NORAZ MULTI-AGENT ENGINE - MASTER ONBOARDING WIZARD 🐾${C.reset}`);
   console.log(`${C.lime}========================================================================${C.reset}\n`);
   console.log('💡 Note: API keys are MANDATORY for their respective sub-agents to run. Press ENTER to keep existing values.\n');
 
@@ -518,7 +518,7 @@ ${C.lime}    ( (  )   (  ) )
     const inputClient = await askQuestion(` 2. Enter DISCORD_CLIENT_ID${defaultClientMsg}: `);
     clientId = inputClient.trim() || clientId;
 
-    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #opencatz-control-room]';
+    const defaultCtrlMsg = controlRoomId ? ` [Default: ${controlRoomId}]` : ' [Optional — alerts are sent here; falls back to #noraz-control-room]';
     const inputCtrl = await askQuestion(` 3. Enter DISCORD_CHANNEL_CONTROL_ROOM (channel ID)${defaultCtrlMsg}: `);
     controlRoomId = inputCtrl.trim() || controlRoomId;
   }
@@ -535,9 +535,9 @@ ${C.lime}    ( (  )   (  ) )
     telegramChatId = inputTgChat.trim() || telegramChatId;
   }
 
-  // 4. OPENCATZ'S REASONING ENGINE
+  // 4. NORAZ'S REASONING ENGINE
   drawProgressHeader(4, 9, 'AI provider & model');
-  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: OPENCATZ'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
+  console.log(` ${C.cyan}${C.bold}🧠 STEP 4: NORAZ'S REASONING ENGINE (AI PROVIDER)${C.reset}`);
   let existingProvider = existingEnv.AI_PROVIDER || '';
   let existingBaseUrl = existingEnv.AI_BASE_URL || '';
   let existingModelName = existingEnv.AI_MODEL_NAME || '';
@@ -637,7 +637,7 @@ ${C.lime}    ( (  )   (  ) )
   // 8. OPERATING MODE & RISK CONTROLS
   console.log('\n⚙️ STEP 8: OPERATING MODE & AUTO TP/SL RISK CONTROLS');
   console.log(' [1] DRY_RUN — Safe realistic simulation with real market quotes & fees (Address only, Default)');
-  console.log(' [2] SIGNAL_ONLY — OpenCat Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
+  console.log(' [2] SIGNAL_ONLY — Noraz Intelligence Hub (Call Signals + Wallet Tracking, Address only)');
   console.log(' [3] AUTO_EXECUTE — Autonomous Trading via Uniswap V3 (Private Key required)');
   const existingExecMode = existingEnv.EXECUTION_MODE || 'DRY_RUN';
   const defaultModeChoice = existingExecMode === 'AUTO_EXECUTE' ? '3' : existingExecMode === 'SIGNAL_ONLY' ? '2' : '1';
@@ -749,7 +749,7 @@ ${C.lime}    ( (  )   (  ) )
   for (const [label, val] of rows) console.log(`   ${label.padEnd(16)} ${val}`);
   const confirmWrite = (await askQuestion(`\n   Save this configuration to .env? (Y/n) [Default Y]: `)) || 'y';
   if (confirmWrite.toLowerCase() === 'n') {
-    console.log(`\n${C.yellow}Configuration discarded. Rerun 'opencatz wizard' when ready.${C.reset}`);
+    console.log(`\n${C.yellow}Configuration discarded. Rerun 'noraz wizard' when ready.${C.reset}`);
     rl.close();
     return;
   }
@@ -796,11 +796,11 @@ ${C.lime}    ( (  )   (  ) )
   fs.writeFileSync(envPath, mergedLines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n', 'utf8');
 
   console.log(`\n${C.lime}${C.bold}========================================================${C.reset}`);
-  console.log(`${C.lime}${C.bold} 🐾 CONFIGURATION SAVED — OPENCATZ IS READY 🐾${C.reset}`);
+  console.log(`${C.lime}${C.bold} 🐾 CONFIGURATION SAVED — NORAZ IS READY 🐾${C.reset}`);
   console.log(`${C.lime}${C.bold}========================================================${C.reset}`);
-  console.log(`   ${C.bold}Command Center:${C.reset} run \`opencatz terminal\` to open the interactive TUI.`);
-  console.log(`   ${C.bold}OpenCatz Engine:${C.reset} run \`opencatz run\` (dev) or \`opencatz deploy\` (24/7 via PM2 — Cat Den).`);
-  console.log(`   ${C.bold}Diagnostics:${C.reset}    \`opencatz doctor\` | \`opencatz test\` | \`opencatz update\``);
+  console.log(`   ${C.bold}Command Center:${C.reset} run \`noraz terminal\` to open the interactive TUI.`);
+  console.log(`   ${C.bold}Noraz Engine:${C.reset} run \`noraz run\` (dev) or \`noraz deploy\` (24/7 via PM2 — Noraz Ops).`);
+  console.log(`   ${C.bold}Diagnostics:${C.reset}    \`noraz doctor\` | \`noraz test\` | \`noraz update\``);
   console.log(`\n${C.dim}Wise words: 9 lives in crypto — DRY_RUN is your armor, strike when ready. 🐱${C.reset}\n`);
 
   rl.close();

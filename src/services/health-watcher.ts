@@ -1,5 +1,5 @@
 /**
- * Opencatz AI - System Health Monitoring & Incident Watcher (HealthWatcherService)
+ * Noraz AI - System Health Monitoring & Incident Watcher (HealthWatcherService)
  * Tracks sub-agent heartbeats, detects silent failures, and triggers alerts/auto-restart notifications.
  */
 
@@ -69,7 +69,7 @@ export class HealthWatcherService {
       if (now - agent.lastPingAt > maxTimeoutMs) {
         agent.status = 'UNRESPONSIVE';
         allHealthy = false;
-        console.warn(`🚨 🐾 OPENCATZ HEALTH WATCHER: Agent [${agent.domain}] is UNRESPONSIVE! Last ping: ${Math.round((now - agent.lastPingAt) / 1000)}s ago.`);
+        console.warn(`🚨 🐾 NORAZ HEALTH WATCHER: Agent [${agent.domain}] is UNRESPONSIVE! Last ping: ${Math.round((now - agent.lastPingAt) / 1000)}s ago.`);
       }
       report.push({ ...agent });
     });

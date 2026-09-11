@@ -1,11 +1,11 @@
-# 🐾 Inside Opencatz AI: The Autonomous Multi-Agent Trading Swarm on Robinhood Chain
+# 🐾 Inside Noraz AI: The Autonomous Multi-Agent Trading Swarm on Robinhood Chain
 
-> *"Chill trades, 9 lives, razor-sharp on-chain alpha."* — **Opencatz AI** 🐾⚡
+> *"Chill trades, 9 lives, razor-sharp on-chain alpha."* — **Noraz AI** 🐾⚡
 >
-> 🌐 **Official Website:** [https://opencatz.xyz](https://opencatz.xyz)  
-> 📖 **Documentation:** [https://opencatz.xyz/docs](https://opencatz.xyz/docs)  
-> 💻 **Web Terminal Emulator:** [https://opencatz.xyz/terminal](https://opencatz.xyz/terminal)  
-> 🔗 **GitHub Repository:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)  
+> 🌐 **Official Website:** [https://noraz.space](https://noraz.space)  
+> 📖 **Documentation:** [https://noraz.space/docs](https://noraz.space/docs)  
+> 💻 **Web Terminal Emulator:** [https://noraz.space/terminal](https://noraz.space/terminal)  
+> 🔗 **GitHub Repository:** [https://github.com/runesatsdev/noraz-agent](https://github.com/runesatsdev/noraz-agent)  
 >
 > ⚠️ **Upfront Disclaimer (NFA & DYOR):** This article is strictly for educational, research, and technical exploratory purposes. Trading on-chain crypto assets, meme tokens, liquidity pools, and NFTs carries substantial financial risk. Always Do Your Own Research (DYOR) and employ strict capital risk management. *Not Financial Advice.*
 
@@ -21,13 +21,13 @@ While the upside in new ecosystems is immense, individual traders face steep obs
 * **Severe Tool Fragmentation:** Vetting a single token requires juggling DexScreener (charts), GoPlus (contract security), GMGN (smart money flows), Twitter/X (sentiment), and Krystal (pool yields). It is exhausting and slow.
 * **Emotional Traps & FOMO:** Seeing sudden green candles tempts traders to buy at local tops, only to panic sell during standard market corrections.
 
-**Opencatz AI** was engineered to solve these exact structural problems. Rather than acting as a simple alert webhook, it is a comprehensive **Multi-Agent Swarm Intelligence** that autonomously monitors Robinhood Chain 24/7, filters noise through strict multi-agent consensus, and delivers actionable intelligence to Discord, an interactive terminal console, or Telegram.
+**Noraz AI** was engineered to solve these exact structural problems. Rather than acting as a simple alert webhook, it is a comprehensive **Multi-Agent Swarm Intelligence** that autonomously monitors Robinhood Chain 24/7, filters noise through strict multi-agent consensus, and delivers actionable intelligence to Discord, an interactive terminal console, or Telegram.
 
 ---
 
 ## 2. Dedicated Single-Chain Focus: Robinhood Chain (EVM L2 #4663)
 
-Opencatz AI avoids fragile cross-chain bridges and complex routing layers by operating natively and exclusively on **Robinhood Chain**.
+Noraz AI avoids fragile cross-chain bridges and complex routing layers by operating natively and exclusively on **Robinhood Chain**.
 
 | Network Parameter | Specification |
 | :--- | :--- |
@@ -45,7 +45,7 @@ Focusing on a dedicated single-chain stack guarantees ultra-low latency, reliabl
 
 ## 3. System Architecture: How the Swarm Operates
 
-Opencatz AI divides screening and trading responsibilities across 5 specialist screening agents, a central consensus gate, and post-execution risk managers:
+Noraz AI divides screening and trading responsibilities across 5 specialist screening agents, a central consensus gate, and post-execution risk managers:
 
 ```
                           USER INTERFACE PLATFORMS
@@ -53,8 +53,8 @@ Opencatz AI divides screening and trading responsibilities across 5 specialist s
                                       │
                                       ▼
                    ┌───────────────────────────────────┐
-                   │       OPENCATZ CORE HUB           │
-                   │   #opencatz-control-room · chat   │
+                   │       NORAZ CORE HUB           │
+                   │   #noraz-control-room · chat   │
                    │   risk gate · 9-lives risk engine │
                    │   wallet service · trade journal  │
                    └──────────────────┬────────────────┘
@@ -109,7 +109,7 @@ Post-execution, the Position Manager safeguards capital:
 
 ## 4. Full Strategy Customization & Plain English Compiler
 
-Opencatz AI adapts completely to your personal trading approach:
+Noraz AI adapts completely to your personal trading approach:
 * **Plain English Strategy Compiler:** Define custom screening criteria using natural language (e.g. *"Only hunt meme tokens held by 3+ smart wallets with liquidity over $15k"*). At startup, the compiler converts this prompt into a validated, sandboxed `.mjs` module.
 * **Screening Presets:**
   * *Loosened Default:* Yields ~2x more signals for active traders while maintaining the strict 80% quality threshold.
@@ -121,10 +121,10 @@ Opencatz AI adapts completely to your personal trading approach:
 
 ## 5. 💡 Pro-Tip: Run 100% Free with OpenRouter Free Tier
 
-You can operate Opencatz AI around the clock **with zero AI subscription costs ($0/month)**:
+You can operate Noraz AI around the clock **with zero AI subscription costs ($0/month)**:
 1. Create a free account at [OpenRouter.ai](https://openrouter.ai) and generate an API key.
 2. Select high-performance free models such as `meta-llama/llama-3.3-70b-instruct:free` or `deepseek/deepseek-r1:free`.
-3. Opencatz AI performs all heavy filtering, math scoring, and security audits locally via deterministic code. The LLM is invoked only for high-level reasoning (sentiment analysis and control room chat queries). Operational overhead remains **strictly $0**!
+3. Noraz AI performs all heavy filtering, math scoring, and security audits locally via deterministic code. The LLM is invoked only for high-level reasoning (sentiment analysis and control room chat queries). Operational overhead remains **strictly $0**!
 
 ---
 
@@ -136,8 +136,8 @@ You can operate Opencatz AI around the clock **with zero AI subscription costs (
 3. **`AUTO_EXECUTE`:** Fully autonomous on-chain trading via Viem and Uniswap V3 when swarm consensus reaches ≥ 80% and risk checks pass.
 
 ### Multi-Platform Interfaces
-* **🎮 Discord Command Center:** Auto-provisions `🐾 OPENCATZ COMMAND CENTER` category, 6 specialized channels, and 22 slash commands.
-* **💻 Terminal TUI (`opencatz terminal`):** Interactive 24-bit TrueColor ANSI dashboard for VPS and headless server management.
+* **🎮 Discord Command Center:** Auto-provisions `🐾 NORAZ COMMAND CENTER` category, 6 specialized channels, and 22 slash commands.
+* **💻 Terminal TUI (`noraz terminal`):** Interactive 24-bit TrueColor ANSI dashboard for VPS and headless server management.
 * **📱 Telegram Notification Bridge:** High-priority mobile push notifications with interactive callback buttons.
 * **🌐 Web Dashboard REST API (Port 3000):** Ready to connect with Next.js dashboards or mobile applications.
 
@@ -145,7 +145,7 @@ You can operate Opencatz AI around the clock **with zero AI subscription costs (
 
 ## 7. 🎟️ Live Deployment in PX Identities Discord (404 Identities Holders)
 
-For traders seeking zero-infrastructure access: **Opencatz AI will be deployed live 24/7 in the PX Identities Discord server!**
+For traders seeking zero-infrastructure access: **Noraz AI will be deployed live 24/7 in the PX Identities Discord server!**
 
 Holders of the **404 Identities (Robinhood Chain)** collection receive complimentary access:
 * Real-time screening signals across all dedicated channels.
@@ -163,8 +163,8 @@ Holders of the **404 Identities (Robinhood Chain)** collection receive complimen
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/dizcorvus/opencatz-ai-robinhood-chain.git
-cd "Opencatz AI (Robinhood Chain)"
+git clone https://github.com/runesatsdev/noraz-agent.git
+cd "Noraz AI (Robinhood Chain)"
 ```
 
 ### Step 2: Automated 1-Click Setup
@@ -177,34 +177,34 @@ cd "Opencatz AI (Robinhood Chain)"
   bash setup.sh
   ```
 
-### Step 3: Interactive Onboarding (`opencatz onboard`)
+### Step 3: Interactive Onboarding (`noraz onboard`)
 Run the onboarding wizard:
 ```bash
-opencatz onboard
+noraz onboard
 ```
 Configure execution mode, Discord/Telegram credentials, AI provider, and data API keys (GMGN, Krystal Cloud, OpenSea, GoPlus, Uniswap, X API v2) alongside backup key arrays (`*_BACKUP_KEYS`).
 
 ### Step 4: Launch the Swarm
-* **Development Mode:** `opencatz run`
-* **Terminal TUI Console:** `opencatz terminal`
-* **24/7 Production Background Daemon (PM2):** `opencatz deploy`
+* **Development Mode:** `noraz run`
+* **Terminal TUI Console:** `noraz terminal`
+* **24/7 Production Background Daemon (PM2):** `noraz deploy`
 
-> ✨ Upon bot initialization, Opencatz **automatically creates the `🐾 OPENCATZ COMMAND CENTER` category, configures all 6 channels, and registers all 22 slash commands**.
+> ✨ Upon bot initialization, Noraz **automatically creates the `🐾 NORAZ COMMAND CENTER` category, configures all 6 channels, and registers all 22 slash commands**.
 
 ### Essential Commands
 * `/analyze [address]`: Instant 3-layer security and liquidity audit for any contract.
 * `/wallet balance / setup`: Manage burner wallet and inspect on-chain balance.
 * `/alert set [token] [target]`: Set automated price alerts with Discord notifications.
 * `/journal summary / export`: Review trading performance and export trade logs to CSV.
-* `opencatz doctor`: Complete diagnostic check across RPC endpoints, API keys, and sub-agents.
-* `opencatz update`: Single-command auto-update (git pull, build, PM2 daemon restart).
+* `noraz doctor`: Complete diagnostic check across RPC endpoints, API keys, and sub-agents.
+* `noraz update`: Single-command auto-update (git pull, build, PM2 daemon restart).
 
 ---
 
 ## 9. 🌟 Open Source & Roadmap
 
-Opencatz AI is **100% Open-Source** under the MIT license. We welcome developers, quants, and crypto researchers to collaborate, build new screening sub-agents, and contribute custom strategy modules.
+Noraz AI is **100% Open-Source** under the MIT license. We welcome developers, quants, and crypto researchers to collaborate, build new screening sub-agents, and contribute custom strategy modules.
 
-🔗 **GitHub Repository:** [https://github.com/dizcorvus/opencatz-ai-robinhood-chain](https://github.com/dizcorvus/opencatz-ai-robinhood-chain)
+🔗 **GitHub Repository:** [https://github.com/runesatsdev/noraz-agent](https://github.com/runesatsdev/noraz-agent)
 
-The Robinhood Chain edition represents the foundation of the ecosystem. The team is actively developing **Opencatz AI Multi-Chain Edition** (Solana, Base, Arbitrum, BSC) and a **Premium Swarm Execution Engine**. Stay updated at [opencatz.xyz](https://opencatz.xyz)!
+The Robinhood Chain edition represents the foundation of the ecosystem. The team is actively developing **Noraz AI Multi-Chain Edition** (Solana, Base, Arbitrum, BSC) and a **Premium Swarm Execution Engine**. Stay updated at [noraz.space](https://noraz.space)!

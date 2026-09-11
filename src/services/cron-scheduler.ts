@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { OpenCatzHub, OpenCatHub } from '../orchestrator/hub.js';
+import type { NorazHub } from '../orchestrator/hub.js';
 
 export interface ScheduledTask {
   id: string;
@@ -20,7 +20,7 @@ export class CronSchedulerService {
   private dbPath: string;
   private tasks: Map<string, ScheduledTask> = new Map();
   private timerIds: Map<string, NodeJS.Timeout> = new Map();
-  private hub?: OpenCatzHub;
+  private hub?: NorazHub;
 
   constructor(dbPath?: string) {
     this.dbPath = dbPath || path.join(process.cwd(), 'database', 'schedules.json');
@@ -31,7 +31,7 @@ export class CronSchedulerService {
   /**
    * Attach orchestrator hub instance to trigger agent screening passes
    */
-  public attachHub(hub: OpenCatzHub): void {
+  public attachHub(hub: NorazHub): void {
     this.hub = hub;
   }
 

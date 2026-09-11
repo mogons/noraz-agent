@@ -1,5 +1,5 @@
 # ==============================================================================
-# OpenCatz AI — Comprehensive .gitignore
+# Noraz AI — Comprehensive .gitignore
 # ==============================================================================
 
 # 1. Dependencies & Package Managers
@@ -70,6 +70,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 pino.log
+noraz.log
 opencatz.log
 opencat.log
 .pm2/

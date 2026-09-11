@@ -219,11 +219,9 @@ describe('RobinhoodScreeningAgent', () => {
     const token = mkToken(); // healthy CTO token (totalFeeNative 1 ETH)
     const gmgnCtx = { ...agent.toStrategyGmgn(token), native_price_usd: ETH_PRICE };
 
-    const { createRequire } = await import('module');
-    const path = (await import('path')).default;
-    const requireEsm = createRequire(import.meta.url);
-    const stratPath = path.resolve(process.cwd(), 'strategies', 'meme-robinhood-default.mjs');
-    const strat = requireEsm(stratPath).default;
+    const { StrategyEngine } = await import('../src/orchestrator/strategy-engine.js');
+    const strat = new StrategyEngine().getActiveStrategy('meme-robinhood');
+    expect(strat).not.toBeNull();
 
     const ctx = {
       domain: 'MEME_ROBINHOOD',
@@ -239,16 +237,16 @@ describe('RobinhoodScreeningAgent', () => {
       gmgn: gmgnCtx,
     };
 
-    const ev = strat.evaluate(ctx);
+    const ev = strat!.evaluate(ctx);
     expect(ev.recommendedAction).not.toBe('SKIP');
     expect(ev.confidence).toBeGreaterThanOrEqual(80);
 
     // Fee gate active (default 500): null fee → fail-closed (unrecorded activity)
-    const feeOn = strat.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
+    const feeOn = strat!.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
     expect(feeOn.recommendedAction).toBe('SKIP');
 
     // When fee gate is disabled (params 0), null fee is no longer fatal
-    const stratNoFee = { ...strat, params: { ...strat.params, minTotalFeeUsd: 0 } };
+    const stratNoFee = { ...strat!, params: { ...strat!.params, minTotalFeeUsd: 0 } };
     const feeOff = stratNoFee.evaluate({ ...ctx, gmgn: { ...gmgnCtx, total_fee: null } });
     expect(feeOff.recommendedAction).not.toBe('SKIP');
   });

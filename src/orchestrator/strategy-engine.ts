@@ -1,11 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
-import type { OpenCatStrategy, OpenCatIndicator } from './strategy-types.js';
-
-const requireEsm = createRequire(import.meta.url);
+import type { NorazStrategy, NorazIndicator } from './strategy-types.js';
 
 const PROJECT_ROOT = path.resolve(process.cwd());
 const DEFAULT_STRATEGIES_DIR = path.join(PROJECT_ROOT, 'strategies');
@@ -202,7 +199,7 @@ export class StrategyEngine {
     return { success: true, message: `✅ Strategy ${strategyId} is now active for domain ${domain}.` };
   }
 
-  public getActiveStrategy(domain: string): OpenCatStrategy | null {
+  public getActiveStrategy(domain: string): NorazStrategy | null {
     const map = this.readActiveMap();
     const domainKey = this.domainKey(domain);
     let activeId = typeof map[domainKey] === 'string' ? map[domainKey] : undefined;
@@ -237,7 +234,7 @@ export class StrategyEngine {
     return null;
   }
 
-  public getIndicator(id: string): OpenCatIndicator | null {
+  public getIndicator(id: string): NorazIndicator | null {
     const file = path.join(this.indicatorsDir, `${id}.mjs`);
     if (!fs.existsSync(file)) return null;
     try {
@@ -250,8 +247,17 @@ export class StrategyEngine {
   }
 
   private loadModule(filePath: string): any {
-    const mod = requireEsm(filePath);
-    return mod.default || mod;
+    // Strategy/indicator sandboxes are plain `export default { ... }` ESM modules
+    // (no imports). createRequire cannot load .mjs, so evaluate the default
+    // export in-process. Modules with import statements are rejected.
+    const source = fs.readFileSync(filePath, 'utf-8');
+    if (/^\s*import\s/m.test(source)) {
+      throw new Error(`Strategy/indicator modules with import statements are not supported: ${path.basename(filePath)}`);
+    }
+    const transformed = source.replace(/export\s+default\s+/, 'return ');
+    // eslint-disable-next-line no-new-func
+    const factory = new Function(transformed);
+    return factory();
   }
 
   /**

@@ -75,7 +75,7 @@ export class PriceAlertService {
   /**
    * Parse natural language text into a price alert payload
    * Examples:
-   * - "Opencatz, alert me if BTC hits 70k" -> symbol: BTC, target: 70000, ABOVE
+   * - "Noraz, alert me if BTC hits 70k" -> symbol: BTC, target: 70000, ABOVE
    * - "alert me if ETH drops below 1500" -> symbol: ETH, target: 1500, BELOW
    * - "notify when ETH hits 3000" -> symbol: ETH, target: 3000, ABOVE
    */

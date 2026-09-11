@@ -1,5 +1,5 @@
 /**
- * Opencatz AI - Market Regime Classifier & Strategy Filter (MarketRegimeFilter)
+ * Noraz AI - Market Regime Classifier & Strategy Filter (MarketRegimeFilter)
  * Evaluates current market condition on Robinhood Chain using volatility & price metrics.
  * Categorizes macro market state (TRENDING_BULL, TRENDING_BEAR, SIDEWAYS_CHOP, EXTREME_VOLATILITY)
  * to adjust sub-agent strategy behaviors automatically.

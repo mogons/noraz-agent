@@ -3,7 +3,7 @@ import path from 'path';
 import { isDryRun as isDryRunMode, getExecutionMode, isAutoExecute, isSignalOnly } from './config/config.js';
 import { Client, GatewayIntentBits, REST, Routes, ChannelType } from 'discord.js';
 import { buildCallEmbed } from './discord/embeds/call-embed.js';
-import { OpenCatzHub } from './orchestrator/hub.js';
+import { NorazHub } from './orchestrator/hub.js';
 import { dispatchDomain } from './orchestrator/dispatch.js';
 import { SwarmConsensusEngine } from './orchestrator/swarm-consensus.js';
 import { StrategyEngine } from './orchestrator/strategy-engine.js';
@@ -37,16 +37,16 @@ const telegramService = new TelegramService();
 const apiKeyGuard = new ApiKeyGuardService();
 
 console.log('----------------------------------------------------');
-console.log('🐾 OPENCATZ MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
+console.log('🐾 NORAZ MULTI-AGENT CRYPTO SYSTEM INITIALIZING...');
 console.log('----------------------------------------------------');
 
 const execMode = getExecutionMode();
-console.log(`[CONFIG] OpenCatz Execution Mode: ${execMode} (Primary Swap Venue: Uniswap V3 on Robinhood Chain #4663)`);
+console.log(`[CONFIG] Noraz Execution Mode: ${execMode} (Primary Swap Venue: Uniswap V3 on Robinhood Chain #4663)`);
 
 // Initialize persistent StateStore (survives bot restarts)
 const stateStore = new StateStore();
 
-const hub = new OpenCatzHub();
+const hub = new NorazHub();
 const swarmEngine = new SwarmConsensusEngine();
 swarmEngine.attachStateStore(stateStore);
 
@@ -72,7 +72,7 @@ function gateSignal(payload: any): boolean {
   return res.passed;
 }
 
-// Rate-limited Discord notification to #opencatz-control-room (never spam)
+// Rate-limited Discord notification to #noraz-control-room (never spam)
 const controlRoomNotifyCooldown = new Map<string, number>();
 const CONTROL_ROOM_NOTIFY_MS = 10 * 60 * 1000; // max 1 notif per key per 10 minutes
 
@@ -97,7 +97,7 @@ async function notifyControlRoom(client: any, key: string, content: string): Pro
   controlRoomNotifyCooldown.set(key, now);
   try {
     const channel = client.channels.cache.find(
-      (c: any) => c.type === ChannelType.GuildText && (c.name === 'opencatz-control-room' || c.name === 'opencat-control-room')
+      (c: any) => c.type === ChannelType.GuildText && (c.name === 'noraz-control-room' || c.name === 'opencatz-control-room' || c.name === 'opencat-control-room')
     );
     if (channel && 'send' in channel) {
       await channel.send(content);
@@ -182,7 +182,7 @@ if (discordToken && clientId) {
     ],
     rest: {
       // Increase Discord REST timeout (default 10s) — VPS previously timed out during
-      // restart + bootstrap + reply simultaneously, causing "Opencatz is thinking..."
+      // restart + bootstrap + reply simultaneously, causing "Noraz is thinking..."
       timeout: 30000,
     },
   });
@@ -202,14 +202,14 @@ if (discordToken && clientId) {
         const stepLines = (report.steps || []).map((s: { label: string; ok: boolean }) => `• **${s.label}:** ${s.ok ? '✅' : '❌'}`).join('\n');
         const restartLine = report.restartOk
           ? '🔄 **PM2 agent restarted — new code is live.**'
-          : '⚠ **PM2 restart failed** — run `opencatz deploy` manually.';
+          : '⚠ **PM2 restart failed** — run `noraz deploy` manually.';
         const controlRoomId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
         const channel = controlRoomId
           ? client.channels.cache.get(controlRoomId)
-          : client.channels.cache.find((c: any) => c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
+          : client.channels.cache.find((c: any) => c.name === 'noraz-control-room' || c.name === 'opencatz-control-room' || c.name === 'opencat-control-room');
         if (channel && 'send' in channel) {
           await channel.send(
-            `${report.ok ? '✅' : '❌'} **OpenCatz Self-Update ${report.ok ? 'Complete' : 'FAILED'}**\n\n` +
+            `${report.ok ? '✅' : '❌'} **Noraz Self-Update ${report.ok ? 'Complete' : 'FAILED'}**\n\n` +
             `${stepLines}\n${restartLine}`
           );
           console.log('[UPDATE REPORT] Update report sent to control room.');
@@ -264,7 +264,7 @@ if (discordToken && clientId) {
             const currentPx = alert.lastTriggeredPriceUsd || alert.targetPriceUsd;
             if (channel && 'send' in channel) {
               const alertMsg =
-                `🔔 **OPENCATZ PRICE ALERT TRIGGERED!**\n\n` +
+                `🔔 **NORAZ PRICE ALERT TRIGGERED!**\n\n` +
                 `📈 **Asset:** \`${alert.symbol}/USDT\`\n` +
                 `💵 **Target Price Hit:** \`$${alert.targetPriceUsd.toLocaleString()} USD\` (Current: \`$${currentPx.toLocaleString()} USD\`)\n` +
                 `👤 **Alert for:** <@${alert.userId}>\n` +
@@ -536,7 +536,7 @@ if (discordToken && clientId) {
   client.on('messageCreate', (message) => {
     if (message.author.bot) return;
     const chName = (message.channel && 'name' in message.channel ? (message.channel as any).name : '').toLowerCase();
-    const isAuditChannel = chName === 'opencatz-audit' || chName === 'opencat-audit' || chName === 'audit-on-demand';
+    const isAuditChannel = chName === 'noraz-audit' || chName === 'opencatz-audit' || chName === 'opencat-audit' || chName === 'audit-on-demand';
     const controlRoomChannelId = process.env.DISCORD_CHANNEL_CONTROL_ROOM;
 
     if (isAuditChannel || isControlRoomChannel(controlRoomChannelId, message)) {
@@ -556,15 +556,15 @@ function isControlRoomChannel(configuredId: string | undefined, message: any): b
     return message.channelId === configuredId;
   }
   const chName = (message.channel?.name || '').toLowerCase();
-  return chName === 'opencatz-control-room' || chName === 'opencat-control-room';
+  return chName === 'noraz-control-room' || chName === 'opencatz-control-room' || chName === 'opencat-control-room';
 }
 
-console.log('[SYSTEM] Setup complete. All OpenCatz modules ready.');
+console.log('[SYSTEM] Setup complete. All Noraz modules ready.');
 console.log('[STATE STORE] Persistent state engine active — positions, alerts, and journal survive restarts.');
 
-// Start OpenCatz Telemetry & REST API Server
-import { OpenCatzRESTServer } from './api/server.js';
-const apiServer = new OpenCatzRESTServer();
+// Start Noraz Telemetry & REST API Server
+import { NorazRESTServer } from './api/server.js';
+const apiServer = new NorazRESTServer();
 apiServer.start(hub);
 
 // Graceful Shutdown: flush pending state writes to disk before exit

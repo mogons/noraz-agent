@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { OpenCatHub } from '../orchestrator/hub.js';
+import { NorazHub } from '../orchestrator/hub.js';
 import { globalHealthWatcher } from '../services/health-watcher.js';
 import { globalMarketRegimeFilter } from '../services/market-regime.js';
 import { globalRiskEngineV2 } from '../orchestrator/risk-engine-v2.js';
@@ -9,7 +9,7 @@ import { getExecutionMode } from '../config/config.js';
 import { AGENT_DOMAINS } from '../orchestrator/agent-registry.js';
 import { ToolRegistry } from '../orchestrator/tool-registry.js';
 
-export class OpenCatzRESTServer {
+export class NorazRESTServer {
   private server: http.Server | null = null;
   private port: number;
   private toolRegistry = new ToolRegistry();
@@ -29,14 +29,14 @@ export class OpenCatzRESTServer {
     });
   }
 
-  public start(hub: OpenCatHub): void {
+  public start(hub: NorazHub): void {
     this.toolRegistry.attachOrchestrator(hub);
 
     this.server = http.createServer(async (req, res) => {
       // Set CORS Headers for website integration
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-OpenCatz-Api-Key, X-OpenCat-Api-Key');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Noraz-Api-Key, X-OpenCatz-Api-Key, X-OpenCat-Api-Key');
       res.setHeader('Content-Type', 'application/json');
 
       // Handle CORS Preflight
@@ -46,10 +46,10 @@ export class OpenCatzRESTServer {
         return;
       }
 
-      // API Key Authentication Guard (if OPENCATZ_API_KEY or OPENCAT_API_KEY is configured)
-      const authKey = process.env.OPENCATZ_API_KEY || process.env.OPENCAT_API_KEY;
+      // API Key Authentication Guard (if NORAZ_API_KEY is configured; legacy OPENCATZ_API_KEY / OPENCAT_API_KEY also accepted)
+      const authKey = process.env.NORAZ_API_KEY || process.env.OPENCATZ_API_KEY || process.env.OPENCAT_API_KEY;
       if (authKey && authKey.trim() !== '') {
-        const clientKey = req.headers['x-opencatz-api-key'] || req.headers['x-opencat-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+        const clientKey = req.headers['x-noraz-api-key'] || req.headers['x-opencatz-api-key'] || req.headers['x-opencat-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
         if (clientKey !== authKey) {
           res.statusCode = 401;
           res.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or missing API Key' }));
@@ -217,14 +217,11 @@ export class OpenCatzRESTServer {
     });
 
     this.server.listen(this.port, () => {
-      console.log(`📡 🐾 OPENCATZ AI REST API Server listening on port ${this.port}`);
+      console.log(`📡 🐾 NORAZ AI REST API Server listening on port ${this.port}`);
     });
   }
 }
 
-/** Backward-compatible alias */
-export const OpenCatRESTServer = OpenCatzRESTServer;
-export type OpenCatRESTServer = OpenCatzRESTServer;
 
 function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {

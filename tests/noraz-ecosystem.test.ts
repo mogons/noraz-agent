@@ -6,11 +6,11 @@ import { NFTScreeningAgent } from '../src/agents/nft/nft-screening-agent.js';
 import { PriceAlertService } from '../src/services/price-alert-service.js';
 import { PositionManager } from '../src/position/position-manager.js';
 
-describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
+describe('🐾 NORAZ MULTI-AGENT SYSTEM TEST SUITE', () => {
   it('1. Swarm Consensus Engine: Should pass high confidence signals (>= 80%)', () => {
     const swarm = new SwarmConsensusEngine();
     const result = swarm.evaluateSignal({
-      symbol: 'OPENCATZ_MEME',
+      symbol: 'NORAZ_MEME',
       domain: 'MEME_ROBINHOOD',
       contractAddress: '0x1234567890123456789012345678901234567890',
       liquidityUsd: 25000,
@@ -81,7 +81,7 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
 
   it('7. Price Alert Service: Should parse natural language alert expressions', () => {
     const alertService = new PriceAlertService();
-    const parsed = alertService.parseNaturalLanguageAlert('opencatz alert if BTC 70000', 'test_user', 'test_chan');
+    const parsed = alertService.parseNaturalLanguageAlert('noraz alert if BTC 70000', 'test_user', 'test_chan');
     expect(parsed).not.toBeNull();
     expect(parsed?.symbol).toBe('BTC');
     expect(parsed?.targetPriceUsd).toBe(70000);
@@ -120,7 +120,7 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
     });
   });
 
-  it('19. OpenSea Adapter: Should provide OpenCatz Agent Tools manifest & quote', async () => {
+  it('19. OpenSea Adapter: Should provide Noraz Agent Tools manifest & quote', async () => {
     const { OpenSeaAdapter } = await import('../src/adapters/opensea-adapter.js');
     const adapter = new OpenSeaAdapter('mock_key');
     const quote = await adapter.getSwapQuote({
@@ -135,16 +135,16 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
     expect(quote.openseaSwapUrl).toContain('opensea.io/swap');
 
     const manifest = adapter.getAgentToolsManifest();
-    expect(manifest.name).toBe('OpenCatz OpenSea Agent Tools');
+    expect(manifest.name).toBe('Noraz OpenSea Agent Tools');
     expect(Array.isArray(manifest.capabilities)).toBe(true);
   });
 
   it('20. Tool Registry & Hub Control: Should execute sub-agent pause, resume, and risk limit tools', async () => {
     const { ToolRegistry } = await import('../src/orchestrator/tool-registry.js');
-    const { OpenCatzHub } = await import('../src/orchestrator/hub.js');
+    const { NorazHub } = await import('../src/orchestrator/hub.js');
     const { AIService } = await import('../src/services/ai-service.js');
 
-    const hub = new OpenCatzHub();
+    const hub = new NorazHub();
     const aiService = new AIService();
     const registry = new ToolRegistry();
     registry.attachOrchestrator(hub);
@@ -210,8 +210,8 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
   });
 
   it('24. Sub-Agent Domain Normalization: Should correctly synchronize pause/resume across aliases', async () => {
-    const { OpenCatzHub } = await import('../src/orchestrator/hub.js');
-    const hub = new OpenCatzHub();
+    const { NorazHub } = await import('../src/orchestrator/hub.js');
+    const hub = new NorazHub();
 
     hub.setAgentActive('evm', false);
     expect(hub.isAgentActive('meme-robinhood')).toBe(false);
@@ -250,8 +250,8 @@ describe('🐾 OPENCATZ MULTI-AGENT SYSTEM TEST SUITE', () => {
   });
 
   it('27. Auto-execute: hub state reflects enablement', async () => {
-    const { OpenCatzHub } = await import('../src/orchestrator/hub.js');
-    const hub = new OpenCatzHub();
+    const { NorazHub } = await import('../src/orchestrator/hub.js');
+    const hub = new NorazHub();
     hub.setAutoExecute('meme-robinhood', true, 0.1);
     const st = hub.isAutoExecuteEnabled('meme-robinhood');
     expect(st.enabled).toBe(true);
