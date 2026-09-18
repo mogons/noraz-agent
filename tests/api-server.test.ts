@@ -67,6 +67,14 @@ describe('NorazRESTServer Test Suite', () => {
     expect(Array.isArray(data.entries)).toBe(true);
   });
 
+  it('GET /api/audit rejects a missing address', async () => {
+    const res = await fetch(`http://localhost:${testPort}/api/audit`);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('address');
+  });
+
   it('POST /api/agents/toggle toggles sub-agent active state', async () => {
     const res = await fetch(`http://localhost:${testPort}/api/agents/toggle`, {
       method: 'POST',

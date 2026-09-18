@@ -2,8 +2,7 @@
 
 Thank you for your interest in contributing to **Noraz AI**! We welcome bug fixes, strategy modules, new sub-agent screeners, documentation improvements, and Web3 integrations for Robinhood Chain L2 (#4663).
 
-- 💬 **Discord Contributor Coordination:** [https://discord.gg/5HMy95ZHuY](https://discord.gg/5HMy95ZHuY) (Join `#noraz-control-room` for architecture discussions and PR ideas)
-- 🐦 **Official X (Twitter):** [@pxidentities](https://x.com/pxidentities/)
+- 🐦 **Official X (Twitter):** [@norazspace](https://x.com/norazspace)
 - 🌐 **Web Portal & Documentation:** [https://noraz.space](https://noraz.space)
 
 ---
@@ -18,7 +17,7 @@ Thank you for your interest in contributing to **Noraz AI**! We welcome bug fixe
 ```bash
 # Clone the repository
 git clone https://github.com/runesatsdev/noraz-agent.git
-cd noraz-ai-robinhood-chain
+cd noraz-agent
 
 # Install dependencies
 npm install

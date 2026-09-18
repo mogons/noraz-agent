@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RobinhoodScreeningAgent, RobinhoodSignal } from '../src/agents/meme-robinhood/robinhood-screening-agent.js';
 import { createDedupe, volume24hOf, buildSignalBoostMap, applySignalBoost } from '../src/agents/shared/gmgn-meme-helpers.js';
 import type { GMGNRawToken } from '../src/adapters/gmgn-adapter.js';
+import { DexFlowAdapter } from '../src/adapters/dex-flow-adapter.js';
+import { RhLaunchpadAdapter } from '../src/adapters/rh-launchpad-adapter.js';
 
 const ETH_PRICE = 1929.03;
 
@@ -22,7 +24,12 @@ const mkToken = (over: Partial<GMGNRawToken> = {}): GMGNRawToken => ({
 });
 
 describe('RobinhoodScreeningAgent', () => {
-  afterEach(() => { vi.unstubAllGlobals(); delete process.env.GMGN_API_KEY; });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.GMGN_API_KEY;
+    DexFlowAdapter.resetCache();
+    RhLaunchpadAdapter.resetCache();
+  });
 
   it('preFilter passes young & unknown-age tokens (age gate off — degen early)', () => {
     const agent = new RobinhoodScreeningAgent();
@@ -291,5 +298,115 @@ describe('RobinhoodScreeningAgent', () => {
     const agent = new RobinhoodScreeningAgent();
     const map = await agent.collectSignalBoostMap();
     expect(map.size).toBe(0);
+  });
+
+  it('runScreeningPass skips one-sided DEX dumps when tape is present', async () => {
+    process.env.GMGN_API_KEY = 'test-key';
+    const healthy = mkToken({ address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+    const mkWire = (t: GMGNRawToken) => ({
+      address: t.address, symbol: t.symbol, name: t.name,
+      price: t.priceUsd, market_cap: t.marketCapUsd, volume: t.volume24hUsd, liquidity: t.liquidityUsd,
+      buys: t.buys, sells: t.sells, swaps: t.swaps, holder_count: t.holderCount,
+      top_10_holder_rate: t.top10HolderRate, dev_team_hold_rate: t.devTeamHoldRate,
+      creator_token_status: t.creatorTokenStatus, smart_degen_count: t.smartDegenCount,
+      renowned_count: t.renownedCount, bundler_rate: t.bundlerRate,
+      rat_trader_amount_rate: t.ratTraderAmountRate, rug_ratio: t.rugRatio,
+      is_wash_trading: t.isWashTrading ? 1 : 0, cto_flag: t.ctoFlag ? 1 : 0,
+      is_honeypot: t.isHoneypot ? 1 : 0, buy_tax: t.buyTax, sell_tax: t.sellTax,
+      renounced_mint: t.renouncedMint ? 1 : 0, renounced_freeze_account: t.renouncedFreeze ? 1 : 0,
+      creation_timestamp: t.creationTimestamp, open_timestamp: t.openTimestamp,
+      price_change_percent1m: t.priceChange1m, price_change_percent5m: t.priceChange5m,
+      price_change_percent1h: t.priceChange1h, visiting_count: t.visitingCount,
+      square_mentions: t.squareMentions, twitter_rename_count: t.twitterRenameCount,
+      twitter_del_post_token_count: t.twitterDelPostCount,
+      twitter_create_token_count: t.twitterCreateTokenCount,
+      total_fee: t.totalFeeNative, dexscr_boost_fee: t.dexscrBoostFee, dexscr_ad: t.dexscrAd,
+      exchange: t.exchange, launchpad_platform: t.launchpadPlatform, launchpad_status: t.launchpadStatus, progress: t.progress,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('openapi.gmgn.ai/v1/market/rank')) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: { data: { rank: [mkWire(healthy)] } } }) };
+      }
+      if (url.includes('openapi.gmgn.ai/v1/market/hot_searches')) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: [{ tokens: [] }] }) };
+      }
+      if (url.includes('openapi.gmgn.ai/v1/trenches')) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ code: 0, data: { new_creation: [], pump: [], completed: [] } }) };
+      }
+      if (url.includes('openapi.gmgn.ai/v1/token/security')) {
+        return {
+          ok: true, status: 200, headers: { get: () => null },
+          json: async () => ({
+            code: 0,
+            data: {
+              is_honeypot: false, is_blacklist: false, is_renounced: true,
+              renounced_mint: false, renounced_freeze_account: false, can_not_sell: false,
+              buy_tax: '0', sell_tax: '0', average_tax: '0', high_tax: '0',
+              is_open_source: true, burn_ratio: '0', lock_summary: { is_locked: false },
+              is_show_alert: false, flags: [],
+            },
+          }),
+        };
+      }
+      if (url.includes('coingecko')) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ ethereum: { usd: ETH_PRICE, usd_24h_change: 1.5 } }) };
+      }
+      if (url.includes('api.dexscreener.com/tokens/v1/robinhood/')) {
+        return {
+          ok: true, status: 200,
+          json: async () => ([{
+            chainId: 'robinhood',
+            pairAddress: '0xpair',
+            baseToken: { address: healthy.address, symbol: healthy.symbol },
+            liquidity: { usd: 50000 },
+            volume: { h1: 20000, h24: 100000 },
+            txns: { h1: { buys: 2, sells: 40 } },
+          }]),
+        };
+      }
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({}) };
+    }));
+    const agent = new RobinhoodScreeningAgent();
+    const reports = await agent.runScreeningPass();
+    expect(reports.length).toBe(0);
+  });
+
+  it('collectDexFlow is fail-open (empty map on network failure)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network')));
+    const agent = new RobinhoodScreeningAgent();
+    const map = await agent.collectDexFlow(['0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']);
+    expect(map.size).toBe(0);
+  });
+
+  it('buildPayload overlays DexScreener tape and RH pad origin', () => {
+    const agent = new RobinhoodScreeningAgent();
+    const flow = {
+      chain: 'robinhood' as const,
+      address: 'addr1',
+      symbol: 'TEST',
+      pairAddress: '0xpair',
+      dexId: 'uniswap',
+      quoteSymbol: 'WETH',
+      priceUsd: 0.001,
+      mcapUsd: 200000,
+      liqUsd: 80000,
+      vol1hUsd: 22000,
+      vol24hUsd: 180000,
+      buys1h: 40,
+      sells1h: 10,
+      pairAgeMin: 90,
+      pairCreatedAt: Date.now() - 90 * 60_000,
+      priceChange1h: 12,
+      priceChange24h: 30,
+      volLiq: 0.275,
+      dump: false,
+      pairUrl: 'https://dexscreener.com/robinhood/0xpair',
+    };
+    const p = agent.buildPayload(mkToken(), 88, 'thesis', undefined, flow, 'Pons');
+    expect(p.volume1h).toBe('$22.0k');
+    expect(p.txRatio).toBe('Buy 80% / Sell 20%');
+    expect(p.launchpadOrigin).toBe('Pons');
+    expect(p.dexScreenerUrl).toBe('https://dexscreener.com/robinhood/0xpair');
+    expect(p.dexFlowSummary).toContain('40B/10S');
   });
 });

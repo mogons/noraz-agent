@@ -17,8 +17,7 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 [![Domain](https://img.shields.io/badge/Domain-noraz.space-brightgreen.svg)](https://noraz.space)
 [![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663%20%7C%20ETH-7b5cff.svg)](https://robinhoodchain.blockscout.com)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://nodejs.org/)
-[![Discord](https://img.shields.io/badge/Discord-Community-5865F2.svg)](https://discord.gg/5HMy95ZHuY)
-[![X (Twitter)](https://img.shields.io/badge/X-%40pxidentities-black.svg)](https://x.com/pxidentities/)
+[![X (Twitter)](https://img.shields.io/badge/X-%40norazspace-black.svg)](https://x.com/norazspace)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D22.12-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-264%20Passed-brightgreen.svg)](https://vitest.dev/)
@@ -32,12 +31,8 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 ## 🌐 Official Web Portal & Community Links
 
 - 🌐 **Official Web Portal:** [noraz.space](https://noraz.space)
-- 💬 **Discord Community:** [discord.gg/5HMy95ZHuY](https://discord.gg/5HMy95ZHuY)
-- 🐦 **Official X (Twitter):** [@pxidentities](https://x.com/pxidentities/)
+- 🐦 **Official X (Twitter):** [@norazspace](https://x.com/norazspace)
 - 📖 **Interactive Documentation & Quickstart:** [noraz.space/docs](https://noraz.space/docs)
-- 💻 **Browser Web Terminal TUI Emulator:** [noraz.space/terminal](https://noraz.space/terminal)
-- 🛡️ **9-Lives Risk Engine & Swarm Consensus Visualizer:** [noraz.space/docs/risk-engine](https://noraz.space/docs/risk-engine)
-- 🤖 **LLM Agent Index & Discovery:** [noraz.space/llms.txt](https://noraz.space/llms.txt)
 
 ---
 
@@ -70,7 +65,7 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
 │  MEME AGENT  │ │ LP VELOCITY  │ │  NFT AGENT   │ │ ALPHA SCRAPER│ │ ETH WHALES   │
 │meme-robinhood│ │ lp-robinhood │ │    nft       │ │alpha-robinhood│ │ whale-eth    │
-│ GMGN + GoPlus│ │ Krystal Cloud│ │   OpenSea    │ │X API v2 / Web│ │ Hyperliquid  │
+│GMGN+Dex tape │ │ Krystal Cloud│ │   OpenSea    │ │X API v2 / Web│ │ Hyperliquid  │
 │vol 24h ≥ $25k│ │Fee/TVL ≥ 2%  │ │floor +10%/1h │ │1h rh alpha   │ │perps ≥ $500k │
 │liq ≥ $5k     │ │TVL ≥ $10k    │ │sales ≥ 3/h   │ │sentiment high│ │spot ≥ $50k   │
 └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
@@ -101,7 +96,7 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 | # | Feature | Description |
 | :-: | :--- | :--- |
 | 1 | 🛡️ **3-Layer Swarm Consensus** | Quant & Liquidity, Catalyst & Sentiment, Security Audit — **≥ 80% confidence** required before any call card is posted. |
-| 2 | 🌸 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + GMGN & GoPlus security audits; hard gate **real 24h volume ≥ $25k**, **liquidity ≥ $5k**, **total fees ≥ $250**, fail-closed. |
+| 2 | 🌸 **Robinhood Meme Agent** (`#call-meme-robinhood`) | GMGN smart-money/rank/trenches screening + native DexScreener 1h tape (dump / vol-liq) + RH launchpad origin (Pons, NOXA, LetsCash, …) + GMGN & GoPlus security audits; hard gate **real 24h volume ≥ $25k**, **liquidity ≥ $5k**, **total fees ≥ $250**, fail-closed. |
 | 3 | 🌊 **Robinhood LP Velocity Engine** (`#call-lp-robinhood`) | Concentrated-liquidity (Uniswap V3) high-yield pools via **Krystal Cloud** (`ethereum@4663`); **TVL ≥ $10k**, **24h volume ≥ $100k**, **24h Fee/TVL ≥ 2%**, **market cap ≥ $100k**, volume velocity, GMGN security re-check. |
 | 4 | 🔮 **NFT Sniper** (`#call-nft-robinhood`) | OpenSea REST v2 floor & rarity sniping; hard filters **floor surge ≥ +10%/1h**, **volume ≥ 1.5x**, **sales ≥ 3/h**; whale sweep & verified badge as card info. |
 | 5 | 🐋 **ETH Whale Tracker** (`#call-whale-eth`) | Hyperliquid L1 institutional positioning & smart money tracker; monitors open perps positions (**≥ $500k**), direction flips, and large spot order flow (**≥ $50k**). |
@@ -146,7 +141,7 @@ Noraz AI is built with Node.js and TypeScript, making it **100% cross-platform c
 ```powershell
 # Clone the repository
 git clone https://github.com/runesatsdev/noraz-agent.git
-cd "noraz-ai-robinhood-chain"
+cd noraz-agent
 
 # Run the Windows setup script
 .\setup.bat
@@ -184,7 +179,7 @@ npx pm2 logs noraz-agent
 ```bash
 # Clone the repository
 git clone https://github.com/runesatsdev/noraz-agent.git
-cd "noraz-ai-robinhood-chain"
+cd noraz-agent
 
 # Run the Linux/macOS setup script
 bash setup.sh

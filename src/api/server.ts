@@ -8,6 +8,7 @@ import { globalStateStore } from '../services/state-store.js';
 import { getExecutionMode } from '../config/config.js';
 import { AGENT_DOMAINS } from '../orchestrator/agent-registry.js';
 import { ToolRegistry } from '../orchestrator/tool-registry.js';
+import { runTokenAudit } from '../services/token-audit-service.js';
 
 export class NorazRESTServer {
   private server: http.Server | null = null;
@@ -187,7 +188,21 @@ export class NorazRESTServer {
           return;
         }
 
-        // 7. POST /api/command (Execute ToolRegistry command via REST)
+        // 7. GET /api/audit (GoPlus + GMGN card for a Robinhood CA)
+        if (req.method === 'GET' && pathname === '/api/audit') {
+          const address = String(urlObj.searchParams.get('address') || '').trim();
+          if (!address) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: 'Missing required query parameter "address"' }));
+            return;
+          }
+          const audit = await runTokenAudit(address);
+          res.statusCode = audit.success ? 200 : 502;
+          res.end(JSON.stringify(audit));
+          return;
+        }
+
+        // 8. POST /api/command (Execute ToolRegistry command via REST)
         if (req.method === 'POST' && pathname === '/api/command') {
           const body = await parseJsonBody(req);
           const toolName = String(body.command || body.toolName || '').trim();
@@ -205,7 +220,7 @@ export class NorazRESTServer {
           return;
         }
 
-        // 8. 404 Route Not Found
+        // 9. 404 Route Not Found
         res.statusCode = 404;
         res.end(JSON.stringify({ success: false, error: `Endpoint "${pathname}" not found.` }));
 

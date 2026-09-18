@@ -1,4 +1,6 @@
 import { GMGNAdapter, GMGNRawToken } from '../../adapters/gmgn-adapter.js';
+import { DexFlowAdapter, evaluateDexFlow, type DexFlowSnapshot } from '../../adapters/dex-flow-adapter.js';
+import { RhLaunchpadAdapter } from '../../adapters/rh-launchpad-adapter.js';
 import { globalPriceFeedService } from '../../services/price-feed-service.js';
 import { StrategyEngine } from '../../orchestrator/strategy-engine.js';
 import type { ScreeningAgent, AgentReport, CallCardPayload } from '../shared/agent-contract.js';
@@ -56,6 +58,8 @@ const DEFAULT_CONFIG: RobinhoodScreeningConfig = {
 export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> {
   readonly domain = 'meme-robinhood';
   private gmgn: GMGNAdapter;
+  private dexFlow: DexFlowAdapter;
+  private launchpad: RhLaunchpadAdapter;
   private priceFeed = globalPriceFeedService;
   private strategyEngine: StrategyEngine;
   private config: RobinhoodScreeningConfig;
@@ -66,6 +70,8 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     // Separate GMGN key for robinhood (per-key rate limit): fallback to
     // GMGN_API_KEY when GMGN_API_KEY_ROBINHOOD is not yet set.
     this.gmgn = new GMGNAdapter(process.env.GMGN_API_KEY_ROBINHOOD || process.env.GMGN_API_KEY);
+    this.dexFlow = new DexFlowAdapter();
+    this.launchpad = new RhLaunchpadAdapter();
     this.strategyEngine = new StrategyEngine();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.strategyParams = strategyParams;
@@ -158,14 +164,30 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     }
   }
 
-   /**
-    * Additional candidates from the track feed (BOOSTER, not a replacement):
-    * tokens newly accumulated by smart money (>= minTrackWallets buying
-    * wallets, total >= minTrackBuyUsd, fresh <= trackFreshMinutes) but not yet
-    * appearing in rank/trenches/hot. Full data fetched via fetchTokenInfo —
-    * still goes through ALL pipeline gates (graduated, preFilter, audit,
-    * detect, strategy, 80).
-    */
+  /**
+   * DexScreener 1h tape for candidate addresses. Fail-open: error → empty map.
+   * Does not replace GMGN rank/trenches; overlays buys/sells/vol-liq/dump.
+   */
+  public async collectDexFlow(addresses: string[]): Promise<Map<string, DexFlowSnapshot>> {
+    if (addresses.length === 0) return new Map();
+    try {
+      const map = await this.dexFlow.fetchFlowBatch(addresses);
+      if (map.size > 0) console.log(`[ROBINHOOD AGENT] DEX flow: ${map.size}/${addresses.length} tokens with pair tape.`);
+      return map;
+    } catch (err: any) {
+      console.warn(`[ROBINHOOD AGENT] DEX flow failed (skipped): ${err.message}`);
+      return new Map();
+    }
+  }
+
+  /**
+   * Additional candidates from the track feed (BOOSTER, not a replacement):
+   * tokens newly accumulated by smart money (>= minTrackWallets buying
+   * wallets, total >= minTrackBuyUsd, fresh <= trackFreshMinutes) but not yet
+   * appearing in rank/trenches/hot. Full data fetched via fetchTokenInfo —
+   * still goes through ALL pipeline gates (graduated, preFilter, audit,
+   * detect, strategy, 80).
+   */
   public async collectTrackCandidates(acc: Map<string, TrackAccumulation>): Promise<GMGNRawToken[]> {
     if (!this.config.trackFeedEnabled || acc.size === 0) return [];
     const nowSec = Date.now() / 1000;
@@ -217,10 +239,22 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
   }
 
   /** Build call-card payload from real data (or 'N/A') */
-  public buildPayload(t: GMGNRawToken, confidence: number, thesis: string, trackLabel?: string): CallCardPayload {
+  public buildPayload(
+    t: GMGNRawToken,
+    confidence: number,
+    thesis: string,
+    trackLabel?: string,
+    flow?: DexFlowSnapshot | null,
+    originName?: string | null,
+  ): CallCardPayload {
     const ageHours = t.creationTimestamp !== null ? (Date.now()/1000 - t.creationTimestamp)/3600 : null;
-    const total = t.buys + t.sells;
-    const txRatio = total > 0 ? `Buy ${((t.buys/total)*100).toFixed(0)}% / Sell ${((t.sells/total)*100).toFixed(0)}%` : 'N/A';
+    const buys = flow && flow.buys1h + flow.sells1h > 0 ? flow.buys1h : t.buys;
+    const sells = flow && flow.buys1h + flow.sells1h > 0 ? flow.sells1h : t.sells;
+    const total = buys + sells;
+    const txRatio = total > 0 ? `Buy ${((buys/total)*100).toFixed(0)}% / Sell ${((sells/total)*100).toFixed(0)}%` : 'N/A';
+    const vol1hUsd = flow && flow.vol1hUsd > 0 ? flow.vol1hUsd : t.volume1hUsd;
+    const liqUsd = flow && flow.liqUsd > 0 ? flow.liqUsd : t.liquidityUsd;
+    const origin = originName || t.launchpadPlatform || null;
     const devStr = t.devTeamHoldRate !== null ? `${(t.devTeamHoldRate*100).toFixed(1)}%${t.creatorClose ? ' (CLOSED)' : ''}` : (t.creatorClose ? 'CLOSED' : 'N/A');
     const rugStr = t.rugRatio !== null ? `${(t.rugRatio*100).toFixed(1)}%` : 'N/A';
     const bundlerStr = t.bundlerRate !== null ? `${(t.bundlerRate*100).toFixed(1)}%` : 'N/A';
@@ -228,6 +262,9 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     const smStr = trackLabel
       ? `🧠 **Smart Money:** ${trackLabel}`
       : `🧠 **Smart Traders:** ${t.smartDegenCount} wallets (+${t.creatorClose ? 'dev closed' : 'monitoring'})`;
+    const flowSummary = flow
+      ? `1h ${flow.buys1h}B/${flow.sells1h}S • vol $${(flow.vol1hUsd / 1000).toFixed(1)}k • vol/liq ${flow.volLiq.toFixed(2)}`
+      : undefined;
 
     return {
       domain: 'MEME_ROBINHOOD',
@@ -238,11 +275,10 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       tokenAge: ageHours !== null ? `${ageHours.toFixed(1)}h` : 'N/A',
       priceUsd: t.priceUsd > 0 ? `$${t.priceUsd}` : 'N/A',
       marketCap: t.marketCapUsd > 0 ? `$${(t.marketCapUsd/1000).toFixed(1)}k` : 'N/A',
-      liquidity: t.liquidityUsd > 0 ? `$${(t.liquidityUsd/1000).toFixed(1)}k` : 'N/A',
-      // Honest card: we have no real 5m/1h volume breakdown — price-change data lives in reasons/thesis
+      liquidity: liqUsd > 0 ? `$${(liqUsd/1000).toFixed(1)}k` : 'N/A',
       volume5m: 'N/A',
-      volume1h: 'N/A',
-      volume24h: (() => { const v = volume24hOf(t); return v > 0 ? `$${(v/1000).toFixed(1)}k` : 'N/A'; })(),
+      volume1h: vol1hUsd > 0 ? `$${(vol1hUsd/1000).toFixed(1)}k` : 'N/A',
+      volume24h: (() => { const v = flow && flow.vol24hUsd > 0 ? flow.vol24hUsd : volume24hOf(t); return v > 0 ? `$${(v/1000).toFixed(1)}k` : 'N/A'; })(),
       txRatio,
       top10Pct: top10Str,
       devHoldingPct: devStr,
@@ -254,12 +290,15 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       securityScore: rugStr,
       aiThesis: thesis,
       gmgnUrl: `https://gmgn.ai/robinhood/token/${t.address}`,
-      dexScreenerUrl: `https://dexscreener.com/robinhood/${t.address}`,
+      dexScreenerUrl: flow?.pairUrl || `https://dexscreener.com/robinhood/${t.address}`,
       goplusUrl: `https://gopluslabs.io/token-security/4663/${t.address}`,
       securityAuditPassed: true, // security audit via GMGN in preFilter (rug/honeypot/tax/insider/bundler/top10)
       socialHypeScore: confidence,
-      liquidityUsd: t.liquidityUsd,
-      volume1hUsd: t.volume1hUsd > 0 ? t.volume1hUsd : volume24hOf(t) / 24,
+      liquidityUsd: liqUsd,
+      volume1hUsd: vol1hUsd > 0 ? vol1hUsd : volume24hOf(t) / 24,
+      launchpadOrigin: origin || undefined,
+      dexFlowSummary: flowSummary,
+      pairAddress: flow?.pairAddress || undefined,
     };
   }
 
@@ -289,6 +328,7 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
     const merged = new Map<string, GMGNRawToken>();
     for (const t of [...candidates, ...trackCandidates]) merged.set(t.address.toLowerCase(), t);
     const allCandidates = [...merged.values()];
+    const flowMap = await this.collectDexFlow(allCandidates.map((t) => t.address));
     if (signalBoostMap.size > 0) {
       console.log(`[ROBINHOOD AGENT] Signal overlay: ${signalBoostMap.size} tokens with smart-money/KOL/CTO events.`);
     }
@@ -298,6 +338,13 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       // Graduated-only: reject tokens still on the bonding curve (exchange='pump')
       if (!isGraduatedToken(t)) {
         console.log(`[ROBINHOOD AGENT] ⛔ ${t.symbol}: not yet graduated (bonding curve).`);
+        continue;
+      }
+
+      const flow = flowMap.get(t.address.toLowerCase()) ?? null;
+      const flowEval = evaluateDexFlow(flow);
+      if (flowEval.dump) {
+        console.log(`[ROBINHOOD AGENT] ⛔ ${t.symbol}: ${flowEval.reasons.join(' ')}`);
         continue;
       }
 
@@ -323,6 +370,15 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
           confidence: Math.min(100, det.confidence + 20),
           reasons: [...det.reasons, `⚡ Cluster of ${trackEntry.buyWalletCount} smart-money wallets bought $${(trackEntry.totalBuyUsd / 1000).toFixed(0)}k (+20)`],
         };
+      }
+      if (flowEval.confidenceDelta > 0 && det.type !== 'NONE') {
+        det = {
+          ...det,
+          confidence: Math.min(100, det.confidence + flowEval.confidenceDelta),
+          reasons: [...det.reasons, ...flowEval.reasons],
+        };
+      } else if (flowEval.reasons.length > 0 && det.type !== 'NONE') {
+        det = { ...det, reasons: [...det.reasons, ...flowEval.reasons] };
       }
       if (det.type === 'NONE' || det.confidence < this.config.passThreshold) {
         console.log(`[ROBINHOOD AGENT] ⚪ ${t.symbol}: ${det.type} ${det.confidence}% < ${this.config.passThreshold}% (${det.reasons.join(' | ')})`);
@@ -361,7 +417,13 @@ export class RobinhoodScreeningAgent implements ScreeningAgent<RobinhoodSignal> 
       }
 
       const thesis = buildMemeThesis(t, det.type, confidence, det.reasons, strategyReason);
-      const payload = this.buildPayload(t, confidence, thesis, trackLabel);
+      let originName: string | null = null;
+      try {
+        originName = await this.launchpad.originName(t.address);
+      } catch (err: any) {
+        console.warn(`[ROBINHOOD AGENT] Launchpad origin skipped: ${err.message}`);
+      }
+      const payload = this.buildPayload(t, confidence, thesis, trackLabel, flow, originName);
       const signal: RobinhoodSignal = { token: t, signalType: det.type, confidence, reasons: det.reasons };
       reports.push({ passed: true, signal, reason: thesis, confidence, payload });
       console.log(`[ROBINHOOD AGENT] 🎯 ${det.type} ${t.symbol} ${confidence}%`);

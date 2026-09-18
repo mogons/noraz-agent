@@ -12,7 +12,7 @@ node_modules/
 .yarn/install-state.gz
 
 # 2. Build & Compilation Artifacts
-dist/
+/dist/
 build/
 out/
 *.tsbuildinfo

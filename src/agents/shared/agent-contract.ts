@@ -79,6 +79,11 @@ export interface CallCardPayload {
   volume1hUsd: number;
   whaleReport?: WhaleReport;
   cexRadar?: any[];
+  /** RH factory pad that minted the token (Pons, NOXA Fun, …). */
+  launchpadOrigin?: string;
+  /** DexScreener 1h tape summary (buys/sells, vol/liq). */
+  dexFlowSummary?: string;
+  pairAddress?: string;
 }
 
 export interface AgentReport<TSignal = unknown> {

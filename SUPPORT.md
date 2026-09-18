@@ -7,7 +7,7 @@ Welcome to **Noraz AI (Robinhood Chain Edition)**! Here are the official resourc
 ## 💬 Interactive Support Channels
 
 - **Discord Community & Support**: Join our Discord server at [https://discord.gg/5HMy95ZHuY](https://discord.gg/5HMy95ZHuY) and navigate to `#noraz-control-room` for natural language chat, setup assistance, contributor coordination, and strategy configuration.
-- **Official X (Twitter)**: Follow [@pxidentities](https://x.com/pxidentities/) for release announcements, alpha insights, and ecosystem updates.
+- **Official X (Twitter)**: Follow [@norazspace](https://x.com/norazspace) for release announcements, alpha insights, and ecosystem updates.
 - **Official Web Portal**: Browse [https://noraz.space](https://noraz.space) and technical docs at [https://noraz.space/docs](https://noraz.space/docs).
 - **Telegram Notification Bridge**: Follow real-time signal broadcasts and status alerts.
 - **Terminal TUI Diagnostics**: Run `noraz doctor` or `noraz terminal` in your terminal for real-time diagnostic checks on API keys, RPC connections, and wallet configuration.

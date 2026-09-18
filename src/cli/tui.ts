@@ -303,6 +303,8 @@ Current Operating Parameters:
           if (payload) {
             console.log(`\n${C.green}✅ [${chosen.id.toUpperCase()}] ${payload.symbol || payload.title} — ${payload.confidenceScore || 80}% Confidence${C.reset}`);
             if (payload.marketCap) console.log(`   MC: ${payload.marketCap} | Liq: ${payload.liquidity} | Vol1h: ${payload.volume1h}`);
+            if (payload.launchpadOrigin) console.log(`   Pad: ${payload.launchpadOrigin}${payload.dexFlowSummary ? ` | DEX: ${payload.dexFlowSummary}` : ''}`);
+            if (payload.launchpadOrigin) console.log(`   Pad: ${payload.launchpadOrigin}${payload.dexFlowSummary ? ` | DEX: ${payload.dexFlowSummary}` : ''}`);
             if (payload.aiThesis) console.log(`   Thesis: ${payload.aiThesis}`);
           } else {
             console.log(`\n${C.green}✅ Signal: ${r.reason}${C.reset}`);

@@ -238,9 +238,12 @@ export function buildCallEmbed(payload: CallSignalPayload) {
 
   if (payload.contractAddress) {
     const ageStr = payload.tokenAge ? ` • ⏱️ **Age:** ${payload.tokenAge}` : '';
+    const originStr = payload.launchpadOrigin
+      ? ` • 🏭 **Pad:** ${sanitizeEmbedField(payload.launchpadOrigin, 40)}`
+      : '';
     embed.addFields({
       name: '📍 Contract Address (CA)',
-      value: `\`${payload.contractAddress}\`${ageStr}`,
+      value: `\`${payload.contractAddress}\`${ageStr}${originStr}`,
       inline: false,
     });
   }
@@ -250,10 +253,13 @@ export function buildCallEmbed(payload: CallSignalPayload) {
     ? `\n📈 **Vol (5m / 1h):** ${payload.volume5m || 'N/A'} / ${payload.volume1h || 'N/A'}`
     : '';
   const txStr = payload.txRatio ? ` | ⚖️ **Tx:** ${payload.txRatio}` : '';
+  const flowStr = payload.dexFlowSummary
+    ? `\n📉 **DEX tape:** ${sanitizeEmbedField(payload.dexFlowSummary, 160)}`
+    : '';
 
   embed.addFields({
     name: '📊 Market Metrics',
-    value: `💰 **MC:** ${payload.marketCap || 'N/A'}${priceStr}\n💧 **Liquidity:** ${payload.liquidity || 'N/A'}${volStr}${txStr}`,
+    value: `💰 **MC:** ${payload.marketCap || 'N/A'}${priceStr}\n💧 **Liquidity:** ${payload.liquidity || 'N/A'}${volStr}${txStr}${flowStr}`,
     inline: false,
   });
 
