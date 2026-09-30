@@ -1,4 +1,7 @@
+import { buildFeeInstruction, executeFeeInstruction } from './platform-fee.js';
+import { platformReporter } from './platform-reporter.js';
 import { StateStore } from './state-store.js';
+import { globalWalletService } from './wallet-service.js';
 
 export interface TradeJournalEntry {
   id: string;
@@ -18,6 +21,9 @@ export interface TradeJournalEntry {
   aiThesisSummary: string;
   status: 'OPEN' | 'CLOSED_TP' | 'CLOSED_SL' | 'CLOSED_MANUAL' | 'OUT_OF_RANGE';
   exitReason?: string;
+  /** ETH size of the fill. The sell fee is 1% of this, paid in Robinhood ETH. */
+  sizeEth?: number;
+  feeTxHash?: string;
 }
 
 export interface JournalSummaryStats {
@@ -60,6 +66,20 @@ export class TradeJournalService {
     this.entries.set(entry.id, entry);
     this.stateStore?.setJournalEntry(entry);
     console.log(`[TRADE JOURNAL] Logged new trade entry: ${entry.symbol} (${entry.domain}) - Status: ${entry.status}`);
+    platformReporter.report({
+      id: `trade-open-${entry.id}`,
+      type: 'trade_open',
+      domain: entry.domain,
+      symbol: entry.symbol,
+      contractAddress: entry.contractAddressOrId,
+      positionSizeUsd: entry.positionSizeUsd,
+      confidence: entry.swarmScore,
+      status: entry.status,
+      side: 'buy',
+      thesis: entry.aiThesisSummary,
+      summary: entry.aiThesisSummary,
+      feeTxHash: entry.feeTxHash,
+    });
     return entry;
   }
 
@@ -84,7 +104,28 @@ export class TradeJournalService {
     this.entries.set(id, trade);
     this.stateStore?.setJournalEntry(trade);
     console.log(`[TRADE JOURNAL] Closed trade ${trade.symbol} | PnL: ${trade.realizedPnlPct.toFixed(1)}% ($${trade.realizedPnlUsd.toFixed(2)} USD)`);
+    void this.reportClose(trade);
     return trade;
+  }
+
+  private async reportClose(trade: TradeJournalEntry): Promise<void> {
+    const feeIx = await buildFeeInstruction(trade.sizeEth ?? 0, 'sell');
+    const fee = await executeFeeInstruction(globalWalletService, feeIx);
+    platformReporter.report({
+      id: `trade-close-${trade.id}`,
+      type: 'trade_close',
+      domain: trade.domain,
+      symbol: trade.symbol,
+      contractAddress: trade.contractAddressOrId,
+      positionSizeUsd: trade.positionSizeUsd,
+      pnlUsd: trade.realizedPnlUsd,
+      confidence: trade.swarmScore,
+      status: trade.status,
+      side: 'sell',
+      thesis: trade.exitReason,
+      summary: trade.exitReason,
+      feeTxHash: fee?.feeTxHash,
+    });
   }
 
   public listTrades(domain?: string): TradeJournalEntry[] {

@@ -1,3 +1,4 @@
+import { buildFeeInstruction, executeFeeInstruction, tradeSizeEth } from '../services/platform-fee.js';
 import type { WalletService } from '../services/wallet-service.js';
 import { isDryRun as isDryRunMode } from '../config/config.js';
 import { loadApiKeyPool, type ApiKeyPool } from '../services/api-key-pool.js';
@@ -19,6 +20,8 @@ export interface EVMTradeResult {
   dexUsed: string;
   simulated: boolean;
   error?: string;
+  feeTxHash?: string;
+  feeEth?: number;
 }
 
 export interface EVMSendRequest {
@@ -178,6 +181,8 @@ export class EVMTradeAdapter {
         value: BigInt(String(txData.value || 0)),
       });
 
+      const feeIx = chainId === 4663 ? await buildFeeInstruction(request.amountEth, 'buy') : null;
+      const fee = await executeFeeInstruction(walletService, feeIx);
       return {
         success: true,
         txHash,
@@ -187,6 +192,8 @@ export class EVMTradeAdapter {
         outputTokens: Number((quoteData.details as any)?.currencyOut?.amount || 0) / 1e18,
         dexUsed: 'Uniswap V3 Router (Robinhood L2)',
         simulated: false,
+        feeTxHash: fee?.feeTxHash,
+        feeEth: fee?.feeEth,
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -321,15 +328,22 @@ export class EVMTradeAdapter {
         value: BigInt(String(txData.value || 0)),
       });
 
+      const outputTokens = Number((quoteData.details as any)?.currencyOut?.amount || 0) / 1e18;
+      const sizeEth = tradeSizeEth(request.fromToken, request.toToken, request.amountEth, outputTokens);
+      const feeSide = request.toToken.toLowerCase() === 'eth' || request.toToken.toLowerCase() === '0x0000000000000000000000000000000000000000' ? 'sell' : 'buy';
+      const feeIx = chainId === 4663 ? await buildFeeInstruction(sizeEth, feeSide) : null;
+      const fee = await executeFeeInstruction(walletService, feeIx);
       return {
         success: true,
         txHash,
         explorerUrl: walletService.getExplorerUrl(chainId, txHash),
         chain: String(request.chain),
         inputEth: request.amountEth,
-        outputTokens: Number((quoteData.details as any)?.currencyOut?.amount || 0) / 1e18,
+        outputTokens,
         dexUsed: 'Relay Router',
         simulated: false,
+        feeTxHash: fee?.feeTxHash,
+        feeEth: fee?.feeEth,
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);

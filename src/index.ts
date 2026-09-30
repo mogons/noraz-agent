@@ -30,6 +30,7 @@ import { StateStore } from './services/state-store.js';
 import { ApiKeyGuardService } from './services/api-key-guard.js';
 import { globalRiskEngineV2 } from './orchestrator/risk-engine-v2.js';
 import { WalletTracker } from './services/wallet-tracker.js';
+import { platformReporter } from './services/platform-reporter.js';
 
 dotenv.config();
 
@@ -424,8 +425,9 @@ if (discordToken && clientId) {
                   await notifyControlRoom(client, 'risk:killswitch', `🚨 **KILL-SWITCH ACTIVE** — auto-execute ${autoExecDomain} ${item.payload.symbol} blocked.`);
                   break;
                 }
+                let execRes: Awaited<ReturnType<typeof evmTradeAdapter.executeBuyToken>> | undefined;
                 if (autoExecDomain === 'meme-robinhood' && item.payload.contractAddress) {
-                  const execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 }, walletService);
+                  execRes = await evmTradeAdapter.executeBuyToken({ chain: 'robinhood', tokenAddress: item.payload.contractAddress, amountEth: autoExec.maxTradeAmount || 0.1, slippagePercentage: 1.5 }, walletService);
                   console.log(`[AUTO-EXECUTE] meme-robinhood ${item.payload.symbol}: ${execRes.success ? (execRes.simulated ? 'SIMULATED ' : '') + 'ok' : 'FAILED'} ${execRes.error || ''} (out=${execRes.outputTokens})`);
                 }
 
@@ -434,6 +436,7 @@ if (discordToken && clientId) {
                 try {
                   const entryPrice = parseFloat(String(item.payload.priceUsd || '0').replace(/[^0-9.]/g, '')) || 0;
                   const journalDomain = (item.payload.domain || 'MEME_ROBINHOOD') as any;
+                  const sizeEth = autoExec.maxTradeAmount || 0.1;
                   tradeJournalService.recordTradeEntry({
                     id: `TRADE_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                     domain: journalDomain,
@@ -442,7 +445,9 @@ if (discordToken && clientId) {
                     chain: autoExecDomain === 'meme-robinhood' ? 'robinhood' : 'nft',
                     entryTimestamp: new Date().toISOString(),
                     entryPriceUsdOrEth: entryPrice,
-                    positionSizeUsd: (autoExec.maxTradeAmount || 0.1) * (entryPrice || 1),
+                    positionSizeUsd: sizeEth * (entryPrice || 1),
+                    sizeEth,
+                    feeTxHash: execRes?.success && !execRes.simulated ? execRes.feeTxHash : undefined,
                     swarmScore: Number(item.payload.confidenceScore) || 0,
                     strategyUsed: 'auto-execute',
                     aiThesisSummary: (item.rawReason || item.payload.aiThesis || '').slice(0, 200),
@@ -505,6 +510,15 @@ if (discordToken && clientId) {
           } catch (learnErr: any) {
             console.warn(`[SWARM LEARNING] record failed: ${learnErr.message}`);
           }
+
+          platformReporter.report({
+            type: 'signal',
+            domain: item.channelName.replace('call-', ''),
+            symbol: item.payload.symbol || 'TOKEN',
+            contractAddress: item.payload.contractAddress,
+            confidence: Number(item.payload.confidenceScore) || 0,
+            summary: String(item.rawReason || item.payload.title || '').slice(0, 280),
+          });
         }
 
         // Wallet Auto-Tracking: detect user's own positions + exit alerts
