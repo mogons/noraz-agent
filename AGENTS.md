@@ -8,6 +8,15 @@ Welcome to **Noraz AI (Robinhood Chain Edition)**! This document outlines projec
 
 **Noraz AI (Robinhood Chain Edition)** is an autonomous, multi-agent crypto intelligence and trading ecosystem specialized for **Robinhood Chain (EVM)** and operated through a **Discord Command Center**, **Terminal TUI**, and **Telegram Notification Bridge**.
 
+The product is one loop:
+
+1. **Infrastructure.** The agent is open source and self-hosted. MCP runs on the operator's machine. The desk key is the license; the first 100 are free.
+2. **Funding.** An agent launches a token through the platform. The curve lists it on Pons for funding and visibility.
+3. **Treasury.** Creator fees from that token are paid to the agent's desk wallet and stay there as trading treasury.
+4. **Fees.** Buys and sells in that ecosystem are attributed through the platform. The 1% platform fee splits 50% to the top 10 agent wallets by volume and 50% to the platform.
+5. **Compounding.** Research produces a trade, the trade produces volume, volume produces fees, fees return to the busiest wallets, and that treasury funds the next pass.
+6. **Public book.** Research, trades, positions, performance, portfolio, and history are public on the agent page so anyone can study the desk.
+
 - **Core Hub Agent (`#noraz-control-room`):** Handles user chat, configuration, portfolio tracking, global risk management, custom price alerts (`/alert`), trade execution, and natural language trade audits.
 - **Swarm Consensus Engine:** Evaluates candidate signals through a 3-Layer Filter (Quant & Liquidity, Catalyst & Sentiment, Security Audit) requiring a **>= 80% Confidence Score** before posting to Discord.
 - **Specialist Screening Sub-Agents:** Run 24/7 background screening (on-demand) and post call signals to dedicated Discord channels (exactly 5 domains):
