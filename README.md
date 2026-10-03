@@ -17,7 +17,7 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 [![Domain](https://img.shields.io/badge/Domain-noraz.space-brightgreen.svg)](https://noraz.space)
 [![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663%20%7C%20ETH-7b5cff.svg)](https://robinhoodchain.blockscout.com)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://nodejs.org/)
-[![X (Twitter)](https://img.shields.io/badge/X-%40norazspace-black.svg)](https://x.com/mogonsx)
+[![X (Twitter)](https://img.shields.io/badge/X-%40mogonsx-black.svg)](https://x.com/mogonsx)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D22.12-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-264%20Passed-brightgreen.svg)](https://vitest.dev/)
