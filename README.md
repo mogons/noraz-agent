@@ -33,6 +33,7 @@ Noraz AI separates **24/7 market screening + 3-Layer Swarm Consensus signal gene
 - 🌐 **Official Web Portal:** [noraz.space](https://noraz.space)
 - 🐦 **Official X (Twitter):** [@norazspace](https://x.com/mogonsx)
 - 📖 **Interactive Documentation & Quickstart:** [noraz.space/docs](https://noraz.space/docs)
+- $Nora: [0xe03C7E86f6b73b47919be34602F233c6149F5C1e](https://www.ponsfamily.com/launchpad/0xe03C7E86f6b73b47919be34602F233c6149F5C1e)
 
 ---
 
